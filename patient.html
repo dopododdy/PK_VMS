@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>PK_VMS – เวชระเบียน</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 20px;
+    }
+    h1 {
+      color: #2c7be5;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 1000px;
+      margin: auto;
+    }
+    input {
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background: #f1f3f5;
+    }
+    tr:hover {
+      background: #f9fafb;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>🐶 เวชระเบียน</h1>
+
+  <input id="search" placeholder="ค้นหา OPD / ชื่อสัตว์ / เจ้าของ / เบอร์โทร">
+
+  <table>
+    <thead>
+      <tr>
+        <th>OPD No.</th>
+        <th>ชื่อสัตว์</th>
+        <th>เจ้าของ</th>
+        <th>เบอร์โทร</th>
+        <th>หมายเหตุ</th>
+      </tr>
+    </thead>
+    <tbody id="patientTable"></tbody>
+  </table>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyByr7W7FgP6FyNmy7yZw6vccFP7OUweZvc",
+    authDomain: "pk-vms.firebaseapp.com",
+    projectId: "pk-vms",
+    storageBucket: "pk-vms.firebasestorage.app",
+    messagingSenderId: "973293512357",
+    appId: "1:973293512357:web:c1be0b74b9ea092c5fcf4c"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let allPatients = [];
+
+  function renderTable(data) {
+    const tbody = document.getElementById("patientTable");
+    tbody.innerHTML = "";
+
+    data.forEach(p => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${p.opdNo || ""}</td>
+        <td>${p.petName || ""}</td>
+        <td>${p.ownerName || ""}</td>
+        <td>${p.phone || ""}</td>
+        <td>${p.importantNote || ""}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  db.collection("patients")
+    .orderBy("createdAt", "desc")
+    .onSnapshot(snapshot => {
+      allPatients = snapshot.docs.map(d => d.data());
+      renderTable(allPatients);
+    });
+
+  document.getElementById("search").addEventListener("input", e => {
+    const q = e.target.value.toLowerCase();
+    const filtered = allPatients.filter(p =>
+      (p.opdNo || "").toLowerCase().includes(q) ||
+      (p.petName || "").toLowerCase().includes(q) ||
+      (p.ownerName || "").toLowerCase().includes(q) ||
+      (p.phone || "").includes(q)
+    );
+    renderTable(filtered);
+  });
+</script>
+
+</body>
+</html>
