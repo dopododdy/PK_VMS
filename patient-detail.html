@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>PK_VMS – Patient Detail</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f4f6f8; padding:20px; }
+    .container { max-width:1000px; margin:auto; }
+    .card { background:#fff; border-radius:10px; padding:20px; margin-bottom:20px; }
+    h1 { color:#2c7be5; margin-top:0; }
+    .row { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+    .label { font-weight:bold; color:#555; }
+    .value { margin-bottom:8px; }
+    .actions { display:flex; gap:10px; }
+    .btn { padding:10px 14px; border-radius:6px; border:none; cursor:pointer; }
+    .btn.primary { background:#2c7be5; color:#fff; }
+    .btn.secondary { background:#6c757d; color:#fff; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:10px; border-bottom:1px solid #ddd; }
+    th { background:#f1f3f5; text-align:left; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="card">
+    <h1>🐶 ข้อมูลผู้ป่วย</h1>
+    <div class="row">
+      <div>
+        <div class="label">OPD No.</div>
+        <div class="value" id="opdNo"></div>
+      </div>
+      <div>
+        <div class="label">ชื่อสัตว์</div>
+        <div class="value" id="petName"></div>
+      </div>
+      <div>
+        <div class="label">เพศ</div>
+        <div class="value" id="sex"></div>
+      </div>
+      <div>
+        <div class="label">ทำหมัน</div>
+        <div class="value" id="neuterStatus"></div>
+      </div>
+      <div>
+        <div class="label">เจ้าของ</div>
+        <div class="value" id="ownerName"></div>
+      </div>
+      <div>
+        <div class="label">เบอร์โทร</div>
+        <div class="value" id="phone"></div>
+      </div>
+    </div>
+
+    <div class="label">ข้อสำคัญ / หมายเหตุ</div>
+    <div class="value" id="importantNote"></div>
+
+    <div class="actions">
+      <button class="btn primary">➕ New OPD</button>
+      <button class="btn secondary" onclick="history.back()">⬅ กลับ</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📋 ประวัติ OPD / Visit</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>OPD No.</th>
+          <th>วันที่</th>
+          <th>สรุป</th>
+        </tr>
+      </thead>
+      <tbody id="visitTable">
+        <tr>
+          <td colspan="3" style="color:#888;">(STEP ถัดไป จะเริ่มสร้าง OPD จริง)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyByr7W7FgP6FyNmy7yZw6vccFP7OUweZvc",
+    authDomain: "pk-vms.firebaseapp.com",
+    projectId: "pk-vms",
+    storageBucket: "pk-vms.firebasestorage.app",
+    messagingSenderId: "973293512357",
+    appId: "1:973293512357:web:c1be0b74b9ea092c5fcf4c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // อ่าน id จาก URL ?id=xxxx
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+
+  if (!id) {
+    alert("ไม่พบข้อมูลผู้ป่วย");
+  } else {
+    db.collection("patients").doc(id).get().then(doc => {
+      if (!doc.exists) return;
+      const p = doc.data();
+      document.getElementById("opdNo").innerText = p.opdNo || "";
+      document.getElementById("petName").innerText = p.petName || "";
+      document.getElementById("sex").innerText = p.sex || "";
+      document.getElementById("neuterStatus").innerText = p.neuterStatus || "";
+      document.getElementById("ownerName").innerText = p.ownerName || "";
+      document.getElementById("phone").innerText = p.phone || "";
+      document.getElementById("importantNote").innerText = p.importantNote || "";
+    });
+  }
+</script>
+
+</body>
+</html>
