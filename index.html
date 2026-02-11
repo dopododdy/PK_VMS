@@ -1,130 +1,91 @@
-<!-- PK_VMS Patient Record v1 -->
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>PK_VMS – Patient Record</title>
+  <title>PK_VMS – Dashboard</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
       background: #f4f6f8;
-      padding: 20px;
+      color: #2c3e50;
     }
-    .card {
-      background: white;
-      max-width: 700px;
+
+    /* Header */
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+      color: #2c7be5;
+    }
+    header .date {
+      font-size: 14px;
+      color: #6c757d;
+    }
+
+    /* Container */
+    .container {
+      padding: 24px;
+      max-width: 1200px;
       margin: auto;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    h1 { color: #2c7be5; }
-    label { display: block; margin-top: 12px; font-weight: bold; }
-    input, select, textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
+
+    /* Quick actions */
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
     }
-    textarea { resize: vertical; }
-    button {
-      margin-top: 20px;
-      padding: 12px;
+    .action-btn {
       background: #2c7be5;
       color: white;
-      border: none;
-      border-radius: 6px;
+      padding: 14px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: bold;
       cursor: pointer;
+      transition: 0.2s;
     }
-    button:hover { opacity: 0.9; }
-    .status { margin-top: 10px; }
-  </style>
-</head>
-<body>
+    .action-btn.secondary {
+      background: #6c757d;
+    }
+    .action-btn:hover {
+      opacity: 0.9;
+    }
 
-<div class="card">
-  <h1>🐶 Patient Record – PK_VMS</h1>
+    /* Menu grid */
+    .menu {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
 
-  <label>OPD No.</label>
-  <input id="opdNo" placeholder="690001-1">
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: 0.2s;
+    }
 
-  <label>ชื่อสัตว์</label>
-  <input id="petName">
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
 
-  <label>เพศ</label>
-  <select id="sex">
-    <option value="Male">ผู้</option>
-    <option value="Female">เมีย</option>
-  </select>
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
 
-  <label>ทำหมัน</label>
-  <select id="neuterStatus">
-    <option value="Neutered">ทำหมันแล้ว</option>
-    <option value="Intact">ยังไม่ทำหมัน</option>
-  </select>
-
-  <label>วันเกิด (ถ้าทราบ)</label>
-  <input type="date" id="birthDate">
-
-  <label>อายุ (ปี) – ถ้าไม่ทราบวันเกิด</label>
-  <input type="number" id="ageYear">
-
-  <label>ชื่อเจ้าของสัตว์</label>
-  <input id="ownerName">
-
-  <label>เบอร์โทร</label>
-  <input id="phone">
-
-  <label>ข้อสำคัญ / หมายเหตุ</label>
-  <textarea id="importantNote" rows="3"
-    placeholder="เช่น แพ้ยา, โรคหัวใจ, ชัก"></textarea>
-
-  <button onclick="savePatient()">💾 บันทึกข้อมูล</button>
-  <div class="status" id="status"></div>
-</div>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyByr7W7FgP6FyNmy7yZw6vccFP7OUweZvc",
-    authDomain: "pk-vms.firebaseapp.com",
-    projectId: "pk-vms",
-    storageBucket: "pk-vms.firebasestorage.app",
-    messagingSenderId: "973293512357",
-    appId: "1:973293512357:web:c1be0b74b9ea092c5fcf4c"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  function savePatient() {
-    const data = {
-      opdNo: document.getElementById("opdNo").value,
-      petName: document.getElementById("petName").value,
-      sex: document.getElementById("sex").value,
-      neuterStatus: document.getElementById("neuterStatus").value,
-      birthDate: document.getElementById("birthDate").value || null,
-      ageYear: document.getElementById("ageYear").value || null,
-      ownerName: document.getElementById("ownerName").value,
-      phone: document.getElementById("phone").value,
-      importantNote: document.getElementById("importantNote").value,
-      createdAt: new Date()
-    };
-
-    db.collection("patients").add(data)
-      .then(() => {
-        document.getElementById("status").innerText =
-          "✅ บันทึกข้อมูลเรียบร้อย";
-      })
-      .catch(err => {
-        document.getElementById("status").innerText =
-          "❌ Error: " + err;
-      });
-  }
-</script>
-
-</body>
-</html>
+    .card p {
