@@ -2,51 +2,127 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>My First Web App</title>
+  <title>PK_VMS – Patient Record</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 40px;
+      background: #f4f6f8;
+      padding: 20px;
     }
     .card {
       background: white;
-      padding: 30px;
-      max-width: 600px;
+      max-width: 700px;
       margin: auto;
+      padding: 25px;
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    h1 {
-      color: #2c3e50;
+    h1 { color: #2c7be5; }
+    label { display: block; margin-top: 12px; font-weight: bold; }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
     }
+    textarea { resize: vertical; }
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      background: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    .status { margin-top: 10px; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>🎉 เว็บแรกของผม</h1>
-    <p>นี่คือเว็บที่สร้างจาก GitHub Pages แบบฟรี 100%</p>
-    <p>ถ้าคุณเห็นหน้านี้ แปลว่าเว็บออนไลน์แล้ว ✅</p>
-  </div>
-    <!-- Firebase SDK (CDN) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyByr7W7FgP6FyNmy7yZw6vccFP7OUweZvc",
-      authDomain: "pk-vms.firebaseapp.com",
-      projectId: "pk-vms",
-      storageBucket: "pk-vms.firebasestorage.app",
-      messagingSenderId: "973293512357",
-      appId: "1:973293512357:web:c1be0b74b9ea092c5fcf4c"
+<div class="card">
+  <h1>🐶 Patient Record – PK_VMS</h1>
+
+  <label>OPD No.</label>
+  <input id="opdNo" placeholder="690001-1">
+
+  <label>ชื่อสัตว์</label>
+  <input id="petName">
+
+  <label>เพศ</label>
+  <select id="sex">
+    <option value="Male">ผู้</option>
+    <option value="Female">เมีย</option>
+  </select>
+
+  <label>ทำหมัน</label>
+  <select id="neuterStatus">
+    <option value="Neutered">ทำหมันแล้ว</option>
+    <option value="Intact">ยังไม่ทำหมัน</option>
+  </select>
+
+  <label>วันเกิด (ถ้าทราบ)</label>
+  <input type="date" id="birthDate">
+
+  <label>อายุ (ปี) – ถ้าไม่ทราบวันเกิด</label>
+  <input type="number" id="ageYear">
+
+  <label>ชื่อเจ้าของสัตว์</label>
+  <input id="ownerName">
+
+  <label>เบอร์โทร</label>
+  <input id="phone">
+
+  <label>ข้อสำคัญ / หมายเหตุ</label>
+  <textarea id="importantNote" rows="3"
+    placeholder="เช่น แพ้ยา, โรคหัวใจ, ชัก"></textarea>
+
+  <button onclick="savePatient()">💾 บันทึกข้อมูล</button>
+  <div class="status" id="status"></div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyByr7W7FgP6FyNmy7yZw6vccFP7OUweZvc",
+    authDomain: "pk-vms.firebaseapp.com",
+    projectId: "pk-vms",
+    storageBucket: "pk-vms.firebasestorage.app",
+    messagingSenderId: "973293512357",
+    appId: "1:973293512357:web:c1be0b74b9ea092c5fcf4c"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  function savePatient() {
+    const data = {
+      opdNo: document.getElementById("opdNo").value,
+      petName: document.getElementById("petName").value,
+      sex: document.getElementById("sex").value,
+      neuterStatus: document.getElementById("neuterStatus").value,
+      birthDate: document.getElementById("birthDate").value || null,
+      ageYear: document.getElementById("ageYear").value || null,
+      ownerName: document.getElementById("ownerName").value,
+      phone: document.getElementById("phone").value,
+      importantNote: document.getElementById("importantNote").value,
+      createdAt: new Date()
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    console.log("🔥 Firebase connected successfully");
-  </script>
+    db.collection("patients").add(data)
+      .then(() => {
+        document.getElementById("status").innerText =
+          "✅ บันทึกข้อมูลเรียบร้อย";
+      })
+      .catch(err => {
+        document.getElementById("status").innerText =
+          "❌ Error: " + err;
+      });
+  }
+</script>
 
 </body>
 </html>
