@@ -20,7 +20,7 @@
         .form-input:focus { border-color: var(--teal); background: rgba(255,255,255,0.12); }
         .form-label { display: block; font-weight: 700; color: var(--text-gray); margin-bottom: 6px; font-size: 0.95rem; }
         .glass-table { background: rgba(255,255,255,0.03); border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-        .pet-entry { background: rgba(255,255,255,0.03); border: 1px dashed rgba(20, 184, 177, 0.4); }
+        .pet-entry, .phone-entry { background: rgba(255,255,255,0.03); border: 1px dashed rgba(20, 184, 177, 0.4); }
         .highlight-found { border-color: var(--teal) !important; background: rgba(20, 184, 177, 0.1) !important; }
     </style>
 </head>
@@ -32,7 +32,7 @@
                 <h1 class="text-4xl font-bold text-white flex items-center gap-4">
                     <span class="text-teal-400 text-5xl">🐾</span> เวชระเบียนสัตว์ป่วย
                 </h1>
-                <p class="text-teal-500 font-bold text-lg mt-2">จัดการข้อมูลเจ้าของ (1 HN per Owner) และสัตว์เลี้ยง</p>
+                <p class="text-teal-500 font-bold text-lg mt-2">1 HN : 1 เจ้าของ (รองรับหลายเบอร์โทรและหลายสัตว์เลี้ยง)</p>
             </div>
             <div class="flex items-center gap-4 w-full md:w-auto">
                 <a href="index.html" class="flex-1 md:flex-none text-center bg-slate-700 hover:bg-slate-600 text-white px-8 py-4 rounded-2xl transition font-bold text-lg border border-white/10">🏠 หน้าหลัก</a>
@@ -42,34 +42,40 @@
 
         <section id="record-form" class="hidden mb-12 bg-navy-mid p-8 rounded-[32px] border-2 border-teal-500/40 shadow-2xl">
             <form id="main-form" onsubmit="saveData(event)">
+                
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 bg-white/5 p-8 rounded-3xl border border-white/10 mb-8">
-                    <div class="md:col-span-4 flex justify-between items-center">
+                    <div class="md:col-span-4 flex justify-between items-center border-b border-white/10 pb-4 mb-2">
                         <h3 class="text-xl font-bold text-teal-400">👤 ข้อมูลเจ้าของ</h3>
                         <div class="text-right">
-                            <span class="text-gray-400 text-sm block">หมายเลขเวชระเบียน (HN)</span>
+                            <span class="text-gray-400 text-sm block">HN</span>
                             <input type="text" id="hn" class="bg-transparent text-2xl font-black text-teal-400 outline-none text-right" readonly placeholder="AUTO">
                         </div>
                     </div>
-                    <div>
-                        <label class="form-label">เบอร์โทรศัพท์</label>
-                        <input type="text" id="phone" oninput="checkOwnerAndGenerateHN()" class="form-input font-bold" placeholder="08xxxxxxxx" required>
-                    </div>
+                    
                     <div class="md:col-span-1">
                         <label class="form-label">ชื่อเจ้าของ</label>
                         <input type="text" id="owner_name" class="form-input" placeholder="ชื่อ-นามสกุล" required>
                     </div>
-                    <div class="md:col-span-2">
+
+                    <div class="md:col-span-3">
                         <label class="form-label">ที่อยู่</label>
-                        <input type="text" id="address" class="form-input" placeholder="ที่อยู่ปัจจุบัน">
+                        <input type="text" id="address" class="form-input" placeholder="เลขที่บ้าน/ถนน/จังหวัด">
+                    </div>
+
+                    <div class="md:col-span-4">
+                        <label class="form-label mb-3">เบอร์โทรศัพท์ (กรอกเบอร์เพื่อตรวจสอบประวัติ)</label>
+                        <div id="phone-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            </div>
+                        <button type="button" onclick="addPhoneField()" class="mt-3 text-teal-400 text-sm font-bold hover:underline">+ เพิ่มเบอร์โทรศัพท์อีก</button>
                     </div>
                 </div>
 
                 <div id="pet-container" class="space-y-4">
                     <h3 class="text-xl font-bold text-white mb-4">🐶 รายละเอียดสัตว์เลี้ยง</h3>
-                    </div>
+                </div>
 
                 <button type="button" onclick="addPetField()" class="mt-4 w-full py-4 border-2 border-dashed border-teal-500/50 rounded-2xl text-teal-400 font-bold hover:bg-teal-500/10 transition">
-                    + เพิ่มสัตว์อีกตัวสำหรับเจ้าของคนนี้
+                    + เพิ่มสัตว์อีกตัว
                 </button>
 
                 <div class="flex justify-end gap-6 mt-10 pt-6 border-t border-white/10">
@@ -101,11 +107,48 @@
 
     <script>
         let petCount = 0;
+        let phoneCount = 0;
         const breedData = {
             "สุนัข": ["ไทย", "โกลเด้น รีทรีฟเวอร์", "ไซบีเรียน ฮัสกี้", "ปอมเมอเรเนียน", "พุดเดิ้ล", "ชิสุ", "บีเกิล", "อื่นๆ"],
             "แมว": ["ไทย", "เปอร์เซีย", "สก็อตติช โฟลด์", "บริติช ชอร์ตแฮร์", "วิเชียรมาศ", "เบงกอล", "อเมริกัน ชอร์ตแฮร์", "เมนคูน", "อื่นๆ"]
         };
 
+        // --- ระบบเบอร์โทรศัพท์ ---
+        function addPhoneField(value = '', label = 'เบอร์หลัก') {
+            phoneCount++;
+            const html = `
+                <div class="phone-entry flex gap-2 p-2 rounded-xl" id="phone-row-${phoneCount}">
+                    <input type="text" name="owner_phone" value="${value}" oninput="checkOwnerLookup(this)" class="form-input text-base" placeholder="08xxxxxxxx" required>
+                    <input type="text" name="phone_label" value="${label}" class="form-input text-base w-32" placeholder="เช่น แฟน">
+                    ${phoneCount > 1 ? `<button type="button" onclick="document.getElementById('phone-row-${phoneCount}').remove()" class="text-red-400 px-2">✕</button>` : ''}
+                </div>
+            `;
+            document.getElementById('phone-container').insertAdjacentHTML('beforeend', html);
+        }
+
+        async function checkOwnerLookup(input) {
+            const phone = input.value;
+            if (phone.length < 9) return;
+
+            // ค้นหาจากตาราง owner_phones
+            const { data, error } = await db.from('owner_phones').select('owner_hn, owners(*)').eq('phone_number', phone).single();
+            
+            if (data && data.owners) {
+                document.getElementById('hn').value = data.owner_hn;
+                document.getElementById('owner_name').value = data.owners.owner_name;
+                document.getElementById('address').value = data.owners.address;
+                document.getElementById('owner_name').classList.add('highlight-found');
+                // โหลดเบอร์อื่นๆ ของเจ้าของนี้มาแสดง (ถ้าต้องการ)
+            } else {
+                // ถ้าไม่เจอเบอร์นี้ ให้ลองเจน HN ใหม่ถ้ายังไม่มี HN ค้างไว้
+                if(!document.getElementById('hn').value) {
+                    const { data: maxOwner } = await db.from('owners').select('hn').order('hn', { ascending: false }).limit(1).single();
+                    document.getElementById('hn').value = maxOwner ? parseInt(maxOwner.hn) + 1 : 690001;
+                }
+            }
+        }
+
+        // --- ระบบสัตว์เลี้ยง ---
         function addPetField() {
             petCount++;
             const petHtml = `
@@ -126,10 +169,8 @@
                     <div>
                         <label class="form-label">เพศ</label>
                         <select name="gender" class="form-input">
-                            <option value="ผู้">♂️ ผู้</option>
-                            <option value="เมีย">♀️ เมีย</option>
-                            <option value="ผู้ตอน">♂️ ผู้ตอน</option>
-                            <option value="เมียหมัน">♀️ เมียหมัน</option>
+                            <option value="ผู้">♂️ ผู้</option><option value="เมีย">♀️ เมีย</option>
+                            <option value="ผู้ตอน">♂️ ผู้ตอน</option><option value="เมียหมัน">♀️ เมียหมัน</option>
                         </select>
                     </div>
                     <div>
@@ -143,87 +184,73 @@
         }
 
         function updateBreed(selectEl) {
-            const type = selectEl.value.replace(/[^ก-ฮa-zA-Z]/g, ''); // ลบไอคอนออกเพื่อเช็ค data
+            const type = selectEl.value.replace(/[^ก-ฮa-zA-Z]/g, '');
             const breedSelect = selectEl.parentElement.parentElement.querySelector('select[name="breed"]');
             breedSelect.innerHTML = (breedData[type] || ["อื่นๆ"]).map(b => `<option value="${b}">${b}</option>`).join('');
         }
 
-        async function checkOwnerAndGenerateHN() {
-            const phone = document.getElementById('phone').value;
-            const hnField = document.getElementById('hn');
-            const nameField = document.getElementById('owner_name');
-            const addrField = document.getElementById('address');
-
-            if (phone.length >= 9) {
-                // 1. เช็คว่าเป็นเจ้าของเดิมไหม
-                const { data: owner } = await db.from('owners').select('*').eq('phone', phone).single();
-                
-                if (owner) {
-                    hnField.value = owner.hn;
-                    nameField.value = owner.owner_name;
-                    addrField.value = owner.address;
-                    nameField.classList.add('highlight-found');
-                } else {
-                    // 2. ถ้าไม่พบ ให้เจน HN ใหม่ (MAX HN + 1)
-                    const { data: maxOwner } = await db.from('owners').select('hn').order('hn', { ascending: false }).limit(1).single();
-                    const lastHN = maxOwner ? parseInt(maxOwner.hn) : 690000; 
-                    hnField.value = lastHN + 1;
-                    nameField.classList.remove('highlight-found');
-                }
-            }
-        }
-
+        // --- บันทึกข้อมูล ---
         async function saveData(e) {
             e.preventDefault();
-            const phone = document.getElementById('phone').value;
             const hn = document.getElementById('hn').value;
-            
+
             // 1. บันทึก/อัปเดตเจ้าของ
-            const { error: ownerError } = await db.from('owners').upsert({
+            const { error: oe } = await db.from('owners').upsert({
                 hn: hn,
                 owner_name: document.getElementById('owner_name').value,
-                phone: phone,
                 address: document.getElementById('address').value
-            }, { onConflict: 'phone' });
+            });
+            if (oe) return alert("Error Owner: " + oe.message);
 
-            if (ownerError) return alert(ownerError.message);
+            // 2. บันทึกเบอร์โทรศัพท์ (ลบของเก่าที่ผูกกับ HN นี้แล้วเพิ่มใหม่เพื่อความเป๊ะ)
+            await db.from('owner_phones').delete().eq('owner_hn', hn);
+            const phones = Array.from(document.querySelectorAll('.phone-entry')).map(row => ({
+                owner_hn: hn,
+                phone_number: row.querySelector('[name="owner_phone"]').value,
+                label: row.querySelector('[name="phone_label"]').value
+            }));
+            await db.from('owner_phones').insert(phones);
 
-            // 2. รวบรวมข้อมูลสัตว์ทุกตัว
-            const petRows = document.querySelectorAll('.pet-entry');
-            const pets = Array.from(petRows).map(row => ({
-                hn: hn,
-                owner_phone: phone,
+            // 3. บันทึกสัตว์เลี้ยง
+            const pets = Array.from(document.querySelectorAll('.pet-entry')).map(row => ({
+                owner_hn: hn,
                 pet_name: row.querySelector('[name="pet_name"]').value,
-                pet_type: row.querySelector('[name="pet_type"]').value.includes('แมว') ? 'แมว' : row.querySelector('[name="pet_type"]').value.includes('สุนัข') ? 'สุนัข' : 'อื่นๆ',
+                pet_type: row.querySelector('[name="pet_type"]').value.includes('แมว') ? 'แมว' : 'สุนัข',
                 gender: row.querySelector('[name="gender"]').value.replace(/[^ก-ฮ]/g, ''),
                 breed: row.querySelector('[name="breed"]').value
             }));
+            const { error: ae } = await db.from('animals').insert(pets);
 
-            const { error: animalError } = await db.from('animals').insert(pets);
-            if (animalError) alert(animalError.message);
-            else { alert('บันทึกเรียบร้อย!'); location.reload(); }
+            if (ae) alert(ae.message);
+            else { alert('บันทึกสำเร็จ!'); location.reload(); }
         }
 
         async function fetchRecords() {
             const search = document.getElementById('search').value;
-            let query = db.from('animals').select('*, owners(*)').order('created_at', { ascending: false });
-            if (search) query = query.or(`hn.ilike.%${search}%,pet_name.ilike.%${search}%,owner_phone.ilike.%${search}%`);
+            // ดึงข้อมูลสัตว์ พร้อมข้อมูลเจ้าของ และเบอร์โทรของเจ้าของนั้น
+            let query = db.from('animals').select('*, owners(*, owner_phones(*))').order('created_at', { ascending: false });
+            
+            if (search) {
+                query = query.or(`owner_hn.ilike.%${search}%,pet_name.ilike.%${search}%`);
+                // หมายเหตุ: การค้นหาเบอร์โทรแบบซับซ้อนใน Join table อาจต้องใช้ RPC หรือ query แยก แต่เบื้องต้นใช้ HN/ชื่อสัตว์ก่อน
+            }
 
             const { data } = await query;
-            document.getElementById('animal-list').innerHTML = data.map(item => {
-                const typeIcon = item.pet_type === 'สุนัข' ? '🐶' : item.pet_type === 'แมว' ? '🐱' : '🐾';
+            document.getElementById('animal-list').innerHTML = (data || []).map(item => {
+                const typeIcon = item.pet_type === 'สุนัข' ? '🐶' : '🐱';
                 const genderIcon = item.gender.includes('ผู้') ? '<span class="text-blue-400">♂️</span>' : '<span class="text-pink-400">♀️</span>';
+                const phones = item.owners?.owner_phones?.map(p => p.phone_number).join(', ') || '-';
                 
                 return `
                 <tr class="hover:bg-white/5 transition">
-                    <td class="p-6 font-mono text-teal-400 font-black text-2xl">${item.hn}</td>
+                    <td class="p-6 font-mono text-teal-400 font-black text-2xl">${item.owner_hn}</td>
                     <td class="p-6">
                         <div class="font-bold text-white text-xl">${typeIcon} ${genderIcon} ${item.pet_name}</div>
                         <div class="text-sm text-gray-400 font-bold">${item.breed}</div>
                     </td>
                     <td class="p-6">
                         <div class="text-lg font-bold text-white">${item.owners?.owner_name || '-'}</div>
-                        <div class="text-base text-teal-500 font-black tracking-widest">${item.owner_phone}</div>
+                        <div class="text-base text-teal-500 font-black tracking-tight">${phones}</div>
                     </td>
                     <td class="p-6 text-center">
                         <button class="bg-white/10 hover:bg-teal-500 text-white px-6 py-2 rounded-xl border border-white/20 font-bold transition">ดูประวัติ</button>
@@ -235,6 +262,7 @@
         function toggleForm() {
             const form = document.getElementById('record-form');
             form.classList.toggle('hidden');
+            if(phoneCount === 0) addPhoneField();
             if(petCount === 0) addPetField();
         }
 
