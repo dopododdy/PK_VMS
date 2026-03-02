@@ -33,8 +33,7 @@
         .gender-m { color: #60a5fa; font-weight: 900; }
         .gender-f { color: #f472b6; font-weight: 900; }
         
-        /* ปุ่มคำนวณอายุ */
-        .btn-calc { background: #0f172a; border: 1px solid var(--teal); color: var(--teal); font-size: 0.7rem; padding: 2px 8px; border-radius: 6px; margin-top: 4px; transition: 0.2s; }
+        .btn-calc { background: #0f172a; border: 1px solid var(--teal); color: var(--teal); font-size: 0.7rem; padding: 4px 10px; border-radius: 8px; transition: 0.2s; }
         .btn-calc:hover { background: var(--teal); color: white; }
     </style>
 </head>
@@ -110,27 +109,44 @@
 
     <script>
         let allRecords = [];
-        let phoneCount = 0, petCount = 0;
+        let petCount = 0;
         const breedOptions = {
             "แมว": ["ไทย", "เปอร์เซีย", "สก็อตติช โฟลด์", "บริติช ชอร์ตแฮร์", "เมนคูน", "อื่นๆ"],
             "สุนัข": ["ไทย", "โกลเด้น รีทรีฟเวอร์", "ไซบีเรียน ฮัสกี้", "ปอมเมอเรเนียน", "พุดเดิ้ล", "อื่นๆ"]
         };
 
-        // --- Helper: คำนวณอายุจากวันเกิด ---
+        // --- ระบบวันที่ไทย (พ.ศ.) ---
+        function formatThaiDate(dateString) {
+            if (!dateString) return "ไม่ระบุ";
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('th-TH', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }).format(date);
+        }
+
+        // --- คำนวณอายุ ---
         function calculateAge(birthDate) {
-            if (!birthDate) return "ไม่ระบุ";
-            const diff = new Date() - new Date(birthDate);
-            const ageDate = new Date(diff);
-            const years = Math.abs(ageDate.getUTCFullYear() - 1970);
-            const months = ageDate.getUTCMonths();
+            if (!birthDate) return "ไม่ระบุอายุ";
+            const today = new Date();
+            const birth = new Date(birthDate);
+            let years = today.getFullYear() - birth.getFullYear();
+            let months = today.getMonth() - birth.getMonth();
+            if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
+                years--;
+                months += 12;
+            }
             return years > 0 ? `${years} ปี ${months} ด.` : `${months} เดือน`;
         }
 
+        // --- โหลดข้อมูลเริ่มต้น ---
         async function loadInitialData() {
             const { data, error } = await db.from('animals').select('*, owners(*, owner_phones(*))').order('created_at', { ascending: false });
             if (!error) { allRecords = data; renderList(data); }
         }
 
+        // --- กรองข้อมูล (Search) ---
         function filterLocal() {
             const kw = document.getElementById('search').value.toLowerCase();
             const filtered = allRecords.filter(i => 
@@ -141,33 +157,37 @@
             renderList(filtered);
         }
 
+        // --- แสดงผลรายการด้านซ้าย ---
         function renderList(data) {
             const listEl = document.getElementById('animal-list');
             listEl.innerHTML = data.map(item => {
                 const typeIcon = item.pet_type === 'สุนัข' ? '🐶' : (item.pet_type === 'แมว' ? '🐱' : '🐾');
                 const genderClass = item.gender.includes('ผู้') ? 'gender-m' : 'gender-f';
+                const thaiBirth = formatThaiDate(item.birth_date);
                 const ageText = calculateAge(item.birth_date);
-                const weightText = item.weight ? `${item.weight} kg` : '-';
                 
                 return `
                 <tr class="selectable" onclick="selectRecord('${item.owner_hn}', event)">
                     <td class="p-5 flex items-center gap-4">
                         <div class="type-icon">${typeIcon}</div>
                         <div>
-                            <div class="text-2xl font-black text-white"><span class="${genderClass}">${item.gender.includes('ผู้') ? '♂' : '♀'}</span> ${item.pet_name}</div>
-                            <div class="text-xs text-teal-400 font-mono">HN: ${item.owner_hn} | อายุ: ${ageText}</div>
+                            <div class="text-2xl font-black text-white">
+                                <span class="${genderClass}">${item.gender.includes('ผู้') ? '♂' : '♀'}</span> ${item.pet_name}
+                            </div>
+                            <div class="text-[11px] text-teal-400 font-bold">เกิด: ${thaiBirth}</div>
+                            <div class="text-[10px] text-gray-500 font-mono">HN: ${item.owner_hn} | อายุ: ${ageText}</div>
                         </div>
                     </td>
                     <td class="p-5 text-right">
                         <div class="text-lg font-bold text-gray-300">${item.owners?.owner_name || '-'}</div>
-                        <div class="text-xs text-teal-500 font-bold">น้ำหนัก: ${weightText}</div>
+                        <div class="text-xs text-teal-500 font-bold italic">W: ${item.weight || '-'} kg</div>
                     </td>
                 </tr>`;
             }).join('');
         }
 
+        // --- จัดการฟิลด์โทรศัพท์ ---
         function addPhoneField(value = '', label = 'หลัก') {
-            phoneCount++;
             const html = `<div class="flex gap-4 mb-2">
                 <input type="text" name="owner_phone" value="${value}" class="form-input flex-[3]" placeholder="เบอร์โทร" required>
                 <input type="text" name="phone_label" value="${label}" class="form-input flex-[1]" placeholder="ชื่อ">
@@ -175,6 +195,7 @@
             document.getElementById('phone-container').insertAdjacentHTML('beforeend', html);
         }
 
+        // --- จัดการฟิลด์สัตว์เลี้ยง ---
         function addPetField(data = {}) {
             petCount++;
             const html = `
@@ -214,11 +235,11 @@
                             <input type="date" name="birth_date" id="bd-${petCount}" value="${data.birth_date || ''}" class="form-input">
                         </div>
                         <div class="col-span-2 bg-black/20 p-3 rounded-xl border border-white/5">
-                            <label class="text-[10px] font-bold text-teal-500 mb-1 block uppercase">จำวันเกิดไม่ได้? (ใส่อายุเพื่อคำนวณ)</label>
+                            <label class="text-[10px] font-bold text-teal-500 mb-1 block uppercase">ประมาณอายุ (เพื่อคำนวณวันเกิด)</label>
                             <div class="flex gap-2 items-center">
                                 <input type="number" id="age-y-${petCount}" class="form-input py-1 text-center" placeholder="ปี">
                                 <input type="number" id="age-m-${petCount}" class="form-input py-1 text-center" placeholder="เดือน">
-                                <button type="button" onclick="calcBirthDate(${petCount})" class="btn-calc whitespace-nowrap">ยืนยันอายุ</button>
+                                <button type="button" onclick="calcBirthDate(${petCount})" class="btn-calc whitespace-nowrap">ยืนยัน</button>
                             </div>
                         </div>
                     </div>
@@ -227,28 +248,25 @@
             updateBreedOptions(document.querySelector(`#pet-container div:last-child select[name="pet_type"]`), data.breed);
         }
 
-        // --- ระบบคำนวณวันเกิดย้อนหลัง ---
+        // --- คำนวณวันเกิดย้อนหลัง ---
         function calcBirthDate(id) {
             const y = parseInt(document.getElementById(`age-y-${id}`).value) || 0;
             const m = parseInt(document.getElementById(`age-m-${id}`).value) || 0;
-            if (y === 0 && m === 0) return;
-
             const d = new Date();
             d.setFullYear(d.getFullYear() - y);
             d.setMonth(d.getMonth() - m);
-            // ปรับเป็นวันที่ 1 ของเดือนนั้นๆ เพื่อความง่าย
-            const formattedDate = d.toISOString().split('T')[0];
-            document.getElementById(`bd-${id}`).value = formattedDate;
+            d.setDate(1);
+            document.getElementById(`bd-${id}`).value = d.toISOString().split('T')[0];
         }
 
         function updateBreedOptions(selectType, selectedBreed = null) {
             const type = selectType.value;
-            const breedSelect = selectType.parentElement.parentElement.parentElement.querySelector('select[name="breed"]');
+            const breedSelect = selectType.closest('.pet-entry').querySelector('select[name="breed"]');
             const options = breedOptions[type] || ["อื่นๆ"];
             breedSelect.innerHTML = options.map(b => `<option value="${b}" ${b===selectedBreed?'selected':''}>${b}</option>`).join('');
         }
 
-        // แก้ไขให้ดึงข้อมูลมาแสดงครบถ้วน
+        // --- เลือกเรคคอร์ด ---
         async function selectRecord(hn, event) {
             document.querySelectorAll('.selectable').forEach(el => el.classList.remove('active-row'));
             if(event) event.currentTarget.classList.add('active-row');
@@ -292,18 +310,22 @@
             document.getElementById('hn').value = data ? parseInt(data.hn) + 1 : 690001;
         }
 
+        // --- บันทึกข้อมูล ---
         async function saveData(e) {
             e.preventDefault();
             const hn = document.getElementById('hn').value;
             try {
+                // 1. Upsert Owner
                 await db.from('owners').upsert({ hn, owner_name: document.getElementById('owner_name').value, address: document.getElementById('address').value });
+                
+                // 2. Refresh Phones
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
                 const phones = Array.from(document.querySelectorAll('#phone-container > div')).map(div => ({
                     owner_hn: hn, phone_number: div.querySelector('[name="owner_phone"]').value, label: div.querySelector('[name="phone_label"]').value
                 }));
-                await db.from('owner_phones').insert(phones);
+                if (phones.length > 0) await db.from('owner_phones').insert(phones);
                 
-                // ลบสัตว์เดิม (ถ้าเป็นการแก้ไข) เพื่อป้องกันข้อมูลซ้ำ หรือจะใช้การ update ก็ได้
+                // 3. Refresh Animals
                 await db.from('animals').delete().eq('owner_hn', hn);
                 const pets = Array.from(document.querySelectorAll('.pet-entry')).map(div => ({
                     owner_hn: hn, 
@@ -314,7 +336,8 @@
                     weight: div.querySelector('[name="weight"]').value || null,
                     birth_date: div.querySelector('[name="birth_date"]').value || null
                 }));
-                await db.from('animals').insert(pets);
+                if (pets.length > 0) await db.from('animals').insert(pets);
+
                 alert('บันทึกสำเร็จ!'); location.reload();
             } catch (err) { alert(err.message); }
         }
