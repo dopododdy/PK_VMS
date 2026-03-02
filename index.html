@@ -1,165 +1,228 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
     <title>PK-VMS | Veterinary Management System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Kanit', sans-serif; }
+        :root {
+            --navy: #0b1929;
+            --navy-mid: #112240;
+            --teal: #0ea5a0;
+            --teal-light: #14c4bc;
+            --teal-glow: rgba(14,165,160,0.25);
+            --amber: #f59e0b;
+            --surface: rgba(255,255,255,0.04);
+            --border: rgba(255,255,255,0.1);
+            --text: #e2e8f0;
+        }
+
+        body {
+            font-family: "Sarabun", sans-serif;
+            background: var(--navy);
+            color: var(--text);
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Mesh Background */
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background: 
+                radial-gradient(ellipse at 20% 10%, rgba(14,165,160,0.15) 0%, transparent 70%),
+                radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.1) 0%, transparent 60%);
+        }
+
+        /* Login Overlay */
+        #login-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: var(--navy);
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .login-box {
+            background: var(--navy-mid);
+            padding: 2.5rem;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 400px; width: 90%;
+        }
+
+        .input-pw {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            width: 100%;
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 1.2rem;
+            letter-spacing: 0.5rem;
+            outline: none;
+        }
+
+        .input-pw:focus { border-color: var(--teal); box-shadow: 0 0 10px var(--teal-glow); }
+
+        /* Menu Styles */
+        .menu-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-5px);
+            background: rgba(14,165,160,0.08);
+            border-color: var(--teal);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .notif-badge {
+            position: absolute; top: 15px; right: 15px;
+            background: var(--teal);
+            color: white; font-size: 10px; font-weight: bold;
+            padding: 2px 8px; border-radius: 20px;
+        }
+
+        .card-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
     </style>
 </head>
-<body class="bg-gray-50" x-data="{ menu: 'dashboard', sidebarOpen: true }">
+<body>
 
-    <div class="lg:hidden bg-blue-600 text-white p-4 flex justify-between items-center">
-        <h1 class="font-bold">PK-VMS</h1>
-        <button @click="sidebarOpen = !sidebarOpen"><i class="fas fa-bars"></i></button>
+    <div class="mesh-bg"></div>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <div class="text-4xl mb-4">🔐</div>
+            <h2 class="text-xl font-bold text-white mb-2">PK-VMS Access</h2>
+            <p class="text-gray-400 text-sm">กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานระบบ</p>
+            <input type="password" id="pw-input" class="input-pw" placeholder="•••••••••" maxlength="9">
+            <button onclick="checkPassword()" class="w-full mt-4 bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 rounded-xl transition">
+                เข้าสู่ระบบ
+            </button>
+        </div>
     </div>
 
-    <div class="flex h-screen overflow-hidden">
-        <aside class="bg-slate-800 text-white w-64 flex-shrink-0 transition-all duration-300" 
-               :class="sidebarOpen ? 'translate-x-0' : '-translate-x-64 lg:translate-x-0 lg:w-20'">
-            <div class="p-6 text-center border-b border-slate-700">
-                <h2 class="text-xl font-bold text-blue-400" x-show="sidebarOpen">PK-VMS</h2>
-                <i class="fas fa-stethoscopes text-2xl" x-show="!sidebarOpen"></i>
+    <div id="main-content" style="display: none;">
+        <header class="p-6 flex justify-between items-center border-b border-white/5 bg-navy/80 backdrop-blur-md sticky top-0 z-50">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-teal-500 to-teal-700 w-10 h-10 rounded-lg flex items-center justify-center shadow-lg shadow-teal-900/20">
+                    <span class="text-white font-bold">PK</span>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none">PK-VMS</h1>
+                    <span class="text-[10px] text-teal-500 uppercase tracking-widest">Veterinary Management System</span>
+                </div>
             </div>
-            <nav class="mt-6">
-                <template x-for="item in [
-                    {id: 'dashboard', icon: 'fa-chart-line', label: 'หน้าแรก'},
-                    {id: 'medical', icon: 'fa-notes-medical', label: 'เวชระเบียน'},
-                    {id: 'pharmacy', icon: 'fa-pills', label: 'ยาและเวชภัณฑ์'},
-                    {id: 'lab', icon: 'fa-microscope', label: 'ผลแล็ป'},
-                    {id: 'pos', icon: 'fa-cash-register', label: 'POS / ชำระเงิน'},
-                    {id: 'docs', icon: 'fa-file-invoice', label: 'เอกสาร'}
-                ]">
-                    <a href="#" @click.prevent="menu = item.id" 
-                       class="flex items-center px-6 py-4 transition-colors hover:bg-slate-700"
-                       :class="menu === item.id ? 'bg-blue-600 border-r-4 border-blue-300' : ''">
-                        <i class="fas w-6" :class="item.icon"></i>
-                        <span class="ml-4" x-show="sidebarOpen" x-text="item.label"></span>
-                    </a>
-                </template>
-            </nav>
-        </aside>
+            <button onclick="logout()" class="text-xs text-gray-500 hover:text-white">ออกจากระบบ</button>
+        </header>
 
-        <main class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white shadow-sm p-4 flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-gray-700 uppercase tracking-wider" x-text="menu"></h2>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-500">น.สพ. ปิติพัทธ์ กิตติภัทรคุณ</span>
-                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">PK</div>
+        <main class="max-w-6xl mx-auto p-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <p class="text-gray-400 text-xs">เคสวันนี้</p>
+                    <p class="text-2xl font-bold text-teal-400">12</p>
                 </div>
-            </header>
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <p class="text-gray-400 text-xs">ยอดขาย (POS)</p>
+                    <p class="text-2xl font-bold text-amber-400">฿8,450</p>
+                </div>
+            </div>
 
-            <section class="flex-1 overflow-y-auto p-6">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-6">
                 
-                <div x-show="menu === 'dashboard'" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-                            <p class="text-gray-500 text-sm">คนไข้วันนี้</p>
-                            <p class="text-2xl font-bold">12 ราย</p>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-                            <p class="text-gray-500 text-sm">ยอดขายวันนี้</p>
-                            <p class="text-2xl font-bold">฿15,400</p>
-                        </div>
-                    </div>
-                </div>
+                <a href="registration.html" class="menu-card">
+                    <span class="card-icon">📝</span>
+                    <h3 class="font-bold text-white">เวชระเบียน</h3>
+                    <p class="text-xs text-gray-400 mt-1">ลงทะเบียนสัตว์ป่วยใหม่และประวัติ</p>
+                </a>
 
-                <div x-show="menu === 'medical'">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-medium">จัดการเวชระเบียนสัตว์ป่วย</h3>
-                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ เพิ่มสัตว์ป่วยใหม่</button>
-                    </div>
-                    <div class="bg-white rounded-xl shadow overflow-hidden">
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50 border-b">
-                                <tr>
-                                    <th class="p-4">HN</th>
-                                    <th class="p-4">ชื่อสัตว์</th>
-                                    <th class="p-4">เจ้าของ</th>
-                                    <th class="p-4">สถานะล่าสุด</th>
-                                    <th class="p-4">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="border-b hover:bg-gray-50">
-                                    <td class="p-4">HN-001</td>
-                                    <td class="p-4">น้องถุงเงิน (แมว)</td>
-                                    <td class="p-4">คุณสมชาย</td>
-                                    <td class="p-4"><span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs">รอตรวจ</span></td>
-                                    <td class="p-4"><button class="text-blue-600"><i class="fas fa-edit"></i></button></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <a href="pharmacy.html" class="menu-card">
+                    <div class="notif-badge">3 รายการใกล้หมด</div>
+                    <span class="card-icon">💊</span>
+                    <h3 class="font-bold text-white">ยาและเวชภัณฑ์</h3>
+                    <p class="text-xs text-gray-400 mt-1">จัดการคลังยาและจัดยาตามสั่ง</p>
+                </a>
 
-                <div x-show="menu === 'pharmacy'">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow">
-                            <h3 class="font-bold mb-4">รายการยาในคลัง</h3>
-                            <input type="text" placeholder="ค้นหาชื่อยา..." class="w-full mb-4 p-2 border rounded">
-                            <table class="w-full text-sm">
-                                <tr class="bg-gray-100"><th class="p-2">ชื่อยา</th><th class="p-2">คงเหลือ</th><th class="p-2">หน่วย</th></tr>
-                                <tr><td class="p-2">Amoxicillin 250mg</td><td class="p-2 text-red-500 font-bold">5</td><td class="p-2">แผง</td></tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <a href="lab.html" class="menu-card">
+                    <span class="card-icon">🔬</span>
+                    <h3 class="font-bold text-white">แล็ป (Lab)</h3>
+                    <p class="text-xs text-gray-400 mt-1">ผลตรวจเลือดและ X-Ray</p>
+                </a>
 
-                <div x-show="menu === 'lab'">
-                    <div class="bg-white p-8 rounded-xl shadow text-center">
-                        <i class="fas fa-microscope text-5xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500">ระบบเชื่อมต่อเครื่องตรวจเลือดอัตโนมัติ (กำลังพัฒนา)</p>
-                    </div>
-                </div>
+                <a href="pos.html" class="menu-card">
+                    <span class="card-icon">💰</span>
+                    <h3 class="font-bold text-white">POS (ชำระเงิน)</h3>
+                    <p class="text-xs text-gray-400 mt-1">คิดเงิน ออกใบเสร็จรับเงิน</p>
+                </a>
 
-                <div x-show="menu === 'pos'" class="flex flex-col lg:flex-row gap-6">
-                    <div class="flex-1 bg-white p-6 rounded-xl shadow">
-                        <h3 class="font-bold mb-4 text-blue-600">รายการสินค้า/บริการ</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <button class="p-4 border rounded-lg hover:bg-blue-50 text-left">
-                                <p class="font-bold">ค่าตรวจทั่วไป</p>
-                                <p class="text-sm text-gray-500">฿300.00</p>
-                            </button>
-                            <button class="p-4 border rounded-lg hover:bg-blue-50 text-left">
-                                <p class="font-bold">วัคซีนรวมสุนัข</p>
-                                <p class="text-sm text-gray-500">฿450.00</p>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="w-full lg:w-80 bg-slate-100 p-6 rounded-xl shadow border">
-                        <h3 class="font-bold mb-4">สรุปยอดชำระ</h3>
-                        <div class="space-y-2 border-b pb-4 mb-4 text-sm">
-                            <div class="flex justify-between"><span>ค่าตรวจ</span><span>300.00</span></div>
-                        </div>
-                        <div class="flex justify-between font-bold text-xl text-blue-700">
-                            <span>ยอดสุทธิ</span><span>฿300.00</span>
-                        </div>
-                        <button class="w-full bg-green-600 text-white mt-6 py-3 rounded-xl font-bold hover:bg-green-700">ชำระเงิน / พิมพ์ใบเสร็จ</button>
-                    </div>
-                </div>
+                <a href="surgery.html" class="menu-card">
+                    <div class="notif-badge bg-red-500">2 เคส</div>
+                    <span class="card-icon">✂️</span>
+                    <h3 class="font-bold text-white">ห้องผ่าตัด</h3>
+                    <p class="text-xs text-gray-400 mt-1">ตารางผ่าตัดและวิสัญญี</p>
+                </a>
 
-                <div x-show="menu === 'docs'">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="p-6 bg-white rounded-xl shadow border hover:border-blue-500 cursor-pointer transition-all text-center">
-                            <i class="fas fa-file-pdf text-red-500 text-3xl mb-2"></i>
-                            <p class="font-medium">ใบรับรองฉีดวัคซีน</p>
-                        </div>
-                        <div class="p-6 bg-white rounded-xl shadow border hover:border-blue-500 cursor-pointer transition-all text-center">
-                            <i class="fas fa-file-medical text-blue-500 text-3xl mb-2"></i>
-                            <p class="font-medium">ใบรับรองแพทย์</p>
-                        </div>
-                    </div>
-                </div>
+                <a href="documents.html" class="menu-card">
+                    <span class="card-icon">📄</span>
+                    <h3 class="font-bold text-white">เอกสาร</h3>
+                    <p class="text-xs text-gray-400 mt-1">ใบรับรองแพทย์และรายงาน</p>
+                </a>
 
-            </section>
+            </div>
         </main>
+
+        <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
+            PK-VMS © 2026 Pitipat Kitpipatkun
+        </footer>
     </div>
 
+    <script>
+        const MASTER_PW = "044641460";
+
+        // ตรวจสอบสถานะ Login จาก Session
+        window.onload = () => {
+            if (sessionStorage.getItem("isLoggedIn") === "true") {
+                showDashboard();
+            }
+        };
+
+        function checkPassword() {
+            const input = document.getElementById("pw-input").value;
+            if (input === MASTER_PW) {
+                sessionStorage.setItem("isLoggedIn", "true");
+                showDashboard();
+            } else {
+                alert("รหัสผ่านไม่ถูกต้อง!");
+                document.getElementById("pw-input").value = "";
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById("login-overlay").style.display = "none";
+            document.getElementById("main-content").style.display = "block";
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            location.reload();
+        }
+
+        // รองรับการกด Enter
+        document.getElementById("pw-input").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") checkPassword();
+        });
+    </script>
 </body>
 </html>
