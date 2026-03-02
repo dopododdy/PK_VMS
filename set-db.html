@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>จัดการฐานข้อมูล | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+
+    <style>
+        :root {
+            --navy: #0b1929;
+            --navy-mid: #112240;
+            --teal: #0ea5a0;
+            --border: rgba(255,255,255,0.1);
+        }
+        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; }
+        .glass-panel {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+        }
+        .status-dot {
+            width: 12px; height: 12px; border-radius: 50%; display: inline-block;
+        }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="max-w-3xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <a href="settings.html" class="text-teal-500 text-sm hover:underline">← ย้อนกลับ</a>
+                <h1 class="text-2xl font-bold text-white mt-2">🗄️ Database Management</h1>
+            </div>
+            <button onclick="checkConnection()" class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-xl text-sm transition">
+                ตรวจสอบการเชื่อมต่อ
+            </button>
+        </header>
+
+        <div class="glass-panel p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-gray-400">สถานะการเชื่อมต่อปัจจุบัน</span>
+                <div id="status-tag" class="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full text-xs">
+                    <span id="status-color" class="status-dot bg-gray-500"></span>
+                    <span id="status-text">กำลังตรวจสอบ...</span>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="bg-black/20 p-3 rounded-lg border border-white/5">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Project URL</p>
+                    <p id="display-url" class="text-sm font-mono text-teal-400 break-all italic">Loading...</p>
+                </div>
+                <div class="bg-black/20 p-3 rounded-lg border border-white/5">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">API Key (Public)</p>
+                    <p id="display-key" class="text-sm font-mono text-gray-400 break-all italic">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+            📊 ตารางในระบบ (Tables)
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="table-list">
+            <div class="glass-panel p-4 animate-pulse">กำลังโหลดข้อมูลตาราง...</div>
+        </div>
+
+        <div class="mt-8 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+            <p class="text-amber-500 text-xs">
+                <strong>คำแนะนำ:</strong> หากสถานะเป็น Offline กรุณาตรวจสอบค่าในไฟล์ <code>supabase-config.js</code> หรือเช็คอินเทอร์เน็ตของคุณ
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // แสดงค่าจาก Config
+        document.getElementById('display-url').innerText = supabaseUrl;
+        document.getElementById('display-key').innerText = supabaseKey.substring(0, 20) + "..." + supabaseKey.substring(supabaseKey.length - 10);
+
+        async function checkConnection() {
+            const statusColor = document.getElementById('status-color');
+            const statusText = document.getElementById('status-text');
+            const tableList = document.getElementById('table-list');
+
+            statusText.innerText = "กำลังทดสอบ...";
+            statusColor.className = "status-dot bg-amber-500 animate-pulse-slow";
+
+            try {
+                // ทดลองดึงข้อมูลจากตาราง medrec (หรือตารางใดก็ได้) เพื่อเช็ค Connection
+                const { data, error } = await db.from('medrec').select('id').limit(1);
+
+                if (error) throw error;
+
+                // ถ้าสำเร็จ
+                statusColor.className = "status-dot bg-green-500";
+                statusText.innerText = "Online - เชื่อมต่อสำเร็จ";
+                statusText.classList.add("text-green-400");
+                
+                loadTableStats();
+
+            } catch (err) {
+                // ถ้าล้มเหลว
+                statusColor.className = "status-dot bg-red-500";
+                statusText.innerText = "Offline - การเชื่อมต่อผิดพลาด";
+                statusText.classList.add("text-red-400");
+                console.error(err);
+                tableList.innerHTML = `<p class="text-red-400 text-sm">ไม่สามารถดึงข้อมูลตารางได้</p>`;
+            }
+        }
+
+        async function loadTableStats() {
+            const tableList = document.getElementById('table-list');
+            const tables = ['medrec', 'pharmacy', 'pos_transactions']; // รายชื่อตารางที่เราสร้างไว้
+            
+            tableList.innerHTML = ''; // ล้างค่าเดิม
+
+            for (const tableName of tables) {
+                const { count, error } = await db
+                    .from(tableName)
+                    .select('*', { count: 'exact', head: true });
+
+                const card = document.createElement('div');
+                card.className = 'glass-panel p-4 flex justify-between items-center';
+                card.innerHTML = `
+                    <div>
+                        <p class="text-white font-bold">${tableName}</p>
+                        <p class="text-[10px] text-gray-500 uppercase">Database Table</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-bold text-teal-400">${error ? 'N/A' : count}</p>
+                        <p class="text-[10px] text-gray-500">Rows</p>
+                    </div>
+                `;
+                tableList.appendChild(card);
+            }
+        }
+
+        // รันครั้งแรกเมื่อโหลดหน้า
+        window.onload = checkConnection;
+    </script>
+</body>
+</html>
