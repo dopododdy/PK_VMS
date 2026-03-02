@@ -15,7 +15,7 @@
         .form-input { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; padding: 10px 15px; width: 100%; color: white; outline: none; }
         .form-input:focus { border-color: var(--teal); box-shadow: 0 0 10px rgba(14,165,160,0.2); }
         .glass-table { background: rgba(255,255,255,0.02); border-radius: 20px; overflow: hidden; border: 1px solid var(--border); }
-        select option { background: var(--navy-mid); }
+        select option { background: var(--navy-mid); color: white; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -49,10 +49,17 @@
                     <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">ชื่อสัตว์</label>
                     <input type="text" id="pet_name" class="form-input" placeholder="ชื่อสัตว์เลี้ยง" required>
                 </div>
+
                 <div>
                     <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">ชนิดสัตว์</label>
-                    <input type="text" id="pet_type" class="form-input" placeholder="เช่น สุนัข, แมว, กระต่าย" required>
+                    <select id="pet_type" class="form-input" onchange="updateBreedOptions()" required>
+                        <option value="">เลือกชนิดสัตว์</option>
+                        <option value="แมว">แมว</option>
+                        <option value="สุนัข">สุนัข</option>
+                        <option value="อื่นๆ">อื่นๆ</option>
+                    </select>
                 </div>
+
                 <div>
                     <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">เพศ</label>
                     <select id="gender" class="form-input">
@@ -62,10 +69,15 @@
                         <option value="เมียหมัน">เมียหมัน</option>
                     </select>
                 </div>
+
                 <div>
                     <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">พันธุ์</label>
-                    <input type="text" id="breed" class="form-input" placeholder="พันธุ์สัตว์">
+                    <select id="breed_select" class="form-input">
+                        <option value="">กรุณาเลือกชนิดสัตว์ก่อน</option>
+                    </select>
+                    <input type="text" id="breed_custom" class="form-input mt-2 hidden" placeholder="ระบุพันธุ์">
                 </div>
+
                 <div>
                     <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">เบอร์โทรศัพท์เจ้าของ</label>
                     <input type="text" id="phone" class="form-input" placeholder="08x-xxxxxxx" required>
@@ -105,19 +117,58 @@
                         <th class="p-4 text-center">จัดการ</th>
                     </tr>
                 </thead>
-                <tbody id="med-list" class="divide-y divide-white/5">
-                    </tbody>
+                <tbody id="med-list" class="divide-y divide-white/5"></tbody>
             </table>
         </div>
     </div>
 
     <script>
+        // ข้อมูลสายพันธุ์
+        const breedData = {
+            "สุนัข": [
+                "โกลเด้น รีทรีฟเวอร์", "ไซบีเรียน ฮัสกี้", "ปอมเมอเรเนียน", "พุดเดิ้ล", "ชิสุ", 
+                "บูลด็อก", "เฟรนช์ บูลด็อก", "บีเกิล", "ไทยหลังอาน", "ชิวาวา", "อื่นๆ"
+            ],
+            "แมว": [
+                "เปอร์เซีย", "สก็อตติช โฟลด์", "บริติช ชอร์ตแฮร์", "วิเชียรมาศ", "เบงกอล", 
+                "อเมริกัน ชอร์ตแฮร์", "เมนคูน", "รัสเซียน บลู", "สฟิงซ์", "ขาวมณี", "อื่นๆ"
+            ]
+        };
+
+        function updateBreedOptions() {
+            const type = document.getElementById('pet_type').value;
+            const breedSelect = document.getElementById('breed_select');
+            const breedCustom = document.getElementById('breed_custom');
+            
+            breedSelect.innerHTML = '';
+            breedCustom.classList.add('hidden');
+
+            if (type === "อื่นๆ" || !type) {
+                const opt = document.createElement('option');
+                opt.value = "อื่นๆ";
+                opt.textContent = type === "อื่นๆ" ? "ระบุเองด้านล่าง" : "กรุณาเลือกชนิดสัตว์";
+                breedSelect.appendChild(opt);
+                if (type === "อื่นๆ") breedCustom.classList.remove('hidden');
+            } else {
+                breedData[type].forEach(breed => {
+                    const opt = document.createElement('option');
+                    opt.value = breed;
+                    opt.textContent = breed;
+                    breedSelect.appendChild(opt);
+                });
+                
+                // เช็คถ้าเลือก "อื่นๆ" ใน dropdown ของพันธุ์
+                breedSelect.onchange = function() {
+                    if (this.value === "อื่นๆ") breedCustom.classList.remove('hidden');
+                    else breedCustom.classList.add('hidden');
+                };
+            }
+        }
+
         function toggleForm() {
             const form = document.getElementById('record-form');
             form.classList.toggle('hidden');
-            if(!form.classList.contains('hidden')) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+            if(!form.classList.contains('hidden')) window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         async function fetchRecords() {
@@ -145,9 +196,7 @@
                         <div class="text-[10px] text-teal-500 font-bold">${item.phone || '-'}</div>
                     </td>
                     <td class="p-4 text-center">
-                        <button class="text-[10px] bg-white/5 hover:bg-teal-500 hover:text-white px-3 py-1.5 rounded-lg border border-white/10 transition uppercase font-bold tracking-tighter">
-                            Details
-                        </button>
+                        <button class="text-[10px] bg-white/5 hover:bg-teal-500 hover:text-white px-3 py-1.5 rounded-lg border border-white/10 transition uppercase font-bold tracking-tighter">Details</button>
                     </td>
                 </tr>
             `).join('');
@@ -156,12 +205,19 @@
         async function saveData(e) {
             e.preventDefault();
             
+            const petType = document.getElementById('pet_type').value;
+            const breedSelect = document.getElementById('breed_select').value;
+            const breedCustom = document.getElementById('breed_custom').value;
+            
+            // เลือกใช้ค่าจาก dropdown หรือถ้าเป็น "อื่นๆ" ให้ใช้ค่าที่พิมพ์
+            const finalBreed = (breedSelect === "อื่นๆ") ? breedCustom : breedSelect;
+
             const payload = {
                 hn: document.getElementById('hn').value,
                 pet_name: document.getElementById('pet_name').value,
-                pet_type: document.getElementById('pet_type').value,
+                pet_type: petType,
                 gender: document.getElementById('gender').value,
-                breed: document.getElementById('breed').value,
+                breed: finalBreed,
                 owner_name: document.getElementById('owner_name').value,
                 phone: document.getElementById('phone').value,
                 address: document.getElementById('address').value
@@ -174,6 +230,7 @@
             } else {
                 alert('บันทึกข้อมูลเรียบร้อย!');
                 document.getElementById('pet-form').reset();
+                updateBreedOptions(); // Reset breed list
                 toggleForm();
                 fetchRecords();
             }
