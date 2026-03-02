@@ -2,268 +2,109 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <title>PK-VMS | Veterinary Management System</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>ตั้งค่าระบบ | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-
     <style>
-        /* ... (CSS เดิมของคุณคงไว้ทั้งหมด) ... */
         :root {
             --navy: #0b1929;
             --navy-mid: #112240;
             --teal: #0ea5a0;
-            --teal-light: #14c4bc;
-            --teal-glow: rgba(14,165,160,0.25);
-            --amber: #f59e0b;
-            --surface: rgba(255,255,255,0.04);
             --border: rgba(255,255,255,0.1);
-            --text: #e2e8f0;
         }
-
-        body {
-            font-family: "Sarabun", sans-serif;
-            background: var(--navy);
-            color: var(--text);
-            margin: 0;
-            overflow-x: hidden;
+        body { 
+            font-family: "Sarabun", sans-serif; 
+            background: var(--navy); 
+            color: #e2e8f0; 
+            min-height: 100vh;
         }
-
         .mesh-bg {
             position: fixed; inset: 0; z-index: -1;
-            background: 
-                radial-gradient(ellipse at 20% 10%, rgba(14,165,160,0.15) 0%, transparent 70%),
-                radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.1) 0%, transparent 60%);
+            background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%);
         }
-
-        #login-overlay {
-            position: fixed; inset: 0; z-index: 1000;
-            background: var(--navy);
-            display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .login-box {
-            background: var(--navy-mid);
-            padding: 2.5rem;
-            border-radius: 24px;
+        .settings-card {
+            background: rgba(255,255,255,0.03);
             border: 1px solid var(--border);
-            box-shadow: 0 0 40px rgba(0,0,0,0.5);
-            text-align: center;
-            max-width: 400px; width: 90%;
-        }
-
-        .input-pw {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            color: white;
-            padding: 12px;
-            border-radius: 12px;
-            width: 100%;
-            margin-top: 1.5rem;
-            text-align: center;
-            font-size: 1.2rem;
-            letter-spacing: 0.5rem;
-            outline: none;
-        }
-
-        .input-pw:focus { border-color: var(--teal); box-shadow: 0 0 10px var(--teal-glow); }
-
-        .menu-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 22px;
+            border-radius: 20px;
             padding: 1.5rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
         }
-
-        .menu-card:hover {
-            transform: translateY(-5px);
-            background: rgba(14,165,160,0.08);
+        .settings-card:hover {
+            background: rgba(14,165,160,0.1);
             border-color: var(--teal);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: translateX(10px);
         }
-
-        .notif-badge {
-            position: absolute; top: 15px; right: 15px;
-            background: var(--teal);
-            color: white; font-size: 10px; font-weight: bold;
-            padding: 2px 8px; border-radius: 20px;
+        .icon-box {
+            width: 50px;
+            height: 50px;
+            background: var(--navy-mid);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 1px solid var(--border);
         }
-
-        .card-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
     </style>
 </head>
 <body>
-
     <div class="mesh-bg"></div>
 
-    <div id="login-overlay">
-        <div class="login-box">
-            <div class="text-4xl mb-4">🔐</div>
-            <h2 class="text-xl font-bold text-white mb-2">PK-VMS Access</h2>
-            <p class="text-gray-400 text-sm">กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานระบบ</p>
-            <input type="password" id="pw-input" class="input-pw" placeholder="•••••••••" maxlength="9">
-            <button onclick="checkPassword()" class="w-full mt-4 bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 rounded-xl transition">
-                เข้าสู่ระบบ
-            </button>
+    <header class="p-6 border-b border-white/5 bg-navy/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex items-center gap-4">
+            <a href="index.html" class="text-gray-400 hover:text-white transition text-sm">← กลับหน้าหลัก</a>
+            <h1 class="text-xl font-bold border-l pl-4 border-white/20">⚙️ การตั้งค่าระบบ</h1>
         </div>
-    </div>
+    </header>
 
-    <div id="main-content" style="display: none;">
-        <header class="p-6 flex justify-between items-center border-b border-white/5 bg-navy/80 backdrop-blur-md sticky top-0 z-50">
-            <div class="flex items-center gap-3">
-                <div class="bg-gradient-to-br from-teal-500 to-teal-700 w-10 h-10 rounded-lg flex items-center justify-center shadow-lg shadow-teal-900/20">
-                    <span class="text-white font-bold">PK</span>
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-none">PK-VMS</h1>
-                    <span class="text-[10px] text-teal-500 uppercase tracking-widest">Veterinary Management System</span>
-                </div>
-            </div>
-            <div class="flex items-center gap-4">
-                <span id="db-status" class="text-[10px] bg-green-500/20 text-green-400 px-2 py-1 rounded">Cloud Online</span>
-                <button onclick="logout()" class="text-xs text-gray-500 hover:text-white">ออกจากระบบ</button>
-            </div>
-        </header>
+    <main class="max-w-4xl mx-auto p-6">
+        <p class="text-gray-400 mb-8">จัดการการเชื่อมต่อ ข้อมูลพื้นฐาน และความปลอดภัยของระบบ PK-VMS</p>
 
-        <main class="max-w-6xl mx-auto p-6">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <p class="text-gray-400 text-xs">เคสวันนี้</p>
-                    <p id="today-cases" class="text-2xl font-bold text-teal-400">...</p>
+        <div class="grid grid-cols-1 gap-4">
+            
+            <a href="set-db.html" class="settings-card">
+                <div class="icon-box">🗄️</div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-white text-lg">จัดการฐานข้อมูล (Database)</h3>
+                    <p class="text-sm text-gray-400">ตั้งค่าการเชื่อมต่อ Supabase, ตรวจสอบสถานะ Cloud</p>
                 </div>
-                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <p class="text-gray-400 text-xs">ยอดขายวันนี้ (POS)</p>
-                    <p id="today-sales" class="text-2xl font-bold text-amber-400">฿0</p>
+                <div class="text-teal-500 text-xl">→</div>
+            </a>
+
+            <div class="settings-card opacity-50 cursor-not-allowed">
+                <div class="icon-box">🏥</div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-white text-lg">ข้อมูลคลินิก</h3>
+                    <p class="text-sm text-gray-400">ชื่อคลินิก, ที่อยู่, เบอร์โทรสำหรับออกใบเสร็จ (เร็วๆ นี้)</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 lg:grid-cols-3 gap-6">
-                <a href="medrec.html" class="menu-card">
-                    <span class="card-icon">📝</span>
-                    <h3 class="font-bold text-white">เวชระเบียน</h3>
-                    <p class="text-xs text-gray-400 mt-1">ลงทะเบียนสัตว์ป่วยใหม่และประวัติ</p>
-                </a>
-
-                <a href="pharmacy.html" class="menu-card">
-                    <div id="stock-alert" class="notif-badge" style="display:none;">!</div>
-                    <span class="card-icon">💊</span>
-                    <h3 class="font-bold text-white">ยาและเวชภัณฑ์</h3>
-                    <p class="text-xs text-gray-400 mt-1">จัดการคลังยาและจัดยาตามสั่ง</p>
-                </a>
-
-                <a href="lab.html" class="menu-card">
-                    <span class="card-icon">🔬</span>
-                    <h3 class="font-bold text-white">แล็ป (Lab)</h3>
-                    <p class="text-xs text-gray-400 mt-1">ผลตรวจเลือดและ X-Ray</p>
-                </a>
-
-                <a href="pos.html" class="menu-card">
-                    <span class="card-icon">💰</span>
-                    <h3 class="font-bold text-white">POS (ชำระเงิน)</h3>
-                    <p class="text-xs text-gray-400 mt-1">คิดเงิน ออกใบเสร็จรับเงิน</p>
-                </a>
-
-                <a href="surgery.html" class="menu-card">
-                    <span class="card-icon">✂️</span>
-                    <h3 class="font-bold text-white">ห้องผ่าตัด</h3>
-                    <p class="text-xs text-gray-400 mt-1">ตารางผ่าตัดและวิสัญญี</p>
-                </a>
-
-                <a href="documents.html" class="menu-card">
-                    <span class="card-icon">📄</span>
-                    <h3 class="font-bold text-white">เอกสาร</h3>
-                    <p class="text-xs text-gray-400 mt-1">ใบรับรองแพทย์และรายงาน</p>
-                </a>
+            <div class="settings-card opacity-50 cursor-not-allowed">
+                <div class="icon-box">🔒</div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-white text-lg">ความปลอดภัย</h3>
+                    <p class="text-sm text-gray-400">เปลี่ยนรหัสผ่าน Master Password สำหรับเข้าสู่ระบบ (เร็วๆ นี้)</p>
+                </div>
             </div>
-        </main>
 
-        <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
-            PK-VMS © 2026 Pitipat Kitpipatkun
-        </footer>
-    </div>
+        </div>
 
-    <script>
-        const MASTER_PW = "044641460";
+        <div class="mt-12 p-6 rounded-2xl border border-teal-500/20 bg-teal-500/5">
+            <h4 class="text-teal-400 font-bold mb-2 uppercase text-xs tracking-widest">System Info</h4>
+            <div class="text-sm text-gray-400 space-y-1">
+                <p>PK-VMS Version: 1.0.0 (Cloud Sync)</p>
+                <p>Developer: Pitipat Kitpipatkun</p>
+            </div>
+        </div>
+    </main>
 
-        window.onload = () => {
-            if (sessionStorage.getItem("isLoggedIn") === "true") {
-                showDashboard();
-            }
-        };
-
-        // ฟังก์ชันดึงข้อมูลจาก Supabase มาโชว์ที่หน้าแรก
-        async function fetchDashboardStats() {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-
-                // 1. นับจำนวนเคสที่สร้างวันนี้
-                const { count: caseCount, error: err1 } = await db
-                    .from('medrec')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', today);
-
-                if (!err1) document.getElementById('today-cases').innerText = caseCount || 0;
-
-                // 2. คำนวณยอดขายจากตาราง POS (ถ้ามีข้อมูล)
-                const { data: salesData, error: err2 } = await db
-                    .from('pos_transactions')
-                    .select('total_price')
-                    .gte('created_at', today);
-
-                if (!err2 && salesData) {
-                    const total = salesData.reduce((sum, item) => sum + Number(item.total_price), 0);
-                    document.getElementById('today-sales').innerText = `฿${total.toLocaleString()}`;
-                }
-
-                // 3. เช็คสต็อกยาที่ต่ำกว่า 10 ชิ้น
-                const { count: stockAlert, error: err3 } = await db
-                    .from('pharmacy')
-                    .select('*', { count: 'exact', head: true })
-                    .lt('stock_qty', 10);
-                
-                if (!err3 && stockAlert > 0) {
-                    const badge = document.getElementById('stock-alert');
-                    badge.innerText = `${stockAlert} รายการใกล้หมด`;
-                    badge.style.display = 'block';
-                }
-
-            } catch (e) {
-                console.error("Dashboard Sync Error:", e);
-            }
-        }
-
-        function checkPassword() {
-            const input = document.getElementById("pw-input").value;
-            if (input === MASTER_PW) {
-                sessionStorage.setItem("isLoggedIn", "true");
-                showDashboard();
-            } else {
-                alert("รหัสผ่านไม่ถูกต้อง!");
-                document.getElementById("pw-input").value = "";
-            }
-        }
-
-        function showDashboard() {
-            document.getElementById("login-overlay").style.display = "none";
-            document.getElementById("main-content").style.display = "block";
-            fetchDashboardStats(); // ดึงข้อมูลทันทีที่ Login สำเร็จ
-        }
-
-        function logout() {
-            sessionStorage.clear();
-            location.reload();
-        }
-
-        document.getElementById("pw-input").addEventListener("keypress", (e) => {
-            if (e.key === "Enter") checkPassword();
-        });
-    </script>
+    <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
+        PK-VMS © 2026 Settings Module
+    </footer>
 </body>
 </html>
