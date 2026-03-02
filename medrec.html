@@ -6,232 +6,145 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
 
     <style>
-        :root {
-            --navy: #0b1929;
-            --navy-mid: #112240;
-            --teal: #0ea5a0;
-            --border: rgba(255,255,255,0.1);
-        }
+        :root { --navy: #0b1929; --navy-mid: #112240; --teal: #0ea5a0; --border: rgba(255,255,255,0.1); }
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; }
-        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); border: 1px solid var(--border); }
-        input, select, textarea { 
-            background: rgba(255,255,255,0.05) !important; 
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            color: white !important;
-        }
-        input:focus { border-color: var(--teal) !important; outline: none; box-shadow: 0 0 10px rgba(14,165,160,0.3); }
-        .btn-teal { background: linear-gradient(135deg, var(--teal), #14c4bc); }
+        .form-input { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 12px; padding: 10px 15px; width: 100%; color: white; outline: none; }
+        .form-input:focus { border-color: var(--teal); box-shadow: 0 0 10px rgba(14,165,160,0.2); }
+        .glass-table { background: rgba(255,255,255,0.02); border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
     </style>
 </head>
-<body x-data="medRecApp()">
+<body class="p-4 md:p-8">
 
-    <header class="p-4 border-b border-white/5 bg-navy/80 sticky top-0 z-50 flex justify-between items-center">
-        <div class="flex items-center gap-4">
-            <a href="index.html" class="text-gray-400 hover:text-white transition">← กลับหน้าหลัก</a>
-            <h1 class="text-xl font-bold border-l pl-4 border-white/20">📋 เวชระเบียนสัตว์ป่วย</h1>
-        </div>
-        <button @click="openModal('add')" class="btn-teal text-white px-5 py-2 rounded-xl font-bold hover:opacity-90 transition">
-            + เพิ่มทะเบียนใหม่
-        </button>
-    </header>
-
-    <main class="max-w-7xl mx-auto p-6">
-        <div class="mb-6 flex gap-4">
-            <input type="text" x-model="search" placeholder="ค้นหา OPD, ชื่อสัตว์ หรือชื่อเจ้าของ..." class="flex-1 p-3 rounded-xl">
-        </div>
-
-        <div class="glass-card rounded-2xl overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-white/5 text-teal-400 text-sm">
-                            <th class="p-4">OPD No.</th>
-                            <th class="p-4">สัตว์ป่วย</th>
-                            <th class="p-4">เจ้าของ / เบอร์โทร</th>
-                            <th class="p-4">สถานะทำหมัน</th>
-                            <th class="p-4">นัดหมาย</th>
-                            <th class="p-4 text-center">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="(item, index) in filteredRecords" :key="item.id">
-                            <tr class="border-b border-white/5 hover:bg-white/5 transition text-sm">
-                                <td class="p-4 font-mono text-teal-300" x-text="item.opd"></td>
-                                <td class="p-4">
-                                    <div class="font-bold text-white" x-text="item.petName"></div>
-                                    <div class="text-xs text-gray-400" x-text="`${item.species} | ${item.breed} | ${item.gender}`"></div>
-                                </td>
-                                <td class="p-4">
-                                    <div x-text="item.ownerName"></div>
-                                    <div class="text-xs text-gray-400" x-text="item.phone"></div>
-                                </td>
-                                <td class="p-4">
-                                    <span :class="item.neutered === 'ทำหมันแล้ว' ? 'text-green-400' : 'text-amber-400'" x-text="item.neutered"></span>
-                                </td>
-                                <td class="p-4 text-rose-400" x-text="item.appointment || '-'"></td>
-                                <td class="p-4 text-center">
-                                    <div class="flex justify-center gap-2">
-                                        <button @click="openModal('edit', item)" class="p-2 hover:bg-blue-500/20 rounded text-blue-400">แก้ไข</button>
-                                        <button @click="deleteRecord(item.id)" class="p-2 hover:bg-red-500/20 rounded text-red-400">ลบ</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <a href="index.html" class="text-gray-400 text-sm hover:text-white transition">← กลับหน้าหลัก</a>
+                <h1 class="text-3xl font-bold text-white mt-2">📝 เวชระเบียนสัตว์ป่วย</h1>
             </div>
-        </div>
-    </main>
+            <button onclick="toggleForm()" class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-2 rounded-xl transition font-bold">
+                + เพิ่มเคสใหม่
+            </button>
+        </header>
 
-    <div x-show="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" x-cloak>
-        <div class="glass-card bg-[#112240] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-8 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-teal-400" x-text="editMode ? 'แก้ไขข้อมูลเวชระเบียน' : 'เพิ่มเวชระเบียนสัตว์ป่วยใหม่'"></h2>
-                <button @click="showModal = false" class="text-gray-400 text-2xl hover:text-white">&times;</button>
-            </div>
-
-            <form @submit.prevent="saveRecord" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-4">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500">ข้อมูลสัตว์</h3>
-                    <div>
-                        <label class="block text-xs mb-1">หมายเลข OPD</label>
-                        <input type="text" x-model="form.opd" required class="w-full p-2 rounded-lg">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs mb-1">ชื่อสัตว์</label>
-                            <input type="text" x-model="form.petName" required class="w-full p-2 rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-xs mb-1">ชนิด (เช่น สุนัข, แมว)</label>
-                            <input type="text" x-model="form.species" class="w-full p-2 rounded-lg">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs mb-1">เพศ</label>
-                            <select x-model="form.gender" class="w-full p-2 rounded-lg">
-                                <option value="ผู้">ผู้</option>
-                                <option value="เมีย">เมีย</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs mb-1">สถานะทำหมัน</label>
-                            <select x-model="form.neutered" class="w-full p-2 rounded-lg">
-                                <option value="ยังไม่ทำหมัน">ยังไม่ทำหมัน</option>
-                                <option value="ทำหมันแล้ว">ทำหมันแล้ว</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs mb-1">พันธุ์</label>
-                            <input type="text" x-model="form.breed" class="w-full p-2 rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-xs mb-1">วดป. เกิด / อายุ</label>
-                            <input type="text" x-model="form.age" placeholder="เช่น 2 ปี หรือ 12/05/65" class="w-full p-2 rounded-lg">
-                        </div>
-                    </div>
+        <section id="record-form" class="hidden mb-10 bg-navy-mid p-6 rounded-3xl border border-teal-500/30 shadow-2xl shadow-teal-900/20">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-teal-400">📝 ลงทะเบียนสัตว์ป่วย</h2>
+            <form id="pet-form" onsubmit="saveData(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">ชื่อสัตว์เลี้ยง</label>
+                    <input type="text" id="pet_name" class="form-input" placeholder="เช่น ถุงเงิน" required>
                 </div>
-
-                <div class="space-y-4">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500">ข้อมูลเจ้าของ & การรักษา</h3>
-                    <div>
-                        <label class="block text-xs mb-1">ชื่อเจ้าของ</label>
-                        <input type="text" x-model="form.ownerName" required class="w-full p-2 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-xs mb-1">เบอร์โทรศัพท์</label>
-                        <input type="tel" x-model="form.phone" required class="w-full p-2 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-xs mb-1">ที่อยู่</label>
-                        <textarea x-model="form.address" rows="2" class="w-full p-2 rounded-lg"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs mb-1 text-teal-400">วันนัดหมายครั้งถัดไป</label>
-                        <input type="date" x-model="form.appointment" class="w-full p-2 rounded-lg border-teal-500/30">
-                    </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">ชื่อเจ้าของ</label>
+                    <input type="text" id="owner_name" class="form-input" placeholder="ชื่อ-นามสกุล" required>
                 </div>
-
-                <div class="md:col-span-2">
-                    <label class="block text-xs mb-1">ประวัติการรักษา / บันทึกเพิ่มเติม</label>
-                    <textarea x-model="form.history" rows="3" class="w-full p-2 rounded-lg" placeholder="ระบุอาการเบื้องต้น หรือประวัติการเจ็บป่วย..."></textarea>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">ชนิดสัตว์</label>
+                    <select id="pet_type" class="form-input">
+                        <option value="สุนัข">สุนัข</option>
+                        <option value="แมว">แมว</option>
+                        <option value="นก">นก</option>
+                        <option value="อื่นๆ">อื่นๆ</option>
+                    </select>
                 </div>
-
-                <div class="md:col-span-2 flex justify-end gap-3 mt-4">
-                    <button type="button" @click="showModal = false" class="px-6 py-2 text-gray-400 hover:text-white">ยกเลิก</button>
-                    <button type="submit" class="btn-teal px-8 py-2 rounded-xl text-white font-bold shadow-lg shadow-teal-500/20">บันทึกข้อมูล</button>
+                <div class="lg:col-span-3">
+                    <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">อาการเบื้องต้น / ประวัติ</label>
+                    <textarea id="symptoms" class="form-input h-24" placeholder="ระบุอาการอย่างละเอียด"></textarea>
+                </div>
+                <div class="lg:col-span-3 flex justify-end gap-3">
+                    <button type="button" onclick="toggleForm()" class="px-6 py-2 text-gray-400 hover:text-white">ยกเลิก</button>
+                    <button type="submit" class="bg-teal-600 hover:bg-teal-500 text-white px-10 py-2 rounded-xl font-bold">บันทึกข้อมูล</button>
                 </div>
             </form>
+        </section>
+
+        <div class="mb-6">
+            <input type="text" id="search" oninput="fetchRecords()" class="form-input max-w-md" placeholder="🔍 ค้นหาชื่อสัตว์ หรือเจ้าของ...">
+        </div>
+
+        <div class="glass-table">
+            <table class="w-full text-left">
+                <thead class="bg-white/5 text-gray-400 text-xs uppercase tracking-widest">
+                    <tr>
+                        <th class="p-4">วันที่ลงทะเบียน</th>
+                        <th class="p-4">สัตว์เลี้ยง</th>
+                        <th class="p-4">เจ้าของ</th>
+                        <th class="p-4">อาการ</th>
+                        <th class="p-4 text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="med-list" class="divide-y divide-white/5">
+                    </tbody>
+            </table>
         </div>
     </div>
 
     <script>
-        function medRecApp() {
-            return {
-                records: JSON.parse(localStorage.getItem('pk_vms_medrec') || '[]'),
-                search: '',
-                showModal: false,
-                editMode: false,
-                form: {
-                    id: null, opd: '', petName: '', species: '', gender: 'ผู้', 
-                    breed: '', neutered: 'ยังไม่ทำหมัน', age: '', 
-                    ownerName: '', address: '', phone: '', history: '', appointment: ''
-                },
+        function toggleForm() {
+            const form = document.getElementById('record-form');
+            form.classList.toggle('hidden');
+        }
 
-                get filteredRecords() {
-                    if (this.search === '') return this.records;
-                    const s = this.search.toLowerCase();
-                    return this.records.filter(r => 
-                        r.opd.toLowerCase().includes(s) || 
-                        r.petName.toLowerCase().includes(s) || 
-                        r.ownerName.toLowerCase().includes(s)
-                    );
-                },
+        // ดึงข้อมูลจาก Supabase
+        async function fetchRecords() {
+            const searchTerm = document.getElementById('search').value;
+            let query = db.from('medrec').select('*').order('created_at', { ascending: false });
 
-                openModal(mode, data = null) {
-                    this.editMode = mode === 'edit';
-                    if (this.editMode && data) {
-                        this.form = { ...data };
-                    } else {
-                        this.form = { 
-                            id: Date.now(), opd: 'OPD-' + (this.records.length + 1).toString().padStart(4, '0'), 
-                            petName: '', species: '', gender: 'ผู้', breed: '', 
-                            neutered: 'ยังไม่ทำหมัน', age: '', ownerName: '', 
-                            address: '', phone: '', history: '', appointment: ''
-                        };
-                    }
-                    this.showModal = true;
-                },
+            if (searchTerm) {
+                query = query.or(`pet_name.ilike.%${searchTerm}%,owner_name.ilike.%${searchTerm}%`);
+            }
 
-                saveRecord() {
-                    if (this.editMode) {
-                        const index = this.records.findIndex(r => r.id === this.form.id);
-                        if (index !== -1) this.records[index] = { ...this.form };
-                    } else {
-                        this.records.push({ ...this.form });
-                    }
-                    this.persist();
-                    this.showModal = false;
-                },
+            const { data, error } = await query;
 
-                deleteRecord(id) {
-                    if (confirm('ยืนยันการลบเวชระเบียนนี้? ข้อมูลจะหายไปถาวร')) {
-                        this.records = this.records.filter(r => r.id !== id);
-                        this.persist();
-                    }
-                },
+            if (error) {
+                console.error(error);
+                return;
+            }
 
-                persist() {
-                    localStorage.setItem('pk_vms_medrec', JSON.stringify(this.records));
-                }
+            const listBody = document.getElementById('med-list');
+            listBody.innerHTML = data.map(item => `
+                <tr class="hover:bg-white/5 transition group">
+                    <td class="p-4 text-sm">${new Date(item.created_at).toLocaleDateString('th-TH')}</td>
+                    <td class="p-4">
+                        <div class="font-bold text-teal-400">${item.pet_name}</div>
+                        <div class="text-[10px] text-gray-500">${item.pet_type}</div>
+                    </td>
+                    <td class="p-4 text-sm text-gray-300">${item.owner_name}</td>
+                    <td class="p-4 text-sm text-gray-400 truncate max-w-xs">${item.symptoms || '-'}</td>
+                    <td class="p-4 text-center">
+                        <button class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg transition">ดูประวัติ</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // บันทึกข้อมูล
+        async function saveData(e) {
+            e.preventDefault();
+            const pet_name = document.getElementById('pet_name').value;
+            const owner_name = document.getElementById('owner_name').value;
+            const pet_type = document.getElementById('pet_type').value;
+            const symptoms = document.getElementById('symptoms').value;
+
+            const { error } = await db.from('medrec').insert([
+                { pet_name, owner_name, pet_type, symptoms }
+            ]);
+
+            if (error) {
+                alert('เกิดข้อผิดพลาด: ' + error.message);
+            } else {
+                alert('บันทึกสำเร็จ!');
+                document.getElementById('pet-form').reset();
+                toggleForm();
+                fetchRecords();
             }
         }
+
+        // โหลดข้อมูลครั้งแรก
+        window.onload = fetchRecords;
     </script>
 </body>
 </html>
