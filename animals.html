@@ -10,33 +10,28 @@
     <script src="supabase-config.js"></script>
 
     <style>
-        :root { --navy: #0b1929; --navy-mid: #112240; --teal: #14b8b1; --white-bright: #ffffff; }
-        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: var(--white-bright); height: 100vh; overflow: hidden; font-size: 1.1rem; }
+        :root { --navy: #0b1929; --navy-mid: #112240; --teal: #14b8b1; }
+        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: white; height: 100vh; overflow: hidden; }
         
-        /* ขยายขนาด Input และตัวหนังสือ */
+        /* ขยายขนาด UI */
         .form-input { 
             background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); 
-            border-radius: 12px; padding: 12px 16px; width: 100%; color: white; outline: none; 
-            font-size: 1.1rem; font-weight: 500;
+            border-radius: 12px; padding: 12px 16px; width: 100%; color: white; outline: none; font-size: 1.1rem;
         }
-        .form-input:focus { border-color: var(--teal); background: rgba(255,255,255,0.15); box-shadow: 0 0 10px rgba(20, 184, 177, 0.3); }
-        select.form-input option { background: #112240; color: white; padding: 10px; }
-
-        .form-label { display: block; font-weight: 700; color: #cbd5e1; margin-bottom: 6px; font-size: 1rem; }
+        .form-input:focus { border-color: var(--teal); background: rgba(255,255,255,0.15); }
         
-        /* Layout & Scrolling */
-        .scroll-container { scrollbar-width: thin; scrollbar-color: rgba(20, 184, 177, 0.5) transparent; overflow-y: auto; }
-        .pet-entry { background: rgba(20, 184, 177, 0.08); border: 2px solid rgba(20, 184, 177, 0.3); padding: 20px; border-radius: 16px; position: relative; }
+        .scroll-container { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--teal) transparent; }
         
-        tr.selectable { cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        /* รายการในตาราง */
+        tr.selectable { cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
         tr.selectable:hover { background: rgba(20, 184, 177, 0.15); }
-        .active-row { background: rgba(20, 184, 177, 0.25) !important; border-left: 6px solid var(--teal); }
+        .active-row { background: rgba(20, 184, 177, 0.3) !important; border-left: 6px solid var(--teal); }
 
-        /* Icon Badge Styles (ขยายใหญ่) */
-        .type-badge { font-size: 1.8rem; min-width: 40px; display: inline-block; text-align: center; }
-        .gender-male { color: #60a5fa; font-weight: 900; font-size: 1.3rem; }
-        .gender-female { color: #f472b6; font-weight: 900; font-size: 1.3rem; }
-        .hn-text { font-family: 'Courier New', Courier, monospace; letter-spacing: 1px; }
+        /* Icon ใหญ่ชัดเจน */
+        .type-icon { font-size: 2rem; min-width: 50px; text-align: center; }
+        .gender-symbol { font-size: 1.4rem; font-weight: 900; margin-right: 5px; }
+        .gender-m { color: #60a5fa; } /* สีฟ้า */
+        .gender-f { color: #f472b6; } /* สีชมพู */
     </style>
 </head>
 <body class="flex flex-col">
@@ -44,170 +39,158 @@
     <header class="h-20 flex items-center justify-between px-8 bg-navy-mid border-b-2 border-teal-500/30 shrink-0">
         <div class="flex items-center gap-4">
             <span class="text-4xl">🐾</span>
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight text-white">เวชระเบียนสัตว์ป่วย</h1>
-                <p class="text-teal-400 text-xs font-bold uppercase tracking-widest">PK-VMS : Medical Record System</p>
-            </div>
+            <h1 class="text-2xl font-bold">เวชระเบียนสัตว์ป่วย <span class="text-teal-500 font-normal text-sm ml-2">PK-VMS</span></h1>
         </div>
         <div class="flex items-center gap-4">
-            <a href="index.html" class="bg-slate-800 hover:bg-slate-700 px-6 py-2.5 rounded-xl transition border border-white/10 font-bold">🏠 หน้าหลัก</a>
-            <button id="btn-add-new" onclick="clearFormAndOpen()" class="bg-teal-600 hover:bg-teal-500 px-8 py-3 rounded-xl font-black text-lg shadow-lg shadow-teal-900/40 transition active:scale-95">+ เพิ่มเคสใหม่</button>
+            <a href="index.html" class="bg-slate-800 px-6 py-2 rounded-xl text-sm font-bold border border-white/10">🏠 หน้าหลัก</a>
+            <button id="btn-add-new" onclick="clearFormAndOpen()" class="bg-teal-600 hover:bg-teal-500 px-8 py-3 rounded-xl font-black text-lg shadow-lg">+ เพิ่มเคสใหม่</button>
         </div>
     </header>
 
     <main class="flex flex-1 overflow-hidden">
         
-        <section class="w-full md:w-[35%] flex flex-col border-r border-white/20 bg-navy/60">
+        <section class="w-full md:w-[38%] flex flex-col border-r border-white/20 bg-navy/60">
             <div class="p-5 bg-navy-mid/40">
+                <label class="text-xs text-teal-400 font-bold mb-2 block uppercase tracking-widest">Search Database</label>
                 <div class="relative">
-                    <input type="text" id="search" oninput="fetchRecords()" class="form-input pl-12 py-4 shadow-inner" placeholder="พิมพ์ชื่อสัตว์, HN หรือชื่อเจ้าของ...">
-                    <span class="absolute left-4 top-4 text-xl opacity-60">🔍</span>
+                    <input type="text" id="search" oninput="filterLocal()" class="form-input pl-12 py-4 text-xl" placeholder="พิมพ์ชื่อสัตว์ / HN / ชื่อเจ้าของ...">
+                    <span class="absolute left-4 top-4 text-2xl opacity-50">🔍</span>
                 </div>
-                <div class="mt-2 text-[11px] text-teal-500 font-bold px-1">พิมพ์เพื่อค้นหาอัตโนมัติ...</div>
             </div>
             
-            <div class="flex-1 scroll-container">
-                <table class="w-full text-left border-collapse">
-                    <thead class="sticky top-0 bg-navy-mid text-xs uppercase text-gray-400 z-10 shadow-md">
-                        <tr>
-                            <th class="p-4">สัตว์ / HN</th>
-                            <th class="p-4">เจ้าของ / เบอร์โทร</th>
-                        </tr>
-                    </thead>
-                    <tbody id="animal-list" class="divide-y divide-white/5">
+            <div class="flex-1 scroll-container" id="list-scroll">
+                <table class="w-full text-left">
+                    <tbody id="animal-list">
                         </tbody>
                 </table>
             </div>
         </section>
 
-        <section id="form-container" class="hidden w-full md:w-[65%] flex flex-col bg-navy-mid/10">
+        <section id="form-container" class="hidden w-full md:w-[62%] flex flex-col bg-navy-mid/10">
             <div class="p-8 scroll-container flex-1">
                 <form id="main-form" onsubmit="saveData(event)">
                     
-                    <div class="mb-10 bg-white/5 p-6 rounded-2xl border border-white/10">
-                        <div class="flex justify-between items-center mb-6 border-b border-teal-500/50 pb-4">
-                            <h2 class="text-2xl font-bold text-teal-400 flex items-center gap-3">
-                                👤 ข้อมูลเจ้าของ <span id="mode-text" class="text-sm font-normal text-gray-400 italic bg-white/10 px-3 py-1 rounded-full"></span>
-                            </h2>
-                            <div class="text-right bg-navy p-3 rounded-xl border border-teal-500/30">
-                                <span class="form-label !mb-0 text-xs text-teal-500">HN เวชระเบียน</span>
-                                <input type="text" id="hn" class="bg-transparent text-3xl font-black text-teal-300 outline-none text-right w-40 hn-text" readonly placeholder="69XXXX">
+                    <div class="mb-10 bg-white/5 p-8 rounded-3xl border border-white/10 shadow-2xl">
+                        <div class="flex justify-between items-center mb-8 border-b border-teal-500/30 pb-6">
+                            <h2 class="text-3xl font-black text-teal-400">👤 ข้อมูลเจ้าของ</h2>
+                            <div class="bg-black/40 p-4 rounded-2xl border-2 border-teal-500/50">
+                                <p class="text-[10px] text-teal-500 font-bold uppercase mb-1">Medical Record No.</p>
+                                <input type="text" id="hn" class="bg-transparent text-4xl font-black text-white outline-none w-40 text-right" readonly placeholder="69XXXX">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                             <div>
-                                <label class="form-label">ชื่อ-นามสกุล เจ้าของ</label>
-                                <input type="text" id="owner_name" class="form-input" required placeholder="ระบุชื่อเจ้าของ">
+                                <label class="block font-bold text-gray-400 mb-2">ชื่อ-นามสกุล เจ้าของ</label>
+                                <input type="text" id="owner_name" class="form-input text-2xl" required>
                             </div>
                             <div>
-                                <label class="form-label">ที่อยู่ / ข้อมูลติดต่อ</label>
-                                <input type="text" id="address" class="form-input" placeholder="บ้านเลขที่, ถนน, ตำบล/อำเภอ">
+                                <label class="block font-bold text-gray-400 mb-2">ที่อยู่ / ติดต่อ</label>
+                                <input type="text" id="address" class="form-input">
                             </div>
                         </div>
 
-                        <label class="form-label">เบอร์โทรศัพท์ (ใส่ได้มากกว่า 1 เบอร์)</label>
-                        <div id="phone-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3"></div>
-                        <button type="button" onclick="addPhoneField()" class="text-teal-400 text-sm font-bold hover:text-teal-200 transition underline decoration-dotted">+ เพิ่มเบอร์โทรสำรอง</button>
+                        <div id="phone-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                        <button type="button" onclick="addPhoneField()" class="mt-4 text-teal-400 font-bold underline">+ เพิ่มเบอร์โทร</button>
                     </div>
 
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                            <span class="w-2 h-8 bg-teal-500 rounded-full shadow-[0_0_10px_#14b8b1]"></span> 
-                            ข้อมูลสัตว์เลี้ยง
-                        </h2>
-                        <div id="pet-container" class="space-y-6"></div>
-                        <button type="button" onclick="addPetField()" class="mt-6 w-full py-5 border-2 border-dashed border-teal-500/20 rounded-2xl text-gray-400 font-bold hover:border-teal-500/50 hover:text-teal-400 hover:bg-teal-500/5 transition-all text-lg">
-                            + เพิ่มสัตว์เลี้ยงตัวใหม่
-                        </button>
-                    </div>
+                    <div id="pet-container" class="space-y-6"></div>
+                    <button type="button" onclick="addPetField()" class="mt-8 w-full py-6 border-4 border-dashed border-teal-500/20 rounded-3xl text-teal-500 font-black text-2xl hover:bg-teal-500/10 transition-all">
+                        + เพิ่มสัตว์เลี้ยง
+                    </button>
 
-                    <div class="flex justify-end gap-6 mt-12 pt-8 border-t border-white/10">
-                        <button type="button" onclick="closeForm()" class="px-8 py-3 text-gray-400 hover:text-white font-bold transition text-lg">ยกเลิก</button>
-                        <button type="submit" class="bg-teal-600 hover:bg-teal-500 text-white px-16 py-4 rounded-2xl font-black text-xl shadow-2xl transition active:scale-95">💾 บันทึกข้อมูล</button>
+                    <div class="flex justify-end gap-6 mt-12">
+                        <button type="button" onclick="closeForm()" class="px-10 py-4 text-xl text-gray-400 font-bold">ยกเลิก</button>
+                        <button type="submit" class="bg-teal-600 px-20 py-5 rounded-2xl font-black text-2xl shadow-2xl">💾 บันทึกข้อมูล</button>
                     </div>
                 </form>
             </div>
         </section>
 
-        <section id="empty-state" class="w-full md:w-[65%] flex flex-col items-center justify-center text-gray-600 bg-navy/20">
-            <div class="text-[120px] mb-6 opacity-10">🏥</div>
-            <p class="text-2xl font-bold mb-2">ยินดีต้อนรับสู่ระบบ PK-VMS</p>
-            <p class="text-lg opacity-60 italic">กรุณาเลือกรายชื่อด้านซ้าย หรือ "เพิ่มเคสใหม่" เพื่อเริ่มต้น</p>
+        <section id="empty-state" class="w-full md:w-[62%] flex flex-col items-center justify-center text-gray-700 bg-navy/20">
+            <div class="text-[150px] mb-4 opacity-5">🏥</div>
+            <p class="text-2xl font-bold opacity-30">เลือกรายชื่อหรือเริ่มเคสใหม่</p>
         </section>
-
     </main>
 
     <script>
-        let petCount = 0, phoneCount = 0;
-        const breedData = {
-            "สุนัข": ["ไทย", "โกลเด้น รีทรีฟเวอร์", "ไซบีเรียน ฮัสกี้", "ปอมเมอเรเนียน", "พุดเดิ้ล", "ชิสุ", "บีเกิล", "โกลเด้น", "ชิบะ", "อื่นๆ"],
-            "แมว": ["ไทย", "เปอร์เซีย", "สก็อตติช โฟลด์", "บริติช ชอร์ตแฮร์", "วิเชียรมาศ", "เบงกอล", "อเมริกัน ชอร์ตแฮร์", "เมนคูน", "อื่นๆ"]
-        };
+        let allRecords = []; // เก็บข้อมูลทั้งหมดไว้ในเครื่องเพื่อการค้นหาที่รวดเร็ว
+        let phoneCount = 0, petCount = 0;
 
-        // --- ปรับปรุง Search Logic ให้แม่นยำและค้นหาได้ทันที ---
-        async function fetchRecords() {
-            const rawSearch = document.getElementById('search').value.trim();
-            const searchStr = `%${rawSearch}%`; // ใส่ % ครอบเพื่อให้ค้นหาบางส่วนได้
-            
-            let query = db.from('animals').select('*, owners(*, owner_phones(*))');
-
-            if (rawSearch) {
-                // ค้นหาข้าม 3 ฟิลด์หลัก (ชื่อสัตว์, HN, ชื่อเจ้าของ)
-                query = query.or(`pet_name.ilike.${searchStr},owner_hn.ilike.${searchStr},owners.owner_name.ilike.${searchStr}`);
-            }
-
-            const { data, error } = await query.order('created_at', { ascending: false }).limit(30);
+        // --- 1. โหลดข้อมูลทั้งหมดมาเตรียมไว้ (Master Data) ---
+        async function loadInitialData() {
+            const { data, error } = await db.from('animals')
+                .select('*, owners(*, owner_phones(*))')
+                .order('created_at', { ascending: false });
             
             if (error) {
-                console.error("Search Fail:", error);
+                console.error("โหลดข้อมูลไม่สำเร็จ:", error);
                 return;
             }
+            allRecords = data;
+            renderList(allRecords); // แสดงผลครั้งแรก
+        }
 
+        // --- 2. Logic การค้นหาแบบพิมพ์ไปกรองไป (Local Search) ---
+        function filterLocal() {
+            const keyword = document.getElementById('search').value.trim().toLowerCase();
+            
+            // กรองข้อมูลจาก Array ในเครื่อง (ไม่ต้องต่อเน็ตทุกครั้งที่พิมพ์)
+            const filtered = allRecords.filter(item => {
+                const hn = item.owner_hn.toLowerCase();
+                const petName = item.pet_name.toLowerCase();
+                const ownerName = (item.owners?.owner_name || "").toLowerCase();
+                const phone = (item.owners?.owner_phones?.[0]?.phone_number || "");
+
+                return hn.includes(keyword) || petName.includes(keyword) || ownerName.includes(keyword) || phone.includes(keyword);
+            });
+
+            renderList(filtered);
+        }
+
+        // --- 3. แสดงผลรายการในตาราง ---
+        function renderList(data) {
             const listEl = document.getElementById('animal-list');
-            listEl.innerHTML = (data || []).map(item => {
+            listEl.innerHTML = data.map(item => {
                 const phones = item.owners?.owner_phones || [];
                 const phonesJson = encodeURIComponent(JSON.stringify(phones));
                 
+                // Icon ใหญ่ๆ
                 const typeIcon = item.pet_type === 'สุนัข' ? '🐶' : (item.pet_type === 'แมว' ? '🐱' : '🐾');
-                const genderSymbol = item.gender.includes('ผู้') ? '<span class="gender-male">♂</span>' : '<span class="gender-female">♀</span>';
-                
+                const genderClass = item.gender.includes('ผู้') ? 'gender-m' : 'gender-f';
+                const genderSym = item.gender.includes('ผู้') ? '♂' : '♀';
+
                 return `
                 <tr class="selectable" onclick="selectOwner('${item.owner_hn}', '${item.owners?.owner_name}', '${item.owners?.address || ''}', '${phonesJson}', event)">
-                    <td class="p-4 flex items-center gap-4">
-                        <span class="type-badge">${typeIcon}</span>
+                    <td class="p-5 flex items-center gap-5">
+                        <div class="type-icon">${typeIcon}</div>
                         <div>
-                            <div class="text-white font-bold text-lg">${genderSymbol} ${item.pet_name}</div>
-                            <div class="text-sm text-teal-400 font-mono tracking-tighter">HN: ${item.owner_hn}</div>
+                            <div class="text-2xl font-black text-white"><span class="${genderClass} gender-symbol">${genderSym}</span>${item.pet_name}</div>
+                            <div class="text-lg text-teal-400 font-mono tracking-widest">HN: ${item.owner_hn}</div>
                         </div>
                     </td>
-                    <td class="p-4">
-                        <div class="font-bold text-gray-200 text-base">${item.owners?.owner_name || '-'}</div>
+                    <td class="p-5">
+                        <div class="text-xl font-bold text-gray-300">${item.owners?.owner_name || 'ไม่ทราบชื่อ'}</div>
                         <div class="text-sm text-gray-500">${phones[0]?.phone_number || '-'}</div>
                     </td>
                 </tr>`;
             }).join('');
         }
 
-        // --- ระบบฟอร์มและปุ่มกด ---
+        // --- ฟังก์ชันอื่นๆ (CRUD) ---
         function selectOwner(hn, name, address, phonesJson, event) {
             document.querySelectorAll('.selectable').forEach(el => el.classList.remove('active-row'));
             event.currentTarget.classList.add('active-row');
-
             const phones = JSON.parse(decodeURIComponent(phonesJson));
             document.getElementById('hn').value = hn;
             document.getElementById('owner_name').value = name;
             document.getElementById('address').value = address;
-            document.getElementById('mode-text').innerText = "แก้ไขข้อมูล";
-
             document.getElementById('phone-container').innerHTML = '';
             phoneCount = 0;
             if (phones.length > 0) phones.forEach(p => addPhoneField(p.phone_number, p.label));
             else addPhoneField();
-
             document.getElementById('pet-container').innerHTML = '';
-            petCount = 0;
-            addPetField(); 
+            petCount = 0; addPetField();
             openForm();
         }
 
@@ -215,75 +198,56 @@
             document.getElementById('main-form').reset();
             document.getElementById('phone-container').innerHTML = '';
             document.getElementById('pet-container').innerHTML = '';
-            document.getElementById('mode-text').innerText = "สร้างเคสใหม่";
             phoneCount = 0; petCount = 0;
-            openForm();
-            genNewHN();
-            addPhoneField();
-            addPetField();
+            openForm(); genNewHN(); addPhoneField(); addPetField();
         }
 
-        function openForm() {
-            document.getElementById('form-container').classList.remove('hidden');
-            document.getElementById('empty-state').classList.add('hidden');
+        function openForm() { 
+            document.getElementById('form-container').classList.remove('hidden'); 
+            document.getElementById('empty-state').classList.add('hidden'); 
             document.getElementById('btn-add-new').classList.add('hidden');
         }
 
-        function closeForm() {
-            document.getElementById('form-container').classList.add('hidden');
-            document.getElementById('empty-state').classList.remove('hidden');
+        function closeForm() { 
+            document.getElementById('form-container').classList.add('hidden'); 
+            document.getElementById('empty-state').classList.remove('hidden'); 
             document.getElementById('btn-add-new').classList.remove('hidden');
-            document.querySelectorAll('.selectable').forEach(el => el.classList.remove('active-row'));
         }
 
         function addPhoneField(value = '', label = 'หลัก') {
             phoneCount++;
             const html = `
-                <div class="flex gap-3 items-center" id="phone-row-${phoneCount}">
-                    <input type="text" name="owner_phone" value="${value}" class="form-input flex-[3]" placeholder="08XXXXXXXX" required>
-                    <input type="text" name="phone_label" value="${label}" class="form-input flex-[1.5]" placeholder="คำอธิบาย">
-                    ${phoneCount > 1 ? `<button type="button" onclick="this.parentElement.remove()" class="text-red-400 text-xl font-bold px-2">✕</button>` : ''}
+                <div class="flex gap-4 items-center mb-2">
+                    <input type="text" name="owner_phone" value="${value}" class="form-input flex-[3] text-xl" placeholder="เบอร์โทร" required>
+                    <input type="text" name="phone_label" value="${label}" class="form-input flex-[1] text-sm" placeholder="ใคร?">
                 </div>`;
             document.getElementById('phone-container').insertAdjacentHTML('beforeend', html);
         }
 
         function addPetField() {
             petCount++;
-            const petHtml = `
-                <div id="pet-row-${petCount}" class="pet-entry shadow-lg">
-                    <button type="button" onclick="this.parentElement.remove()" class="absolute top-4 right-4 text-red-400 font-bold hover:text-red-200">✕ ลบตัวนี้</button>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            const html = `
+                <div class="bg-teal-500/5 p-6 rounded-3xl border-2 border-teal-500/20 relative">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                         <div class="col-span-2 md:col-span-1">
-                            <label class="form-label">ชื่อสัตว์เลี้ยง</label>
-                            <input type="text" name="pet_name" class="form-input" required>
+                            <label class="text-sm font-bold text-gray-500 mb-2 block">ชื่อสัตว์</label>
+                            <input type="text" name="pet_name" class="form-input text-xl" required>
                         </div>
                         <div>
-                            <label class="form-label">ชนิด</label>
-                            <select name="pet_type" class="form-input" onchange="updateBreed(this)">
-                                <option value="แมว">🐱 แมว</option><option value="สุนัข">🐶 สุนัข</option><option value="อื่นๆ">อื่นๆ</option>
-                            </select>
+                            <label class="text-sm font-bold text-gray-500 mb-2 block">ชนิด</label>
+                            <select name="pet_type" class="form-input"><option>แมว</option><option>สุนัข</option></select>
                         </div>
                         <div>
-                            <label class="form-label">เพศ</label>
-                            <select name="gender" class="form-input">
-                                <option value="ผู้">♂ ผู้</option><option value="เมีย">♀ เมีย</option>
-                                <option value="ผู้ตอน">♂ ผู้ตอน</option><option value="เมียหมัน">♀ เมียหมัน</option>
-                            </select>
+                            <label class="text-sm font-bold text-gray-500 mb-2 block">เพศ</label>
+                            <select name="gender" class="form-input"><option>ผู้</option><option>เมีย</option><option>ผู้ตอน</option><option>เมียหมัน</option></select>
                         </div>
                         <div>
-                            <label class="form-label">สายพันธุ์</label>
-                            <select name="breed" class="form-input"></select>
+                            <label class="text-sm font-bold text-gray-500 mb-2 block">พันธุ์</label>
+                            <input type="text" name="breed" class="form-input" value="ไทย">
                         </div>
                     </div>
                 </div>`;
-            document.getElementById('pet-container').insertAdjacentHTML('beforeend', petHtml);
-            updateBreed(document.querySelector(`#pet-row-${petCount} select[name="pet_type"]`));
-        }
-
-        function updateBreed(selectEl) {
-            const type = selectEl.value.includes('แมว') ? 'แมว' : (selectEl.value.includes('สุนัข') ? 'สุนัข' : 'อื่นๆ');
-            const breedSelect = selectEl.parentElement.parentElement.querySelector('select[name="breed"]');
-            breedSelect.innerHTML = (breedData[type] || ["อื่นๆ"]).map(b => `<option value="${b}">${b}</option>`).join('');
+            document.getElementById('pet-container').insertAdjacentHTML('beforeend', html);
         }
 
         async function genNewHN() {
@@ -297,24 +261,21 @@
             try {
                 await db.from('owners').upsert({ hn, owner_name: document.getElementById('owner_name').value, address: document.getElementById('address').value });
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
-                const phones = Array.from(document.querySelectorAll('#phone-container > div')).map(row => ({
-                    owner_hn: hn, phone_number: row.querySelector('[name="owner_phone"]').value.trim(), label: row.querySelector('[name="phone_label"]').value
+                const phones = Array.from(document.querySelectorAll('[name="owner_phone"]')).map((el, i) => ({
+                    owner_hn: hn, phone_number: el.value, label: document.querySelectorAll('[name="phone_label"]')[i].value
                 }));
-                if(phones.length) await db.from('owner_phones').insert(phones);
-                const pets = Array.from(document.querySelectorAll('.pet-entry')).map(row => ({
-                    owner_hn: hn, 
-                    pet_name: row.querySelector('[name="pet_name"]').value,
-                    pet_type: row.querySelector('[name="pet_type"]').value.includes('แมว') ? 'แมว' : 'สุนัข',
-                    gender: row.querySelector('[name="gender"]').value.replace(/[^ก-ฮ]/g, ''), 
-                    breed: row.querySelector('[name="breed"]').value
+                await db.from('owner_phones').insert(phones);
+                const pets = Array.from(document.querySelectorAll('#pet-container > div')).map(div => ({
+                    owner_hn: hn, pet_name: div.querySelector('[name="pet_name"]').value,
+                    pet_type: div.querySelector('[name="pet_type"]').value,
+                    gender: div.querySelector('[name="gender"]').value, breed: div.querySelector('[name="breed"]').value
                 }));
-                if(pets.length) await db.from('animals').insert(pets);
-                alert('บันทึกข้อมูลสำเร็จ!');
-                location.reload();
-            } catch (err) { alert("Error: " + err.message); }
+                await db.from('animals').insert(pets);
+                alert('สำเร็จ!'); location.reload();
+            } catch (err) { alert(err.message); }
         }
 
-        window.onload = fetchRecords;
+        window.onload = loadInitialData; // เริ่มทำงาน
     </script>
 </body>
 </html>
