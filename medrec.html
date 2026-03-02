@@ -53,8 +53,7 @@
                 <div>
                     <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">ชนิดสัตว์</label>
                     <select id="pet_type" class="form-input" onchange="updateBreedOptions()" required>
-                        <option value="">เลือกชนิดสัตว์</option>
-                        <option value="แมว">แมว</option>
+                        <option value="แมว" selected>แมว</option>
                         <option value="สุนัข">สุนัข</option>
                         <option value="อื่นๆ">อื่นๆ</option>
                     </select>
@@ -72,9 +71,7 @@
 
                 <div>
                     <label class="block text-xs text-gray-400 mb-2 uppercase tracking-widest">พันธุ์</label>
-                    <select id="breed_select" class="form-input">
-                        <option value="">กรุณาเลือกชนิดสัตว์ก่อน</option>
-                    </select>
+                    <select id="breed_select" class="form-input"></select>
                     <input type="text" id="breed_custom" class="form-input mt-2 hidden" placeholder="ระบุพันธุ์">
                 </div>
 
@@ -123,15 +120,14 @@
     </div>
 
     <script>
-        // ข้อมูลสายพันธุ์
         const breedData = {
             "สุนัข": [
-                "โกลเด้น รีทรีฟเวอร์", "ไซบีเรียน ฮัสกี้", "ปอมเมอเรเนียน", "พุดเดิ้ล", "ชิสุ", 
-                "บูลด็อก", "เฟรนช์ บูลด็อก", "บีเกิล", "ไทยหลังอาน", "ชิวาวา", "อื่นๆ"
+                "ไทย", "โกลเด้น รีทรีฟเวอร์", "ไซบีเรียน ฮัสกี้", "ปอมเมอเรเนียน", "พุดเดิ้ล", 
+                "ชิสุ", "บูลด็อก", "เฟรนช์ บูลด็อก", "บีเกิล", "ชิวาวา", "อื่นๆ"
             ],
             "แมว": [
-                "เปอร์เซีย", "สก็อตติช โฟลด์", "บริติช ชอร์ตแฮร์", "วิเชียรมาศ", "เบงกอล", 
-                "อเมริกัน ชอร์ตแฮร์", "เมนคูน", "รัสเซียน บลู", "สฟิงซ์", "ขาวมณี", "อื่นๆ"
+                "ไทย", "เปอร์เซีย", "สก็อตติช โฟลด์", "บริติช ชอร์ตแฮร์", "วิเชียรมาศ", 
+                "เบงกอล", "อเมริกัน ชอร์ตแฮร์", "เมนคูน", "รัสเซียน บลู", "ขาวมณี", "อื่นๆ"
             ]
         };
 
@@ -154,10 +150,11 @@
                     const opt = document.createElement('option');
                     opt.value = breed;
                     opt.textContent = breed;
+                    // ให้ "ไทย" ถูกเลือกเป็นค่าเริ่มต้น
+                    if (breed === "ไทย") opt.selected = true;
                     breedSelect.appendChild(opt);
                 });
                 
-                // เช็คถ้าเลือก "อื่นๆ" ใน dropdown ของพันธุ์
                 breedSelect.onchange = function() {
                     if (this.value === "อื่นๆ") breedCustom.classList.remove('hidden');
                     else breedCustom.classList.add('hidden');
@@ -174,10 +171,7 @@
         async function fetchRecords() {
             const search = document.getElementById('search').value;
             let query = db.from('medrec').select('*').order('created_at', { ascending: false });
-
-            if (search) {
-                query = query.or(`hn.ilike.%${search}%,pet_name.ilike.%${search}%,phone.ilike.%${search}%,owner_name.ilike.%${search}%`);
-            }
+            if (search) query = query.or(`hn.ilike.%${search}%,pet_name.ilike.%${search}%,phone.ilike.%${search}%,owner_name.ilike.%${search}%`);
 
             const { data, error } = await query;
             if (error) return console.error(error);
@@ -196,7 +190,7 @@
                         <div class="text-[10px] text-teal-500 font-bold">${item.phone || '-'}</div>
                     </td>
                     <td class="p-4 text-center">
-                        <button class="text-[10px] bg-white/5 hover:bg-teal-500 hover:text-white px-3 py-1.5 rounded-lg border border-white/10 transition uppercase font-bold tracking-tighter">Details</button>
+                        <button class="text-[10px] bg-white/5 hover:bg-teal-500 hover:text-white px-3 py-1.5 rounded-lg border border-white/10 transition font-bold">Details</button>
                     </td>
                 </tr>
             `).join('');
@@ -204,12 +198,9 @@
 
         async function saveData(e) {
             e.preventDefault();
-            
             const petType = document.getElementById('pet_type').value;
             const breedSelect = document.getElementById('breed_select').value;
             const breedCustom = document.getElementById('breed_custom').value;
-            
-            // เลือกใช้ค่าจาก dropdown หรือถ้าเป็น "อื่นๆ" ให้ใช้ค่าที่พิมพ์
             const finalBreed = (breedSelect === "อื่นๆ") ? breedCustom : breedSelect;
 
             const payload = {
@@ -224,19 +215,24 @@
             };
 
             const { error } = await db.from('medrec').insert([payload]);
-
             if (error) {
                 alert('Error: ' + error.message);
             } else {
                 alert('บันทึกข้อมูลเรียบร้อย!');
                 document.getElementById('pet-form').reset();
-                updateBreedOptions(); // Reset breed list
+                // คืนค่า Default หลังบันทึก
+                document.getElementById('pet_type').value = "แมว";
+                updateBreedOptions(); 
                 toggleForm();
                 fetchRecords();
             }
         }
 
-        window.onload = fetchRecords;
+        // เมื่อโหลดหน้าเว็บ ให้รันการดึงข้อมูลและตั้งค่าพันธุ์ไม้ทันที
+        window.onload = function() {
+            fetchRecords();
+            updateBreedOptions(); // เรียกเพื่อให้ "ไทย" ปรากฏขึ้นมาเป็นค่าแรก
+        };
     </script>
 </body>
 </html>
