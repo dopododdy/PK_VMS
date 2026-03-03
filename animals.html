@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <title>เวชระเบียนสัตว์ | PK-VMS</title>
+    <title>เวชระเบียนสัตว์ | PK-VMS (Search Focused)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,30 +17,30 @@
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
         .mesh-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% -20%, rgba(20, 184, 177, 0.18), transparent 75%); }
         
-        /* SIDEBAR ขยายกว้างพิเศษ 600px */
-        .sidebar-container { background: rgba(17, 34, 64, 0.6); backdrop-filter: blur(25px); border-right: 2px solid var(--border); width: 600px; }
+        /* SIDEBAR กว้าง 750px เพื่อให้โชว์ที่อยู่และเบอร์โทรได้ชัดเจน */
+        .sidebar-container { background: rgba(17, 34, 64, 0.6); backdrop-filter: blur(25px); border-right: 2px solid var(--border); width: 750px; }
         
-        /* รายการสัตว์แบบบรรทัดเดียว แต่ตัวใหญ่ชัดเจน */
+        /* รายการสัตว์แบบบรรทัดเดียว - เน้นข้อมูลครบถ้วน */
         .animal-item {
             background: var(--surface); border: 2px solid transparent;
-            border-radius: 20px; padding: 1rem 1.5rem; cursor: pointer;
-            transition: all 0.2s ease; margin-bottom: 0.75rem;
-            display: flex; align-items: center; gap: 1.5rem; /* ระยะห่างระหว่างไอเทม */
+            border-radius: 16px; padding: 0.8rem 1.2rem; cursor: pointer;
+            transition: all 0.2s ease; margin-bottom: 0.6rem;
+            display: flex; align-items: center; gap: 1rem;
         }
-        .animal-item:hover { background: rgba(20, 184, 177, 0.15); border-color: var(--teal); transform: translateX(5px); }
-        .animal-item.active { border-color: var(--teal); background: rgba(20, 184, 177, 0.25); box-shadow: 0 0 20px rgba(20, 184, 177, 0.3); }
+        .animal-item:hover { background: rgba(20, 184, 177, 0.15); border-color: var(--teal); }
+        .animal-item.active { border-color: var(--teal); background: rgba(20, 184, 177, 0.25); box-shadow: 0 0 15px rgba(20, 184, 177, 0.2); }
 
-        /* ขนาดตัวอักษรใน Sidebar (เน้นอ่านง่าย) */
-        .list-icon { font-size: 3rem; min-width: 60px; text-align: center; }
-        .list-hn { background: var(--teal); color: var(--navy); font-weight: 900; padding: 4px 12px; border-radius: 10px; font-size: 1.1rem; }
-        .list-name { font-size: 1.6rem; font-weight: 800; color: white; white-space: nowrap; }
-        .list-owner { font-size: 1.2rem; font-weight: 600; color: #cbd5e1; white-space: nowrap; }
-        .list-tel { font-size: 1.1rem; font-weight: 800; color: var(--teal); }
+        /* ขนาดตัวอักษร Sidebar (เน้น High Contrast) */
+        .list-icon { font-size: 2.8rem; min-width: 50px; text-align: center; }
+        .list-hn { background: var(--teal); color: var(--navy); font-weight: 900; padding: 2px 10px; border-radius: 8px; font-size: 1rem; min-width: 85px; text-align: center; }
+        .list-name { font-size: 1.5rem; font-weight: 800; color: white; width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .list-owner { font-size: 1.2rem; font-weight: 600; color: #cbd5e1; width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .list-tel { font-size: 1.2rem; font-weight: 800; color: #14b8b1; width: 130px; }
+        .list-address { font-size: 1rem; font-weight: 400; color: #94a3b8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        .search-box { font-size: 1.4rem; padding: 1.25rem; border-radius: 18px; background: rgba(0,0,0,0.3); border: 2px solid var(--border); color: white; width: 100%; outline: none; }
-        .search-box:focus { border-color: var(--teal); }
+        .search-box { font-size: 1.4rem; padding: 1.2rem; border-radius: 15px; background: rgba(0,0,0,0.4); border: 2px solid var(--teal); color: white; width: 100%; outline: none; }
 
-        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-thumb { background: var(--teal); border-radius: 10px; }
     </style>
 </head>
@@ -48,35 +48,36 @@
     <div class="mesh-bg"></div>
 
     <div class="flex h-screen overflow-hidden">
-        <aside class="sidebar-container flex flex-col">
-            <div class="p-8 pb-4">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-4xl font-black text-white">เวชระเบียน</h2>
+        <aside class="sidebar-container flex flex-col shadow-2xl">
+            <div class="p-6 pb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-3xl font-black text-white">เวชระเบียนสัตว์</h2>
                     <div class="flex gap-4">
-                        <button onclick="loadData()" class="text-3xl hover:rotate-180 transition-all duration-500">🔄</button>
-                        <a href="index.html" class="text-4xl">🏠</a>
+                        <button onclick="loadData()" class="text-2xl hover:rotate-180 transition-all duration-500">🔄</button>
+                        <a href="index.html" class="text-3xl">🏠</a>
                     </div>
                 </div>
-                <input type="text" id="search-box" class="search-box" placeholder="🔍 ค้นหา (ชื่อ, HN, เบอร์โทร)..." oninput="filterAnimals()">
+                <input type="text" id="search-box" class="search-box" 
+                    placeholder="🔍 ค้นหา: ชื่อสัตว์, เจ้าของ, เบอร์โทร, ที่อยู่..." oninput="filterAnimals()">
             </div>
 
-            <div id="animal-list" class="flex-1 overflow-y-auto px-6 py-2">
-                <div class="text-center py-20 text-2xl font-bold opacity-40">กำลังโหลด...</div>
+            <div id="animal-list" class="flex-1 overflow-y-auto px-4 py-2">
+                <div class="text-center py-20 text-xl font-bold opacity-40 italic">กำลังดึงข้อมูลระบบ...</div>
             </div>
 
-            <div class="p-6 bg-navy/40 border-t border-white/10">
-                <button class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-5 rounded-2xl text-2xl shadow-xl transition-all active:scale-95">
-                    + ลงทะเบียนสัตว์ใหม่
+            <div class="p-4 bg-navy/40 border-t border-white/10">
+                <button class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-4 rounded-xl text-xl shadow-lg transition-all active:scale-95">
+                    + ลงทะเบียนสัตว์ใหม่ (New Record)
                 </button>
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto p-12" id="detail-view">
+        <main class="flex-1 overflow-y-auto p-10" id="detail-view">
             <div class="h-full flex flex-col items-center justify-center text-gray-500 text-center">
-                <div class="bg-white/5 p-20 rounded-[60px] border-2 border-white/5 backdrop-blur-sm">
-                    <div class="text-[12rem] mb-6 opacity-10">🐾</div>
-                    <h3 class="text-4xl font-black text-white/30">คลินิกรักษาสัตว์หมอปิติพัฒน์</h3>
-                    <p class="text-xl mt-4">เลือกรายชื่อสัตว์เพื่อดูประวัติการรักษา</p>
+                <div class="bg-white/5 p-16 rounded-[60px] border border-white/5 backdrop-blur-sm">
+                    <div class="text-[10rem] mb-4 opacity-10">🐾</div>
+                    <h3 class="text-3xl font-black text-white/30 uppercase tracking-tighter">PK-VMS Dashboard</h3>
+                    <p class="text-lg">เลือกรายชื่อทางด้านซ้ายเพื่อจัดการข้อมูล</p>
                 </div>
             </div>
         </main>
@@ -107,27 +108,42 @@
         function renderList(list) {
             const container = document.getElementById('animal-list');
             if (list.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-2xl text-gray-500">ไม่พบข้อมูล</div>`;
+                container.innerHTML = `<div class="text-center py-10 text-xl text-gray-500">❌ ไม่พบข้อมูลที่ค้นหา</div>`;
                 return;
             }
 
             container.innerHTML = list.map(pet => {
-                const owner = allOwners.find(o => o.hn === pet.owner_hn) || { owner_name: '-' };
+                const owner = allOwners.find(o => o.hn === pet.owner_hn) || { owner_name: '-', address: '-' };
                 const phone = allPhones.find(p => p.owner_hn === pet.owner_hn)?.phone_number || '-';
                 const typeIcon = (pet.pet_type === 'แมว') ? '🐱' : (pet.pet_type === 'สุนัข' ? '🐶' : '🐾');
                 
                 return `
                     <div class="animal-item" onclick="viewDetail('${pet.id}')" id="pet-${pet.id}">
                         <div class="list-icon">${typeIcon}</div>
-                        <div class="flex items-center gap-6 w-full overflow-hidden">
-                            <span class="list-hn">HN: ${pet.owner_hn}</span>
-                            <div class="list-name flex-none w-[150px] truncate">${pet.pet_name}</div>
-                            <div class="list-owner flex-none w-[160px] truncate">👤 ${owner.owner_name}</div>
-                            <div class="list-tel flex-1 text-right">📞 ${phone}</div>
-                        </div>
+                        <span class="list-hn">HN ${pet.owner_hn}</span>
+                        <div class="list-name">${pet.pet_name}</div>
+                        <div class="list-owner">👤 ${owner.owner_name}</div>
+                        <div class="list-tel">📞 ${phone}</div>
+                        <div class="list-address italic">📍 ${owner.address || '-'}</div>
                     </div>
                 `;
             }).join('');
+        }
+
+        function filterAnimals() {
+            const term = document.getElementById('search-box').value.toLowerCase();
+            const filtered = allAnimals.filter(pet => {
+                const owner = allOwners.find(o => o.hn === pet.owner_hn) || {};
+                const phones = allPhones.filter(p => p.owner_hn === pet.owner_hn).map(p => p.phone_number).join(' ');
+                const address = (owner.address || '').toLowerCase();
+                
+                return pet.pet_name.toLowerCase().includes(term) || 
+                       pet.owner_hn.toLowerCase().includes(term) || 
+                       (owner.owner_name && owner.owner_name.toLowerCase().includes(term)) || 
+                       phones.includes(term) ||
+                       address.includes(term);
+            });
+            renderList(filtered);
         }
 
         function viewDetail(id) {
@@ -140,82 +156,57 @@
 
             document.getElementById('detail-view').innerHTML = `
                 <div class="max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    
-                    <div class="bg-navy-mid/70 backdrop-blur-3xl p-10 rounded-[45px] border-2 border-white/10 shadow-2xl flex items-center justify-between mb-10">
-                        <div class="flex items-center gap-10">
-                            <div class="text-8xl bg-white/5 p-8 rounded-[35px] border border-white/10">
-                                ${(pet.pet_type === 'แมว') ? '🐱' : (pet.pet_type === 'สุนัข' ? '🐶' : '🐾')}
+                    <div class="bg-navy-mid/70 backdrop-blur-3xl p-8 rounded-[40px] border border-white/10 shadow-2xl flex items-center justify-between mb-8">
+                        <div class="flex items-center gap-8">
+                            <div class="text-7xl bg-white/5 p-6 rounded-[30px] border border-white/5">
+                                ${(pet.pet_type === 'แมว') ? '🐱' : '🐶'}
                             </div>
                             <div>
-                                <div class="flex items-center gap-6 mb-3">
-                                    <h2 class="text-7xl font-black text-white">${pet.pet_name}</h2>
-                                    <span class="text-5xl">${pet.gender?.includes('ผู้') ? '♂️' : '♀️'}</span>
+                                <div class="flex items-center gap-4 mb-2">
+                                    <h2 class="text-6xl font-black text-white">${pet.pet_name}</h2>
+                                    <span class="text-4xl">${pet.gender?.includes('ผู้') ? '♂️' : '♀️'}</span>
                                 </div>
-                                <span class="bg-teal-500 text-navy font-black px-6 py-2 rounded-2xl text-2xl uppercase tracking-tighter">
+                                <span class="bg-teal-500 text-navy font-black px-6 py-2 rounded-xl text-xl uppercase tracking-widest">
                                     HN: ${pet.owner_hn}
                                 </span>
                             </div>
                         </div>
-                        
                         <div class="flex flex-col gap-3">
-                            <button onclick="editPet('${pet.id}')" class="bg-white/10 hover:bg-teal-500 hover:text-navy text-white px-8 py-4 rounded-2xl font-black text-xl border border-white/10 transition-all flex items-center gap-3">
-                                ✏️ แก้ไขข้อมูล
-                            </button>
-                            <button onclick="deletePet('${pet.id}')" class="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white px-8 py-4 rounded-2xl font-black text-xl border border-red-500/20 transition-all flex items-center gap-3">
-                                🗑️ ลบข้อมูล
-                            </button>
+                            <button onclick="editPet('${pet.id}')" class="bg-teal-500 text-navy px-8 py-3 rounded-xl font-black text-xl hover:bg-white transition-all">✏️ แก้ไขข้อมูล</button>
+                            <button onclick="deletePet('${pet.id}')" class="bg-red-500/20 text-red-500 px-8 py-3 rounded-xl font-black text-xl border border-red-500/30 hover:bg-red-500 hover:text-white transition-all">🗑️ ลบข้อมูล</button>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-10">
-                        <div class="bg-white/5 p-10 rounded-[40px] border-2 border-white/5">
-                            <h3 class="text-teal-400 font-black text-2xl uppercase mb-8 flex items-center gap-4">
-                                <span class="w-10 h-1 bg-teal-400"></span> ข้อมูลสัตว์เลี้ยง
-                            </h3>
-                            <div class="space-y-6 text-3xl font-bold">
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="bg-white/5 p-10 rounded-[40px] border border-white/5">
+                            <h3 class="text-teal-400 font-black text-2xl uppercase mb-6 flex items-center gap-3"><span class="w-10 h-1 bg-teal-400"></span> ข้อมูลสัตว์เลี้ยง</h3>
+                            <div class="space-y-4 text-2xl font-bold">
                                 <p class="flex justify-between"><span class="text-gray-500">ชนิด:</span> <span>${pet.pet_type}</span></p>
                                 <p class="flex justify-between"><span class="text-gray-500">สายพันธุ์:</span> <span>${pet.breed || '-'}</span></p>
                                 <p class="flex justify-between"><span class="text-gray-500">น้ำหนัก:</span> <span class="text-teal-400">${pet.weight || '0'} กก.</span></p>
-                                <p class="text-gray-500 text-xl italic mt-6">วันเกิด: ${pet.birth_date || '-'}</p>
+                                <p class="text-gray-500 text-lg italic mt-4">เกิดเมื่อ: ${pet.birth_date || '-'}</p>
                             </div>
                         </div>
 
-                        <div class="bg-white/5 p-10 rounded-[40px] border-2 border-white/5">
-                            <h3 class="text-teal-400 font-black text-2xl uppercase mb-8 flex items-center gap-4">
-                                <span class="w-10 h-1 bg-teal-400"></span> ข้อมูลเจ้าของ
-                            </h3>
-                            <div class="space-y-8">
-                                <div><label class="text-gray-500 text-xl block mb-1">ชื่อ-นามสกุล</label><p class="text-4xl font-black text-white">${owner.owner_name}</p></div>
-                                <div><label class="text-gray-500 text-xl block mb-1">เบอร์โทรศัพท์</label><p class="text-4xl font-black text-teal-400">${phones}</p></div>
-                                <div><label class="text-gray-500 text-xl block mb-1">ที่อยู่</label><p class="text-xl font-bold text-gray-300">${owner.address || '-'}</p></div>
+                        <div class="bg-white/5 p-10 rounded-[40px] border border-white/5">
+                            <h3 class="text-teal-400 font-black text-2xl uppercase mb-6 flex items-center gap-3"><span class="w-10 h-1 bg-teal-400"></span> ข้อมูลเจ้าของ</h3>
+                            <div class="space-y-6">
+                                <div><label class="text-gray-500 text-lg block">ชื่อ-นามสกุล</label><p class="text-3xl font-black text-white">${owner.owner_name}</p></div>
+                                <div><label class="text-gray-500 text-lg block">เบอร์โทรศัพท์</label><p class="text-3xl font-black text-teal-400">${phones}</p></div>
+                                <div><label class="text-gray-500 text-lg block">ที่อยู่ปัจจุบัน</label><p class="text-xl font-bold text-gray-300">${owner.address || '-'}</p></div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="mt-10 p-10 bg-amber-500/5 border-2 border-amber-500/20 rounded-[40px]">
-                         <p class="text-amber-500 font-black text-2xl uppercase mb-4 tracking-widest">หมายเหตุเพิ่มเติม</p>
-                         <p class="text-3xl text-gray-200 font-bold">${owner.note || 'ไม่มีข้อมูลบันทึก'}</p>
                     </div>
                 </div>
             `;
         }
 
         async function deletePet(id) {
-            if (confirm("⚠️ ยืนยันการลบประวัติสัตว์ตัวนี้? (ไม่สามารถย้อนกลับได้)")) {
+            if (confirm("⚠️ ลบข้อมูลสัตว์ตัวนี้?")) {
                 const { error } = await db.from('animals').delete().eq('id', id);
-                if (error) alert("ล้มเหลว: " + error.message);
-                else { alert("ลบสำเร็จ!"); window.location.reload(); }
+                if (error) alert(error.message);
+                else window.location.reload();
             }
-        }
-
-        function filterAnimals() {
-            const term = document.getElementById('search-box').value.toLowerCase();
-            const filtered = allAnimals.filter(pet => {
-                const owner = allOwners.find(o => o.hn === pet.owner_hn) || {};
-                const phones = allPhones.filter(p => p.owner_hn === pet.owner_hn).map(p => p.phone_number).join(' ');
-                return pet.pet_name.toLowerCase().includes(term) || pet.owner_hn.toLowerCase().includes(term) || (owner.owner_name && owner.owner_name.toLowerCase().includes(term)) || phones.includes(term);
-            });
-            renderList(filtered);
         }
     </script>
 </body>
