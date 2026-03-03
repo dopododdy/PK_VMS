@@ -62,14 +62,11 @@
         .input-dark:focus { border-color: var(--teal); }
         textarea.input-dark { min-height: 100px; font-size: 1rem; }
 
-        /* Stats Inputs */
         .input-stats { font-size: 1.5rem !important; font-weight: 800 !important; text-align: center; }
 
         .section-title { color: var(--teal); font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         .badge-date { background: rgba(20, 184, 177, 0.1); color: var(--teal); padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 1rem; }
 
-        /* แก้ไขสไตล์ Flatpickr Alt Input ให้เข้ากับธีม */
-        .flatpickr-mobile { color: white !important; }
         input[readonly].flatpickr-input { background: rgba(0,0,0,0.3) !important; cursor: pointer; }
     </style>
 </head>
@@ -118,7 +115,7 @@
                     <input type="number" step="0.1" id="v_temp" class="input-dark input-stats text-red-400">
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                    <label class="label-text">วันนัดครั้งถัดไป (Appointment)</label>
+                    <label class="label-text">วันนัดครั้งถัดไป</label>
                     <input type="text" id="v_next_app" class="input-dark font-bold">
                 </div>
 
@@ -177,17 +174,15 @@
             await fetchAnimalDetails();
             loadVisitHistory();
 
-            // แก้ไข Flatpickr เพื่อส่งค่าแบบ ISO ให้ Database
             flatpickr("#v_next_app", {
                 enableTime: true,
-                dateFormat: "Y-m-d H:i", // Database เข้าใจ format นี้
-                altInput: true,         // สร้าง input ตัวหลอกมาบังไว้
-                altFormat: "j F Y เวลา H:i น.", // สิ่งที่คนเห็น
+                dateFormat: "Y-m-d H:i", 
+                altInput: true,         
+                altFormat: "j F Y เวลา H:i น.", 
                 time_24hr: true,
                 locale: "th",
                 minDate: "today",
                 onReady: function(selectedDates, dateStr, instance) {
-                    // ปรับแต่งปีใน Alt Input ให้เป็น พ.ศ.
                     const wrapFormat = () => {
                         if (instance.selectedDates.length > 0) {
                             const date = instance.selectedDates[0];
@@ -271,59 +266,35 @@
                         <div class="record-content">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div class="space-y-4">
-                                    <div>
-                                        <h4 class="text-teal-500 text-[11px] font-black uppercase tracking-wider mb-1">1. Subjective (CC)</h4>
-                                        <p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.symptoms || '-'}</p>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-teal-500 text-[11px] font-black uppercase tracking-wider mb-1">2. Objective (PE)</h4>
-                                        <p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.physical_exam || '-'}</p>
-                                    </div>
+                                    <div><h4 class="text-teal-500 text-[11px] font-black uppercase tracking-wider mb-1">1. Subjective (CC)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.symptoms || '-'}</p></div>
+                                    <div><h4 class="text-teal-500 text-[11px] font-black uppercase tracking-wider mb-1">2. Objective (PE)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.physical_exam || '-'}</p></div>
                                 </div>
                                 <div class="space-y-4">
-                                    <div>
-                                        <h4 class="text-indigo-400 text-[11px] font-black uppercase tracking-wider mb-1">4. Treatment (Tx)</h4>
-                                        <p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.treatment || '-'}</p>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-emerald-400 text-[11px] font-black uppercase tracking-wider mb-1">5. Prescription (Rx)</h4>
-                                        <p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10 bg-emerald-500/5 p-3 rounded-lg">${v.prescription || '-'}</p>
-                                    </div>
+                                    <div><h4 class="text-indigo-400 text-[11px] font-black uppercase tracking-wider mb-1">4. Treatment (Tx)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.treatment || '-'}</p></div>
+                                    <div><h4 class="text-emerald-400 text-[11px] font-black uppercase tracking-wider mb-1">5. Prescription (Rx)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10 bg-emerald-500/5 p-3 rounded-lg">${v.prescription || '-'}</p></div>
                                 </div>
                             </div>
-                            ${v.next_appointment ? `
-                                <div class="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center gap-4">
-                                    <div class="text-2xl">📅</div>
-                                    <div>
-                                        <div class="text-indigo-300 font-bold text-sm">นัดครั้งต่อไป: ${nextApptStr}</div>
-                                        <div class="text-gray-400 text-xs mt-0.5">${v.next_note || ''}</div>
-                                    </div>
-                                </div>
-                            ` : ''}
+                            ${v.next_appointment ? `<div class="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center gap-4">📅 <div><div class="text-indigo-300 font-bold text-sm">นัดครั้งต่อไป: ${nextApptStr}</div><div class="text-gray-400 text-xs">${v.next_note || ''}</div></div></div>` : ''}
                         </div>
                     </div>`;
             }).join('');
         }
 
         async function saveVisit() {
-            const cc = document.getElementById('v_cc').value;
-            const tdx = document.getElementById('v_tdx').value;
-            if(!cc || !tdx) return alert("❌ กรุณาระบุ CC และ TDx");
-
-            // ดึงค่าจากช่องดั้งเดิม (ที่ซ่อนอยู่) ซึ่งเก็บ format YYYY-MM-DD
+            // ปลดล็อกเงื่อนไขการบังคับกรอก (Validation Bypass)
             const nextAppValue = document.getElementById('v_next_app').value;
 
             const visitData = {
                 animal_id: petId,
                 weight: parseFloat(document.getElementById('v_weight').value) || 0,
                 temp: parseFloat(document.getElementById('v_temp').value) || 0,
-                symptoms: cc,
-                physical_exam: document.getElementById('v_pe').value,
-                diagnosis: tdx,
-                treatment: document.getElementById('v_tx').value,
-                prescription: document.getElementById('v_rx').value,
+                symptoms: document.getElementById('v_cc').value || "-", // ถ้าไม่ใส่ให้เป็นขีด
+                physical_exam: document.getElementById('v_pe').value || "-",
+                diagnosis: document.getElementById('v_tdx').value || "-",
+                treatment: document.getElementById('v_tx').value || "-",
+                prescription: document.getElementById('v_rx').value || "-",
                 next_appointment: nextAppValue === "" ? null : nextAppValue,
-                next_note: document.getElementById('v_next_note').value
+                next_note: document.getElementById('v_next_note').value || ""
             };
             
             const { error } = await db.from('visit_history').insert(visitData);
