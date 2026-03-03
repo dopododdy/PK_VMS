@@ -12,6 +12,7 @@
         :root {
             --base-font-size: 14px; 
             --navy: #0b1929; 
+            --navy-light: #112240;
             --teal: #14b8b1; 
             --border: rgba(255, 255, 255, 0.1);
         }
@@ -20,76 +21,102 @@
         html { font-size: var(--base-font-size); }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; font-size: 1rem; }
 
-        /* SIDEBAR - ตั้งค่า Default แคบสุดที่ 400px */
+        /* SIDEBAR STRUCTURE */
         .sidebar-container { 
-            position: relative; min-width: 400px; max-width: 900px; width: 400px;
-            background: rgba(17, 34, 64, 0.95); backdrop-filter: blur(25px); 
+            position: relative; min-width: 400px; max-width: 800px; width: 420px;
+            background: rgba(17, 34, 64, 0.98); backdrop-filter: blur(25px); 
             border-right: 1px solid var(--border); display: flex; flex-direction: column;
         }
-        .resizer { width: 4px; cursor: col-resize; position: absolute; right: 0; top: 0; bottom: 0; z-index: 50; }
+        .resizer { width: 4px; cursor: col-resize; position: absolute; right: 0; top: 0; bottom: 0; z-index: 50; transition: 0.2s; }
+        .resizer:hover { background: var(--teal); }
 
-        /* Sidebar List - ขนาดฟอนต์เท่าหน้าจอหลัก (1rem) และจัด 2 บรรทัด */
-        .animal-item { 
-            background: rgba(255,255,255,0.02); border: 1px solid transparent; 
-            border-radius: 12px; padding: 12px; cursor: pointer; 
-            margin-bottom: 0.6rem; display: flex; flex-direction: column; gap: 4px;
+        /* PET CARD DESIGN (SIDEBAR) */
+        .pet-card { 
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); 
+            border-radius: 16px; padding: 14px; cursor: pointer; 
+            margin-bottom: 0.8rem; display: flex; align-items: center; gap: 12px;
+            transition: all 0.2s ease;
         }
-        .animal-item.active { border-color: var(--teal); background: rgba(20, 184, 177, 0.15); }
+        .pet-card:hover { background: rgba(255, 255, 255, 0.08); transform: translateX(4px); }
+        .pet-card.active { border-color: var(--teal); background: rgba(20, 184, 177, 0.12); box-shadow: inset 4px 0 0 var(--teal); }
         
-        /* บรรทัดที่ 1: ชื่อสัตว์ และ HN */
-        .line-1 { display: flex; justify-content: space-between; align-items: center; font-size: 1rem; font-weight: 800; color: white; }
-        /* บรรทัดที่ 2: เจ้าของ และ เบอร์โทร */
-        .line-2 { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; color: #94a3b8; }
-        .hn-badge { background: #3b82f6; color: white; padding: 1px 6px; border-radius: 4px; font-size: 0.8rem; }
+        .hn-box { 
+            background: rgba(59, 130, 246, 0.15); color: #60a5fa; 
+            font-weight: 800; padding: 4px 8px; border-radius: 8px; 
+            font-size: 0.85rem; min-width: 70px; text-align: center;
+        }
+        .pet-icon-big { font-size: 2.2rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+        .pet-name-main { font-size: 1.15rem; font-weight: 800; color: white; line-height: 1.2; }
+        .owner-sub-text { font-size: 0.95rem; color: #94a3b8; display: flex; justify-content: space-between; margin-top: 2px; }
+
+        /* UI ELEMENTS */
+        .search-input-premium {
+            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); 
+            border-radius: 12px; padding: 12px 16px; color: white; font-size: 1.1rem;
+            outline: none; transition: 0.2s;
+        }
+        .search-input-premium:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+
+        .btn-home-big {
+            width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.05); border-radius: 12px; font-size: 1.5rem; transition: 0.2s;
+        }
+        .btn-home-big:hover { background: rgba(255,255,255,0.15); transform: scale(1.05); }
 
         /* FORM STYLES */
         .input-box { 
             background: rgba(0,0,0,0.3); border: 1px solid var(--border); 
-            border-radius: 8px; padding: 8px 10px; color: white; width: 100%; 
-            font-size: 1rem; outline: none;
+            border-radius: 10px; padding: 8px 12px; color: white; width: 100%; 
+            font-size: 1.05rem; outline: none;
         }
         
-        /* แก้ไข "เมียหมัน" แสดงไม่ครบ */
         select.input-box {
-            padding-left: 6px; /* ลดช่องว่างซ้าย */
-            padding-right: 18px; /* เผื่อพื้นที่ลูกศร */
-            font-size: 0.9rem; /* ลดขนาดฟอนต์ใน select เล็กน้อยเพื่อให้แสดงคำครบ */
+            padding-left: 6px; padding-right: 20px; font-size: 0.9rem;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 4px center;
-            background-size: 10px;
-            appearance: none;
+            background-repeat: no-repeat; background-position: right 6px center; background-size: 12px; appearance: none;
         }
 
-        .zone-pet { background: rgba(49, 46, 129, 0.4); border-radius: 20px; padding: 1.2rem; margin-bottom: 1rem; position: relative; }
-        .label-text { color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; display: block; }
+        .zone-pet { background: rgba(49, 46, 129, 0.3); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 24px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .label-text { color: #94a3b8; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; display: block; }
 
         .btn-save-main {
-            display: block; width: 100%; max-width: 350px; margin: 2rem auto;
+            display: block; width: 100%; max-width: 380px; margin: 2rem auto;
             background: var(--teal); color: var(--navy); font-weight: 900;
-            padding: 1rem; border-radius: 15px; font-size: 1.3rem; transition: 0.2s;
+            padding: 1.2rem; border-radius: 18px; font-size: 1.4rem; transition: 0.3s;
+            box-shadow: 0 10px 25px rgba(20, 184, 177, 0.2);
         }
+        .btn-save-main:hover { transform: translateY(-3px); filter: brightness(1.1); }
     </style>
 </head>
 <body>
     <div class="flex h-screen overflow-hidden">
+        
         <aside class="sidebar-container" id="sidebar">
             <div class="resizer" id="resizer"></div>
-            <div class="p-4 flex-shrink-0">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-black text-white">เวชระเบียนสัตว์</h2>
-                    <a href="index.html" class="bg-white/5 p-1 rounded">🏠</a>
+            
+            <div class="p-6 flex-shrink-0">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-black text-white tracking-tight">เวชระเบียนสัตว์</h2>
+                    <a href="index.html" class="btn-home-big" title="กลับหน้าแรก">🏠</a>
                 </div>
-                <input type="text" id="search-box" class="input-box text-sm" placeholder="ค้นหา..." oninput="filterAnimals()">
+                <input type="text" id="search-box" class="search-input-premium" placeholder="ค้นหาชื่อสัตว์, HN, เบอร์โทร..." oninput="filterAnimals()">
             </div>
-            <div id="animal-list" class="flex-1 overflow-y-auto px-4 pb-4"></div>
-            <div class="p-4 bg-black/20 border-t border-white/5">
-                <button onclick="createNewForm()" class="w-full bg-teal-600 text-white font-bold py-2 rounded-lg">+ ลงทะเบียนใหม่</button>
+
+            <div id="animal-list" class="flex-1 overflow-y-auto px-5 pb-4"></div>
+
+            <div class="p-5 bg-black/20 border-t border-white/5">
+                <button onclick="createNewForm()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-3 rounded-xl text-lg transition-all">
+                    + ลงทะเบียนใหม่
+                </button>
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto p-8 bg-[#080f1a]" id="form-view">
-            <div class="h-full flex flex-col items-center justify-center opacity-10">📋 เลือกสัตว์ป่วยเพื่อดูข้อมูล</div>
+        <main class="flex-1 overflow-y-auto p-10 bg-[#080f1a]" id="form-view">
+            <div class="h-full flex flex-col items-center justify-center opacity-10">
+                <div class="text-[8rem] mb-4">📋</div>
+                <h3 class="text-2xl font-black">PK-VMS Medical Records</h3>
+                <p>เลือกสัตว์ป่วยจากแถบด้านซ้ายเพื่อจัดการข้อมูล</p>
+            </div>
         </main>
     </div>
 
@@ -108,7 +135,7 @@
             document.addEventListener("mousemove", resize);
             document.addEventListener("mouseup", () => document.removeEventListener("mousemove", resize));
         });
-        function resize(e) { if(e.pageX >= 400 && e.pageX <= 900) sidebar.style.width = e.pageX + "px"; }
+        function resize(e) { if(e.pageX >= 400 && e.pageX <= 800) sidebar.style.width = e.pageX + "px"; }
 
         window.onload = async () => {
             const savedSize = localStorage.getItem('preferred-font-size') || '14';
@@ -134,22 +161,24 @@
             container.innerHTML = list.map(pet => {
                 const owner = allOwners.find(o => o.hn === pet.owner_hn) || { owner_name: '-' };
                 const phones = allPhones.filter(p => p.owner_hn === pet.owner_hn).map(p => p.phone_number).join(', ');
+                const icon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
                 return `
-                    <div class="animal-item" onclick="editOwner('${pet.owner_hn}')" id="hn-${pet.owner_hn}">
-                        <div class="line-1">
-                            <span>${pet.pet_type === 'สุนัข' ? '🐶' : '🐱'} ${pet.pet_name}</span>
-                            <span class="hn-badge">HN ${pet.owner_hn}</span>
-                        </div>
-                        <div class="line-2">
-                            <span class="truncate">👤 ${owner.owner_name}</span>
-                            <span class="font-bold text-teal-500">📞 ${phones || '-'}</span>
+                    <div class="pet-card" onclick="editOwner('${pet.owner_hn}')" id="hn-${pet.owner_hn}">
+                        <div class="hn-box">HN ${pet.owner_hn}</div>
+                        <div class="pet-icon-big">${icon}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="pet-name-main truncate">${pet.pet_name}</div>
+                            <div class="owner-sub-text">
+                                <span class="truncate">👤 ${owner.owner_name}</span>
+                                <span class="font-bold text-teal-400 ml-2">📞 ${phones.split(',')[0] || '-'}</span>
+                            </div>
                         </div>
                     </div>`;
             }).join('');
         }
 
         function editOwner(hn) {
-            document.querySelectorAll('.animal-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.pet-card').forEach(el => el.classList.remove('active'));
             const item = document.getElementById(`hn-${hn}`);
             if(item) item.classList.add('active');
             const owner = allOwners.find(o => o.hn === hn);
@@ -161,21 +190,21 @@
         function renderForm(owner, pets, phones = []) {
             const formView = document.getElementById('form-view');
             const p1 = phones[0]?.phone_number || '';
-            const p2 = phones[1]?.phone_number || '';
             formView.innerHTML = `
-                <div class="max-w-4xl mx-auto">
-                    <h2 class="text-xl font-black text-white mb-6">📂 แก้ไขเวชระเบียน <span class="text-teal-400 ml-2">HN: ${owner.hn}</span></h2>
+                <div class="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <h2 class="text-3xl font-black text-white mb-8">📂 แก้ไขเวชระเบียน <span class="text-teal-400 ml-3">HN: ${owner.hn}</span></h2>
                     
-                    <div class="zone-owner mb-6 p-6 bg-slate-800/40 rounded-2xl border border-white/5">
-                        <div class="grid grid-cols-12 gap-4">
+                    <div class="mb-8 p-8 bg-slate-800/40 rounded-[30px] border border-white/5 shadow-2xl">
+                        <h3 class="text-lg font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของ</h3>
+                        <div class="grid grid-cols-12 gap-6">
                             <div class="col-span-2"><label class="label-text">HN</label><input type="text" id="f_hn" class="input-box" value="${owner.hn}" readonly></div>
-                            <div class="col-span-6"><label class="label-text">ชื่อเจ้าของ</label><input type="text" id="f_owner_name" class="input-box font-bold" value="${owner.owner_name || ''}"></div>
-                            <div class="col-span-4"><label class="label-text">เบอร์โทร</label><input type="tel" id="f_phone1" class="input-box" value="${p1}"></div>
-                            <div class="col-span-12"><label class="label-text">ที่อยู่</label><input type="text" id="f_address" class="input-box" value="${owner.address || ''}"></div>
+                            <div class="col-span-6"><label class="label-text">ชื่อเจ้าของ</label><input type="text" id="f_owner_name" class="input-box font-bold text-white" value="${owner.owner_name || ''}"></div>
+                            <div class="col-span-4"><label class="label-text">เบอร์โทรศัพท์หลัก</label><input type="tel" id="f_phone1" class="input-box" value="${p1}" placeholder="08xxxxxxxx"></div>
+                            <div class="col-span-12"><label class="label-text">ที่อยู่ปัจจุบัน</label><input type="text" id="f_address" class="input-box" value="${owner.address || ''}"></div>
                         </div>
                     </div>
 
-                    <div id="pets-container" class="space-y-4">
+                    <div id="pets-container" class="space-y-6">
                         ${pets.length ? pets.map(p => petRowHtml(p)).join('') : petRowHtml({})}
                     </div>
 
@@ -194,36 +223,118 @@
             }
             return `
                 <div class="zone-pet group">
-                    <div class="grid grid-cols-12 gap-3">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-4">
+                             <div class="text-3xl">${pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾')}</div>
+                             <h4 class="text-xl font-bold text-white">${pet.pet_name || 'ลงทะเบียนสัตว์ใหม่'}</h4>
+                        </div>
+                        ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="bg-teal-500/10 text-teal-400 border border-teal-500/50 px-4 py-2 rounded-xl font-bold hover:bg-teal-500 hover:text-white transition-all">🏥 ประวัติการรักษา</button>` : ''}
+                    </div>
+
+                    <div class="grid grid-cols-12 gap-5">
                         <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-bold" value="${pet.pet_name || ''}"></div>
                         <div class="col-span-3"><label class="label-text">สายพันธุ์</label><input type="text" class="p_breed input-box" value="${pet.breed || ''}"></div>
                         <div class="col-span-4"><label class="label-text">วันเกิด</label><input type="date" class="p_dob input-box" value="${pet.birth_date || ''}" onchange="calcAge(this)"></div>
-                        <div class="col-span-2"><label class="label-text">นน.(กก.)</label><input type="number" class="p_weight input-box text-center text-yellow-400 font-bold" value="${pet.weight || ''}"></div>
+                        <div class="col-span-2"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="p_weight input-box text-center text-yellow-400 font-bold" value="${pet.weight || ''}"></div>
 
                         <div class="col-span-3">
                             <label class="label-text">ชนิด / เพศ</label>
-                            <div class="grid grid-cols-2 gap-1">
+                            <div class="grid grid-cols-2 gap-2">
                                 <select class="p_type input-box"><option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>แมว</option><option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>สุนัข</option></select>
                                 <select class="p_gender input-box"><option value="เมีย" ${(!pet.gender||pet.gender==='เมีย')?'selected':''}>เมีย</option><option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>ผู้</option><option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>ผู้ตอน</option><option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>เมียหมัน</option></select>
                             </div>
                         </div>
-                        <div class="col-span-3"><label class="label-text">ไมโครชิพ</label><input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}"></div>
+                        <div class="col-span-3"><label class="label-text">เลขไมโครชิพ</label><input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}"></div>
                         <div class="col-span-4">
-                            <label class="label-text">อายุ</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div class="flex items-center gap-1"><input type="number" class="p_age_y input-box text-center" value="${ageY}" oninput="calcDOB(this)"><span class="text-xs">ปี</span></div>
-                                <div class="flex items-center gap-1"><input type="number" class="p_age_m input-box text-center" value="${ageM}" oninput="calcDOB(this)"><span class="text-xs">ด.</span></div>
+                            <label class="label-text">คำนวณอายุ</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="flex items-center gap-2"><input type="number" class="p_age_y input-box text-center text-teal-400" value="${ageY}" oninput="calcDOB(this)"><span class="text-xs text-slate-500">ปี</span></div>
+                                <div class="flex items-center gap-2"><input type="number" class="p_age_m input-box text-center text-teal-400" value="${ageM}" oninput="calcDOB(this)"><span class="text-xs text-slate-500">ด.</span></div>
                             </div>
                         </div>
-                        <div class="col-span-12"><label class="label-text">โรคประจำตัว</label><textarea class="p_congenital input-box h-[40px] text-sm">${pet.congenital_disease || ''}</textarea></div>
+                        <div class="col-span-2"></div>
+                        <div class="col-span-12"><label class="label-text">โรคประจำตัว / แพ้ยา / ข้อควรระวัง</label><textarea class="p_congenital input-box h-[60px] text-sm">${pet.congenital_disease || ''}</textarea></div>
                     </div>
                 </div>`;
         }
 
-        async function saveAllData() { /* Logic การบันทึกคงเดิม */ }
-        function filterAnimals() { /* Logic การค้นหาคงเดิม */ }
-        function calcAge(el) { /* Logic คำนวณอายุคงเดิม */ }
-        function calcDOB(el) { /* Logic คำนวณวันเกิดคงเดิม */ }
+        async function createNewForm() {
+            let nextHN = "690001";
+            if (allOwners.length > 0) {
+                const hns = allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
+                nextHN = (Math.max(...hns) + 1).toString();
+            }
+            renderForm({ hn: nextHN, owner_name: '', address: '' }, [], []); 
+        }
+
+        function calcAge(el) {
+            const row = el.closest('.zone-pet');
+            if(!el.value) return;
+            const d = new Date(el.value);
+            const now = new Date();
+            let y = now.getFullYear() - d.getFullYear();
+            let m = now.getMonth() - d.getMonth();
+            if(m < 0) { y--; m += 12; }
+            row.querySelector('.p_age_y').value = y;
+            row.querySelector('.p_age_m').value = m;
+        }
+
+        function calcDOB(el) {
+            const row = el.closest('.zone-pet');
+            const y = parseInt(row.querySelector('.p_age_y').value) || 0;
+            const m = parseInt(row.querySelector('.p_age_m').value) || 0;
+            const d = new Date();
+            d.setFullYear(d.getFullYear() - y);
+            d.setMonth(d.getMonth() - m);
+            row.querySelector('.p_dob').value = d.toISOString().split('T')[0];
+        }
+
+        async function saveAllData() {
+            const hn = document.getElementById('f_hn').value;
+            const owner_name = document.getElementById('f_owner_name').value;
+            const p1 = document.getElementById('f_phone1').value;
+            if (!hn || !owner_name || !p1) return alert("❌ กรุณาระบุชื่อเจ้าของ และเบอร์โทร");
+            try {
+                await db.from('owners').upsert({ hn, owner_name, address: document.getElementById('f_address').value, updated_at: new Date() });
+                await db.from('owner_phones').delete().eq('owner_hn', hn);
+                await db.from('owner_phones').insert([{ owner_hn: hn, phone_number: p1, label: 'เบอร์หลัก' }]);
+                
+                const petNodes = document.querySelectorAll('.zone-pet');
+                for (const node of petNodes) {
+                    const petName = node.querySelector('.p_name').value;
+                    if (!petName) continue;
+                    const existingPet = allAnimals.find(a => a.owner_hn === hn && a.pet_name === petName);
+                    const petData = {
+                        owner_hn: hn, pet_name: petName, pet_type: node.querySelector('.p_type').value,
+                        gender: node.querySelector('.p_gender').value, breed: node.querySelector('.p_breed').value,
+                        microchip_number: node.querySelector('.p_microchip').value,
+                        congenital_disease: node.querySelector('.p_congenital').value,
+                        birth_date: node.querySelector('.p_dob').value || null,
+                        weight: parseFloat(node.querySelector('.p_weight').value) || 0,
+                        updated_at: new Date()
+                    };
+                    if (existingPet) await db.from('animals').update(petData).eq('id', existingPet.id);
+                    else await db.from('animals').insert(petData);
+                }
+                alert("✅ บันทึกสำเร็จ!");
+                await loadData();
+                editOwner(hn);
+            } catch (err) { alert("❌ Error: " + err.message); }
+        }
+
+        function filterAnimals() {
+            const term = document.getElementById('search-box').value.toLowerCase();
+            const filtered = allAnimals.filter(pet => {
+                const owner = allOwners.find(o => o.hn === pet.owner_hn) || {};
+                const phones = allPhones.filter(p => p.owner_hn === pet.owner_hn).map(p => p.phone_number).join(' ');
+                return pet.pet_name.toLowerCase().includes(term) || pet.owner_hn.toLowerCase().includes(term) || (owner.owner_name && owner.owner_name.toLowerCase().includes(term)) || phones.includes(term);
+            });
+            renderList(filtered);
+        }
+
+        function gotoMedicalRecord(petId, petName, hn) {
+            window.location.href = `medical_records.html?id=${petId}&name=${encodeURIComponent(petName)}&hn=${hn}`;
+        }
     </script>
 </body>
 </html>
