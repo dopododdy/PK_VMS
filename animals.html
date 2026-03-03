@@ -10,54 +10,45 @@
     <style>
         :root { 
             --navy: #0b1929; --navy-mid: #112240; --teal: #14b8b1; 
-            --hn-bg: #3b82f6; --owner-zone: rgba(30, 41, 59, 0.5);
-            --pet-zone: rgba(49, 46, 129, 0.3);
+            --hn-bg: #3b82f6; --owner-zone: rgba(30, 41, 59, 0.6);
+            --pet-zone: rgba(49, 46, 129, 0.4);
         }
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
         
         /* RESIZABLE SIDEBAR */
         .sidebar-container { 
-            position: relative;
-            min-width: 450px; max-width: 900px; width: 780px;
-            background: rgba(17, 34, 64, 0.8); 
-            backdrop-filter: blur(20px); 
-            border-right: 2px solid rgba(255,255,255,0.1); 
-            display: flex; flex-direction: column;
+            position: relative; min-width: 450px; max-width: 900px; width: 700px;
+            background: rgba(17, 34, 64, 0.85); backdrop-filter: blur(25px); 
+            border-right: 2px solid rgba(255,255,255,0.1); display: flex; flex-direction: column;
         }
-        .resizer {
-            width: 8px; cursor: col-resize; position: absolute;
-            right: 0; top: 0; bottom: 0; z-index: 10;
-            background: transparent; transition: background 0.2s;
-        }
-        .resizer:hover { background: var(--teal); }
+        .resizer { width: 10px; cursor: col-resize; position: absolute; right: 0; top: 0; bottom: 0; z-index: 50; }
+        .resizer:hover { background: var(--teal); opacity: 0.5; }
 
         /* LIST ITEM */
         .animal-item { 
-            background: rgba(255,255,255,0.05); border: 2px solid transparent; 
-            border-radius: 12px; padding: 0.8rem 1.2rem; cursor: pointer; 
+            background: rgba(255,255,255,0.03); border: 2px solid transparent; 
+            border-radius: 12px; padding: 1rem; cursor: pointer; 
             margin-bottom: 0.6rem; display: flex; align-items: center; gap: 1rem;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
-        .animal-item:hover { background: rgba(20, 184, 177, 0.1); border-color: var(--teal); }
-        .animal-item.active { border-color: var(--teal); background: rgba(20, 184, 177, 0.15); box-shadow: 0 0 15px rgba(20, 184, 177, 0.2); }
+        .animal-item:hover { background: rgba(20, 184, 177, 0.1); }
+        .animal-item.active { border-color: var(--teal); background: rgba(20, 184, 177, 0.15); }
         .hn-badge { background: var(--hn-bg); color: white; font-weight: 800; padding: 2px 10px; border-radius: 8px; font-size: 0.9rem; }
 
-        /* FORM ELEMENTS */
-        .zone-owner { background: var(--owner-zone); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; padding: 30px; margin-bottom: 20px; }
-        .zone-pet { background: var(--pet-zone); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 30px; padding: 30px; margin-bottom: 20px; position: relative; }
+        /* FORM ZONES */
+        .zone-owner { background: var(--owner-zone); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 30px; margin-bottom: 20px; }
+        .zone-pet { background: var(--pet-zone); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 24px; padding: 30px; margin-bottom: 20px; position: relative; }
         
-        .label-text { color: #94a3b8; font-size: 1.1rem; font-weight: 500; margin-bottom: 8px; display: block; }
+        .label-text { color: #94a3b8; font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; display: block; }
         .input-box { 
-            background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15); 
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); 
             border-radius: 12px; padding: 12px 16px; color: white; width: 100%; 
-            font-size: 1.25rem; outline: none; transition: all 0.2s;
+            font-size: 1.2rem; outline: none; transition: 0.2s;
         }
-        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.4); }
+        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
-        /* CUSTOM SCROLLBAR */
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--teal); }
     </style>
 </head>
 <body>
@@ -73,7 +64,7 @@
                         <a href="index.html" class="text-3xl">🏠</a>
                     </div>
                 </div>
-                <input type="text" id="search-box" class="w-full bg-black/40 border-2 border-white/10 rounded-xl p-4 text-xl text-white outline-none focus:border-teal-500" placeholder="🔍 ค้นหา: ชื่อ, HN, เบอร์โทร..." oninput="filterAnimals()">
+                <input type="text" id="search-box" class="w-full bg-black/40 border-2 border-white/10 rounded-xl p-4 text-xl text-white outline-none focus:border-teal-500" placeholder="🔍 ค้นหา: ชื่อสัตว์, HN, เบอร์โทร..." oninput="filterAnimals()">
             </div>
 
             <div id="animal-list" class="flex-1 overflow-y-auto px-4 pb-4"></div>
@@ -85,27 +76,27 @@
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto p-8 lg:p-12 bg-gradient-to-br from-navy to-black" id="form-view">
+        <main class="flex-1 overflow-y-auto p-12 bg-gradient-to-br from-navy to-black" id="form-view">
             <div class="h-full flex flex-col items-center justify-center opacity-20 text-center">
-                <div class="text-[12rem] mb-4">🐾</div>
-                <h3 class="text-4xl font-black uppercase tracking-widest">PK-VMS Dashboard</h3>
-                <p class="text-xl mt-4">เลือกรายชื่อจากแถบด้านซ้ายเพื่อจัดการข้อมูล</p>
+                <div class="text-[12rem]">📋</div>
+                <h3 class="text-4xl font-black">PK-VMS Dashboard</h3>
+                <p class="text-xl">เลือกรายชื่อสัตว์ป่วยเพื่อเริ่มต้นจัดการข้อมูล</p>
             </div>
         </main>
     </div>
 
     <script>
         let allAnimals = []; let allOwners = []; let allPhones = [];
+        const MONTHS_TH = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
-        // SIDEBAR RESIZER LOGIC
+        // SIDEBAR RESIZER
         const sidebar = document.getElementById("sidebar");
         const resizer = document.getElementById("resizer");
         resizer.addEventListener("mousedown", (e) => {
             document.addEventListener("mousemove", resize);
-            document.addEventListener("mouseup", stopResize);
+            document.addEventListener("mouseup", () => document.removeEventListener("mousemove", resize));
         });
         function resize(e) { sidebar.style.width = e.pageX + "px"; }
-        function stopResize() { document.removeEventListener("mousemove", resize); }
 
         window.onload = async () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
@@ -113,13 +104,15 @@
         };
 
         async function loadData() {
-            const [resA, resO, resP] = await Promise.all([
-                db.from('animals').select('*').order('created_at', { ascending: false }),
-                db.from('owners').select('*'),
-                db.from('owner_phones').select('*')
-            ]);
-            allAnimals = resA.data || []; allOwners = resO.data || []; allPhones = resP.data || [];
-            renderList(allAnimals);
+            try {
+                const [resA, resO, resP] = await Promise.all([
+                    db.from('animals').select('*').order('created_at', { ascending: false }),
+                    db.from('owners').select('*'),
+                    db.from('owner_phones').select('*')
+                ]);
+                allAnimals = resA.data || []; allOwners = resO.data || []; allPhones = resP.data || [];
+                renderList(allAnimals);
+            } catch (e) { console.error("Data Load Error:", e); }
         }
 
         function renderList(list) {
@@ -127,13 +120,13 @@
             container.innerHTML = list.map(pet => {
                 const owner = allOwners.find(o => o.hn === pet.owner_hn) || { owner_name: '-' };
                 const phones = allPhones.filter(p => p.owner_hn === pet.owner_hn).map(p => p.phone_number).join(', ');
-                const typeIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
+                const icon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
                 return `
                     <div class="animal-item" onclick="editOwner('${pet.owner_hn}')" id="hn-${pet.owner_hn}">
-                        <div class="text-4xl">${typeIcon}</div>
+                        <div class="text-4xl">${icon}</div>
                         <span class="hn-badge">HN ${pet.owner_hn}</span>
                         <div class="text-2xl font-black text-white w-40 truncate">${pet.pet_name}</div>
-                        <div class="text-xl text-gray-300 w-40 truncate">👤 ${owner.owner_name}</div>
+                        <div class="text-xl text-gray-400 w-40 truncate">👤 ${owner.owner_name}</div>
                         <div class="text-teal-400 font-bold flex-1 truncate text-lg">📞 ${phones}</div>
                     </div>`;
             }).join('');
@@ -156,173 +149,165 @@
             const p2 = phones[1]?.phone_number || '';
 
             formView.innerHTML = `
-                <div class="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div class="flex justify-between items-center mb-8">
-                        <h2 class="text-5xl font-black text-white">📋 จัดการเวชระเบียน</h2>
-                        ${owner.hn ? `<span class="bg-blue-600 text-white px-8 py-2 rounded-2xl text-2xl font-black">HN: ${owner.hn}</span>` : ''}
-                    </div>
+                <div class="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+                    <h2 class="text-5xl font-black text-white mb-10 flex items-center gap-4">📂 จัดการเวชระเบียน ${owner.hn ? `<span class="text-blue-500">HN ${owner.hn}</span>` : ''}</h2>
                     
                     <div class="zone-owner">
                         <h3 class="text-2xl font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
                         <div class="grid grid-cols-12 gap-6">
-                            <div class="col-span-3">
-                                <label class="label-text">เลข HN *</label>
-                                <input type="text" id="f_hn" class="input-box" value="${owner.hn}" ${owner.hn ? 'readonly disabled' : 'placeholder="เช่น 67001"'}>
-                            </div>
-                            <div class="col-span-5">
-                                <label class="label-text">ชื่อ-นามสกุล เจ้าของ *</label>
-                                <input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name}" placeholder="ระบุชื่อเจ้าของ">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="label-text">เบอร์โทรศัพท์ 1 *</label>
-                                <input type="tel" id="f_phone1" class="input-box" value="${p1}" placeholder="0xx-xxx-xxxx">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="label-text">เบอร์โทรศัพท์ 2</label>
-                                <input type="tel" id="f_phone2" class="input-box" value="${p2}" placeholder="เบอร์สำรอง">
-                            </div>
-                            <div class="col-span-12">
-                                <label class="label-text">ที่อยู่ปัจจุบัน</label>
-                                <input type="text" id="f_address" class="input-box" value="${owner.address || ''}" placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ...">
-                            </div>
+                            <div class="col-span-3"><label class="label-text">เลข HN *</label>
+                                <input type="text" id="f_hn" class="input-box" value="${owner.hn}" ${owner.hn ? 'readonly' : 'placeholder="เช่น 690001"'}></div>
+                            <div class="col-span-5"><label class="label-text">ชื่อ-นามสกุล เจ้าของ *</label>
+                                <input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name || ''}"></div>
+                            <div class="col-span-2"><label class="label-text">เบอร์โทร 1 *</label>
+                                <input type="tel" id="f_phone1" class="input-box" value="${p1}"></div>
+                            <div class="col-span-2"><label class="label-text">เบอร์โทร 2</label>
+                                <input type="tel" id="f_phone2" class="input-box" value="${p2}"></div>
+                            <div class="col-span-12"><label class="label-text">ที่อยู่ปัจจุบัน</label>
+                                <input type="text" id="f_address" class="input-box" value="${owner.address || ''}"></div>
                         </div>
                     </div>
 
                     <div class="flex justify-between items-end mt-12 mb-6">
-                        <h3 class="text-3xl font-black text-indigo-400 flex items-center gap-2">🐾 รายการสัตว์เลี้ยง</h3>
+                        <h3 class="text-3xl font-black text-indigo-400">🐾 รายการสัตว์เลี้ยง</h3>
                         <button onclick="addPetRow()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-2xl font-black shadow-lg transition-all">+ เพิ่มสัตว์เลี้ยง</button>
                     </div>
 
                     <div id="pets-container" class="space-y-6">
-                        ${pets.length ? pets.map((p, i) => petRowHtml(p, i)).join('') : petRowHtml({}, 0)}
+                        ${pets.length ? pets.map(p => petRowHtml(p)).join('') : petRowHtml({})}
                     </div>
 
-                    <div class="mt-12 mb-20">
-                        <button onclick="saveAllData()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-8 rounded-[30px] text-4xl shadow-2xl transition-all active:scale-[0.98]">
-                            💾 บันทึกข้อมูลทั้งหมด
-                        </button>
-                    </div>
+                    <button onclick="saveAllData()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-8 rounded-[30px] text-4xl shadow-2xl mt-12 active:scale-[0.98] transition-all">
+                        💾 บันทึกข้อมูลทั้งหมด
+                    </button>
                 </div>`;
         }
 
-        function petRowHtml(pet, index) {
-            // คำนวณวันที่ภาษาไทยเริ่มต้น
-            const thaiDate = pet.birth_date ? formatThaiDate(pet.birth_date) : "ยังไม่ได้ระบุ";
-            
+        function petRowHtml(pet) {
+            let thaiDate = "ยังไม่ได้ระบุ";
+            if(pet.birth_date) {
+                const d = new Date(pet.birth_date);
+                thaiDate = `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear()+543}`;
+            }
+
             return `
-                <div class="zone-pet group animate-in slide-in-from-right-4">
+                <div class="zone-pet group relative">
                     <div class="grid grid-cols-12 gap-6">
                         <div class="col-span-3">
-                            <label class="label-text">ชื่อสัตว์เลี้ยง</label>
-                            <input type="text" class="input-box p_name mb-4" value="${pet.pet_name || ''}" placeholder="ระบุชื่อ">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="text-xs text-indigo-300 uppercase font-bold">ชนิด</label>
-                                    <select class="input-box p_type !text-lg !py-2">
-                                        <option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>🐱 แมว</option>
-                                        <option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>🐶 สุนัข</option>
-                                        <option value="อื่นๆ" ${pet.pet_type==='อื่นๆ'?'selected':''}>🐾 อื่นๆ</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-xs text-indigo-300 uppercase font-bold">เพศ</label>
-                                    <select class="input-box p_gender !text-lg !py-2">
-                                        <option value="เมีย" ${(!pet.gender || pet.gender==='เมีย')?'selected':''}>♀️ เมีย</option>
-                                        <option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>♂️ ผู้</option>
-                                        <option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>♂️ ผู้ตอน</option>
-                                        <option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>♀️ เมียหมัน</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-span-4">
-                            <label class="label-text">วันเกิด: <span class="text-teal-400 font-bold p_dob_display">${thaiDate}</span></label>
-                            <input type="date" class="input-box p_dob mb-4" value="${pet.birth_date || ''}" onchange="calcAge(this)">
-                            <div class="flex gap-4 items-center">
-                                <div class="flex-1">
-                                    <label class="text-xs text-indigo-300 uppercase font-bold">ระบุอายุ (ปี)</label>
-                                    <input type="number" class="input-box p_age_y !py-2" placeholder="ปี" oninput="calcDOB(this)">
-                                </div>
-                                <div class="flex-1">
-                                    <label class="text-xs text-indigo-300 uppercase font-bold">ระบุอายุ (เดือน)</label>
-                                    <input type="number" class="input-box p_age_m !py-2" placeholder="เดือน" oninput="calcDOB(this)">
-                                </div>
+                            <label class="label-text">ชื่อสัตว์ / ชนิด / เพศ</label>
+                            <input type="text" class="p_name input-box mb-3" value="${pet.pet_name || ''}" placeholder="ชื่อสัตว์">
+                            <div class="grid grid-cols-2 gap-2">
+                                <select class="p_type input-box !text-lg !py-2"><option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>🐱 แมว</option><option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>🐶 สุนัข</option><option value="อื่นๆ" ${pet.pet_type==='อื่นๆ'?'selected':''}>🐾 อื่นๆ</option></select>
+                                <select class="p_gender input-box !text-lg !py-2"><option value="เมีย" ${(!pet.gender||pet.gender==='เมีย')?'selected':''}>♀️ เมีย</option><option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>♂️ ผู้</option><option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>♂️ ผู้ตอน</option><option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>♀️ เมียหมัน</option></select>
                             </div>
                         </div>
                         <div class="col-span-3">
-                            <label class="label-text">โรคประจำตัว / แพ้ยา / หมายเหตุ</label>
-                            <textarea class="input-box p_congenital h-[120px] !text-lg" placeholder="ระบุโรคประจำตัวหรืออาการสำคัญ...">${pet.congenital_disease || ''}</textarea>
+                            <label class="label-text">สายพันธุ์ / ไมโครชิพ</label>
+                            <input type="text" class="p_breed input-box mb-3" value="${pet.breed || ''}" placeholder="สายพันธุ์">
+                            <input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}" placeholder="เลขไมโครชิพ">
+                        </div>
+                        <div class="col-span-4">
+                            <label class="label-text">วันเกิด: <span class="text-teal-400 p_dob_display font-bold">${thaiDate}</span></label>
+                            <input type="date" class="p_dob input-box mb-3" value="${pet.birth_date || ''}" onchange="calcAge(this)">
+                            <div class="flex gap-4">
+                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">ระบุอายุ (ปี)</label>
+                                    <input type="number" class="p_age_y input-box !py-2" placeholder="ปี" oninput="calcDOB(this)"></div>
+                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">ระบุอายุ (เดือน)</label>
+                                    <input type="number" class="p_age_m input-box !py-2" placeholder="เดือน" oninput="calcDOB(this)"></div>
+                            </div>
                         </div>
                         <div class="col-span-2">
                             <label class="label-text">น้ำหนักล่าสุด (กก.)</label>
-                            <input type="number" step="0.1" class="input-box p_weight" value="${pet.weight || ''}" placeholder="0.0">
+                            <input type="number" step="0.1" class="p_weight input-box" value="${pet.weight || ''}" placeholder="0.0">
+                        </div>
+                        <div class="col-span-12">
+                            <label class="label-text">โรคประจำตัว / แพ้ยา / หมายเหตุ</label>
+                            <textarea class="p_congenital input-box h-[80px]" placeholder="เช่น แพ้ยาซัลฟา, เป็นโรคหัวใจ, ดุมาก...">${pet.congenital_disease || ''}</textarea>
                         </div>
                     </div>
-                    <button onclick="this.parentElement.remove()" class="absolute -right-4 -top-4 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">✕</button>
+                    <button onclick="this.parentElement.remove()" class="absolute -right-4 -top-4 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-all shadow-lg">✕</button>
                 </div>`;
         }
 
-        // --- ระบบคำนวณอายุและวันที่ภาษาไทย ---
-        function formatThaiDate(dateStr) {
-            const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            const d = new Date(dateStr);
-            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+        function addPetRow() {
+            const container = document.getElementById('pets-container');
+            const div = document.createElement('div');
+            div.innerHTML = petRowHtml({});
+            container.appendChild(div.firstElementChild);
         }
 
         function calcAge(el) {
             const row = el.closest('.zone-pet');
             if(!el.value) return;
-            row.querySelector('.p_dob_display').innerText = formatThaiDate(el.value);
-            const birth = new Date(el.value);
+            const d = new Date(el.value);
+            row.querySelector('.p_dob_display').innerText = `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear()+543}`;
             const now = new Date();
-            let years = now.getFullYear() - birth.getFullYear();
-            let months = now.getMonth() - birth.getMonth();
-            if (months < 0) { years--; months += 12; }
-            row.querySelector('.p_age_y').value = years;
-            row.querySelector('.p_age_m').value = months;
+            let y = now.getFullYear() - d.getFullYear();
+            let m = now.getMonth() - d.getMonth();
+            if(m < 0) { y--; m += 12; }
+            row.querySelector('.p_age_y').value = y;
+            row.querySelector('.p_age_m').value = m;
         }
 
         function calcDOB(el) {
             const row = el.closest('.zone-pet');
             const y = parseInt(row.querySelector('.p_age_y').value) || 0;
             const m = parseInt(row.querySelector('.p_age_m').value) || 0;
-            if (y === 0 && m === 0) return;
+            if(y === 0 && m === 0) return;
             const d = new Date();
             d.setFullYear(d.getFullYear() - y);
             d.setMonth(d.getMonth() - m);
             const dateStr = d.toISOString().split('T')[0];
             row.querySelector('.p_dob').value = dateStr;
-            row.querySelector('.p_dob_display').innerText = formatThaiDate(dateStr);
+            row.querySelector('.p_dob_display').innerText = `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear()+543}`;
         }
 
         async function saveAllData() {
             const hn = document.getElementById('f_hn').value;
             const owner_name = document.getElementById('f_owner_name').value;
-            const phone1 = document.getElementById('f_phone1').value;
-            if (!hn || !owner_name || !phone1) return alert("❌ กรุณาระบุ HN, ชื่อเจ้าของ และเบอร์โทรศัพท์ 1");
+            const p1 = document.getElementById('f_phone1').value;
+            if (!hn || !owner_name || !p1) return alert("❌ กรุณาระบุ HN, ชื่อเจ้าของ และเบอร์โทรหลัก");
 
             try {
-                await db.from('owners').upsert({ hn, owner_name, address: document.getElementById('f_address').value });
+                // 1. Save Owner
+                const { error: err1 } = await db.from('owners').upsert({ 
+                    hn, owner_name, address: document.getElementById('f_address').value,
+                    updated_at: new Date()
+                });
+                if(err1) throw err1;
+
+                // 2. Save Phones (Clear then Insert)
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
-                const phones = [{ owner_hn: hn, phone_number: phone1 }];
+                const phones = [{ owner_hn: hn, phone_number: p1, label: 'เบอร์หลัก' }];
                 const p2 = document.getElementById('f_phone2').value;
-                if (p2) phones.push({ owner_hn: hn, phone_number: p2 });
+                if(p2) phones.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
                 await db.from('owner_phones').insert(phones);
 
+                // 3. Save Animals (Clear then Insert)
                 await db.from('animals').delete().eq('owner_hn', hn);
-                const petData = Array.from(document.querySelectorAll('.zone-pet')).map(card => ({
+                const petNodes = document.querySelectorAll('.zone-pet');
+                const pets = Array.from(petNodes).map(node => ({
                     owner_hn: hn,
-                    pet_name: card.querySelector('.p_name').value,
-                    pet_type: card.querySelector('.p_type').value,
-                    gender: card.querySelector('.p_gender').value,
-                    birth_date: card.querySelector('.p_dob').value,
-                    congenital_disease: card.querySelector('.p_congenital').value,
-                    weight: parseFloat(card.querySelector('.p_weight').value) || 0
+                    pet_name: node.querySelector('.p_name').value,
+                    pet_type: node.querySelector('.p_type').value,
+                    gender: node.querySelector('.p_gender').value,
+                    breed: node.querySelector('.p_breed').value,
+                    microchip_number: node.querySelector('.p_microchip').value,
+                    congenital_disease: node.querySelector('.p_congenital').value,
+                    birth_date: node.querySelector('.p_dob').value || null,
+                    weight: parseFloat(node.querySelector('.p_weight').value) || 0
                 })).filter(p => p.pet_name);
 
-                if (petData.length) await db.from('animals').insert(petData);
-                alert("✅ บันทึกข้อมูลสำเร็จ!"); loadData();
-            } catch (err) { alert("❌ เกิดข้อผิดพลาด: " + err.message); }
+                if(pets.length > 0) {
+                    const { error: err3 } = await db.from('animals').insert(pets);
+                    if(err3) throw err3;
+                }
+
+                alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว");
+                loadData();
+            } catch (err) {
+                alert("❌ เกิดข้อผิดพลาด: " + err.message);
+            }
         }
 
         function filterAnimals() {
