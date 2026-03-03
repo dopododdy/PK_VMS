@@ -2,8 +2,8 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <title>เวชระเบียนสัตว์ | PK-VMS</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>หน้าแรก | PK-VMS ระบบบริหารจัดการคลินิกสัตว์</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -14,178 +14,186 @@
             --navy: #0b1929; --navy-mid: #112240; --teal: #14b8b1;
             --surface: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.1);
         }
-        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; margin: 0; }
+        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; margin: 0; overflow-x: hidden; }
         
+        /* พื้นหลัง Mesh Gradient */
         .mesh-bg { 
             position: fixed; inset: 0; z-index: -1; 
-            background: radial-gradient(circle at 50% -20%, rgba(20, 184, 177, 0.15), transparent 70%);
+            background: radial-gradient(circle at 50% -20%, rgba(20, 184, 177, 0.15), transparent 70%),
+                        radial-gradient(circle at 0% 100%, rgba(17, 34, 64, 1), transparent 50%);
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--teal); }
+        /* Menu Card Style เหมือน animals.html */
+        .menu-card { 
+            background: var(--surface); border: 1px solid var(--border); border-radius: 32px; 
+            padding: 2.5rem 1.5rem; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; text-align: center; backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .menu-card:hover { 
+            transform: translateY(-10px); border-color: var(--teal); 
+            background: rgba(20, 184, 177, 0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        
+        .card-icon { font-size: 3.5rem; margin-bottom: 1.25rem; display: block; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3)); }
+        .card-title { font-size: 1.5rem; font-weight: 800; color: white; margin-bottom: 0.5rem; }
+        .card-desc { font-size: 0.95rem; color: #94a3b8; line-height: 1.5; }
 
-        .search-input {
-            background: rgba(0,0,0,0.2); border: 1px solid var(--border);
-            color: white; padding: 0.75rem 1rem; border-radius: 12px;
-            width: 100%; outline: none; transition: all 0.3s;
-        }
-        .search-input:focus { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(20, 184, 177, 0.2); }
-
-        .animal-item {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; padding: 1rem; cursor: pointer;
-            transition: all 0.2s ease; margin-bottom: 0.75rem;
-        }
-        .animal-item:hover {
-            border-color: var(--teal); background: rgba(20, 184, 177, 0.05);
-            transform: translateX(4px);
-        }
-        .animal-item.active {
-            border-color: var(--teal); background: rgba(20, 184, 177, 0.15);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        /* Badge สำหรับแจ้งเตือนหรือจำนวน */
+        .stat-badge {
+            position: absolute; top: 1.5rem; right: 1.5rem;
+            background: var(--teal); color: white; padding: 4px 12px;
+            border-radius: 12px; font-weight: 800; font-size: 0.75rem;
+            box-shadow: 0 4px 12px rgba(20, 184, 177, 0.3);
         }
 
-        .gender-male { color: #60a5fa; }
-        .gender-female { color: #f472b6; }
+        /* Login Overlay Style */
+        #login-overlay { 
+            position: fixed; inset: 0; z-index: 1000; background: var(--navy); 
+            display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px); 
+        }
+        .login-box { 
+            background: var(--navy-mid); padding: 3.5rem; border-radius: 40px; 
+            border: 1px solid var(--border); width: 90%; max-width: 450px; text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .input-pw { 
+            background: rgba(0,0,0,0.3); border: 2px solid var(--border); color: white; 
+            padding: 18px; border-radius: 20px; width: 100%; margin-top: 2rem; 
+            text-align: center; font-size: 1.75rem; letter-spacing: 0.75rem; outline: none; transition: 0.3s;
+        }
+        .input-pw:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
     <div class="mesh-bg"></div>
 
-    <div class="flex h-screen overflow-hidden">
-        <aside class="w-full md:w-96 border-r border-white/10 flex flex-col bg-navy/40 backdrop-blur-md">
-            <div class="p-6 border-b border-white/5">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-black text-white">เวชระเบียน</h2>
-                    <a href="index.html" class="text-xs text-gray-400 hover:text-white">กลับหน้าหลัก</a>
+    <div id="login-overlay">
+        <div class="login-box">
+            <div class="text-6xl mb-6">🏥</div>
+            <h2 class="text-3xl font-black text-white mb-2">PK-VMS</h2>
+            <p class="text-gray-400">ระบบบริหารจัดการคลินิกรักษาสัตว์<br>หมอปิติพัฒน์</p>
+            <input type="password" id="pw-input" class="input-pw" placeholder="••••">
+            <button onclick="checkPassword()" class="w-full mt-8 bg-teal-600 hover:bg-teal-500 text-white font-black py-4 rounded-2xl transition-all text-xl shadow-lg active:scale-95">
+                เข้าใช้งานระบบ
+            </button>
+        </div>
+    </div>
+
+    <div id="main-content" style="display: none;">
+        <header class="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center bg-navy/60 backdrop-blur-2xl border-b border-white/5 sticky top-0 z-50">
+            <div class="mb-4 md:mb-0 text-center md:text-left">
+                <h1 class="font-black text-2xl text-white tracking-tight flex items-center gap-3">
+                    <span class="bg-teal-500 p-2 rounded-lg text-navy">PK</span>
+                    VMS: <span class="text-teal-400 font-bold ml-1">หมอปิติพัฒน์</span>
+                </h1>
+                <p class="text-xs text-gray-400 mt-1 uppercase tracking-widest">Pitipat Kitpipatkun - Veterinary Management System</p>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <div id="db-status" class="flex items-center gap-2 text-sm font-bold text-green-400 bg-green-400/10 px-4 py-2 rounded-full border border-green-400/20">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-400"></span>
+                    </span>
+                    Online
                 </div>
-                <input type="text" id="search-box" class="search-input" placeholder="ค้นหา ชื่อ, HN, เบอร์โทร..." oninput="filterAnimals()">
+                <button onclick="logout()" class="text-sm font-bold text-gray-500 hover:text-red-400 transition-colors">ออกจากระบบ</button>
             </div>
+        </header>
 
-            <div id="animal-list" class="flex-1 overflow-y-auto p-4">
-                <div class="text-center py-10 text-gray-500">กำลังโหลดข้อมูล...</div>
-            </div>
+        <main class="max-w-7xl mx-auto p-6 md:p-12">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                
+                <a href="animals.html" class="menu-card group">
+                    <div id="animal-count" class="stat-badge">โหลด...</div>
+                    <span class="card-icon">🐾</span>
+                    <h3 class="card-title">เวชระเบียน</h3>
+                    <p class="card-desc">จัดการประวัติสัตว์ป่วย ข้อมูลเจ้าของ และประวัติการรักษาทั้งหมด</p>
+                </a>
 
-            <div class="p-4 border-t border-white/5">
-                <button onclick="openAddModal()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg">
-                    + เพิ่มสัตว์ใหม่
-                </button>
-            </div>
-        </aside>
+                <a href="pharmacy.html" class="menu-card group">
+                    <span class="card-icon">💊</span>
+                    <h3 class="card-title">เภสัชกรรม</h3>
+                    <p class="card-desc">ระบบคลังยา จัดการสต็อก เวชภัณฑ์ และรายการสั่งจ่ายยา</p>
+                </a>
 
-        <main class="flex-1 overflow-y-auto p-8" id="detail-view">
-            <div class="h-full flex items-center justify-center text-gray-500">
-                <div class="text-center">
-                    <div class="text-6xl mb-4">👈</div>
-                    <p class="text-lg">เลือกรายชื่อสัตว์เพื่อดูรายละเอียด</p>
-                </div>
+                <a href="lab.html" class="menu-card group">
+                    <span class="card-icon">🔬</span>
+                    <h3 class="card-title">ผลตรวจพิเศษ</h3>
+                    <p class="card-desc">บันทึกและแสดงผลทางห้องปฏิบัติการ Lab, X-Ray และ Ultrasound</p>
+                </a>
+
+                <a href="documents.html" class="menu-card group">
+                    <span class="card-icon">📄</span>
+                    <h3 class="card-title">เอกสาร</h3>
+                    <p class="card-desc">ใบรับรองแพทย์ ใบยินยอมผ่าตัด และรายงานสรุปต่างๆ</p>
+                </a>
+
+                <a href="settings.html" class="menu-card group border-teal-500/20">
+                    <span class="card-icon">⚙️</span>
+                    <h3 class="card-title text-teal-400">ตั้งค่าระบบ</h3>
+                    <p class="card-desc">จัดการข้อมูลคลินิก ผู้ใช้งาน และการเชื่อมต่อฐานข้อมูล Supabase</p>
+                </a>
+
             </div>
         </main>
+
+        <footer class="text-center p-12 text-gray-600 text-[10px] tracking-[0.3em] font-bold uppercase">
+            PK-VMS Professional Vet Suite © 2026 | Digital Health for Pets
+        </footer>
     </div>
 
     <script>
-        let allAnimals = [];
+        const MASTER_PW = "044641460"; // รหัสผ่านหลักของคุณ
 
-        window.onload = async () => {
-            if (sessionStorage.getItem("isLoggedIn") !== "true") {
-                window.location.href = "index.html";
-                return;
+        window.onload = () => {
+            if (sessionStorage.getItem("isLoggedIn") === "true") {
+                showDashboard();
             }
-            await fetchAnimals();
         };
 
-        async function fetchAnimals() {
+        // ฟังก์ชันดึงสถิติจำนวนสัตว์ (เหมือนในหน้าหลักเดิม)
+        async function fetchStats() {
             try {
-                const { data, error } = await db
+                const { count, error } = await db
                     .from('animals')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-                allAnimals = data;
-                renderAnimalList(allAnimals);
+                    .select('*', { count: 'exact', head: true });
+                
+                if (!error) {
+                    document.getElementById('animal-count').innerText = `${count || 0} รายชื่อ`;
+                }
             } catch (err) {
-                console.error("Fetch Error:", err);
-                document.getElementById('animal-list').innerHTML = `<div class="text-red-400 text-center">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
+                console.error("Stats Error:", err);
             }
         }
 
-        function renderAnimalList(list) {
-            const container = document.getElementById('animal-list');
-            if (list.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-gray-500">ไม่พบข้อมูลสัตว์</div>`;
-                return;
+        function checkPassword() {
+            const input = document.getElementById("pw-input").value;
+            if (input === MASTER_PW) {
+                sessionStorage.setItem("isLoggedIn", "true");
+                showDashboard();
+            } else {
+                alert("รหัสผ่านเข้าใช้งานไม่ถูกต้อง!");
+                document.getElementById("pw-input").value = "";
             }
-
-            container.innerHTML = list.map(pet => {
-                // แยก Icon ตามประเภทสัตว์
-                const typeIcon = pet.type === 'สุนัข' ? '🐶' : (pet.type === 'แมว' ? '🐱' : '🐾');
-                // แยก Icon ตามเพศ
-                const genderIcon = pet.gender === 'ผู้' ? '♂️' : '♀️';
-                const genderClass = pet.gender === 'ผู้' ? 'gender-male' : 'gender-female';
-
-                return `
-                    <div class="animal-item" onclick="viewDetail('${pet.id}')" id="pet-${pet.id}">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="bg-teal-500/20 text-teal-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                                HN: ${pet.hn || 'N/A'}
-                            </span>
-                            <span class="text-xl">${typeIcon}</span>
-                        </div>
-                        
-                        <div class="flex items-center gap-2 mb-1">
-                            <h4 class="font-bold text-white text-lg">${pet.name}</h4>
-                            <span class="${genderClass} font-bold text-sm">${genderIcon}</span>
-                        </div>
-
-                        <div class="space-y-1 text-sm">
-                            <div class="flex items-center gap-2 text-gray-400">
-                                <span class="text-[10px]">👤</span>
-                                <span>เจ้าของ: ${pet.owner_name}</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-gray-400">
-                                <span class="text-[10px]">📞</span>
-                                <span class="text-teal-400/80">${pet.owner_tel}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
         }
 
-        function filterAnimals() {
-            const term = document.getElementById('search-box').value.toLowerCase();
-            const filtered = allAnimals.filter(pet => 
-                pet.name.toLowerCase().includes(term) ||
-                (pet.hn && pet.hn.toLowerCase().includes(term)) ||
-                pet.owner_name.toLowerCase().includes(term) ||
-                pet.owner_tel.includes(term)
-            );
-            renderAnimalList(filtered);
+        function showDashboard() {
+            document.getElementById("login-overlay").style.display = "none";
+            document.getElementById("main-content").style.display = "block";
+            fetchStats();
         }
 
-        function viewDetail(id) {
-            // ลบคลาส active จากรายการอื่น
-            document.querySelectorAll('.animal-item').forEach(el => el.classList.remove('active'));
-            // เพิ่มคลาส active ให้รายการที่เลือก
-            document.getElementById(`pet-${id}`).classList.add('active');
-            
-            // ตัวอย่างการแสดงข้อมูล (คุณสามารถขยายส่วนนี้ต่อได้)
-            const pet = allAnimals.find(p => p.id == id);
-            document.getElementById('detail-view').innerHTML = `
-                <div class="max-w-4xl mx-auto bg-navy-mid p-8 rounded-3xl border border-white/10 shadow-2xl">
-                    <h2 class="text-3xl font-black mb-6">ข้อมูล: ${pet.name}</h2>
-                    <p class="text-gray-400">ประวัติการรักษาและรายละเอียดอื่นๆ จะแสดงตรงนี้...</p>
-                </div>
-            `;
+        function logout() {
+            sessionStorage.clear();
+            location.reload();
         }
 
-        function openAddModal() {
-            alert("ฟังก์ชันเพิ่มข้อมูลกำลังถูกพัฒนา...");
-        }
+        // กด Enter เพื่อเข้าสู่ระบบ
+        document.getElementById("pw-input").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") checkPassword();
+        });
     </script>
 </body>
 </html>
