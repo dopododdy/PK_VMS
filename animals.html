@@ -85,7 +85,6 @@
         }
 
         async function loadData() {
-            // ดึงข้อมูล Owners เรียงตาม HN ล่าสุดเสมอ
             const [resO, resA, resP] = await Promise.all([
                 db.from('owners').select('*').order('hn', { ascending: false }),
                 db.from('animals').select('*'),
@@ -128,7 +127,10 @@
                     <div class="bg-slate-800/40 p-8 rounded-[30px] border border-white/5 mb-8 shadow-xl">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-2xl font-bold text-blue-400 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
-                            <button onclick="readSmartCardRecord()" id="btn-read-card" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-blue-500 shadow-lg transition-all">🪪 อ่านบัตรประชาชน</button>
+                            <div class="flex gap-2">
+                                <button onclick="readSmartCardRecord()" id="btn-read-card" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-blue-500 shadow-lg transition-all">🪪 อ่านบัตรประชาชน</button>
+                                ${owner.hn !== 'AUTO' ? `<button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-delete-pet">🗑️ ลบข้อมูลเจ้าของ</button>` : ''}
+                            </div>
                         </div>
                         <div class="grid grid-cols-12 gap-5">
                             <div class="col-span-2"><label class="label-text">HN No.</label><input type="text" id="f_hn" class="input-box font-bold text-blue-400 text-center" value="${owner.hn}" readonly></div>
@@ -182,7 +184,6 @@
             if (!owner_name || !p1) return alert("❌ กรุณากรอกชื่อและเบอร์โทรหลัก");
 
             let hn = document.getElementById('f_hn').value.trim();
-            // Logic รันเลข HN ใหม่ที่เสถียร (6 หลักเสมอ)
             if (hn === "AUTO" || hn === "") {
                 const hns = allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
                 const maxHN = hns.length > 0 ? Math.max(...hns) : 690000;
@@ -216,6 +217,20 @@
                 alert("✅ บันทึกสำเร็จ");
                 await loadData();
                 editOwner(hn);
+            } catch (err) { alert(err.message); }
+        }
+
+        async function deleteOwner(hn, name) {
+            if (!confirm(`⚠️ ยืนยันการลบข้อมูลของเจ้าของ: ${name} (HN: ${hn})?\nข้อมูลสัตว์เลี้ยงและประวัติทั้งหมดจะถูกลบออกถาวร`)) return;
+            try {
+                // ลบข้อมูลที่เกี่ยวข้องตามลำดับ
+                await db.from('owner_phones').delete().eq('owner_hn', hn);
+                await db.from('animals').delete().eq('owner_hn', hn);
+                await db.from('owners').delete().eq('hn', hn);
+                
+                alert("✅ ลบข้อมูลเจ้าของเรียบร้อยแล้ว");
+                await loadData();
+                document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><div class="text-9xl mb-4">📋</div><h3 class="text-3xl font-bold">เลือกรายชื่อจากด้านซ้ายเพื่อแก้ไข</h3></div>`;
             } catch (err) { alert(err.message); }
         }
 
