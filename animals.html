@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เวชระเบียนสัตว์ | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,6 +14,7 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
+        /* Sidebar Style */
         .sidebar-container { position: relative; width: 420px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .pet-card { 
             padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
@@ -25,6 +27,7 @@
         .owner-subtext { color: #94a3b8; font-size: 13px; font-weight: 400; }
         .phone-text { color: var(--teal); font-weight: 800; text-align: right; font-size: 13px; letter-spacing: 0.5px; }
 
+        /* Form Style */
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: white; width: 100%; outline: none; font-size: 16px; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
@@ -40,7 +43,6 @@
         
         /* Merge Tool Styles */
         .merge-item { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px; }
-        .badge-duplicate { background: #f59e0b; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 900; }
     </style>
 </head>
 <body>
@@ -135,7 +137,6 @@
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-2xl font-bold text-blue-400 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
                             <div class="flex gap-2">
-                                <button onclick="readSmartCardRecord()" id="btn-read-card" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-blue-500 shadow-lg transition-all">🪪 อ่านบัตรประชาชน</button>
                                 ${owner.hn !== 'AUTO' ? `<button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-delete-pet">🗑️ ลบข้อมูลเจ้าของ</button>` : ''}
                             </div>
                         </div>
@@ -227,19 +228,7 @@
             } catch (err) { alert(err.message); }
         }
 
-        async function deleteOwner(hn, name) {
-            if (!confirm(`⚠️ ยืนยันการลบข้อมูลของเจ้าของ: ${name} (HN: ${hn})?\nข้อมูลสัตว์เลี้ยงและประวัติทั้งหมดจะถูกลบออกถาวร`)) return;
-            try {
-                await db.from('owner_phones').delete().eq('owner_hn', hn);
-                await db.from('animals').delete().eq('owner_hn', hn);
-                await db.from('owners').delete().eq('hn', hn);
-                alert("✅ ลบข้อมูลเจ้าของเรียบร้อยแล้ว");
-                await loadData();
-                document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><div class="text-9xl mb-4">📋</div><h3 class="text-3xl font-bold">เลือกรายชื่อจากด้านซ้ายเพื่อแก้ไข</h3></div>`;
-            } catch (err) { alert(err.message); }
-        }
-
-        // --- Merge Functions ---
+        // --- ระบบยุบรวมข้อมูล (Merge System) ---
         function showMergeTool() {
             const formView = document.getElementById('form-view');
             let duplicates = [];
@@ -248,20 +237,22 @@
             allOwners.forEach(o1 => {
                 if (processedHNs.has(o1.hn)) return;
                 const cleanName1 = removePrefix(o1.owner_name).replace(/\s+/g, '');
-                const phone1 = allPhones.filter(p => p.owner_hn === o1.hn).map(p => p.phone_number);
+                const phones1 = allPhones.filter(p => p.owner_hn === o1.hn).map(p => p.phone_number);
 
-                const match = allOwners.filter(o2 => {
+                const matches = allOwners.filter(o2 => {
                     if (o1.hn === o2.hn) return false;
                     const cleanName2 = removePrefix(o2.owner_name).replace(/\s+/g, '');
-                    const phone2 = allPhones.filter(p => p.owner_hn === o2.hn).map(p => p.phone_number);
+                    const phones2 = allPhones.filter(p => p.owner_hn === o2.hn).map(p => p.phone_number);
+                    
                     const nameMatch = cleanName1 === cleanName2 && cleanName1.length > 2;
-                    const phoneMatch = phone1.some(p => phone2.includes(p)) && phone1.length > 0;
+                    const phoneMatch = phones1.some(p => phones2.includes(p)) && phones1.length > 0;
                     return nameMatch || phoneMatch;
                 });
 
-                if (match.length > 0) {
-                    duplicates.push([o1, ...match]);
-                    [o1, ...match].forEach(x => processedHNs.add(x.hn));
+                if (matches.length > 0) {
+                    const group = [o1, ...matches];
+                    duplicates.push(group);
+                    group.forEach(x => processedHNs.add(x.hn));
                 }
             });
 
@@ -289,7 +280,7 @@
                                                 <h4 class="text-teal-400 font-black flex items-center gap-2">กลุ่มที่ ${idx+1}</h4>
                                                 <p class="text-xs text-slate-500">HN หลักคือ ${targetHN} (เลขน้อยสุด)</p>
                                             </div>
-                                            <button onclick="executeMerge('${targetHN}', ${JSON.stringify(sources)})" class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-xl font-black text-sm transition-all shadow-lg">🚀 ยุบรวมข้อมูล</button>
+                                            <button onclick='executeMerge("${targetHN}", ${JSON.stringify(sources)})' class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-xl font-black text-sm transition-all shadow-lg">🚀 ยุบรวมข้อมูล</button>
                                         </div>
                                         <div class="space-y-2">
                                             ${sorted.map(o => {
@@ -299,7 +290,7 @@
                                                     <div class="merge-item flex justify-between items-center ${isT?'border-l-4 border-teal-500 bg-teal-500/5':''}">
                                                         <div class="text-sm">
                                                             <div class="font-bold ${isT?'text-teal-400':'text-white'}">HN: ${o.hn} | ${o.owner_name} ${isT?'(หลัก)':''}</div>
-                                                            <div class="text-slate-400">🐾 ${ps}</div>
+                                                            <div class="text-slate-400 text-xs">🐾 ${ps}</div>
                                                         </div>
                                                         <button onclick="editOwner('${o.hn}')" class="text-xs text-blue-400 underline">ตรวจสอบ</button>
                                                     </div>`;
@@ -313,19 +304,35 @@
         }
 
         async function executeMerge(targetHN, sourceHNs) {
-            if (!confirm(`⚠️ ยืนยันการรวมข้อมูล?\n\nสัตว์และประวัติจาก HN: ${sourceHNs.join(', ')}\nจะถูกย้ายเข้าสู่ HN: ${targetHN} ทั้งหมด\n\n(HN อื่นจะถูกลบทิ้งถาวร)`)) return;
+            const confirmMsg = `⚠️ ยืนยันการรวมข้อมูล?\n\nสัตว์และประวัติจาก HN: ${sourceHNs.join(', ')}\nจะถูกย้ายเข้าสู่ HN: ${targetHN} ทั้งหมด\n\n(HN อื่นจะถูกลบทิ้งถาวร)`;
+            if (!confirm(confirmMsg)) return;
+
             try {
-                for (const sHN of sourceHNs) {
-                    await db.from('animals').update({ owner_hn: targetHN }).eq('owner_hn', sHN);
-                    await db.from('owner_phones').update({ owner_hn: targetHN }).eq('owner_hn', sHN);
-                    await db.from('owners').delete().eq('hn', sHN);
-                }
+                // 1. ย้ายสัตว์เลี้ยง (Animals)
+                await db.from('animals').update({ owner_hn: targetHN }).in('owner_hn', sourceHNs);
+                
+                // 2. ย้ายเบอร์โทรศัพท์ (Phones)
+                await db.from('owner_phones').update({ owner_hn: targetHN }).in('owner_hn', sourceHNs);
+
+                // 3. ย้ายประวัติการรักษา (ถ้ามีตาราง medical_records)
+                // ตรวจสอบชื่อตารางในฐานข้อมูลของคุณด้วย หากชื่อต่างกันให้แก้ไขตรงนี้
+                try {
+                    await db.from('medical_records').update({ owner_hn: targetHN }).in('owner_hn', sourceHNs);
+                } catch(e) { console.log("No medical_records table or error moving records."); }
+
+                // 4. ลบเจ้าของที่ซ้ำ (Old Owners)
+                await db.from('owners').delete().in('hn', sourceHNs);
+
                 alert("✅ รวมข้อมูลสำเร็จ!");
                 await loadData();
                 editOwner(targetHN);
-            } catch (err) { alert("เกิดข้อผิดพลาด: " + err.message); }
+            } catch (err) {
+                alert("เกิดข้อผิดพลาด: " + err.message);
+                console.error(err);
+            }
         }
 
+        // --- ฟังก์ชันช่วยเหลืออื่นๆ ---
         function handleAgeInput(el) {
             const row = el.closest('.zone-pet');
             const years = parseInt(row.querySelector('.p_age_years').value) || 0;
@@ -379,6 +386,18 @@
             div.innerHTML = petRowHtml({});
             document.getElementById('pets-container').insertBefore(div.firstElementChild, document.querySelector('button[onclick="addNewPetRow()"]'));
             updateBreedOptions();
+        }
+
+        async function deleteOwner(hn, name) {
+            if (!confirm(`⚠️ ยืนยันการลบข้อมูลของเจ้าของ: ${name} (HN: ${hn})?\nข้อมูลสัตว์เลี้ยงและประวัติทั้งหมดจะถูกลบออกถาวร`)) return;
+            try {
+                await db.from('owner_phones').delete().eq('owner_hn', hn);
+                await db.from('animals').delete().eq('owner_hn', hn);
+                await db.from('owners').delete().eq('hn', hn);
+                alert("✅ ลบข้อมูลเจ้าของเรียบร้อยแล้ว");
+                await loadData();
+                document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><div class="text-9xl mb-4">📋</div><h3 class="text-3xl font-bold">เลือกรายชื่อจากด้านซ้ายเพื่อแก้ไข</h3></div>`;
+            } catch (err) { alert(err.message); }
         }
 
         async function deletePetRecord(petId, petName) {
