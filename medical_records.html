@@ -18,7 +18,34 @@
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; }
         
         .glass-card { background: rgba(17, 34, 64, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .identity-card { background: rgba(20, 184, 177, 0.1); border: 1px solid rgba(20, 184, 177, 0.3); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        
+        /* ปรับปรุง Identity Card ใหม่ */
+        .identity-card { 
+            background: linear-gradient(145deg, rgba(20, 184, 177, 0.15), rgba(11, 25, 41, 0.4));
+            border: 2px solid rgba(20, 184, 177, 0.3); 
+            border-radius: 24px; 
+            padding: 28px; 
+            margin-bottom: 24px;
+        }
+
+        /* ปรับขนาดตัวหนังสือใน Identity Card */
+        .info-label { color: #94a3b8; font-size: 1.1rem; font-weight: 600; }
+        .info-value { color: #ffffff; font-size: 1.6rem; font-weight: 800; }
+        .info-highlight { color: var(--teal); font-size: 1.6rem; font-weight: 800; }
+
+        /* แถบแจ้งเตือนแพ้ยาแบบเต็มความกว้าง */
+        .allergy-bar {
+            background: rgba(239, 68, 68, 0.15);
+            border: 2px solid rgba(239, 68, 68, 0.4);
+            border-radius: 16px;
+            padding: 16px 24px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+        }
+        .allergy-text { color: #f87171; font-size: 1.4rem; font-weight: 800; }
         
         .record-item { border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; margin-bottom: 16px; }
         .record-header { cursor: pointer; transition: all 0.2s; }
@@ -28,10 +55,10 @@
         .record-item.active .arrow-icon { transform: rotate(180deg); }
         .record-item.active { border-color: var(--teal); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
 
-        .label-text { color: #94a3b8; font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; display: block; }
+        .label-text { color: #94a3b8; font-size: 1rem; font-weight: 600; margin-bottom: 6px; display: block; }
         .input-dark { 
             background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 12px; padding: 12px; width: 100%; color: white; font-size: 1.1rem; outline: none;
+            border-radius: 12px; padding: 12px; width: 100%; color: white; font-size: 1.2rem; outline: none;
         }
         .input-dark:focus { border-color: var(--teal); }
 
@@ -42,12 +69,12 @@
             padding: 12px !important;
             width: 100% !important;
             color: #818cf8 !important;
-            font-size: 1.1rem !important;
+            font-size: 1.2rem !important;
             font-weight: bold !important;
             cursor: pointer;
         }
 
-        .section-title { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .section-title { color: var(--teal); font-weight: 800; font-size: 1.2rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
     </style>
 </head>
 <body class="p-8">
@@ -64,27 +91,34 @@
             </button>
         </div>
 
-        <div id="new-visit-form" class="hidden glass-card rounded-[32px] p-8 mb-10 border-teal-500/40 border-2">
+        <div id="new-visit-form" class="hidden glass-card rounded-[32px] p-8 mb-10 border-teal-500/40 border-2 shadow-2xl">
             
-            <div id="animal-info-card" class="identity-card flex flex-wrap items-center gap-8 shadow-inner">
-                <div class="flex items-center gap-3">
-                    <span class="text-gray-400 font-bold text-lg">ชื่อสัตว์:</span>
-                    <span id="info-name" class="text-2xl font-black text-white">-</span>
+            <div id="animal-info-card" class="identity-card shadow-inner">
+                <div class="flex flex-wrap items-center gap-x-12 gap-y-4">
+                    <div class="flex flex-col">
+                        <span class="info-label">ชื่อสัตว์</span>
+                        <span id="info-name" class="info-value">-</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="info-label">ชนิด</span>
+                        <span id="info-type" class="info-value">-</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="info-label">เพศ</span>
+                        <span id="info-gender" class="info-value">-</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="info-label">อายุ</span>
+                        <span id="info-age" class="info-highlight">-</span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-gray-400 font-bold">ชนิด:</span>
-                    <span id="info-type" class="text-2xl">-</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-gray-400 font-bold">เพศ:</span>
-                    <span id="info-gender" class="text-2xl">-</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-gray-400 font-bold">อายุ:</span>
-                    <span id="info-age" class="text-xl font-bold text-teal-300">-</span>
-                </div>
-                <div id="info-congenital" class="ml-auto bg-red-500/20 text-red-400 px-4 py-2 rounded-xl border border-red-500/30 font-bold hidden">
-                    ⚠️ แพ้ยา/โรคประจำตัว: <span id="info-disease"></span>
+
+                <div id="info-congenital" class="allergy-bar hidden">
+                    <span class="text-3xl">⚠️</span>
+                    <div class="flex flex-col">
+                        <span class="text-red-300 text-sm font-bold uppercase tracking-wider">แพ้ยา / โรคประจำตัว</span>
+                        <span id="info-disease" class="allergy-text">-</span>
+                    </div>
                 </div>
             </div>
 
@@ -93,11 +127,11 @@
             <div class="grid grid-cols-12 gap-6">
                 <div class="col-span-3">
                     <label class="label-text">น้ำหนักปัจจุบัน BW (kg)</label>
-                    <input type="number" step="0.01" id="v_weight" class="input-dark text-2xl font-black text-yellow-400">
+                    <input type="number" step="0.01" id="v_weight" class="input-dark text-3xl font-black text-yellow-400">
                 </div>
                 <div class="col-span-3">
                     <label class="label-text">อุณหภูมิ Temp (F)</label>
-                    <input type="number" step="0.1" id="v_temp" class="input-dark text-2xl font-black text-red-400" placeholder="101.5">
+                    <input type="number" step="0.1" id="v_temp" class="input-dark text-3xl font-black text-red-400" placeholder="101.5">
                 </div>
                 <div class="col-span-6">
                     <label class="label-text">6. วัน-เวลานัดครั้งถัดไป (Appt)</label>
@@ -105,14 +139,14 @@
                 </div>
 
                 <div class="col-span-6 space-y-5">
-                    <div><div class="section-title">1. อาการที่มา (CC)</div><textarea id="v_cc" class="input-dark h-24" placeholder="ระบุอาการสำคัญ..."></textarea></div>
-                    <div><div class="section-title">2. การตรวจร่างกาย (PE)</div><textarea id="v_pe" class="input-dark h-24" placeholder="ระบุผลการตรวจร่างกาย..."></textarea></div>
+                    <div><div class="section-title">1. อาการที่มา (CC)</div><textarea id="v_cc" class="input-dark h-28" placeholder="ระบุอาการสำคัญ..."></textarea></div>
+                    <div><div class="section-title">2. การตรวจร่างกาย (PE)</div><textarea id="v_pe" class="input-dark h-28" placeholder="ระบุผลการตรวจร่างกาย..."></textarea></div>
                     <div><div class="section-title">3. วินิจฉัยเบื้องต้น (TDx)</div><input type="text" id="v_tdx" class="input-dark" placeholder="สรุปผลวินิจฉัย..."></div>
                 </div>
 
                 <div class="col-span-6 space-y-5">
-                    <div><div class="section-title">4. การรักษา (Tx)</div><textarea id="v_tx" class="input-dark h-24" placeholder="ดึงข้อมูลหัตถการ..."></textarea></div>
-                    <div><div class="section-title">5. รายการยา (Rx)</div><textarea id="v_rx" class="input-dark h-24" placeholder="ดึงข้อมูลยา..."></textarea></div>
+                    <div><div class="section-title">4. การรักษา (Tx)</div><textarea id="v_tx" class="input-dark h-28" placeholder="หัตถการ / การรักษา..."></textarea></div>
+                    <div><div class="section-title">5. รายการยา (Rx)</div><textarea id="v_rx" class="input-dark h-28" placeholder="รายการยาที่จ่าย..."></textarea></div>
                     <div><div class="section-title">รายละเอียดการนัดหมาย</div><input type="text" id="v_next_note" class="input-dark" placeholder="เช่น นัดดูแผล, นัดตรวจเลือด..."></div>
                 </div>
             </div>
@@ -132,7 +166,7 @@
         const petName = urlParams.get('name');
         const ownerHN = urlParams.get('hn');
 
-        let defaultWeight = 0; // เก็บน้ำหนักแรกเข้าสำรองไว้
+        let defaultWeight = 0;
 
         window.onload = async () => {
             document.getElementById('pet-display-name').innerText = `ประวัติการรักษา: ${petName}`;
@@ -162,7 +196,6 @@
             const { data, error } = await db.from('animals').select('*').eq('id', petId).single();
             if (error || !data) return;
 
-            // บันทึกน้ำหนักแรกเข้าเก็บไว้
             defaultWeight = data.weight;
 
             document.getElementById('info-name').innerText = data.pet_name;
@@ -180,9 +213,12 @@
                 document.getElementById('info-age').innerText = `${years} ปี ${months} เดือน`;
             }
 
-            if (data.congenital_disease) {
+            // แสดงแพ้ยา/โรคประจำตัวแบบแถบเต็มความกว้าง
+            if (data.congenital_disease && data.congenital_disease.trim() !== "" && data.congenital_disease !== "-") {
                 document.getElementById('info-congenital').classList.remove('hidden');
                 document.getElementById('info-disease').innerText = data.congenital_disease;
+            } else {
+                document.getElementById('info-congenital').classList.add('hidden');
             }
         }
 
@@ -190,12 +226,9 @@
             const { data, error } = await db.from('visit_history').select('*').eq('animal_id', petId).order('visit_date', { ascending: false });
             if (error) return;
 
-            // --- ตรรกะการตั้งค่าน้ำหนักเริ่มต้น ---
             if (data.length > 0) {
-                // ถ้ามีประวัติการรักษาแล้ว ให้ดึงน้ำหนักครั้งล่าสุด (ครั้งล่าสุดคือตำแหน่งที่ 0)
                 document.getElementById('v_weight').value = data[0].weight || defaultWeight;
             } else {
-                // ถ้ายังไม่เคยมีการตรวจเลย ให้ดึงน้ำหนักที่ลงทะเบียนไว้ตอนแรก
                 document.getElementById('v_weight').value = defaultWeight || "";
             }
 
