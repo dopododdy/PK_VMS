@@ -42,31 +42,31 @@
             <div class="p-8 pb-6">
                 <div class="flex justify-between items-center mb-6">
                     <div>
-                        <h2 class="text-3xl font-black text-white">เวชระเบียน</h2>
+                        <h2 class="text-3xl font-black text-white leading-tight">เวชระเบียน</h2>
                         <p class="text-teal-400 text-sm font-bold mt-1 uppercase tracking-widest">Animal Records</p>
                     </div>
-                    <a href="index.html" class="bg-white/5 hover:bg-white/10 p-3 rounded-2xl transition">🏠</a>
+                    <a href="index.html" class="bg-white/5 hover:bg-white/10 p-4 rounded-2xl transition text-xl">🏠</a>
                 </div>
-                <input type="text" id="search-box" class="search-input" placeholder="ค้นหาชื่อสัตว์, HN, เบอร์โทร..." oninput="filterAnimals()">
+                <input type="text" id="search-box" class="search-input" placeholder="ชื่อสัตว์, HN, เบอร์โทร..." oninput="filterAnimals()">
             </div>
 
-            <div id="animal-list" class="flex-1 overflow-y-auto px-6 pb-6">
-                <div class="text-center py-10 text-gray-500 font-bold">กำลังโหลดข้อมูล...</div>
+            <div id="animal-list" class="flex-1 overflow-y-auto px-6 pb-6 text-lg">
+                <div class="text-center py-10 text-gray-500 font-bold italic">กำลังโหลดข้อมูล...</div>
             </div>
 
             <div class="p-6 border-t border-white/5 bg-navy/20">
-                <button onclick="alert('กำลังพัฒนาฟังก์ชันเพิ่มสัตว์ใหม่')" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-4 rounded-2xl transition-all text-lg shadow-lg">
-                    + ลงทะเบียนสัตว์ใหม่
+                <button onclick="alert('ระบบลงทะเบียนกำลังเตรียมเปิดใช้งาน')" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-5 rounded-3xl transition-all text-xl shadow-lg active:scale-95">
+                    + ลงทะเบียนใหม่
                 </button>
             </div>
         </aside>
 
         <main class="flex-1 overflow-y-auto p-12" id="detail-view">
             <div class="h-full flex flex-col items-center justify-center text-gray-500 text-center">
-                <div class="bg-white/5 p-16 rounded-[50px] border border-white/5 backdrop-blur-sm">
-                    <div class="text-8xl mb-8 opacity-20">🐾</div>
-                    <h3 class="text-2xl font-black text-white/50 mb-2">ค้นหาหรือเลือกรายชื่อสัตว์</h3>
-                    <p class="text-lg">เลือกรายชื่อทางด้านซ้ายเพื่อดูประวัติและรายละเอียด</p>
+                <div class="bg-white/5 p-20 rounded-[60px] border border-white/5 backdrop-blur-sm">
+                    <div class="text-9xl mb-10 opacity-20">🐾</div>
+                    <h3 class="text-3xl font-black text-white/50 mb-3 uppercase tracking-tighter">PK-VMS SYSTEM</h3>
+                    <p class="text-xl">เลือกรายชื่อสัตว์ด้านซ้ายเพื่อจัดการข้อมูล</p>
                 </div>
             </div>
         </main>
@@ -74,54 +74,60 @@
 
     <script>
         let allAnimals = [];
+        let allOwners = [];
+        let allPhones = [];
 
         window.onload = async () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") {
                 window.location.href = "index.html";
                 return;
             }
-            await fetchAnimals();
+            await loadAllData();
         };
 
-        async function fetchAnimals() {
+        // ฟังก์ชันโหลดข้อมูลแบบ Manual Join เพื่อความเสถียรสูงสุด
+        async function loadAllData() {
             try {
-                // ดึงข้อมูลสัตว์ พร้อมข้อมูลเจ้าของ (Join Owners) และเบอร์โทร (Join Owner Phones)
-                const { data, error } = await db
-                    .from('animals')
-                    .select(`
-                        *,
-                        owners ( hn, owner_name, address, note ),
-                        owner_phones:owner_hn ( phone_number )
-                    `)
-                    .order('created_at', { ascending: false });
+                // 1. ดึงข้อมูลสัตว์
+                const resAnimals = await db.from('animals').select('*').order('created_at', { ascending: false });
+                // 2. ดึงข้อมูลเจ้าของ
+                const resOwners = await db.from('owners').select('*');
+                // 3. ดึงเบอร์โทร
+                const resPhones = await db.from('owner_phones').select('*');
 
-                if (error) throw error;
-                allAnimals = data;
+                if (resAnimals.error) throw resAnimals.error;
+
+                allAnimals = resAnimals.data;
+                allOwners = resOwners.data || [];
+                allPhones = resPhones.data || [];
+
                 renderAnimalList(allAnimals);
             } catch (err) {
-                console.error("Fetch Error:", err);
-                document.getElementById('animal-list').innerHTML = `<div class="text-red-400 text-center font-bold">Error: ไม่สามารถดึงข้อมูลได้</div>`;
+                console.error("Critical Fetch Error:", err);
+                document.getElementById('animal-list').innerHTML = `
+                    <div class="text-red-400 text-center p-6 bg-red-400/10 rounded-3xl border border-red-400/20">
+                        <p class="font-bold text-xl mb-2">เชื่อมต่อล้มเหลว</p>
+                        <p class="text-sm opacity-80">${err.message}</p>
+                    </div>`;
             }
         }
 
         function renderAnimalList(list) {
             const container = document.getElementById('animal-list');
             if (list.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-gray-500 font-bold">ไม่พบข้อมูล</div>`;
+                container.innerHTML = `<div class="text-center py-10 text-gray-500 font-bold">ไม่พบข้อมูลสัตว์</div>`;
                 return;
             }
 
             container.innerHTML = list.map(pet => {
-                const ownerName = pet.owners ? pet.owners.owner_name : 'ไม่ทราบชื่อ';
-                // ดึงเบอร์โทรแรกที่เจอ (ถ้ามี)
-                const phone = (pet.owner_phones && pet.owner_phones.length > 0) ? pet.owner_phones[0].phone_number : 'ไม่มีเบอร์โทร';
+                // ค้นหาเจ้าของที่ตรงกับ HN
+                const owner = allOwners.find(o => o.hn === pet.owner_hn) || { owner_name: 'ไม่ทราบชื่อ' };
+                // ค้นหาเบอร์โทร (เอาเบอร์แรก)
+                const phone = allPhones.find(p => p.owner_hn === pet.owner_hn)?.phone_number || '-';
                 
-                // เช็คประเภทสัตว์
                 const typeIcon = (pet.pet_type === 'แมว') ? '🐱' : (pet.pet_type === 'สุนัข' ? '🐶' : '🐾');
-                
-                // เช็คเพศ (รองรับ เมียหมัน / ผู้ตอน)
-                const isFemale = pet.gender && pet.gender.includes('เมีย');
                 const isMale = pet.gender && pet.gender.includes('ผู้');
+                const isFemale = pet.gender && pet.gender.includes('เมีย');
                 const genderIcon = isMale ? '♂️' : (isFemale ? '♀️' : '❓');
                 const genderClass = isMale ? 'gender-male' : (isFemale ? 'gender-female' : 'text-gray-500');
 
@@ -129,22 +135,22 @@
                     <div class="animal-item" onclick="viewDetail('${pet.id}')" id="pet-${pet.id}">
                         <div class="flex justify-between items-start mb-3">
                             <span class="hn-badge">HN: ${pet.owner_hn}</span>
-                            <span class="text-2xl">${typeIcon}</span>
+                            <span class="text-3xl">${typeIcon}</span>
                         </div>
                         
-                        <div class="flex items-center gap-2 mb-3">
-                            <h4 class="font-black text-white text-xl tracking-wide">${pet.pet_name}</h4>
-                            <span class="${genderClass} font-black text-lg">${genderIcon}</span>
+                        <div class="flex items-center gap-3 mb-4">
+                            <h4 class="font-black text-white text-2xl tracking-wide">${pet.pet_name}</h4>
+                            <span class="${genderClass} font-black text-xl">${genderIcon}</span>
                         </div>
 
-                        <div class="space-y-2 border-t border-white/5 pt-3">
-                            <div class="flex items-center gap-3 text-gray-300">
-                                <span class="bg-white/10 p-1.5 rounded-lg text-xs">👤</span>
-                                <span class="font-bold text-sm">เจ้าของ: ${ownerName}</span>
+                        <div class="space-y-3 border-t border-white/5 pt-4">
+                            <div class="flex items-center gap-4 text-gray-300">
+                                <span class="bg-white/10 p-2 rounded-xl text-sm">👤</span>
+                                <span class="font-bold text-base">เจ้าของ: ${owner.owner_name}</span>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <span class="bg-teal-500/10 p-1.5 rounded-lg text-xs">📞</span>
-                                <span class="text-teal-400 font-black text-sm">${phone}</span>
+                            <div class="flex items-center gap-4">
+                                <span class="bg-teal-500/10 p-2 rounded-xl text-sm">📞</span>
+                                <span class="text-teal-400 font-black text-base">${phone}</span>
                             </div>
                         </div>
                     </div>
@@ -155,12 +161,12 @@
         function filterAnimals() {
             const term = document.getElementById('search-box').value.toLowerCase();
             const filtered = allAnimals.filter(pet => {
-                const ownerName = pet.owners ? pet.owners.owner_name.toLowerCase() : '';
-                const phones = pet.owner_phones ? pet.owner_phones.map(p => p.phone_number).join(' ') : '';
+                const owner = allOwners.find(o => o.hn === pet.owner_hn) || {};
+                const phones = allPhones.filter(p => p.owner_hn === pet.owner_hn).map(p => p.phone_number).join(' ');
                 
                 return pet.pet_name.toLowerCase().includes(term) ||
                        pet.owner_hn.toLowerCase().includes(term) ||
-                       ownerName.includes(term) ||
+                       (owner.owner_name && owner.owner_name.toLowerCase().includes(term)) ||
                        phones.includes(term);
             });
             renderAnimalList(filtered);
@@ -170,54 +176,81 @@
             document.querySelectorAll('.animal-item').forEach(el => el.classList.remove('active'));
             document.getElementById(`pet-${id}`).classList.add('active');
             
-            const pet = allAnimals.find(p => p.id == id);
-            const owner = pet.owners || {};
-            const phones = pet.owner_phones ? pet.owner_phones.map(p => p.phone_number).join(', ') : 'ไม่มีข้อมูลเบอร์โทร';
+            const pet = allAnimals.find(p => p.id === id);
+            const owner = allOwners.find(o => o.hn === pet.owner_hn) || {};
+            const phones = allPhones.filter(p => p.owner_hn === pet.owner_hn).map(p => p.phone_number).join(', ');
 
             document.getElementById('detail-view').innerHTML = `
-                <div class="max-w-5xl mx-auto">
-                    <div class="bg-navy-mid/50 backdrop-blur-xl p-10 rounded-[40px] border border-white/10 shadow-2xl">
-                        <div class="flex justify-between items-center mb-10">
-                            <div class="flex items-center gap-6">
-                                <div class="text-7xl bg-white/5 p-6 rounded-[30px] border border-white/5">
+                <div class="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div class="bg-navy-mid/60 backdrop-blur-3xl p-12 rounded-[50px] border border-white/10 shadow-2xl">
+                        <div class="flex justify-between items-center mb-12">
+                            <div class="flex items-center gap-8">
+                                <div class="text-8xl bg-white/5 p-8 rounded-[40px] border border-white/5 shadow-inner">
                                     ${(pet.pet_type === 'แมว') ? '🐱' : (pet.pet_type === 'สุนัข' ? '🐶' : '🐾')}
                                 </div>
                                 <div>
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <h2 class="text-5xl font-black text-white">${pet.pet_name}</h2>
-                                        <span class="text-3xl">${pet.gender && pet.gender.includes('ผู้') ? '♂️' : '♀️'}</span>
+                                    <div class="flex items-center gap-4 mb-3">
+                                        <h2 class="text-6xl font-black text-white tracking-tighter">${pet.pet_name}</h2>
+                                        <span class="text-4xl">${pet.gender && pet.gender.includes('ผู้') ? '♂️' : '♀️'}</span>
                                     </div>
-                                    <span class="bg-teal-500 text-navy font-black px-4 py-1 rounded-full text-sm uppercase tracking-widest">
+                                    <span class="bg-teal-500 text-navy font-black px-6 py-2 rounded-2xl text-lg uppercase tracking-widest shadow-lg shadow-teal-500/20">
                                         HN: ${pet.owner_hn}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="bg-white/5 p-8 rounded-3xl border border-white/5">
-                                <p class="text-teal-400 font-bold text-sm uppercase mb-6 tracking-widest">ข้อมูลสัตว์เลี้ยง</p>
-                                <div class="space-y-4 text-xl">
-                                    <p><span class="text-gray-500">ชนิด:</span> <span class="font-bold text-white">${pet.pet_type}</span></p>
-                                    <p><span class="text-gray-500">สายพันธุ์:</span> <span class="font-bold text-white">${pet.breed || '-'}</span></p>
-                                    <p><span class="text-gray-500">เพศ:</span> <span class="font-bold text-white">${pet.gender || '-'}</span></p>
-                                    <p><span class="text-gray-500">น้ำหนัก:</span> <span class="font-bold text-teal-400">${pet.weight || '0'} กก.</span></p>
-                                    <p><span class="text-gray-500">วันเกิด:</span> <span class="font-bold text-white">${pet.birth_date || 'ไม่ระบุ'}</span></p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div class="bg-white/5 p-10 rounded-[40px] border border-white/5 hover:border-teal-500/30 transition-all group">
+                                <p class="text-teal-400 font-bold text-sm uppercase mb-8 tracking-[0.3em] flex items-center gap-3">
+                                    <span class="w-8 h-[2px] bg-teal-400"></span> ข้อมูลสัตว์เลี้ยง
+                                </p>
+                                <div class="space-y-6 text-2xl">
+                                    <div class="flex justify-between border-b border-white/5 pb-4">
+                                        <span class="text-gray-500">ชนิด</span> <span class="font-bold text-white">${pet.pet_type}</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-white/5 pb-4">
+                                        <span class="text-gray-500">สายพันธุ์</span> <span class="font-bold text-white">${pet.breed || '-'}</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-white/5 pb-4">
+                                        <span class="text-gray-500">เพศ</span> <span class="font-bold text-white">${pet.gender || '-'}</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-white/5 pb-4">
+                                        <span class="text-gray-500">น้ำหนัก</span> <span class="font-bold text-teal-400">${pet.weight || '0'} กก.</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500 text-lg italic">เกิดเมื่อ: ${pet.birth_date || 'ไม่ระบุ'}</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="bg-white/5 p-8 rounded-3xl border border-white/5">
-                                <p class="text-teal-400 font-bold text-sm uppercase mb-6 tracking-widest">ข้อมูลเจ้าของ</p>
-                                <div class="space-y-4 text-xl">
-                                    <p><span class="text-gray-500 text-base">ชื่อ:</span> <br><span class="font-bold text-white">${owner.owner_name}</span></p>
-                                    <p><span class="text-gray-500 text-base">เบอร์โทร:</span> <br><span class="font-bold text-teal-400">${phones}</span></p>
-                                    <p><span class="text-gray-500 text-base">ที่อยู่:</span> <br><span class="text-sm font-bold text-gray-300 leading-relaxed">${owner.address || '-'}</span></p>
+
+                            <div class="bg-white/5 p-10 rounded-[40px] border border-white/5 hover:border-teal-500/30 transition-all">
+                                <p class="text-teal-400 font-bold text-sm uppercase mb-8 tracking-[0.3em] flex items-center gap-3">
+                                    <span class="w-8 h-[2px] bg-teal-400"></span> ข้อมูลเจ้าของ
+                                </p>
+                                <div class="space-y-8">
+                                    <div>
+                                        <label class="text-gray-500 text-sm font-bold uppercase block mb-2">ชื่อ-นามสกุล</label>
+                                        <p class="text-3xl font-black text-white leading-none">${owner.owner_name}</p>
+                                    </div>
+                                    <div>
+                                        <label class="text-gray-500 text-sm font-bold uppercase block mb-2">เบอร์โทรศัพท์</label>
+                                        <p class="text-3xl font-black text-teal-400">${phones}</p>
+                                    </div>
+                                    <div>
+                                        <label class="text-gray-500 text-sm font-bold uppercase block mb-2">ที่อยู่</label>
+                                        <p class="text-lg font-bold text-gray-300 leading-relaxed">${owner.address || '-'}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="mt-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-                             <p class="text-amber-500 font-bold text-sm uppercase mb-2">Note / หมายเหตุ</p>
-                             <p class="text-gray-300">${owner.note || 'ไม่มีหมายเหตุ'}</p>
+                        <div class="mt-10 p-8 bg-amber-500/5 border border-amber-500/10 rounded-[35px] relative overflow-hidden group">
+                             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity">
+                                <span class="text-6xl">📝</span>
+                             </div>
+                             <p class="text-amber-500 font-bold text-sm uppercase mb-3 tracking-widest">หมายเหตุ (Medical Note)</p>
+                             <p class="text-xl text-gray-300 italic font-medium">"${owner.note || 'ไม่มีข้อมูลบันทึกเพิ่มเติม'}"</p>
                         </div>
                     </div>
                 </div>
