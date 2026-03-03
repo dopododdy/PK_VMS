@@ -26,7 +26,6 @@
         
         .glass-card { background: rgba(17, 34, 64, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
         
-        /* IDENTITY SECTION */
         .identity-card { 
             background: linear-gradient(145deg, rgba(20, 184, 177, 0.08), rgba(15, 23, 42, 0.5));
             border: 1px solid rgba(20, 184, 177, 0.2); 
@@ -36,7 +35,6 @@
         .info-value { color: #ffffff; font-size: 1.25rem; font-weight: 700; }
         .info-highlight { color: var(--teal); font-size: 1.25rem; font-weight: 800; }
 
-        /* ALLERGY ALERT */
         .allergy-bar {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
@@ -46,13 +44,12 @@
         .allergy-text { color: #f87171; font-size: 1.1rem; font-weight: 700; }
         
         /* VISIT ITEMS */
-        .record-item { border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s ease; margin-bottom: 15px; }
-        .record-header { cursor: pointer; padding: 18px 24px; }
+        .record-item { border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s ease; margin-bottom: 12px; }
+        .record-header { cursor: pointer; padding: 15px 24px; }
         .record-content { max-height: 0; overflow: hidden; transition: all 0.3s ease; background: rgba(0, 0, 0, 0.2); }
         .record-item.active .record-content { max-height: 3000px; padding: 25px; border-top: 1px solid rgba(255,255,255,0.1); }
         .record-item.active .arrow-icon { transform: rotate(180deg); color: var(--teal); }
 
-        /* FORM INPUTS */
         .label-text { color: var(--slate-400); font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; display: block; }
         .input-dark { 
             background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); 
@@ -65,7 +62,7 @@
         .input-stats { font-size: 1.5rem !important; font-weight: 800 !important; text-align: center; }
 
         .section-title { color: var(--teal); font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-        .badge-date { background: rgba(20, 184, 177, 0.1); color: var(--teal); padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 1rem; }
+        .badge-date { background: rgba(20, 184, 177, 0.12); color: var(--teal); padding: 5px 12px; border-radius: 8px; font-weight: 800; font-size: 1rem; white-space: nowrap; }
 
         input[readonly].flatpickr-input { background: rgba(0,0,0,0.3) !important; cursor: pointer; }
     </style>
@@ -75,7 +72,7 @@
     <div class="max-w-6xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
             <div>
-                <a href="animals.html" class="flex items-center gap-2 text-teal-400 hover:text-teal-300 font-bold text-sm transition-all mb-2">
+                <a href="index.html" class="flex items-center gap-2 text-teal-400 hover:text-teal-300 font-bold text-sm transition-all mb-2">
                     <span>←</span> กลับหน้าเวชระเบียน
                 </a>
                 <h1 id="pet-display-name" class="text-4xl font-black text-white tracking-tight">ประวัติการรักษา</h1>
@@ -125,11 +122,11 @@
                         <textarea id="v_cc" class="input-dark" placeholder="อาการที่มา..."></textarea>
                     </div>
                     <div>
-                        <div class="section-title">2. Physical Exam</div>
+                        <div class="section-title">2. Physical Exam (PE)</div>
                         <textarea id="v_pe" class="input-dark" placeholder="ผลการตรวจร่างกาย..."></textarea>
                     </div>
                     <div>
-                        <div class="section-title">3. Diagnosis</div>
+                        <div class="section-title">3. Diagnosis (Dx)</div>
                         <input type="text" id="v_tdx" class="input-dark font-bold text-indigo-300" placeholder="การวินิจฉัย...">
                     </div>
                 </div>
@@ -166,6 +163,7 @@
         const ownerHN = urlParams.get('hn');
 
         let defaultWeight = 0;
+        const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
         window.onload = async () => {
             document.getElementById('pet-display-name').innerText = `${petName}`;
@@ -239,39 +237,58 @@
 
             listContainer.innerHTML = data.map(v => {
                 const d = new Date(v.visit_date);
-                const dateStr = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543}`;
+                // 1. วันที่ไทย (พ.ศ.)
+                const dateStr = `${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear()+543}`;
                 
                 let nextApptStr = "";
                 if(v.next_appointment) {
                     const nd = new Date(v.next_appointment);
-                    const months = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
-                    nextApptStr = `${nd.getDate()} ${months[nd.getMonth()]} ${nd.getFullYear()+543} (${nd.getHours().toString().padStart(2,'0')}:${nd.getMinutes().toString().padStart(2,'0')})`;
+                    nextApptStr = `${nd.getDate()} ${thaiMonths[nd.getMonth()]} ${nd.getFullYear()+543} (${nd.getHours().toString().padStart(2,'0')}:${nd.getMinutes().toString().padStart(2,'0')})`;
                 }
 
+                // ตัดข้อความ PE เพื่อแสดงในแถบรายการ
+                const peSnippet = v.physical_exam && v.physical_exam !== "-" ? v.physical_exam : "ไม่ได้บันทึกผลการตรวจ";
+
                 return `
-                    <div class="record-item glass-card rounded-2xl overflow-hidden shadow-lg">
-                        <div class="record-header flex justify-between items-center" onclick="this.parentElement.classList.toggle('active')">
-                            <div class="flex items-center gap-4">
-                                <div class="badge-date">${dateStr}</div>
-                                <div class="text-white font-bold text-lg md:text-xl">${v.diagnosis || '<span class="opacity-30 text-sm">ไม่ระบุ Dx</span>'}</div>
+                    <div class="record-item glass-card rounded-2xl overflow-hidden shadow-lg border-l-4 border-l-transparent active:border-l-teal-500">
+                        <div class="record-header grid grid-cols-12 gap-4 items-center" onclick="this.parentElement.classList.toggle('active')">
+                            <div class="col-span-4 md:col-span-2">
+                                <div class="badge-date text-center">${dateStr}</div>
                             </div>
-                            <div class="flex items-center gap-6 text-sm font-bold">
-                                <div class="hidden md:flex gap-4">
-                                    <span class="text-yellow-400">BW: ${v.weight || '-'} kg</span>
-                                    <span class="text-red-400">T: ${v.temp || '-'} F</span>
+                            
+                            <div class="col-span-8 md:col-span-3">
+                                <div class="text-white font-bold text-lg truncate" title="Chief Complaint">
+                                    <span class="text-teal-500 text-[10px] block uppercase">CC:</span>
+                                    ${v.symptoms || '-'}
                                 </div>
-                                <span class="arrow-icon opacity-30 transition-transform">▼</span>
+                            </div>
+
+                            <div class="hidden md:block col-span-6">
+                                <div class="text-slate-400 text-sm truncate">
+                                    <span class="text-indigo-400 font-bold text-[10px] uppercase">PE:</span> 
+                                    ${peSnippet}
+                                </div>
+                            </div>
+
+                            <div class="col-span-12 md:col-span-1 text-right">
+                                <span class="arrow-icon inline-block opacity-30 transition-transform">▼</span>
                             </div>
                         </div>
+
                         <div class="record-content">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div class="space-y-4">
-                                    <div><h4 class="text-teal-500 text-[11px] font-black uppercase tracking-wider mb-1">1. Subjective (CC)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.symptoms || '-'}</p></div>
-                                    <div><h4 class="text-teal-500 text-[11px] font-black uppercase tracking-wider mb-1">2. Objective (PE)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.physical_exam || '-'}</p></div>
+                                    <div class="flex gap-4 mb-2">
+                                        <span class="text-yellow-400 font-bold bg-yellow-400/10 px-3 py-1 rounded-lg text-xs">BW: ${v.weight || '-'} kg</span>
+                                        <span class="text-red-400 font-bold bg-red-400/10 px-3 py-1 rounded-lg text-xs">Temp: ${v.temp || '-'} F</span>
+                                    </div>
+                                    <div><h4 class="text-teal-500 text-[11px] font-black uppercase tracking-wider mb-1">1. CC / History</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-teal-500/30">${v.symptoms || '-'}</p></div>
+                                    <div><h4 class="text-indigo-400 text-[11px] font-black uppercase tracking-wider mb-1">2. Physical Exam (PE)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-indigo-500/30">${v.physical_exam || '-'}</p></div>
+                                    <div><h4 class="text-slate-400 text-[11px] font-black uppercase tracking-wider mb-1">3. Diagnosis (Dx)</h4><p class="text-indigo-200 font-bold text-md pl-3 border-l-2 border-white/10">${v.diagnosis || '-'}</p></div>
                                 </div>
                                 <div class="space-y-4">
                                     <div><h4 class="text-indigo-400 text-[11px] font-black uppercase tracking-wider mb-1">4. Treatment (Tx)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10">${v.treatment || '-'}</p></div>
-                                    <div><h4 class="text-emerald-400 text-[11px] font-black uppercase tracking-wider mb-1">5. Prescription (Rx)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-white/10 bg-emerald-500/5 p-3 rounded-lg">${v.prescription || '-'}</p></div>
+                                    <div><h4 class="text-emerald-400 text-[11px] font-black uppercase tracking-wider mb-1">5. Prescription (Rx)</h4><p class="text-white text-md whitespace-pre-wrap pl-3 border-l-2 border-emerald-500/20 bg-emerald-500/5 p-3 rounded-lg">${v.prescription || '-'}</p></div>
                                 </div>
                             </div>
                             ${v.next_appointment ? `<div class="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center gap-4">📅 <div><div class="text-indigo-300 font-bold text-sm">นัดครั้งต่อไป: ${nextApptStr}</div><div class="text-gray-400 text-xs">${v.next_note || ''}</div></div></div>` : ''}
@@ -281,14 +298,12 @@
         }
 
         async function saveVisit() {
-            // ปลดล็อกเงื่อนไขการบังคับกรอก (Validation Bypass)
             const nextAppValue = document.getElementById('v_next_app').value;
-
             const visitData = {
                 animal_id: petId,
                 weight: parseFloat(document.getElementById('v_weight').value) || 0,
                 temp: parseFloat(document.getElementById('v_temp').value) || 0,
-                symptoms: document.getElementById('v_cc').value || "-", // ถ้าไม่ใส่ให้เป็นขีด
+                symptoms: document.getElementById('v_cc').value || "-", 
                 physical_exam: document.getElementById('v_pe').value || "-",
                 diagnosis: document.getElementById('v_tdx').value || "-",
                 treatment: document.getElementById('v_tx').value || "-",
