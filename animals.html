@@ -38,7 +38,7 @@
 
         .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; font-size: 1.25rem !important; border: 2px solid #ef4444 !important; }
         
-        /* สไตล์เพิ่มเติมสำหรับ Merge Tool */
+        /* Merge Tool Styles */
         .merge-item { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px; }
         .badge-duplicate { background: #f59e0b; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 900; }
     </style>
@@ -50,8 +50,8 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-black text-white">เวชระเบียน</h2>
                     <div class="flex gap-3 items-center">
-                        <button onclick="showMergeTool()" title="ตรวจสอบข้อมูลซ้ำ" class="text-2xl opacity-70 hover:opacity-100 hover:scale-110 transition-all filter grayscale hover:grayscale-0">🔄</button>
-                        <a href="index.html" title="กลับหน้าหลัก" class="text-3xl opacity-70 hover:opacity-100 hover:scale-110 transition-all">🏠</a>
+                        <button onclick="showMergeTool()" title="ตรวจสอบและรวมข้อมูลซ้ำ" class="text-2xl opacity-70 hover:opacity-100 hover:scale-110 transition-all filter grayscale hover:grayscale-0">🔄</button>
+                        <a href="index.html" class="text-3xl opacity-70 hover:opacity-100 hover:scale-110 transition-all">🏠</a>
                     </div>
                 </div>
                 <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อเจ้าของ, HN, เบอร์โทร..." oninput="filterData()">
@@ -233,24 +233,20 @@
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
                 await db.from('animals').delete().eq('owner_hn', hn);
                 await db.from('owners').delete().eq('hn', hn);
-                
                 alert("✅ ลบข้อมูลเจ้าของเรียบร้อยแล้ว");
                 await loadData();
                 document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><div class="text-9xl mb-4">📋</div><h3 class="text-3xl font-bold">เลือกรายชื่อจากด้านซ้ายเพื่อแก้ไข</h3></div>`;
             } catch (err) { alert(err.message); }
         }
 
-        // --- ฟังก์ชันสำหรับ Check and Merge ---
+        // --- Merge Functions ---
         function showMergeTool() {
             const formView = document.getElementById('form-view');
-            
-            // ค้นหาข้อมูลซ้ำ (ชื่อเหมือนกัน หรือ เบอร์โทรเหมือนกัน)
             let duplicates = [];
             const processedHNs = new Set();
 
             allOwners.forEach(o1 => {
                 if (processedHNs.has(o1.hn)) return;
-                
                 const cleanName1 = removePrefix(o1.owner_name).replace(/\s+/g, '');
                 const phone1 = allPhones.filter(p => p.owner_hn === o1.hn).map(p => p.phone_number);
 
@@ -258,10 +254,8 @@
                     if (o1.hn === o2.hn) return false;
                     const cleanName2 = removePrefix(o2.owner_name).replace(/\s+/g, '');
                     const phone2 = allPhones.filter(p => p.owner_hn === o2.hn).map(p => p.phone_number);
-                    
                     const nameMatch = cleanName1 === cleanName2 && cleanName1.length > 2;
                     const phoneMatch = phone1.some(p => phone2.includes(p)) && phone1.length > 0;
-                    
                     return nameMatch || phoneMatch;
                 });
 
@@ -274,45 +268,62 @@
             formView.innerHTML = `
                 <div class="max-w-4xl mx-auto">
                     <div class="flex justify-between items-center mb-8">
-                        <h2 class="text-3xl font-black text-teal-400">🔍 ตรวจสอบข้อมูลซ้ำซ้อน</h2>
-                        <button onclick="location.reload()" class="bg-white/10 px-4 py-2 rounded-lg text-sm">ปิดหน้านี้</button>
+                        <h2 class="text-3xl font-black text-teal-400">🔍 ตรวจสอบและรวมข้อมูลซ้ำ</h2>
+                        <button onclick="location.reload()" class="bg-white/10 px-4 py-2 rounded-lg text-sm hover:bg-white/20">ปิด</button>
                     </div>
-                    
                     ${duplicates.length === 0 ? `
-                        <div class="bg-slate-800/40 p-20 rounded-[30px] text-center">
+                        <div class="bg-slate-800/40 p-20 rounded-[30px] text-center border border-white/5">
                             <div class="text-6xl mb-4">✅</div>
-                            <p class="text-xl text-slate-400 font-bold">ไม่พบข้อมูลที่ชื่อหรือเบอร์โทรซ้ำกัน</p>
+                            <p class="text-xl text-slate-400 font-bold">ไม่พบข้อมูลซ้ำซ้อนในระบบ</p>
                         </div>
                     ` : `
-                        <p class="mb-6 text-slate-400">ระบบพบกลุ่มข้อมูลที่อาจเป็นเจ้าของคนเดียวกัน ดังนี้:</p>
                         <div class="space-y-6">
-                            ${duplicates.map((group, idx) => `
-                                <div class="bg-slate-800/40 p-6 rounded-[25px] border border-teal-500/20 shadow-lg">
-                                    <h4 class="text-teal-400 font-black mb-4 flex items-center gap-2">กลุ่มที่ ${idx+1} <span class="badge-duplicate">พบซ้ำ ${group.length} รายการ</span></h4>
-                                    <div class="space-y-3">
-                                        ${group.map(owner => {
-                                            const pets = allAnimals.filter(a => a.owner_hn === owner.hn);
-                                            const phones = allPhones.filter(p => p.owner_hn === owner.hn).map(p => p.phone_number).join(', ');
-                                            return `
-                                                <div class="merge-item flex justify-between items-center">
-                                                    <div>
-                                                        <div class="font-bold text-white text-lg">HN: ${owner.hn} | ${owner.owner_name}</div>
-                                                        <div class="text-sm text-slate-400">📞 ${phones || 'ไม่มีเบอร์'} | 🐾 สัตว์เลี้ยง: ${pets.map(p => p.pet_name).join(', ') || 'ไม่มี'}</div>
-                                                    </div>
-                                                    <button onclick="editOwner('${owner.hn}')" class="bg-teal-500/20 text-teal-400 px-4 py-2 rounded-xl font-bold hover:bg-teal-500 hover:text-navy transition-all">ดูข้อมูล</button>
-                                                </div>
-                                            `;
-                                        }).join('')}
-                                    </div>
-                                    <div class="mt-4 p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
-                                        <p class="text-yellow-500 text-sm font-bold">💡 คำแนะนำ: เลือก HN ที่ต้องการเก็บไว้ แล้วย้ายข้อมูลสัตว์เลี้ยงจาก HN อื่นมารวมกัน จากนั้นจึงลบ HN ที่ไม่ต้องการทิ้ง</p>
-                                    </div>
-                                </div>
-                            `).join('')}
+                            ${duplicates.map((group, idx) => {
+                                const sorted = [...group].sort((a, b) => parseInt(a.hn) - parseInt(b.hn));
+                                const targetHN = sorted[0].hn;
+                                const sources = sorted.slice(1).map(o => o.hn);
+                                return `
+                                    <div class="bg-slate-800/40 p-6 rounded-[25px] border border-teal-500/20 shadow-lg">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h4 class="text-teal-400 font-black flex items-center gap-2">กลุ่มที่ ${idx+1}</h4>
+                                                <p class="text-xs text-slate-500">HN หลักคือ ${targetHN} (เลขน้อยสุด)</p>
+                                            </div>
+                                            <button onclick="executeMerge('${targetHN}', ${JSON.stringify(sources)})" class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-2 rounded-xl font-black text-sm transition-all shadow-lg">🚀 ยุบรวมข้อมูล</button>
+                                        </div>
+                                        <div class="space-y-2">
+                                            ${sorted.map(o => {
+                                                const isT = o.hn === targetHN;
+                                                const ps = allAnimals.filter(a => a.owner_hn === o.hn).map(a => a.pet_name).join(', ') || 'ไม่มีสัตว์';
+                                                return `
+                                                    <div class="merge-item flex justify-between items-center ${isT?'border-l-4 border-teal-500 bg-teal-500/5':''}">
+                                                        <div class="text-sm">
+                                                            <div class="font-bold ${isT?'text-teal-400':'text-white'}">HN: ${o.hn} | ${o.owner_name} ${isT?'(หลัก)':''}</div>
+                                                            <div class="text-slate-400">🐾 ${ps}</div>
+                                                        </div>
+                                                        <button onclick="editOwner('${o.hn}')" class="text-xs text-blue-400 underline">ตรวจสอบ</button>
+                                                    </div>`;
+                                            }).join('')}
+                                        </div>
+                                    </div>`;
+                            }).join('')}
                         </div>
                     `}
-                </div>
-            `;
+                </div>`;
+        }
+
+        async function executeMerge(targetHN, sourceHNs) {
+            if (!confirm(`⚠️ ยืนยันการรวมข้อมูล?\n\nสัตว์และประวัติจาก HN: ${sourceHNs.join(', ')}\nจะถูกย้ายเข้าสู่ HN: ${targetHN} ทั้งหมด\n\n(HN อื่นจะถูกลบทิ้งถาวร)`)) return;
+            try {
+                for (const sHN of sourceHNs) {
+                    await db.from('animals').update({ owner_hn: targetHN }).eq('owner_hn', sHN);
+                    await db.from('owner_phones').update({ owner_hn: targetHN }).eq('owner_hn', sHN);
+                    await db.from('owners').delete().eq('hn', sHN);
+                }
+                alert("✅ รวมข้อมูลสำเร็จ!");
+                await loadData();
+                editOwner(targetHN);
+            } catch (err) { alert("เกิดข้อผิดพลาด: " + err.message); }
         }
 
         function handleAgeInput(el) {
@@ -345,9 +356,9 @@
         function filterData() {
             const term = document.getElementById('search-box').value.toLowerCase();
             const filtered = allOwners.filter(o => {
-                const phones = allPhones.filter(p => p.owner_hn === o.hn).map(p => p.phone_number).join(' ');
+                const phs = allPhones.filter(p => p.owner_hn === o.hn).map(p => p.phone_number).join(' ');
                 const pets = allAnimals.filter(a => a.owner_hn === o.hn).map(a => a.pet_name).join(' ');
-                return o.owner_name.toLowerCase().includes(term) || o.hn.includes(term) || phones.includes(term) || pets.toLowerCase().includes(term);
+                return o.owner_name.toLowerCase().includes(term) || o.hn.includes(term) || phs.includes(term) || pets.toLowerCase().includes(term);
             });
             renderSidebar(filtered);
         }
