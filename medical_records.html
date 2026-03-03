@@ -18,19 +18,37 @@
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; }
         
         .glass-card { background: rgba(17, 34, 64, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* สไตล์รายการประวัติ (พับเก็บได้) */
+        .record-item { border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
         .record-header { cursor: pointer; transition: all 0.2s; }
         .record-header:hover { background: rgba(20, 184, 177, 0.1); }
         .record-content { max-height: 0; overflow: hidden; transition: all 0.3s ease-out; background: rgba(0, 0, 0, 0.2); }
         .record-item.active .record-content { max-height: 2000px; padding: 24px; border-top: 1px solid rgba(255,255,255,0.1); }
         .record-item.active .arrow-icon { transform: rotate(180deg); }
-        .record-item.active { border-color: var(--teal); }
+        .record-item.active { border-color: var(--teal); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
 
-        .label-text { color: #94a3b8; font-size: 1rem; font-weight: 600; margin-bottom: 6px; display: block; }
+        /* สไตล์ช่องกรอกข้อมูล */
+        .label-text { color: #94a3b8; font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; display: block; }
         .input-dark { 
             background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); 
             border-radius: 12px; padding: 12px; width: 100%; color: white; font-size: 1.1rem; outline: none;
         }
-        .input-dark:focus { border-color: var(--teal); box-shadow: 0 0 10px rgba(20, 184, 177, 0.2); }
+        .input-dark:focus { border-color: var(--teal); }
+
+        /* ปรับแต่งช่องวันที่ให้สวยงาม (Alt Input) */
+        .flatpickr-input[readonly] {
+            background: rgba(0,0,0,0.3) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            border-radius: 12px !important;
+            padding: 12px !important;
+            width: 100% !important;
+            color: #818cf8 !important;
+            font-size: 1.1rem !important;
+            font-weight: bold !important;
+            cursor: pointer;
+        }
+
         .section-title { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
     </style>
 </head>
@@ -39,59 +57,59 @@
     <div class="max-w-6xl mx-auto">
         <div class="flex justify-between items-end mb-8">
             <div>
-                <a href="animals.html" class="text-teal-400 hover:text-teal-300 font-bold">← กลับหน้าเวชระเบียน</a>
-                <h1 id="pet-display-name" class="text-5xl font-black mt-2">ประวัติการรักษา: ...</h1>
-                <p id="owner-display-info" class="text-gray-400 text-xl font-bold mt-1">HN: ...</p>
+                <a href="animals.html" class="text-teal-400 hover:text-teal-300 font-bold text-lg">← กลับหน้าเวชระเบียน</a>
+                <h1 id="pet-display-name" class="text-5xl font-black mt-2">ประวัติการรักษา</h1>
+                <p id="owner-display-info" class="text-gray-400 text-xl font-bold mt-1"></p>
             </div>
             <button onclick="toggleNewVisitForm()" class="bg-teal-600 hover:bg-teal-500 text-white px-8 py-4 rounded-2xl font-black text-xl shadow-lg transition-all">
                 + บันทึกการตรวจรักษา
             </button>
         </div>
 
-        <div id="new-visit-form" class="hidden glass-card rounded-[32px] p-8 mb-10 border-teal-500/40 border-2 shadow-2xl">
-            <h3 class="text-3xl font-black text-white mb-8 flex items-center gap-3">🩺 บันทึกตรวจรักษาใหม่</h3>
+        <div id="new-visit-form" class="hidden glass-card rounded-[32px] p-8 mb-10 border-teal-500/40 border-2">
+            <h3 class="text-3xl font-black text-white mb-8 flex items-center gap-3">🩺 บันทึกตรวจรักษา (SOAP)</h3>
             
             <div class="grid grid-cols-12 gap-6">
                 <div class="col-span-3">
-                    <label class="label-text">น้ำหนัก BW (kg)</label>
-                    <input type="number" step="0.01" id="v_weight" class="input-dark text-2xl font-black text-yellow-400">
+                    <label class="label-text">น้ำหนักล่าสุด BW (kg)</label>
+                    <input type="number" step="0.01" id="v_weight" class="input-dark text-2xl font-black text-yellow-400" placeholder="0.00">
                 </div>
                 <div class="col-span-3">
                     <label class="label-text">อุณหภูมิ Temp (F)</label>
-                    <input type="number" step="0.1" id="v_temp" class="input-dark text-2xl font-black text-red-400">
+                    <input type="number" step="0.1" id="v_temp" class="input-dark text-2xl font-black text-red-400" placeholder="101.5">
                 </div>
                 <div class="col-span-6">
                     <label class="label-text">6. วัน-เวลานัดครั้งถัดไป (Appt)</label>
-                    <input type="text" id="v_next_app" class="input-dark font-bold text-indigo-400" placeholder="คลิกเพื่อเลือกวันที่และเวลา">
+                    <input type="text" id="v_next_app" class="input-dark" placeholder="คลิกเพื่อเลือกวันที่นัด">
                 </div>
 
                 <div class="col-span-6 space-y-5">
                     <div>
-                        <div class="section-title"><span>1.</span> อาการที่มา (CC)</div>
-                        <textarea id="v_cc" class="input-dark h-24" placeholder="เจ้าของแจ้งว่า..."></textarea>
+                        <div class="section-title">1. อาการที่มา (CC)</div>
+                        <textarea id="v_cc" class="input-dark h-24" placeholder="ระบุอาการสำคัญ..."></textarea>
                     </div>
                     <div>
-                        <div class="section-title"><span>2.</span> การตรวจร่างกาย (PE)</div>
-                        <textarea id="v_pe" class="input-dark h-24" placeholder="ผลการตรวจร่างกาย..."></textarea>
+                        <div class="section-title">2. การตรวจร่างกาย (PE)</div>
+                        <textarea id="v_pe" class="input-dark h-24" placeholder="ระบุผลการตรวจร่างกาย..."></textarea>
                     </div>
                     <div>
-                        <div class="section-title"><span>3.</span> วินิจฉัยเบื้องต้น (TDx)</div>
-                        <input type="text" id="v_tdx" class="input-dark" placeholder="โรคที่สงสัย...">
+                        <div class="section-title">3. วินิจฉัยเบื้องต้น (TDx)</div>
+                        <input type="text" id="v_tdx" class="input-dark" placeholder="สรุปผลวินิจฉัย...">
                     </div>
                 </div>
 
                 <div class="col-span-6 space-y-5">
                     <div>
-                        <div class="section-title"><span>4.</span> การรักษา (Tx)</div>
-                        <textarea id="v_tx" class="input-dark h-24" placeholder="หัตถการ / การรักษา..."></textarea>
+                        <div class="section-title">4. การรักษา / หัตถการ (Tx)</div>
+                        <textarea id="v_tx" class="input-dark h-24" placeholder="ดึงข้อมูลจากการรักษา..."></textarea>
                     </div>
                     <div>
-                        <div class="section-title"><span>5.</span> ยา (Rx)</div>
-                        <textarea id="v_rx" class="input-dark h-24" placeholder="รายการยาที่จ่าย..."></textarea>
+                        <div class="section-title">5. รายการยา (Rx)</div>
+                        <textarea id="v_rx" class="input-dark h-24" placeholder="ดึงข้อมูลจากเภสัชกรรม..."></textarea>
                     </div>
                     <div>
                         <div class="section-title">รายละเอียดการนัดหมาย</div>
-                        <input type="text" id="v_next_note" class="input-dark" placeholder="เช่น มาดูแผล, มาฉีดวัคซีนซ้ำ...">
+                        <input type="text" id="v_next_note" class="input-dark" placeholder="ระบุสิ่งที่ต้องทำในวันนัด...">
                     </div>
                 </div>
             </div>
@@ -106,6 +124,7 @@
     </div>
 
     <script>
+        // ดึงข้อมูลจาก URL
         const urlParams = new URLSearchParams(window.location.search);
         const petId = urlParams.get('id');
         const petName = urlParams.get('name');
@@ -115,13 +134,22 @@
             document.getElementById('pet-display-name').innerText = `ประวัติการรักษา: ${petName}`;
             document.getElementById('owner-display-info').innerText = `HN: ${ownerHN}`;
             
-            // ตั้งค่า DatePicker
+            // ตั้งค่าระบบปฏิทิน ภาษาไทย พ.ศ.
             flatpickr("#v_next_app", {
                 enableTime: true,
-                dateFormat: "Y-m-d H:i",
+                dateFormat: "Y-m-d H:i", // ค่าที่เก็บลงฐานข้อมูล (ค.ศ.)
+                altInput: true,         // เปิดช่องแสดงผลหลอก
                 time_24hr: true,
                 locale: "th",
-                minDate: "today"
+                minDate: "today",
+                formatDate: (date, format, locale) => {
+                    const d = date.getDate();
+                    const m = locale.months.longhand[date.getMonth()];
+                    const y = date.getFullYear() + 543; // แปลงเป็น พ.ศ.
+                    const time = date.getHours().toString().padStart(2, '0') + ":" + 
+                                 date.getMinutes().toString().padStart(2, '0');
+                    return `${d} ${m} ${y} ${time} น.`;
+                }
             });
 
             loadVisitHistory();
@@ -133,6 +161,7 @@
             if(!form.classList.contains('hidden')) window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // ฟังก์ชันดึงประวัติมาแสดง
         async function loadVisitHistory() {
             const { data, error } = await db.from('visit_history')
                 .select('*')
@@ -141,20 +170,29 @@
 
             if (error) return;
 
-            // ดึงน้ำหนักล่าสุดมาใส่ใน Form
+            // ดึงน้ำหนักล่าสุดมาเตรียมในฟอร์ม
             if (data.length > 0) {
                 document.getElementById('v_weight').value = data[0].weight || "";
             }
 
             const listContainer = document.getElementById('visit-history-list');
             if (data.length === 0) {
-                listContainer.innerHTML = `<div class="text-center py-20 opacity-20 text-3xl font-black">ยังไม่มีประวัติการตรวจ</div>`;
+                listContainer.innerHTML = `<div class="text-center py-20 opacity-20 text-3xl font-black">ไม่พบประวัติการตรวจ</div>`;
                 return;
             }
 
             listContainer.innerHTML = data.map(v => {
                 const d = new Date(v.visit_date);
                 const dateStr = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543}`;
+                
+                // แปลงวันนัดเป็นภาษาไทย พ.ศ.
+                let nextApptStr = "";
+                if(v.next_appointment) {
+                    const nd = new Date(v.next_appointment);
+                    const months = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+                    nextApptStr = `${nd.getDate()} ${months[nd.getMonth()]} ${nd.getFullYear()+543} ${nd.getHours().toString().padStart(2,'0')}:${nd.getMinutes().toString().padStart(2,'0')} น.`;
+                }
+
                 return `
                     <div class="record-item glass-card rounded-2xl overflow-hidden">
                         <div class="record-header p-6 flex justify-between items-center" onclick="this.parentElement.classList.toggle('active')">
@@ -162,43 +200,41 @@
                                 <div class="bg-teal-500/20 text-teal-400 px-4 py-1 rounded-lg font-black text-xl">${dateStr}</div>
                                 <div class="text-white font-bold text-2xl">${v.diagnosis || 'ไม่ระบุ Dx'}</div>
                             </div>
-                            <div class="flex items-center gap-6">
-                                <div class="text-right">
-                                    <span class="text-yellow-400 font-bold">BW: ${v.weight || '-'} kg</span>
-                                    <span class="text-red-400 font-bold ml-4">Temp: ${v.temp || '-'} F</span>
-                                </div>
-                                <span class="arrow-icon text-2xl opacity-50">▼</span>
+                            <div class="flex items-center gap-6 text-xl font-bold">
+                                <span class="text-yellow-400">BW: ${v.weight || '-'} kg</span>
+                                <span class="text-red-400">T: ${v.temp || '-'} F</span>
+                                <span class="arrow-icon text-2xl opacity-50 ml-4">▼</span>
                             </div>
                         </div>
                         <div class="record-content">
                             <div class="grid grid-cols-2 gap-10">
-                                <div>
-                                    <div class="mb-4">
-                                        <h4 class="text-teal-400 text-xs font-bold uppercase tracking-widest mb-1">1. Symptoms (CC)</h4>
-                                        <p class="text-gray-200 text-lg whitespace-pre-wrap">${v.symptoms || '-'}</p>
+                                <div class="space-y-6">
+                                    <div>
+                                        <h4 class="text-teal-500 text-sm font-black uppercase tracking-widest mb-2">1. Symptoms (CC)</h4>
+                                        <p class="text-white text-lg whitespace-pre-wrap leading-relaxed">${v.symptoms || '-'}</p>
                                     </div>
                                     <div>
-                                        <h4 class="text-teal-400 text-xs font-bold uppercase tracking-widest mb-1">2. Physical Exam (PE)</h4>
-                                        <p class="text-gray-200 text-lg whitespace-pre-wrap">${v.physical_exam || '-'}</p>
+                                        <h4 class="text-teal-500 text-sm font-black uppercase tracking-widest mb-2">2. Physical Exam (PE)</h4>
+                                        <p class="text-white text-lg whitespace-pre-wrap leading-relaxed">${v.physical_exam || '-'}</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <div class="mb-4">
-                                        <h4 class="text-teal-400 text-xs font-bold uppercase tracking-widest mb-1">4. Treatment (Tx)</h4>
-                                        <p class="text-gray-200 text-lg whitespace-pre-wrap">${v.treatment || '-'}</p>
+                                <div class="space-y-6">
+                                    <div>
+                                        <h4 class="text-indigo-400 text-sm font-black uppercase tracking-widest mb-2">4. Treatment (Tx)</h4>
+                                        <p class="text-white text-lg whitespace-pre-wrap leading-relaxed">${v.treatment || '-'}</p>
                                     </div>
                                     <div>
-                                        <h4 class="text-teal-400 text-xs font-bold uppercase tracking-widest mb-1">5. Prescription (Rx)</h4>
-                                        <p class="text-gray-200 text-lg whitespace-pre-wrap">${v.prescription || '-'}</p>
+                                        <h4 class="text-emerald-400 text-sm font-black uppercase tracking-widest mb-2">5. Prescription (Rx)</h4>
+                                        <p class="text-white text-lg whitespace-pre-wrap leading-relaxed">${v.prescription || '-'}</p>
                                     </div>
                                 </div>
                             </div>
                             ${v.next_appointment ? `
-                            <div class="mt-8 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl flex items-center gap-4">
-                                <span class="text-2xl">📅</span>
+                            <div class="mt-10 p-5 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl flex items-center gap-5">
+                                <div class="text-4xl">📅</div>
                                 <div>
-                                    <div class="text-indigo-300 font-bold text-lg">นัดหมายครั้งถัดไป: ${new Date(v.next_appointment).toLocaleString('th-TH')}</div>
-                                    <div class="text-gray-400">${v.next_note || 'ไม่มีรายละเอียดเพิ่มเติม'}</div>
+                                    <div class="text-indigo-300 font-black text-xl">นัดหมายครั้งถัดไป: ${nextApptStr}</div>
+                                    <div class="text-gray-400 text-lg">${v.next_note || 'ไม่มีรายละเอียดการนัด'}</div>
                                 </div>
                             </div>` : ''}
                         </div>
@@ -206,11 +242,12 @@
             }).join('');
         }
 
+        // ฟังก์ชันบันทึก
         async function saveVisit() {
             const visitData = {
                 animal_id: petId,
-                weight: parseFloat(document.getElementById('v_weight').value),
-                temp: parseFloat(document.getElementById('v_temp').value),
+                weight: parseFloat(document.getElementById('v_weight').value) || 0,
+                temp: parseFloat(document.getElementById('v_temp').value) || 0,
                 symptoms: document.getElementById('v_cc').value,
                 physical_exam: document.getElementById('v_pe').value,
                 diagnosis: document.getElementById('v_tdx').value,
@@ -222,9 +259,9 @@
 
             const { error } = await db.from('visit_history').insert(visitData);
             if (error) {
-                alert("Error: " + error.message);
+                alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
             } else {
-                alert("บันทึกประวัติการรักษาเรียบร้อย");
+                alert("บันทึกข้อมูลสำเร็จ!");
                 location.reload();
             }
         }
