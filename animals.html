@@ -45,6 +45,21 @@
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         .input-box[readonly] { background: rgba(255,255,255,0.05); color: #3b82f6; font-weight: 800; cursor: not-allowed; }
         
+        .btn-medical {
+            background: rgba(20, 184, 177, 0.1);
+            border: 1px solid var(--teal);
+            color: var(--teal);
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 800;
+            transition: all 0.2s;
+        }
+        .btn-medical:hover {
+            background: var(--teal);
+            color: white;
+            box-shadow: 0 0 15px rgba(20, 184, 177, 0.4);
+        }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
@@ -119,30 +134,33 @@
                 return `
                     <div class="animal-item" onclick="editOwner('${pet.owner_hn}')" id="hn-${pet.owner_hn}">
                         <div class="text-4xl">${icon}</div>
-                        <span class="hn-badge">HN ${pet.owner_hn}</span>
-                        <div class="text-2xl font-black text-white w-40 truncate">${pet.pet_name}</div>
-                        <div class="text-xl text-gray-400 w-40 truncate">👤 ${owner.owner_name}</div>
-                        <div class="text-teal-400 font-bold flex-1 truncate text-lg">📞 ${phones}</div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="hn-badge">HN ${pet.owner_hn}</span>
+                                <span class="text-2xl font-black text-white">${pet.pet_name}</span>
+                            </div>
+                            <div class="flex gap-4 text-lg">
+                                <span class="text-gray-400">👤 ${owner.owner_name}</span>
+                                <span class="text-teal-400 font-bold">📞 ${phones}</span>
+                            </div>
+                        </div>
                     </div>`;
             }).join('');
         }
 
         async function createNewForm() {
-            // --- Auto Generate Next HN ---
-            let nextHN = "690001"; // ค่าเริ่มต้นถ้ายังไม่มีข้อมูลในระบบเลย
+            let nextHN = "690001";
             if (allOwners.length > 0) {
-                // หา HN ที่เป็นตัวเลขสูงสุด
                 const maxHN = Math.max(...allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n)));
-                if (maxHN !== -Infinity) {
-                    nextHN = (maxHN + 1).toString();
-                }
+                if (maxHN !== -Infinity) nextHN = (maxHN + 1).toString();
             }
             renderForm({ hn: nextHN, owner_name: '', address: '' }, [], [], true); 
         }
 
         function editOwner(hn) {
             document.querySelectorAll('.animal-item').forEach(el => el.classList.remove('active'));
-            if(document.getElementById(`hn-${hn}`)) document.getElementById(`hn-${hn}`).classList.add('active');
+            const item = document.getElementById(`hn-${hn}`);
+            if(item) item.classList.add('active');
             const owner = allOwners.find(o => o.hn === hn);
             const pets = allAnimals.filter(a => a.owner_hn === hn);
             const phones = allPhones.filter(p => p.owner_hn === hn);
@@ -156,10 +174,12 @@
 
             formView.innerHTML = `
                 <div class="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-                    <h2 class="text-5xl font-black text-white mb-10">📂 ${isNew ? 'ลงทะเบียนใหม่' : 'แก้ไขเวชระเบียน'} HN: ${owner.hn}</h2>
+                    <div class="flex justify-between items-center mb-10">
+                        <h2 class="text-5xl font-black text-white">📂 ${isNew ? 'ลงทะเบียนใหม่' : 'แก้ไขเวชระเบียน'} HN: ${owner.hn}</h2>
+                    </div>
                     
                     <div class="zone-owner">
-                        <h3 class="text-2xl font-bold text-blue-400 mb-6">👤 ข้อมูลเจ้าของ</h3>
+                        <h3 class="text-2xl font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของ</h3>
                         <div class="grid grid-cols-12 gap-6">
                             <div class="col-span-3"><label class="label-text">เลข HN (รันอัตโนมัติ)</label>
                                 <input type="text" id="f_hn" class="input-box" value="${owner.hn}" readonly></div>
@@ -176,7 +196,7 @@
 
                     <div class="flex justify-between items-end mt-12 mb-6">
                         <h3 class="text-3xl font-black text-indigo-400">🐾 รายการสัตว์เลี้ยง</h3>
-                        <button onclick="addPetRow()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-2xl font-black shadow-lg">+ เพิ่มสัตว์เลี้ยง</button>
+                        <button onclick="addPetRow()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-2xl font-black shadow-lg active:scale-95 transition-all">+ เพิ่มสัตว์เลี้ยง</button>
                     </div>
 
                     <div id="pets-container" class="space-y-6">
@@ -203,6 +223,18 @@
 
             return `
                 <div class="zone-pet group relative">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-4">
+                             <div class="text-4xl">${pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾')}</div>
+                             <h4 class="text-2xl font-black text-white">${pet.pet_name || 'ข้อมูลใหม่'}</h4>
+                        </div>
+                        
+                        ${pet.id ? `
+                        <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-medical flex items-center gap-2">
+                            🏥 ประวัติการรักษา (Medical Record)
+                        </button>` : ''}
+                    </div>
+
                     <div class="grid grid-cols-12 gap-6">
                         <div class="col-span-3">
                             <label class="label-text">ชื่อสัตว์ / ชนิด / เพศ</label>
@@ -238,6 +270,12 @@
                     </div>
                     <button onclick="this.parentElement.remove()" class="absolute -right-4 -top-4 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-all shadow-lg">✕</button>
                 </div>`;
+        }
+
+        // --- ฟังชั่นการทำงานใหม่ ---
+        function gotoMedicalRecord(petId, petName, hn) {
+            // ย้ายไปหน้าประวัติการรักษา พร้อมส่ง ID ไปด้วย
+            window.location.href = `medical_records.html?id=${petId}&name=${encodeURIComponent(petName)}&hn=${hn}`;
         }
 
         function addPetRow() {
@@ -288,24 +326,39 @@
                 const p2 = document.getElementById('f_phone2').value;
                 if(p2) phones.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์รอง' });
                 await db.from('owner_phones').insert(phones);
-                await db.from('animals').delete().eq('owner_hn', hn);
+                
+                // สำหรับ Animals เราจะรักษา ID เดิมไว้ถ้ามี (เพื่อไม่ให้ประวัติรักษาหลุด)
                 const petNodes = document.querySelectorAll('.zone-pet');
-                const pets = Array.from(petNodes).map(node => ({
-                    owner_hn: hn,
-                    pet_name: node.querySelector('.p_name').value,
-                    pet_type: node.querySelector('.p_type').value,
-                    gender: node.querySelector('.p_gender').value,
-                    breed: node.querySelector('.p_breed').value,
-                    microchip_number: node.querySelector('.p_microchip').value,
-                    congenital_disease: node.querySelector('.p_congenital').value,
-                    birth_date: node.querySelector('.p_dob').value || null,
-                    weight: parseFloat(node.querySelector('.p_weight').value) || 0
-                })).filter(p => p.pet_name);
+                for (const node of petNodes) {
+                    const petName = node.querySelector('.p_name').value;
+                    if (!petName) continue;
 
-                if(pets.length > 0) await db.from('animals').insert(pets);
+                    // ค้นหา ID เดิม (ถ้ามี) จากข้อมูลที่โหลดมาครั้งแรก
+                    const existingPet = allAnimals.find(a => a.owner_hn === hn && a.pet_name === petName);
+
+                    const petData = {
+                        owner_hn: hn,
+                        pet_name: petName,
+                        pet_type: node.querySelector('.p_type').value,
+                        gender: node.querySelector('.p_gender').value,
+                        breed: node.querySelector('.p_breed').value,
+                        microchip_number: node.querySelector('.p_microchip').value,
+                        congenital_disease: node.querySelector('.p_congenital').value,
+                        birth_date: node.querySelector('.p_dob').value || null,
+                        weight: parseFloat(node.querySelector('.p_weight').value) || 0,
+                        updated_at: new Date()
+                    };
+
+                    if (existingPet) {
+                        await db.from('animals').update(petData).eq('id', existingPet.id);
+                    } else {
+                        await db.from('animals').insert(petData);
+                    }
+                }
+
                 alert("✅ บันทึกสำเร็จ!");
                 await loadData();
-                editOwner(hn); // แสดงผลข้อมูลที่เพิ่งเซฟ
+                editOwner(hn);
             } catch (err) { alert("❌ Error: " + err.message); }
         }
 
