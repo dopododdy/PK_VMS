@@ -16,14 +16,14 @@
         .sidebar-container { position: relative; width: 420px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .pet-card { 
             padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
-            display: grid; grid-template-columns: 75px 35px 1fr 115px; 
+            display: grid; grid-template-columns: 85px 35px 1fr 110px; 
             gap: 12px; align-items: center; font-size: 15px;
         }
         .pet-card:hover { background: rgba(255,255,255,0.07); }
         .pet-card.active { background: rgba(20, 184, 177, 0.18); border-left: 5px solid var(--teal); }
         .info-group { display: flex; flex-direction: column; min-width: 0; }
         .owner-subtext { color: #94a3b8; font-size: 13px; font-weight: 400; }
-        .phone-text { color: var(--teal); font-weight: 800; text-align: right; font-size: 14px; letter-spacing: 0.5px; }
+        .phone-text { color: var(--teal); font-weight: 800; text-align: right; font-size: 13px; letter-spacing: 0.5px; }
 
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: white; width: 100%; outline: none; font-size: 16px; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
@@ -31,23 +31,12 @@
         .zone-pet { background: rgba(30, 41, 59, 0.4); border-radius: 20px; padding: 22px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
         .label-text { color: #94a3b8; font-size: 0.9rem; margin-bottom: 4px; display: block; font-weight: 600; }
         
-        .btn-medical-record {
-            background: rgba(20, 184, 177, 0.1); color: var(--teal); border: 1.5px solid var(--teal);
-            padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.95rem; transition: 0.2s;
-        }
+        .btn-medical-record { background: rgba(20, 184, 177, 0.1); color: var(--teal); border: 1.5px solid var(--teal); padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; transition: 0.2s; }
         .btn-medical-record:hover { background: var(--teal); color: var(--navy); }
-
-        .btn-delete-pet {
-            background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1.5px solid rgba(239, 68, 68, 0.3);
-            padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.95rem; transition: 0.2s;
-        }
+        .btn-delete-pet { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1.5px solid rgba(239, 68, 68, 0.3); padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; transition: 0.2s; }
         .btn-delete-pet:hover { background: #ef4444; color: white; }
 
-        .critical-box { 
-            background: #7f1d1d !important; color: #ffffff !important; 
-            font-weight: 800; font-size: 1.25rem !important; 
-            border: 2px solid #ef4444 !important;
-        }
+        .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; font-size: 1.25rem !important; border: 2px solid #ef4444 !important; }
     </style>
 </head>
 <body>
@@ -58,12 +47,12 @@
                     <h2 class="text-2xl font-black text-white">เวชระเบียน</h2>
                     <a href="index.html" class="text-3xl opacity-70 hover:opacity-100 hover:scale-110 transition-all">🏠</a>
                 </div>
-                <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อ, OPD, เบอร์โทร..." oninput="filterAnimals()">
+                <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อเจ้าของ, HN, เบอร์โทร..." oninput="filterData()">
             </div>
-            <div id="animal-list" class="flex-1 overflow-y-auto px-1"></div>
+            <div id="owner-list" class="flex-1 overflow-y-auto px-1"></div>
             <div class="p-4 bg-black/20">
                 <button onclick="createNewForm()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-4 rounded-xl text-lg shadow-lg transition-all">
-                    + ลงทะเบียนสัตว์ใหม่
+                    + ลงทะเบียนใหม่
                 </button>
             </div>
         </aside>
@@ -71,7 +60,7 @@
         <main class="flex-1 overflow-y-auto p-10 bg-[#020617]" id="form-view">
             <div class="h-full flex flex-col items-center justify-center opacity-10">
                 <div class="text-9xl mb-4">📋</div>
-                <h3 class="text-3xl font-bold">เลือกสัตว์ป่วยจากรายการด้านซ้าย</h3>
+                <h3 class="text-3xl font-bold">เลือกรายชื่อจากด้านซ้ายเพื่อแก้ไข</h3>
             </div>
         </main>
     </div>
@@ -80,68 +69,49 @@
         let allAnimals = []; let allOwners = []; let allPhones = [];
         const BREEDS = {
             "สุนัข": ["ไทย", "ไทยหลังอาน", "บางแก้ว", "โกลเด้น รีทรีฟเวอร์", "ชิสุ", "พุดเดิ้ล", "ปอมเมอเรเนียน", "ไซบีเรียน ฮัสกี้", "เฟรนช์ บูลด็อก", "บีเกิ้ล", "ชิวาวา", "ร็อตไวเลอร์", "ดัชชุน", "ลาบราดอร์", "พิทบูล", "แจ็ค รัสเซล", "คอร์กี้", "ปั๊ก", "มอลทีส", "ยอร์คเชียร์", "ผสม"],
-            "แมว": ["ไทย", "ไทย (วิเชียรมาศ)", "ไทย (สีสวาด)", "ไทย (ขาวมณี)", "เปอร์เซีย", "บริติช ชอร์ตแฮร์", "สก๊อตติช โฟลด์", "เบงกอล", "เมนคูน", "สฟิงซ์", "อเมริกัน ชอร์ตแฮร์", "รัสเซียน บลู", "แร็กดอลล์", "เอ็กโซติก", "มันช์กิ้น", "แมวบ้าน (Short Hair)", "สก็อตติช สเตรท", "ผสม", "แมวสามสี", "แมวส้ม", "แมวขาวดำ"],
+            "แมว": ["ไทย", "เปอร์เซีย", "บริติช ชอร์ตแฮร์", "สก๊อตติช โฟลด์", "เบงกอล", "เมนคูน", "สฟิงซ์", "อเมริกัน ชอร์ตแฮร์", "แมวบ้าน (Short Hair)", "ผสม", "แมวสามสี", "แมวส้ม"],
             "อื่นๆ": ["นก", "กระต่าย", "หนูแฮมสเตอร์", "เต่า", "กิ้งก่า", "ชูการ์ไกลเดอร์", "อื่น ๆ"]
         };
 
-        function removePrefix(name) {
-            if (!name) return "-";
-            return name.replace(/^(นาย|นางสาว|นาง|เด็กชาย|เด็กหญิง|คุณ|ด\.ช\.|ด\.ญ\.)/g, "").trim();
-        }
+        function removePrefix(name) { return name ? name.replace(/^(นาย|นางสาว|นาง|เด็กชาย|เด็กหญิง|คุณ|ด\.ช\.|ด\.ญ\.)/g, "").trim() : "-"; }
 
         function calculateAge(dob) {
             if (!dob) return "ไม่ระบุ";
-            const birth = new Date(dob);
-            const now = new Date();
+            const birth = new Date(dob); const now = new Date();
             let years = now.getFullYear() - birth.getFullYear();
             let months = now.getMonth() - birth.getMonth();
             if (months < 0) { years--; months += 12; }
             return `${years} ปี ${months} เดือน`;
         }
 
-        // --- NEW: Calculate DOB from Year/Month input ---
-        function handleAgeInput(el) {
-            const row = el.closest('.zone-pet');
-            const years = parseInt(row.querySelector('.p_age_years').value) || 0;
-            const months = parseInt(row.querySelector('.p_age_months').value) || 0;
-            
-            if (years > 0 || months > 0) {
-                const d = new Date();
-                d.setFullYear(d.getFullYear() - years);
-                d.setMonth(d.getMonth() - months);
-                const dobString = d.toISOString().split('T')[0];
-                const dobInput = row.querySelector('.p_dob');
-                dobInput.value = dobString;
-                handleDobChange(dobInput);
-            }
-        }
-
         async function loadData() {
-            const [resA, resO, resP] = await Promise.all([
-                db.from('animals').select('*').order('updated_at', { ascending: false }),
-                db.from('owners').select('*'),
+            // ดึงข้อมูล Owners เรียงตาม HN ล่าสุดเสมอ
+            const [resO, resA, resP] = await Promise.all([
+                db.from('owners').select('*').order('hn', { ascending: false }),
+                db.from('animals').select('*'),
                 db.from('owner_phones').select('*')
             ]);
-            allAnimals = resA.data || []; 
-            allOwners = resO.data || []; 
+            allOwners = resO.data || [];
+            allAnimals = resA.data || [];
             allPhones = resP.data || [];
-            renderList(allAnimals);
+            renderSidebar(allOwners);
         }
 
-        function renderList(list) {
-            const container = document.getElementById('animal-list');
-            container.innerHTML = list.map(pet => {
-                const owner = allOwners.find(o => o.hn === pet.owner_hn) || { owner_name: '-' };
-                const p1 = allPhones.find(p => p.owner_hn === pet.owner_hn && p.label === 'เบอร์หลัก')?.phone_number || 
-                           allPhones.find(p => p.owner_hn === pet.owner_hn)?.phone_number || '-';
-                const icon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
+        function renderSidebar(owners) {
+            const container = document.getElementById('owner-list');
+            container.innerHTML = owners.map(owner => {
+                const pets = allAnimals.filter(a => a.owner_hn === owner.hn);
+                const p1 = allPhones.find(p => p.owner_hn === owner.hn && p.label === 'เบอร์หลัก')?.phone_number || '-';
+                const petIcons = pets.map(p => p.pet_type === 'สุนัข' ? '🐶' : (p.pet_type === 'แมว' ? '🐱' : '🐾')).join('');
+                const petNames = pets.map(p => p.pet_name).join(', ') || 'ไม่มีข้อมูลสัตว์';
+                
                 return `
-                    <div class="pet-card" onclick="editOwner('${pet.owner_hn}')" id="hn-${pet.owner_hn}">
-                        <div class="font-bold text-blue-400">#${pet.owner_hn}</div>
-                        <div class="text-xl">${icon}</div>
+                    <div class="pet-card" onclick="editOwner('${owner.hn}')" id="hn-${owner.hn}">
+                        <div class="font-bold text-blue-400 text-base">#${owner.hn}</div>
+                        <div class="text-xl">${pets[0]?.pet_type === 'สุนัข' ? '🐶' : (pets[0]?.pet_type === 'แมว' ? '🐱' : '👤')}</div>
                         <div class="info-group">
-                            <span class="font-bold text-white truncate">${pet.pet_name}</span>
-                            <span class="owner-subtext truncate">${removePrefix(owner.owner_name)}</span>
+                            <span class="font-bold text-white truncate">${removePrefix(owner.owner_name)}</span>
+                            <span class="owner-subtext truncate">${petIcons} ${petNames}</span>
                         </div>
                         <div class="phone-text">${p1}</div>
                     </div>`;
@@ -150,165 +120,87 @@
 
         function renderForm(owner, pets, phones = []) {
             const formView = document.getElementById('form-view');
-            const p1 = phones.find(p => p.label === 'เบอร์หลัก')?.phone_number || (phones[0]?.phone_number || '');
-            const p2 = phones.find(p => p.label === 'เบอร์สำรอง')?.phone_number || (phones[1]?.phone_number || '');
+            const p1 = phones.find(p => p.label === 'เบอร์หลัก')?.phone_number || '';
+            const p2 = phones.find(p => p.label === 'เบอร์สำรอง')?.phone_number || '';
             
             formView.innerHTML = `
-                <div class="max-w-5xl mx-auto">
+                <div class="max-w-5xl mx-auto pb-20">
                     <div class="bg-slate-800/40 p-8 rounded-[30px] border border-white/5 mb-8 shadow-xl">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-2xl font-bold text-blue-400 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
-                            <button onclick="readSmartCardRecord()" id="btn-read-card" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2">
-                                <span>🪪</span> อ่านบัตรประชาชน
-                            </button>
+                            <button onclick="readSmartCardRecord()" id="btn-read-card" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-blue-500 shadow-lg transition-all">🪪 อ่านบัตรประชาชน</button>
                         </div>
                         <div class="grid grid-cols-12 gap-5">
-                            <div class="col-span-2">
-                                <label class="label-text">OPD No.</label>
-                                <input type="text" id="f_hn" class="input-box font-bold text-blue-400 text-center" value="${owner.hn}">
-                            </div>
-                            <div class="col-span-4">
-                                <label class="label-text">ชื่อ-นามสกุล เจ้าของ</label>
-                                <input type="text" id="f_owner_name" class="input-box font-bold" value="${owner.owner_name || ''}">
-                            </div>
-                            <div class="col-span-3">
-                                <label class="label-text text-teal-400">เบอร์โทรศัพท์หลัก</label>
-                                <input type="tel" id="f_phone1" class="input-box text-teal-400 font-bold text-lg" value="${p1}" placeholder="08x-xxxxxxx">
-                            </div>
-                            <div class="col-span-3">
-                                <label class="label-text">เบอร์โทรศัพท์สำรอง</label>
-                                <input type="tel" id="f_phone2" class="input-box text-lg" value="${p2}" placeholder="0xx-xxxxxxx">
-                            </div>
-                            <div class="col-span-12">
-                                <label class="label-text">ที่อยู่ปัจจุบัน (ตามบัตรประชาชน)</label>
-                                <input type="text" id="f_address" class="input-box" value="${owner.address || ''}">
-                            </div>
+                            <div class="col-span-2"><label class="label-text">HN No.</label><input type="text" id="f_hn" class="input-box font-bold text-blue-400 text-center" value="${owner.hn}" readonly></div>
+                            <div class="col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><input type="text" id="f_owner_name" class="input-box font-bold" value="${owner.owner_name || ''}"></div>
+                            <div class="col-span-3"><label class="label-text text-teal-400">เบอร์โทรศัพท์หลัก</label><input type="tel" id="f_phone1" class="input-box text-teal-400 font-bold text-lg" value="${p1}" placeholder="08x-xxxxxxx"></div>
+                            <div class="col-span-3"><label class="label-text">เบอร์โทรศัพท์สำรอง</label><input type="tel" id="f_phone2" class="input-box text-lg" value="${p2}" placeholder="0xx-xxxxxxx"></div>
+                            <div class="col-span-12"><label class="label-text">ที่อยู่ปัจจุบัน</label><input type="text" id="f_address" class="input-box" value="${owner.address || ''}"></div>
                         </div>
                     </div>
 
                     <div id="pets-container" class="space-y-6">
                         ${pets.length ? pets.map(p => petRowHtml(p)).join('') : petRowHtml({})}
+                        <button onclick="addNewPetRow()" class="w-full border-2 border-dashed border-white/10 py-4 rounded-2xl text-slate-500 hover:border-teal-500 hover:text-teal-500 transition-all font-bold">+ เพิ่มสัตว์เลี้ยงตัวใหม่ใน HN นี้</button>
                     </div>
 
-                    <button onclick="saveAllData()" class="w-full bg-teal-500 py-5 rounded-2xl text-navy font-black text-2xl mt-8 shadow-2xl hover:bg-teal-400 active:scale-95 transition-all">💾 บันทึกและอัปเดตเวชระเบียน</button>
+                    <button onclick="saveAllData()" class="w-full bg-teal-500 py-5 rounded-2xl text-navy font-black text-2xl mt-8 shadow-2xl hover:bg-teal-400 active:scale-95 transition-all">💾 บันทึกข้อมูลทั้งหมด</button>
                 </div>`;
             updateBreedOptions();
         }
 
         function petRowHtml(pet) {
             const ageText = calculateAge(pet.birth_date);
-            const thaiDateLabel = pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }) : "ยังไม่ระบุ";
-            
+            const thaiDate = pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }) : "ยังไม่ระบุ";
             return `
                 <div class="zone-pet border-l-8 border-teal-500 shadow-lg" data-pet-id="${pet.id || ''}">
                     <div class="flex justify-between items-center mb-6">
-                        <h4 class="text-xl font-bold text-white flex items-center gap-3">
-                            <span class="text-2xl">🐾</span> ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'} 
-                            <span class="bg-teal-500/10 text-teal-400 px-4 py-1 rounded-full text-sm font-bold age-display">อายุปัจจุบัน: ${ageText}</span>
-                        </h4>
+                        <h4 class="text-xl font-bold text-white flex items-center gap-3">🐾 ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'} <span class="bg-teal-500/10 text-teal-400 px-4 py-1 rounded-full text-sm font-bold age-display">${ageText}</span></h4>
                         <div class="flex gap-2">
-                            ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-medical-record">🏥 ประวัติการรักษา</button>` : ''}
-                            ${pet.id ? `<button onclick="deletePetRecord('${pet.id}', '${pet.pet_name}')" class="btn-delete-pet">🗑️ ลบข้อมูลสัตว์</button>` : ''}
+                            ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-medical-record">🏥 ประวัติรักษา</button>` : ''}
+                            ${pet.id ? `<button onclick="deletePetRecord('${pet.id}', '${pet.pet_name}')" class="btn-delete-pet">🗑️ ลบ</button>` : ''}
                         </div>
                     </div>
                     <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-bold" value="${pet.pet_name || ''}"></div>
-                        <div class="col-span-2">
-                            <label class="label-text">ชนิด</label>
-                            <select class="p_type input-box" onchange="updateBreedOptions(this)">
-                                <option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>สุนัข</option>
-                                <option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>แมว</option>
-                                <option value="อื่นๆ" ${pet.pet_type==='อื่นๆ'?'selected':''}>อื่นๆ</option>
-                            </select>
-                        </div>
+                        <div class="col-span-2"><label class="label-text">ชนิด</label><select class="p_type input-box" onchange="updateBreedOptions(this)"><option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>สุนัข</option><option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>แมว</option><option value="อื่นๆ" ${pet.pet_type==='อื่นๆ'?'selected':''}>อื่นๆ</option></select></div>
                         <div class="col-span-3"><label class="label-text">สายพันธุ์</label><select class="p_breed input-box" data-val="${pet.breed || 'ไทย'}"></select></div>
-                        <div class="col-span-2"><label class="label-text">เพศ</label>
-                            <select class="p_gender input-box"><option value="เมีย" ${pet.gender==='เมีย'?'selected':''}>เมีย</option><option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>ผู้</option><option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>ผู้ตอน</option><option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>เมียหมัน</option></select>
-                        </div>
+                        <div class="col-span-2"><label class="label-text">เพศ</label><select class="p_gender input-box"><option value="เมีย" ${pet.gender==='เมีย'?'selected':''}>เมีย</option><option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>ผู้</option><option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>ผู้ตอน</option><option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>เมียหมัน</option></select></div>
                         <div class="col-span-2"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="p_weight input-box text-center text-yellow-400 font-bold" value="${pet.weight || ''}"></div>
-                        
-                        <div class="col-span-4">
-                            <label class="label-text">วดป. เกิด (<span class="thai-date-text text-teal-400">${thaiDateLabel}</span>)</label>
-                            <input type="date" class="p_dob input-box" value="${pet.birth_date || ''}" onchange="handleDobChange(this)">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="label-text">อายุ (ปี)</label>
-                            <input type="number" class="p_age_years input-box text-center" placeholder="0" oninput="handleAgeInput(this)">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="label-text">อายุ (เดือน)</label>
-                            <input type="number" class="p_age_months input-box text-center" placeholder="0" oninput="handleAgeInput(this)">
-                        </div>
-                        <div class="col-span-4">
-                            <label class="label-text">เลขไมโครชิพ</label>
-                            <input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}">
-                        </div>
-
-                        <div class="col-span-12">
-                            <label class="label-text text-red-400 font-bold">🚨 โรคประจำตัว / แพ้ยา / ข้อควรระวัง (ตัวหนาพิเศษ)</label>
-                            <textarea class="p_congenital input-box critical-box h-[85px]">${pet.congenital_disease || ''}</textarea>
-                        </div>
+                        <div class="col-span-4"><label class="label-text">วดป. เกิด (<span class="thai-date-text text-teal-400">${thaiDate}</span>)</label><input type="date" class="p_dob input-box" value="${pet.birth_date || ''}" onchange="handleDobChange(this)"></div>
+                        <div class="col-span-2"><label class="label-text">อายุ (ปี)</label><input type="number" class="p_age_years input-box text-center" placeholder="0" oninput="handleAgeInput(this)"></div>
+                        <div class="col-span-2"><label class="label-text">อายุ (เดือน)</label><input type="number" class="p_age_months input-box text-center" placeholder="0" oninput="handleAgeInput(this)"></div>
+                        <div class="col-span-4"><label class="label-text">เลขไมโครชิพ</label><input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}"></div>
+                        <div class="col-span-12"><label class="label-text text-red-400 font-bold">🚨 ข้อควรระวัง / แพ้ยา</label><textarea class="p_congenital input-box critical-box h-[80px]">${pet.congenital_disease || ''}</textarea></div>
                     </div>
                 </div>`;
-        }
-
-        async function deletePetRecord(petId, petName) {
-            if (!confirm(`ยืนยันการลบข้อมูลของ "${petName}" ใช่หรือไม่?\n(ประวัติการรักษาทั้งหมดจะหายไปและไม่สามารถกู้คืนได้)`)) return;
-            try {
-                const { error } = await db.from('animals').delete().eq('id', petId);
-                if (error) throw error;
-                alert("ลบข้อมูลสำเร็จ");
-                const currentHN = document.getElementById('f_hn').value;
-                await loadData();
-                editOwner(currentHN);
-            } catch (err) { alert("ลบไม่สำเร็จ: " + err.message); }
-        }
-
-        function handleDobChange(el) {
-            const row = el.closest('.zone-pet');
-            row.querySelector('.age-display').innerText = `อายุปัจจุบัน: ${calculateAge(el.value)}`;
-            row.querySelector('.thai-date-text').innerText = el.value ? new Date(el.value).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }) : "ยังไม่ระบุ";
-        }
-
-        function updateBreedOptions(el) {
-            const rows = el ? [el.closest('.zone-pet')] : document.querySelectorAll('.zone-pet');
-            rows.forEach(row => {
-                const type = row.querySelector('.p_type').value;
-                const breedSelect = row.querySelector('.p_breed');
-                const savedVal = breedSelect.getAttribute('data-val') || "ไทย";
-                const list = BREEDS[type] || BREEDS["อื่นๆ"];
-                breedSelect.innerHTML = list.map(b => `<option value="${b}" ${b===savedVal?'selected':''}>${b}</option>`).join('');
-            });
         }
 
         async function saveAllData() {
             const owner_name = document.getElementById('f_owner_name').value.trim();
             const p1 = document.getElementById('f_phone1').value.trim();
             if (!owner_name || !p1) return alert("❌ กรุณากรอกชื่อและเบอร์โทรหลัก");
-            
+
             let hn = document.getElementById('f_hn').value.trim();
+            // Logic รันเลข HN ใหม่ที่เสถียร (6 หลักเสมอ)
             if (hn === "AUTO" || hn === "") {
                 const hns = allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
-                hn = (hns.length > 0 ? Math.max(...hns) + 1 : 690001).toString();
+                const maxHN = hns.length > 0 ? Math.max(...hns) : 690000;
+                hn = (maxHN + 1).toString().padStart(6, '0');
             }
 
             try {
-                // Update Owner
                 await db.from('owners').upsert({ hn, owner_name, address: document.getElementById('f_address').value, updated_at: new Date() });
-                
-                // Update Phones
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
                 const pList = [{ owner_hn: hn, phone_number: p1, label: 'เบอร์หลัก' }];
                 const p2 = document.getElementById('f_phone2').value.trim();
                 if(p2) pList.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
                 await db.from('owner_phones').insert(pList);
 
-                // Update Animals
                 const petNodes = document.querySelectorAll('.zone-pet');
                 for (const node of petNodes) {
                     const petName = node.querySelector('.p_name').value;
                     if (!petName) continue;
-                    
                     const petId = node.getAttribute('data-pet-id');
                     const petData = {
                         owner_hn: hn, pet_name: petName, pet_type: node.querySelector('.p_type').value,
@@ -319,29 +211,49 @@
                         congenital_disease: node.querySelector('.p_congenital').value, updated_at: new Date()
                     };
                     if(petId) petData.id = petId;
-                    
                     await db.from('animals').upsert(petData);
                 }
-                
-                alert("✅ บันทึกข้อมูลสำเร็จ");
-                await loadData(); // Reload all data to refresh sidebar
-                editOwner(hn);   // Re-focus on current owner
+                alert("✅ บันทึกสำเร็จ");
+                await loadData();
+                editOwner(hn);
             } catch (err) { alert(err.message); }
         }
 
-        async function readSmartCardRecord() {
-            const btn = document.getElementById('btn-read-card');
-            try {
-                btn.innerHTML = "⏳ กำลังอ่าน...";
-                const res = await fetch('http://127.0.0.1:8080/read');
-                const result = await res.json();
-                if (result.status === "success") {
-                    document.getElementById('f_owner_name').value = `${result.data.prefix}${result.data.firstname} ${result.data.lastname}`;
-                    document.getElementById('f_address').value = result.data.address;
-                    btn.innerHTML = "✅ เรียบร้อย";
-                } else { alert(result.message); }
-            } catch (e) { alert("โปรดเปิดโปรแกรม Smart Card Agent"); }
-            setTimeout(() => { btn.innerHTML = "<span>🪪</span> อ่านบัตรประชาชน"; }, 2000);
+        function handleAgeInput(el) {
+            const row = el.closest('.zone-pet');
+            const years = parseInt(row.querySelector('.p_age_years').value) || 0;
+            const months = parseInt(row.querySelector('.p_age_months').value) || 0;
+            if (years > 0 || months > 0) {
+                const d = new Date(); d.setFullYear(d.getFullYear() - years); d.setMonth(d.getMonth() - months);
+                const dobInput = row.querySelector('.p_dob'); dobInput.value = d.toISOString().split('T')[0];
+                handleDobChange(dobInput);
+            }
+        }
+
+        function handleDobChange(el) {
+            const row = el.closest('.zone-pet');
+            row.querySelector('.age-display').innerText = calculateAge(el.value);
+            row.querySelector('.thai-date-text').innerText = el.value ? new Date(el.value).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }) : "ยังไม่ระบุ";
+        }
+
+        function updateBreedOptions(el) {
+            const rows = el ? [el.closest('.zone-pet')] : document.querySelectorAll('.zone-pet');
+            rows.forEach(row => {
+                const type = row.querySelector('.p_type').value;
+                const breedSelect = row.querySelector('.p_breed');
+                const savedVal = breedSelect.getAttribute('data-val') || "ไทย";
+                breedSelect.innerHTML = (BREEDS[type] || BREEDS["อื่นๆ"]).map(b => `<option value="${b}" ${b===savedVal?'selected':''}>${b}</option>`).join('');
+            });
+        }
+
+        function filterData() {
+            const term = document.getElementById('search-box').value.toLowerCase();
+            const filtered = allOwners.filter(o => {
+                const phones = allPhones.filter(p => p.owner_hn === o.hn).map(p => p.phone_number).join(' ');
+                const pets = allAnimals.filter(a => a.owner_hn === o.hn).map(a => a.pet_name).join(' ');
+                return o.owner_name.toLowerCase().includes(term) || o.hn.includes(term) || phones.includes(term) || pets.toLowerCase().includes(term);
+            });
+            renderSidebar(filtered);
         }
 
         function createNewForm() { renderForm({ hn: 'AUTO', owner_name: '', address: '' }, [], []); }
@@ -349,28 +261,27 @@
         function editOwner(hn) {
             document.querySelectorAll('.pet-card').forEach(el => el.classList.remove('active'));
             const card = document.getElementById(`hn-${hn}`);
-            if(card) {
-                card.classList.add('active');
-                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
+            if(card) { card.classList.add('active'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
             const owner = allOwners.find(o => o.hn === hn);
             if (!owner) return createNewForm();
             renderForm(owner, allAnimals.filter(a => a.owner_hn === hn), allPhones.filter(p => p.owner_hn === hn));
         }
 
-        function filterAnimals() {
-            const term = document.getElementById('search-box').value.toLowerCase();
-            const filtered = allAnimals.filter(pet => {
-                const owner = allOwners.find(o => o.hn === pet.owner_hn) || {};
-                const phones = allPhones.filter(p => p.owner_hn === pet.owner_hn).map(p => p.phone_number).join(' ');
-                return pet.pet_name.toLowerCase().includes(term) || pet.owner_hn.includes(term) || owner.owner_name?.toLowerCase().includes(term) || phones.includes(term);
-            });
-            renderList(filtered);
+        function addNewPetRow() {
+            const div = document.createElement('div');
+            div.innerHTML = petRowHtml({});
+            document.getElementById('pets-container').insertBefore(div.firstElementChild, document.querySelector('button[onclick="addNewPetRow()"]'));
+            updateBreedOptions();
         }
 
-        function gotoMedicalRecord(petId, petName, hn) {
-            window.location.href = `medical_records.html?id=${petId}&name=${encodeURIComponent(petName)}&hn=${hn}`;
+        async function deletePetRecord(petId, petName) {
+            if (!confirm(`ลบข้อมูล "${petName}"?`)) return;
+            await db.from('animals').delete().eq('id', petId);
+            await loadData();
+            editOwner(document.getElementById('f_hn').value);
         }
+
+        function gotoMedicalRecord(petId, petName, hn) { window.location.href = `medical_records.html?id=${petId}&name=${encodeURIComponent(petName)}&hn=${hn}`; }
 
         window.onload = async () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
