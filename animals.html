@@ -15,7 +15,6 @@
         }
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
         
-        /* SIDEBAR */
         .sidebar-container { 
             position: relative; min-width: 450px; max-width: 900px; width: 700px;
             background: rgba(17, 34, 64, 0.85); backdrop-filter: blur(25px); 
@@ -34,7 +33,6 @@
         .animal-item.active { border-color: var(--teal); background: rgba(20, 184, 177, 0.15); }
         .hn-badge { background: var(--hn-bg); color: white; font-weight: 800; padding: 2px 10px; border-radius: 8px; font-size: 0.9rem; }
 
-        /* FORM STYLE */
         .zone-owner { background: var(--owner-zone); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 30px; margin-bottom: 20px; }
         .zone-pet { background: var(--pet-zone); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 24px; padding: 30px; margin-bottom: 20px; position: relative; }
         
@@ -45,6 +43,7 @@
             font-size: 1.2rem; outline: none; transition: 0.2s;
         }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        .input-box[readonly] { background: rgba(255,255,255,0.05); color: #3b82f6; font-weight: 800; cursor: not-allowed; }
         
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
@@ -68,7 +67,7 @@
             <div id="animal-list" class="flex-1 overflow-y-auto px-4 pb-4"></div>
             <div class="p-4 bg-black/20 border-t border-white/5">
                 <button onclick="createNewForm()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-5 rounded-xl text-2xl shadow-lg active:scale-95 transition-all">
-                    + ลงทะเบียนรายใหม่
+                    + ลงทะเบียนรายใหม่ (Auto HN)
                 </button>
             </div>
         </aside>
@@ -77,7 +76,7 @@
             <div class="h-full flex flex-col items-center justify-center opacity-20 text-center">
                 <div class="text-[12rem]">📋</div>
                 <h3 class="text-4xl font-black">PK-VMS Dashboard</h3>
-                <p class="text-xl">เลือกรายชื่อสัตว์ป่วยเพื่อจัดการข้อมูล</p>
+                <p class="text-xl">เลือกรายชื่อสัตว์ป่วยเพื่อเริ่มต้นจัดการข้อมูล</p>
             </div>
         </main>
     </div>
@@ -128,7 +127,18 @@
             }).join('');
         }
 
-        function createNewForm() { renderForm({ hn: '', owner_name: '', address: '' }, []); }
+        async function createNewForm() {
+            // --- Auto Generate Next HN ---
+            let nextHN = "690001"; // ค่าเริ่มต้นถ้ายังไม่มีข้อมูลในระบบเลย
+            if (allOwners.length > 0) {
+                // หา HN ที่เป็นตัวเลขสูงสุด
+                const maxHN = Math.max(...allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n)));
+                if (maxHN !== -Infinity) {
+                    nextHN = (maxHN + 1).toString();
+                }
+            }
+            renderForm({ hn: nextHN, owner_name: '', address: '' }, [], [], true); 
+        }
 
         function editOwner(hn) {
             document.querySelectorAll('.animal-item').forEach(el => el.classList.remove('active'));
@@ -136,27 +146,27 @@
             const owner = allOwners.find(o => o.hn === hn);
             const pets = allAnimals.filter(a => a.owner_hn === hn);
             const phones = allPhones.filter(p => p.owner_hn === hn);
-            renderForm(owner, pets, phones);
+            renderForm(owner, pets, phones, false);
         }
 
-        function renderForm(owner, pets, phones = []) {
+        function renderForm(owner, pets, phones = [], isNew = false) {
             const formView = document.getElementById('form-view');
             const p1 = phones[0]?.phone_number || '';
             const p2 = phones[1]?.phone_number || '';
 
             formView.innerHTML = `
                 <div class="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-                    <h2 class="text-5xl font-black text-white mb-10">📂 เวชระเบียน HN: ${owner.hn || 'ใหม่'}</h2>
+                    <h2 class="text-5xl font-black text-white mb-10">📂 ${isNew ? 'ลงทะเบียนใหม่' : 'แก้ไขเวชระเบียน'} HN: ${owner.hn}</h2>
                     
                     <div class="zone-owner">
                         <h3 class="text-2xl font-bold text-blue-400 mb-6">👤 ข้อมูลเจ้าของ</h3>
                         <div class="grid grid-cols-12 gap-6">
-                            <div class="col-span-3"><label class="label-text">เลข HN</label>
-                                <input type="text" id="f_hn" class="input-box" value="${owner.hn}" ${owner.hn ? 'readonly' : ''}></div>
+                            <div class="col-span-3"><label class="label-text">เลข HN (รันอัตโนมัติ)</label>
+                                <input type="text" id="f_hn" class="input-box" value="${owner.hn}" readonly></div>
                             <div class="col-span-5"><label class="label-text">ชื่อเจ้าของ</label>
-                                <input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name || ''}"></div>
+                                <input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name || ''}" placeholder="ระบุชื่อ-นามสกุล"></div>
                             <div class="col-span-2"><label class="label-text">เบอร์โทร 1</label>
-                                <input type="tel" id="f_phone1" class="input-box" value="${p1}"></div>
+                                <input type="tel" id="f_phone1" class="input-box" value="${p1}" placeholder="08xxxxxxxx"></div>
                             <div class="col-span-2"><label class="label-text">เบอร์โทร 2</label>
                                 <input type="tel" id="f_phone2" class="input-box" value="${p2}"></div>
                             <div class="col-span-12"><label class="label-text">ที่อยู่</label>
@@ -182,12 +192,9 @@
         function petRowHtml(pet) {
             let thaiDate = "ยังไม่ได้ระบุ";
             let ageY = ""; let ageM = "";
-
             if(pet.birth_date) {
                 const d = new Date(pet.birth_date);
                 thaiDate = `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear()+543}`;
-                
-                // คำนวณอายุจาก Birth Date ที่ดึงมาจาก DB
                 const now = new Date();
                 ageY = now.getFullYear() - d.getFullYear();
                 ageM = now.getMonth() - d.getMonth();
@@ -214,10 +221,10 @@
                             <label class="label-text">วันเกิด: <span class="text-teal-400 p_dob_display font-bold">${thaiDate}</span></label>
                             <input type="date" class="p_dob input-box mb-3" value="${pet.birth_date || ''}" onchange="calcAge(this)">
                             <div class="flex gap-4">
-                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">อายุปัจจุบัน (ปี)</label>
-                                    <input type="number" class="p_age_y input-box !py-2 font-bold text-teal-400" value="${ageY}" placeholder="ปี" oninput="calcDOB(this)"></div>
-                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">อายุปัจจุบัน (เดือน)</label>
-                                    <input type="number" class="p_age_m input-box !py-2 font-bold text-teal-400" value="${ageM}" placeholder="เดือน" oninput="calcDOB(this)"></div>
+                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">ปี</label>
+                                    <input type="number" class="p_age_y input-box !py-2 font-bold text-teal-400" value="${ageY}" placeholder="0" oninput="calcDOB(this)"></div>
+                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">เดือน</label>
+                                    <input type="number" class="p_age_m input-box !py-2 font-bold text-teal-400" value="${ageM}" placeholder="0" oninput="calcDOB(this)"></div>
                             </div>
                         </div>
                         <div class="col-span-2">
@@ -225,8 +232,8 @@
                             <input type="number" step="0.1" class="p_weight input-box font-bold text-yellow-400" value="${pet.weight || ''}" placeholder="0.0">
                         </div>
                         <div class="col-span-12">
-                            <label class="label-text">โรคประจำตัว / แพ้ยา / หมายเหตุ</label>
-                            <textarea class="p_congenital input-box h-[80px]" placeholder="ระบุรายละเอียด...">${pet.congenital_disease || ''}</textarea>
+                            <label class="label-text">โรคประจำตัว / แพ้ยา</label>
+                            <textarea class="p_congenital input-box h-[80px]" placeholder="ระบุสิ่งที่ต้องระวัง...">${pet.congenital_disease || ''}</textarea>
                         </div>
                     </div>
                     <button onclick="this.parentElement.remove()" class="absolute -right-4 -top-4 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-all shadow-lg">✕</button>
@@ -269,24 +276,18 @@
             const hn = document.getElementById('f_hn').value;
             const owner_name = document.getElementById('f_owner_name').value;
             const p1 = document.getElementById('f_phone1').value;
-            if (!hn || !owner_name || !p1) return alert("❌ กรุณาระบุ HN, ชื่อเจ้าของ และเบอร์โทรหลัก");
+            if (!hn || !owner_name || !p1) return alert("❌ กรุณาระบุชื่อเจ้าของ และเบอร์โทร");
 
             try {
-                // 1. Save Owner
-                const { error: err1 } = await db.from('owners').upsert({ 
+                await db.from('owners').upsert({ 
                     hn, owner_name, address: document.getElementById('f_address').value,
                     updated_at: new Date()
                 });
-                if(err1) throw err1;
-
-                // 2. Save Phones
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
                 const phones = [{ owner_hn: hn, phone_number: p1, label: 'เบอร์หลัก' }];
                 const p2 = document.getElementById('f_phone2').value;
                 if(p2) phones.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์รอง' });
                 await db.from('owner_phones').insert(phones);
-
-                // 3. Save Animals
                 await db.from('animals').delete().eq('owner_hn', hn);
                 const petNodes = document.querySelectorAll('.zone-pet');
                 const pets = Array.from(petNodes).map(node => ({
@@ -301,16 +302,11 @@
                     weight: parseFloat(node.querySelector('.p_weight').value) || 0
                 })).filter(p => p.pet_name);
 
-                if(pets.length > 0) {
-                    const { error: err3 } = await db.from('animals').insert(pets);
-                    if(err3) throw err3;
-                }
-
-                alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว");
-                loadData();
-            } catch (err) {
-                alert("❌ เกิดข้อผิดพลาด: " + err.message);
-            }
+                if(pets.length > 0) await db.from('animals').insert(pets);
+                alert("✅ บันทึกสำเร็จ!");
+                await loadData();
+                editOwner(hn); // แสดงผลข้อมูลที่เพิ่งเซฟ
+            } catch (err) { alert("❌ Error: " + err.message); }
         }
 
         function filterAnimals() {
