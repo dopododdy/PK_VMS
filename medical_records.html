@@ -26,7 +26,7 @@
         
         .glass-card { background: rgba(17, 34, 64, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
         
-        /* IDENTITY SECTION - ปรับขนาดให้คลีนขึ้น */
+        /* IDENTITY SECTION */
         .identity-card { 
             background: linear-gradient(145deg, rgba(20, 184, 177, 0.08), rgba(15, 23, 42, 0.5));
             border: 1px solid rgba(20, 184, 177, 0.2); 
@@ -36,7 +36,7 @@
         .info-value { color: #ffffff; font-size: 1.25rem; font-weight: 700; }
         .info-highlight { color: var(--teal); font-size: 1.25rem; font-weight: 800; }
 
-        /* ALLERGY ALERT - กะทัดรัดลง */
+        /* ALLERGY ALERT */
         .allergy-bar {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
@@ -52,7 +52,7 @@
         .record-item.active .record-content { max-height: 3000px; padding: 25px; border-top: 1px solid rgba(255,255,255,0.1); }
         .record-item.active .arrow-icon { transform: rotate(180deg); color: var(--teal); }
 
-        /* FORM INPUTS - ปรับขนาดฟอนต์มาตรฐาน 1rem */
+        /* FORM INPUTS */
         .label-text { color: var(--slate-400); font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; display: block; }
         .input-dark { 
             background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); 
@@ -62,11 +62,15 @@
         .input-dark:focus { border-color: var(--teal); }
         textarea.input-dark { min-height: 100px; font-size: 1rem; }
 
-        /* ปรับแต่งช่อง นน. และ Temp ให้เด่นพอประมาณ */
+        /* Stats Inputs */
         .input-stats { font-size: 1.5rem !important; font-weight: 800 !important; text-align: center; }
 
         .section-title { color: var(--teal); font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         .badge-date { background: rgba(20, 184, 177, 0.1); color: var(--teal); padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 1rem; }
+
+        /* แก้ไขสไตล์ Flatpickr Alt Input ให้เข้ากับธีม */
+        .flatpickr-mobile { color: white !important; }
+        input[readonly].flatpickr-input { background: rgba(0,0,0,0.3) !important; cursor: pointer; }
     </style>
 </head>
 <body class="p-6">
@@ -88,7 +92,6 @@
         </div>
 
         <div id="new-visit-form" class="hidden glass-card rounded-3xl p-8 mb-10 border-teal-500/20 border shadow-xl">
-            
             <div id="animal-info-card" class="identity-card">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div class="flex flex-col"><span class="info-label">ชื่อสัตว์</span><span id="info-name" class="info-value">-</span></div>
@@ -115,7 +118,7 @@
                     <input type="number" step="0.1" id="v_temp" class="input-dark input-stats text-red-400">
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                    <label class="label-text">วันนัดครั้งถัดไป</label>
+                    <label class="label-text">วันนัดครั้งถัดไป (Appointment)</label>
                     <input type="text" id="v_next_app" class="input-dark font-bold">
                 </div>
 
@@ -174,20 +177,29 @@
             await fetchAnimalDetails();
             loadVisitHistory();
 
+            // แก้ไข Flatpickr เพื่อส่งค่าแบบ ISO ให้ Database
             flatpickr("#v_next_app", {
                 enableTime: true,
-                dateFormat: "Y-m-d H:i",
-                altInput: true,
+                dateFormat: "Y-m-d H:i", // Database เข้าใจ format นี้
+                altInput: true,         // สร้าง input ตัวหลอกมาบังไว้
+                altFormat: "j F Y เวลา H:i น.", // สิ่งที่คนเห็น
                 time_24hr: true,
                 locale: "th",
                 minDate: "today",
-                altFormat: "j F Y เวลา H:i น.",
-                formatDate: (date, format, locale) => {
-                    const d = date.getDate();
-                    const m = locale.months.longhand[date.getMonth()];
-                    const y = date.getFullYear() + 543;
-                    const time = date.getHours().toString().padStart(2, '0') + ":" + date.getMinutes().toString().padStart(2, '0');
-                    return `${d} ${m} ${y} เวลา ${time} น.`;
+                onReady: function(selectedDates, dateStr, instance) {
+                    // ปรับแต่งปีใน Alt Input ให้เป็น พ.ศ.
+                    const wrapFormat = () => {
+                        if (instance.selectedDates.length > 0) {
+                            const date = instance.selectedDates[0];
+                            const d = date.getDate();
+                            const m = instance.l10n.months.longhand[date.getMonth()];
+                            const y = date.getFullYear() + 543;
+                            const h = date.getHours().toString().padStart(2, '0');
+                            const i = date.getMinutes().toString().padStart(2, '0');
+                            instance.altInput.value = `${d} ${m} ${y} เวลา ${h}:${i} น.`;
+                        }
+                    };
+                    instance.config.onChange.push(wrapFormat);
                 }
             });
         };
@@ -298,6 +310,9 @@
             const tdx = document.getElementById('v_tdx').value;
             if(!cc || !tdx) return alert("❌ กรุณาระบุ CC และ TDx");
 
+            // ดึงค่าจากช่องดั้งเดิม (ที่ซ่อนอยู่) ซึ่งเก็บ format YYYY-MM-DD
+            const nextAppValue = document.getElementById('v_next_app').value;
+
             const visitData = {
                 animal_id: petId,
                 weight: parseFloat(document.getElementById('v_weight').value) || 0,
@@ -307,7 +322,7 @@
                 diagnosis: tdx,
                 treatment: document.getElementById('v_tx').value,
                 prescription: document.getElementById('v_rx').value,
-                next_appointment: document.getElementById('v_next_app').value || null,
+                next_appointment: nextAppValue === "" ? null : nextAppValue,
                 next_note: document.getElementById('v_next_note').value
             };
             
