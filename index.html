@@ -2,8 +2,8 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <title>PK-VMS | คลินิกรักษาสัตว์หมอปิติพัฒน์</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>เวชระเบียนสัตว์ | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -16,190 +16,176 @@
         }
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; margin: 0; }
         
-        /* พื้นหลัง Mesh Gradient นวลๆ */
         .mesh-bg { 
             position: fixed; inset: 0; z-index: -1; 
             background: radial-gradient(circle at 50% -20%, rgba(20, 184, 177, 0.15), transparent 70%);
         }
 
-        /* Login Overlay */
-        #login-overlay { 
-            position: fixed; inset: 0; z-index: 1000; background: var(--navy); 
-            display: flex; align-items: center; justify-content: center; backdrop-filter: blur(15px); 
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--teal); }
+
+        .search-input {
+            background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+            color: white; padding: 0.75rem 1rem; border-radius: 12px;
+            width: 100%; outline: none; transition: all 0.3s;
         }
-        .login-box { 
-            background: var(--navy-mid); padding: 3rem; border-radius: 32px; 
-            border: 1px solid var(--border); width: 90%; max-width: 450px; text-align: center; 
+        .search-input:focus { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(20, 184, 177, 0.2); }
+
+        .animal-item {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 1rem; cursor: pointer;
+            transition: all 0.2s ease; margin-bottom: 0.75rem;
+        }
+        .animal-item:hover {
+            border-color: var(--teal); background: rgba(20, 184, 177, 0.05);
+            transform: translateX(4px);
+        }
+        .animal-item.active {
+            border-color: var(--teal); background: rgba(20, 184, 177, 0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
-        /* Menu Card แบบใหม่ ตัวหนังสือใหญ่ขึ้น */
-        .menu-card { 
-            background: var(--surface); border: 2px solid var(--border); border-radius: 28px; 
-            padding: 2rem 1.5rem; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            position: relative; text-align: center;
-        }
-        .menu-card:hover { 
-            transform: translateY(-8px); border-color: var(--teal); 
-            background: rgba(20, 184, 177, 0.08); box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-        }
-        
-        .card-icon { font-size: 3.5rem; margin-bottom: 1rem; display: block; }
-        .card-title { font-size: 1.5rem; font-weight: 800; color: white; margin-bottom: 0.5rem; }
-        .card-desc { font-size: 1rem; color: #94a3b8; }
-
-        /* Badge จำนวนสัตว์ */
-        .count-badge {
-            position: absolute; top: -10px; right: -10px;
-            background: var(--teal); color: white; padding: 6px 14px;
-            border-radius: 16px; font-weight: 800; font-size: 0.9rem;
-            box-shadow: 0 4px 12px rgba(20, 184, 177, 0.4);
-        }
-
-        .input-pw { 
-            background: rgba(0,0,0,0.2); border: 2px solid var(--border); color: white; 
-            padding: 15px; border-radius: 16px; width: 100%; margin-top: 1.5rem; 
-            text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem; outline: none; 
-        }
+        .gender-male { color: #60a5fa; }
+        .gender-female { color: #f472b6; }
     </style>
 </head>
 <body>
     <div class="mesh-bg"></div>
 
-    <div id="login-overlay">
-        <div class="login-box">
-            <div class="text-5xl mb-6">🔐</div>
-            <h2 class="text-2xl font-black text-white mb-2">เข้าใช้งานระบบ</h2>
-            <p class="text-gray-400">ระบุรหัสผ่านเพื่อเข้าสู่ PK-VMS</p>
-            <input type="password" id="pw-input" class="input-pw" placeholder="••••">
-            <button onclick="checkPassword()" class="w-full mt-6 bg-teal-600 hover:bg-teal-500 text-white font-black py-4 rounded-2xl transition-all text-xl shadow-lg">ยืนยันรหัสผ่าน</button>
-        </div>
-    </div>
-
-    <div id="main-content" style="display: none;">
-        <header class="p-8 flex justify-between items-center bg-navy/50 backdrop-blur-xl border-b border-white/5 sticky top-0 z-50">
-            <div>
-                <h1 class="font-black text-2xl text-white tracking-tight">
-                    PK-VMS: <span class="text-teal-400">คลินิกรักษาสัตว์หมอปิติพัฒน์</span>
-                </h1>
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-full md:w-96 border-r border-white/10 flex flex-col bg-navy/40 backdrop-blur-md">
+            <div class="p-6 border-b border-white/5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-black text-white">เวชระเบียน</h2>
+                    <a href="index.html" class="text-xs text-gray-400 hover:text-white">กลับหน้าหลัก</a>
+                </div>
+                <input type="text" id="search-box" class="search-input" placeholder="ค้นหา ชื่อ, HN, เบอร์โทร..." oninput="filterAnimals()">
             </div>
-            <div class="flex items-center gap-6">
-                <span id="db-status" class="flex items-center gap-2 text-sm font-bold text-green-400 bg-green-400/10 px-4 py-2 rounded-full">
-                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> ระบบออนไลน์
-                </span>
-                <button onclick="logout()" class="text-sm font-bold text-gray-400 hover:text-white transition">ออกจากระบบ</button>
+
+            <div id="animal-list" class="flex-1 overflow-y-auto p-4">
+                <div class="text-center py-10 text-gray-500">กำลังโหลดข้อมูล...</div>
             </div>
-        </header>
 
-        <main class="max-w-6xl mx-auto p-8 pt-12">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                
-                <a href="animals.html" class="menu-card">
-                    <div id="animal-count" class="count-badge">โหลดข้อมูล...</div>
-                    <span class="card-icon">🐾</span>
-                    <h3 class="card-title">เวชระเบียนสัตว์</h3>
-                    <p class="card-desc">ทะเบียนประวัติและข้อมูลเจ้าของ</p>
-                </a>
+            <div class="p-4 border-t border-white/5">
+                <button onclick="openAddModal()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg">
+                    + เพิ่มสัตว์ใหม่
+                </button>
+            </div>
+        </aside>
 
-                <a href="pharmacy.html" class="menu-card">
-                    <div id="stock-alert" class="count-badge bg-amber-500" style="display:none;">!</div>
-                    <span class="card-icon">💊</span>
-                    <h3 class="card-title">ยาและเวชภัณฑ์</h3>
-                    <p class="card-desc">จัดการคลังยาและรายการเบิก</p>
-                </a>
-
-                <a href="pos.html" class="menu-card">
-                    <span class="card-icon">💰</span>
-                    <h3 class="card-title">POS (ชำระเงิน)</h3>
-                    <p class="card-desc">คิดเงินและออกใบเสร็จรับเงิน</p>
-                </a>
-
-                <a href="lab.html" class="menu-card">
-                    <span class="card-icon">🔬</span>
-                    <h3 class="card-title">แล็ป (Lab)</h3>
-                    <p class="card-desc">บันทึกผลเลือดและ X-Ray</p>
-                </a>
-
-                <a href="surgery.html" class="menu-card">
-                    <span class="card-icon">✂️</span>
-                    <h3 class="card-title">ห้องผ่าตัด</h3>
-                    <p class="card-desc">นัดผ่าตัดและประวัติวิสัญญี</p>
-                </a>
-
-                <a href="settings.html" class="menu-card border-teal-500/30">
-                    <span class="card-icon text-teal-500">⚙️</span>
-                    <h3 class="card-title">ตั้งค่าระบบ</h3>
-                    <p class="card-desc">ฐานข้อมูลและข้อมูลคลินิก</p>
-                </a>
-
+        <main class="flex-1 overflow-y-auto p-8" id="detail-view">
+            <div class="h-full flex items-center justify-center text-gray-500">
+                <div class="text-center">
+                    <div class="text-6xl mb-4">👈</div>
+                    <p class="text-lg">เลือกรายชื่อสัตว์เพื่อดูรายละเอียด</p>
+                </div>
             </div>
         </main>
-
-        <footer class="text-center p-12 text-gray-500 text-xs tracking-widest uppercase">
-            PK-VMS © 2026 Pitipat Kitpipatkun | Professional Vet Suite
-        </footer>
     </div>
 
     <script>
-        const MASTER_PW = "044641460";
+        let allAnimals = [];
 
-        window.onload = () => {
-            if (sessionStorage.getItem("isLoggedIn") === "true") {
-                showDashboard();
+        window.onload = async () => {
+            if (sessionStorage.getItem("isLoggedIn") !== "true") {
+                window.location.href = "index.html";
+                return;
             }
+            await fetchAnimals();
         };
 
-        async function fetchSystemStats() {
+        async function fetchAnimals() {
             try {
-                // ดึงจำนวนสัตว์ทั้งหมดจากตาราง animals
-                const { count: totalAnimals, error } = await db
+                const { data, error } = await db
                     .from('animals')
-                    .select('*', { count: 'exact', head: true });
-                
-                if (!error) {
-                    document.getElementById('animal-count').innerText = `${totalAnimals || 0} ตัว`;
-                }
+                    .select('*')
+                    .order('created_at', { ascending: false });
 
-                // ดึงแจ้งเตือนสต็อกยา
-                const { count: lowStock } = await db
-                    .from('pharmacy')
-                    .select('*', { count: 'exact', head: true })
-                    .lt('stock_qty', 10);
-                
-                if (lowStock > 0) {
-                    const badge = document.getElementById('stock-alert');
-                    badge.innerText = `${lowStock} รายการหมด`;
-                    badge.style.display = 'block';
-                }
+                if (error) throw error;
+                allAnimals = data;
+                renderAnimalList(allAnimals);
             } catch (err) {
-                console.error("Stats Error:", err);
+                console.error("Fetch Error:", err);
+                document.getElementById('animal-list').innerHTML = `<div class="text-red-400 text-center">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
             }
         }
 
-        function checkPassword() {
-            const input = document.getElementById("pw-input").value;
-            if (input === MASTER_PW) {
-                sessionStorage.setItem("isLoggedIn", "true");
-                showDashboard();
-            } else {
-                alert("รหัสผ่านไม่ถูกต้อง!");
-                document.getElementById("pw-input").value = "";
+        function renderAnimalList(list) {
+            const container = document.getElementById('animal-list');
+            if (list.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-gray-500">ไม่พบข้อมูลสัตว์</div>`;
+                return;
             }
+
+            container.innerHTML = list.map(pet => {
+                // แยก Icon ตามประเภทสัตว์
+                const typeIcon = pet.type === 'สุนัข' ? '🐶' : (pet.type === 'แมว' ? '🐱' : '🐾');
+                // แยก Icon ตามเพศ
+                const genderIcon = pet.gender === 'ผู้' ? '♂️' : '♀️';
+                const genderClass = pet.gender === 'ผู้' ? 'gender-male' : 'gender-female';
+
+                return `
+                    <div class="animal-item" onclick="viewDetail('${pet.id}')" id="pet-${pet.id}">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="bg-teal-500/20 text-teal-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                HN: ${pet.hn || 'N/A'}
+                            </span>
+                            <span class="text-xl">${typeIcon}</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-bold text-white text-lg">${pet.name}</h4>
+                            <span class="${genderClass} font-bold text-sm">${genderIcon}</span>
+                        </div>
+
+                        <div class="space-y-1 text-sm">
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <span class="text-[10px]">👤</span>
+                                <span>เจ้าของ: ${pet.owner_name}</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <span class="text-[10px]">📞</span>
+                                <span class="text-teal-400/80">${pet.owner_tel}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function showDashboard() {
-            document.getElementById("login-overlay").style.display = "none";
-            document.getElementById("main-content").style.display = "block";
-            fetchSystemStats();
+        function filterAnimals() {
+            const term = document.getElementById('search-box').value.toLowerCase();
+            const filtered = allAnimals.filter(pet => 
+                pet.name.toLowerCase().includes(term) ||
+                (pet.hn && pet.hn.toLowerCase().includes(term)) ||
+                pet.owner_name.toLowerCase().includes(term) ||
+                pet.owner_tel.includes(term)
+            );
+            renderAnimalList(filtered);
         }
 
-        function logout() {
-            sessionStorage.clear();
-            location.reload();
+        function viewDetail(id) {
+            // ลบคลาส active จากรายการอื่น
+            document.querySelectorAll('.animal-item').forEach(el => el.classList.remove('active'));
+            // เพิ่มคลาส active ให้รายการที่เลือก
+            document.getElementById(`pet-${id}`).classList.add('active');
+            
+            // ตัวอย่างการแสดงข้อมูล (คุณสามารถขยายส่วนนี้ต่อได้)
+            const pet = allAnimals.find(p => p.id == id);
+            document.getElementById('detail-view').innerHTML = `
+                <div class="max-w-4xl mx-auto bg-navy-mid p-8 rounded-3xl border border-white/10 shadow-2xl">
+                    <h2 class="text-3xl font-black mb-6">ข้อมูล: ${pet.name}</h2>
+                    <p class="text-gray-400">ประวัติการรักษาและรายละเอียดอื่นๆ จะแสดงตรงนี้...</p>
+                </div>
+            `;
         }
 
-        document.getElementById("pw-input").addEventListener("keypress", (e) => {
-            if (e.key === "Enter") checkPassword();
-        });
+        function openAddModal() {
+            alert("ฟังก์ชันเพิ่มข้อมูลกำลังถูกพัฒนา...");
+        }
     </script>
 </body>
 </html>
