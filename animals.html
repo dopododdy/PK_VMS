@@ -15,7 +15,7 @@
         }
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
         
-        /* RESIZABLE SIDEBAR */
+        /* SIDEBAR */
         .sidebar-container { 
             position: relative; min-width: 450px; max-width: 900px; width: 700px;
             background: rgba(17, 34, 64, 0.85); backdrop-filter: blur(25px); 
@@ -24,7 +24,6 @@
         .resizer { width: 10px; cursor: col-resize; position: absolute; right: 0; top: 0; bottom: 0; z-index: 50; }
         .resizer:hover { background: var(--teal); opacity: 0.5; }
 
-        /* LIST ITEM */
         .animal-item { 
             background: rgba(255,255,255,0.03); border: 2px solid transparent; 
             border-radius: 12px; padding: 1rem; cursor: pointer; 
@@ -35,11 +34,11 @@
         .animal-item.active { border-color: var(--teal); background: rgba(20, 184, 177, 0.15); }
         .hn-badge { background: var(--hn-bg); color: white; font-weight: 800; padding: 2px 10px; border-radius: 8px; font-size: 0.9rem; }
 
-        /* FORM ZONES */
+        /* FORM STYLE */
         .zone-owner { background: var(--owner-zone); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 30px; margin-bottom: 20px; }
         .zone-pet { background: var(--pet-zone); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 24px; padding: 30px; margin-bottom: 20px; position: relative; }
         
-        .label-text { color: #94a3b8; font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; display: block; }
+        .label-text { color: #94a3b8; font-size: 1rem; font-weight: 600; margin-bottom: 6px; display: block; }
         .input-box { 
             background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); 
             border-radius: 12px; padding: 12px 16px; color: white; width: 100%; 
@@ -66,11 +65,9 @@
                 </div>
                 <input type="text" id="search-box" class="w-full bg-black/40 border-2 border-white/10 rounded-xl p-4 text-xl text-white outline-none focus:border-teal-500" placeholder="🔍 ค้นหา: ชื่อสัตว์, HN, เบอร์โทร..." oninput="filterAnimals()">
             </div>
-
             <div id="animal-list" class="flex-1 overflow-y-auto px-4 pb-4"></div>
-
             <div class="p-4 bg-black/20 border-t border-white/5">
-                <button onclick="createNewForm()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-5 rounded-xl text-2xl shadow-lg transition-all active:scale-95">
+                <button onclick="createNewForm()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-5 rounded-xl text-2xl shadow-lg active:scale-95 transition-all">
                     + ลงทะเบียนรายใหม่
                 </button>
             </div>
@@ -80,7 +77,7 @@
             <div class="h-full flex flex-col items-center justify-center opacity-20 text-center">
                 <div class="text-[12rem]">📋</div>
                 <h3 class="text-4xl font-black">PK-VMS Dashboard</h3>
-                <p class="text-xl">เลือกรายชื่อสัตว์ป่วยเพื่อเริ่มต้นจัดการข้อมูล</p>
+                <p class="text-xl">เลือกรายชื่อสัตว์ป่วยเพื่อจัดการข้อมูล</p>
             </div>
         </main>
     </div>
@@ -89,10 +86,9 @@
         let allAnimals = []; let allOwners = []; let allPhones = [];
         const MONTHS_TH = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
-        // SIDEBAR RESIZER
         const sidebar = document.getElementById("sidebar");
         const resizer = document.getElementById("resizer");
-        resizer.addEventListener("mousedown", (e) => {
+        resizer.addEventListener("mousedown", () => {
             document.addEventListener("mousemove", resize);
             document.addEventListener("mouseup", () => document.removeEventListener("mousemove", resize));
         });
@@ -112,7 +108,7 @@
                 ]);
                 allAnimals = resA.data || []; allOwners = resO.data || []; allPhones = resP.data || [];
                 renderList(allAnimals);
-            } catch (e) { console.error("Data Load Error:", e); }
+            } catch (e) { console.error(e); }
         }
 
         function renderList(list) {
@@ -150,34 +146,34 @@
 
             formView.innerHTML = `
                 <div class="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-                    <h2 class="text-5xl font-black text-white mb-10 flex items-center gap-4">📂 จัดการเวชระเบียน ${owner.hn ? `<span class="text-blue-500">HN ${owner.hn}</span>` : ''}</h2>
+                    <h2 class="text-5xl font-black text-white mb-10">📂 เวชระเบียน HN: ${owner.hn || 'ใหม่'}</h2>
                     
                     <div class="zone-owner">
-                        <h3 class="text-2xl font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
+                        <h3 class="text-2xl font-bold text-blue-400 mb-6">👤 ข้อมูลเจ้าของ</h3>
                         <div class="grid grid-cols-12 gap-6">
-                            <div class="col-span-3"><label class="label-text">เลข HN *</label>
-                                <input type="text" id="f_hn" class="input-box" value="${owner.hn}" ${owner.hn ? 'readonly' : 'placeholder="เช่น 690001"'}></div>
-                            <div class="col-span-5"><label class="label-text">ชื่อ-นามสกุล เจ้าของ *</label>
+                            <div class="col-span-3"><label class="label-text">เลข HN</label>
+                                <input type="text" id="f_hn" class="input-box" value="${owner.hn}" ${owner.hn ? 'readonly' : ''}></div>
+                            <div class="col-span-5"><label class="label-text">ชื่อเจ้าของ</label>
                                 <input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name || ''}"></div>
-                            <div class="col-span-2"><label class="label-text">เบอร์โทร 1 *</label>
+                            <div class="col-span-2"><label class="label-text">เบอร์โทร 1</label>
                                 <input type="tel" id="f_phone1" class="input-box" value="${p1}"></div>
                             <div class="col-span-2"><label class="label-text">เบอร์โทร 2</label>
                                 <input type="tel" id="f_phone2" class="input-box" value="${p2}"></div>
-                            <div class="col-span-12"><label class="label-text">ที่อยู่ปัจจุบัน</label>
+                            <div class="col-span-12"><label class="label-text">ที่อยู่</label>
                                 <input type="text" id="f_address" class="input-box" value="${owner.address || ''}"></div>
                         </div>
                     </div>
 
                     <div class="flex justify-between items-end mt-12 mb-6">
                         <h3 class="text-3xl font-black text-indigo-400">🐾 รายการสัตว์เลี้ยง</h3>
-                        <button onclick="addPetRow()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-2xl font-black shadow-lg transition-all">+ เพิ่มสัตว์เลี้ยง</button>
+                        <button onclick="addPetRow()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-2xl font-black shadow-lg">+ เพิ่มสัตว์เลี้ยง</button>
                     </div>
 
                     <div id="pets-container" class="space-y-6">
                         ${pets.length ? pets.map(p => petRowHtml(p)).join('') : petRowHtml({})}
                     </div>
 
-                    <button onclick="saveAllData()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-8 rounded-[30px] text-4xl shadow-2xl mt-12 active:scale-[0.98] transition-all">
+                    <button onclick="saveAllData()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-8 rounded-[30px] text-4xl shadow-2xl mt-12 active:scale-95 transition-all">
                         💾 บันทึกข้อมูลทั้งหมด
                     </button>
                 </div>`;
@@ -185,9 +181,17 @@
 
         function petRowHtml(pet) {
             let thaiDate = "ยังไม่ได้ระบุ";
+            let ageY = ""; let ageM = "";
+
             if(pet.birth_date) {
                 const d = new Date(pet.birth_date);
                 thaiDate = `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear()+543}`;
+                
+                // คำนวณอายุจาก Birth Date ที่ดึงมาจาก DB
+                const now = new Date();
+                ageY = now.getFullYear() - d.getFullYear();
+                ageM = now.getMonth() - d.getMonth();
+                if(ageM < 0) { ageY--; ageM += 12; }
             }
 
             return `
@@ -195,7 +199,7 @@
                     <div class="grid grid-cols-12 gap-6">
                         <div class="col-span-3">
                             <label class="label-text">ชื่อสัตว์ / ชนิด / เพศ</label>
-                            <input type="text" class="p_name input-box mb-3" value="${pet.pet_name || ''}" placeholder="ชื่อสัตว์">
+                            <input type="text" class="p_name input-box mb-3 font-bold" value="${pet.pet_name || ''}" placeholder="ชื่อสัตว์">
                             <div class="grid grid-cols-2 gap-2">
                                 <select class="p_type input-box !text-lg !py-2"><option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>🐱 แมว</option><option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>🐶 สุนัข</option><option value="อื่นๆ" ${pet.pet_type==='อื่นๆ'?'selected':''}>🐾 อื่นๆ</option></select>
                                 <select class="p_gender input-box !text-lg !py-2"><option value="เมีย" ${(!pet.gender||pet.gender==='เมีย')?'selected':''}>♀️ เมีย</option><option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>♂️ ผู้</option><option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>♂️ ผู้ตอน</option><option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>♀️ เมียหมัน</option></select>
@@ -210,19 +214,19 @@
                             <label class="label-text">วันเกิด: <span class="text-teal-400 p_dob_display font-bold">${thaiDate}</span></label>
                             <input type="date" class="p_dob input-box mb-3" value="${pet.birth_date || ''}" onchange="calcAge(this)">
                             <div class="flex gap-4">
-                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">ระบุอายุ (ปี)</label>
-                                    <input type="number" class="p_age_y input-box !py-2" placeholder="ปี" oninput="calcDOB(this)"></div>
-                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">ระบุอายุ (เดือน)</label>
-                                    <input type="number" class="p_age_m input-box !py-2" placeholder="เดือน" oninput="calcDOB(this)"></div>
+                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">อายุปัจจุบัน (ปี)</label>
+                                    <input type="number" class="p_age_y input-box !py-2 font-bold text-teal-400" value="${ageY}" placeholder="ปี" oninput="calcDOB(this)"></div>
+                                <div class="flex-1"><label class="text-xs text-indigo-300 font-bold">อายุปัจจุบัน (เดือน)</label>
+                                    <input type="number" class="p_age_m input-box !py-2 font-bold text-teal-400" value="${ageM}" placeholder="เดือน" oninput="calcDOB(this)"></div>
                             </div>
                         </div>
                         <div class="col-span-2">
-                            <label class="label-text">น้ำหนักล่าสุด (กก.)</label>
-                            <input type="number" step="0.1" class="p_weight input-box" value="${pet.weight || ''}" placeholder="0.0">
+                            <label class="label-text">น้ำหนัก (กก.)</label>
+                            <input type="number" step="0.1" class="p_weight input-box font-bold text-yellow-400" value="${pet.weight || ''}" placeholder="0.0">
                         </div>
                         <div class="col-span-12">
                             <label class="label-text">โรคประจำตัว / แพ้ยา / หมายเหตุ</label>
-                            <textarea class="p_congenital input-box h-[80px]" placeholder="เช่น แพ้ยาซัลฟา, เป็นโรคหัวใจ, ดุมาก...">${pet.congenital_disease || ''}</textarea>
+                            <textarea class="p_congenital input-box h-[80px]" placeholder="ระบุรายละเอียด...">${pet.congenital_disease || ''}</textarea>
                         </div>
                     </div>
                     <button onclick="this.parentElement.remove()" class="absolute -right-4 -top-4 bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-all shadow-lg">✕</button>
@@ -253,7 +257,6 @@
             const row = el.closest('.zone-pet');
             const y = parseInt(row.querySelector('.p_age_y').value) || 0;
             const m = parseInt(row.querySelector('.p_age_m').value) || 0;
-            if(y === 0 && m === 0) return;
             const d = new Date();
             d.setFullYear(d.getFullYear() - y);
             d.setMonth(d.getMonth() - m);
@@ -276,14 +279,14 @@
                 });
                 if(err1) throw err1;
 
-                // 2. Save Phones (Clear then Insert)
+                // 2. Save Phones
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
                 const phones = [{ owner_hn: hn, phone_number: p1, label: 'เบอร์หลัก' }];
                 const p2 = document.getElementById('f_phone2').value;
-                if(p2) phones.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
+                if(p2) phones.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์รอง' });
                 await db.from('owner_phones').insert(phones);
 
-                // 3. Save Animals (Clear then Insert)
+                // 3. Save Animals
                 await db.from('animals').delete().eq('owner_hn', hn);
                 const petNodes = document.querySelectorAll('.zone-pet');
                 const pets = Array.from(petNodes).map(node => ({
