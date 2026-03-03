@@ -13,7 +13,6 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
-        /* SIDEBAR - IMPROVED ALIGNMENT */
         .sidebar-container { position: relative; width: 420px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .pet-card { 
             padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
@@ -26,7 +25,6 @@
         .owner-subtext { color: #94a3b8; font-size: 13px; font-weight: 400; }
         .phone-text { color: var(--teal); font-weight: 800; text-align: right; font-size: 14px; letter-spacing: 0.5px; }
 
-        /* FORM STYLE */
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: white; width: 100%; outline: none; font-size: 16px; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
@@ -35,9 +33,15 @@
         
         .btn-medical-record {
             background: rgba(20, 184, 177, 0.1); color: var(--teal); border: 1.5px solid var(--teal);
-            padding: 8px 18px; border-radius: 12px; font-weight: 800; font-size: 1.1rem; transition: 0.2s;
+            padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.95rem; transition: 0.2s;
         }
-        .btn-medical-record:hover { background: var(--teal); color: var(--navy); transform: translateY(-2px); }
+        .btn-medical-record:hover { background: var(--teal); color: var(--navy); }
+
+        .btn-delete-pet {
+            background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1.5px solid rgba(239, 68, 68, 0.3);
+            padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.95rem; transition: 0.2s;
+        }
+        .btn-delete-pet:hover { background: #ef4444; color: white; }
 
         .critical-box { 
             background: #7f1d1d !important; color: #ffffff !important; 
@@ -142,7 +146,7 @@
                         <div class="grid grid-cols-12 gap-5">
                             <div class="col-span-2">
                                 <label class="label-text">OPD No.</label>
-                                <input type="text" id="f_hn" class="input-box bg-slate-900 font-bold text-blue-400 text-center" value="${owner.hn}" readonly>
+                                <input type="text" id="f_hn" class="input-box font-bold text-blue-400 text-center" value="${owner.hn}">
                             </div>
                             <div class="col-span-4">
                                 <label class="label-text">ชื่อ-นามสกุล เจ้าของ</label>
@@ -177,13 +181,16 @@
             const thaiDateLabel = pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }) : "ยังไม่ระบุ";
             
             return `
-                <div class="zone-pet border-l-8 border-teal-500 shadow-lg">
+                <div class="zone-pet border-l-8 border-teal-500 shadow-lg" data-pet-id="${pet.id || ''}">
                     <div class="flex justify-between items-center mb-6">
                         <h4 class="text-xl font-bold text-white flex items-center gap-3">
                             <span class="text-2xl">🐾</span> ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'} 
                             <span class="bg-teal-500/10 text-teal-400 px-4 py-1 rounded-full text-sm font-bold age-display">อายุปัจจุบัน: ${ageText}</span>
                         </h4>
-                        ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-medical-record">🏥 ประวัติการรักษา</button>` : ''}
+                        <div class="flex gap-2">
+                            ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-medical-record">🏥 ประวัติการรักษา</button>` : ''}
+                            ${pet.id ? `<button onclick="deletePetRecord('${pet.id}', '${pet.pet_name}')" class="btn-delete-pet">🗑️ ลบข้อมูลสัตว์</button>` : ''}
+                        </div>
                     </div>
                     <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-bold" value="${pet.pet_name || ''}"></div>
@@ -215,6 +222,18 @@
                 </div>`;
         }
 
+        async function deletePetRecord(petId, petName) {
+            if (!confirm(`ยืนยันการลบข้อมูลของ "${petName}" ใช่หรือไม่?\n(ประวัติการรักษาทั้งหมดจะหายไปและไม่สามารถกู้คืนได้)`)) return;
+            try {
+                const { error } = await db.from('animals').delete().eq('id', petId);
+                if (error) throw error;
+                alert("ลบข้อมูลสำเร็จ");
+                const currentHN = document.getElementById('f_hn').value;
+                await loadData();
+                editOwner(currentHN);
+            } catch (err) { alert("ลบไม่สำเร็จ: " + err.message); }
+        }
+
         function handleDobChange(el) {
             const row = el.closest('.zone-pet');
             row.querySelector('.age-display').innerText = `อายุปัจจุบัน: ${calculateAge(el.value)}`;
@@ -236,11 +255,12 @@
             const owner_name = document.getElementById('f_owner_name').value.trim();
             const p1 = document.getElementById('f_phone1').value.trim();
             if (!owner_name || !p1) return alert("❌ กรุณากรอกชื่อและเบอร์โทรหลัก");
-            let hn = document.getElementById('f_hn').value;
-            if (hn === "AUTO") {
+            let hn = document.getElementById('f_hn').value.trim();
+            if (hn === "AUTO" || hn === "") {
                 const hns = allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
                 hn = (hns.length > 0 ? Math.max(...hns) + 1 : 690001).toString();
             }
+
             try {
                 await db.from('owners').upsert({ hn, owner_name, address: document.getElementById('f_address').value, updated_at: new Date() });
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
@@ -288,6 +308,7 @@
             document.querySelectorAll('.pet-card').forEach(el => el.classList.remove('active'));
             document.getElementById(`hn-${hn}`)?.classList.add('active');
             const owner = allOwners.find(o => o.hn === hn);
+            if (!owner) return createNewForm();
             renderForm(owner, allAnimals.filter(a => a.owner_hn === hn), allPhones.filter(p => p.owner_hn === hn));
         }
 
