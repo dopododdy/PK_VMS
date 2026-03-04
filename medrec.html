@@ -25,7 +25,6 @@
         .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 4px; display: block; font-weight: 600; }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 0.9rem; margin-bottom: 4px; display: block; }
         
-        /* สไตล์สำหรับค่าข้อมูลสัตว์ที่ต้องการความเท่ากัน */
         .pet-info-val { font-size: 1.125rem; font-weight: 800; line-height: 1.5; }
 
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; }
@@ -37,7 +36,6 @@
         .btn-red { background-color: #dc2626 !important; }
         .btn-blue { background-color: #2563eb !important; }
 
-        /* ปรับแต่งช่อง Readonly List */
         .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 10px; cursor: pointer; transition: 0.2s; }
         .list-box:hover { background: rgba(20, 184, 177, 0.1); }
     </style>
@@ -53,9 +51,9 @@
                     <p class="text-teal-400 font-bold text-lg" id="head-hn">HN: -</p>
                 </div>
             </div>
-            <div class="bg-teal-500/10 border border-teal-500/20 px-6 py-3 rounded-2xl text-teal-400 font-black">
-                🩺 ONE-MAN SHOW CLINIC
-            </div>
+            <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-3xl shadow-xl border border-white/5">
+                🏠
+            </a>
         </header>
 
         <div class="section-card border-l-8 border-blue-500">
@@ -100,8 +98,8 @@
                     <input type="number" id="f_weight" class="input-box text-center pet-info-val text-yellow-400 p-1" step="0.1">
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                    <label class="label-text text-red-500">⚠️ แพ้ยา/ข้อควรระวัง (Drug Allergy & Warning)</label>
-                    <div id="info-pet-congenital" class="pet-info-val text-red-500 whitespace-normal">-</div>
+                    <label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง (Drug Allergy & Warning)</label>
+                    <div id="info-pet-congenital" class="pet-info-val whitespace-normal text-slate-400">-</div>
                 </div>
             </div>
 
@@ -192,7 +190,6 @@
         };
 
         async function fetchInfo() {
-            // Owner Info
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
             const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN);
             if (owner) {
@@ -202,7 +199,6 @@
                 document.getElementById('head-hn').innerText = `HN: ${owner.hn}`;
             }
 
-            // Pet Info
             const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
             if (pet) {
                 const icon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
@@ -212,7 +208,18 @@
                 document.getElementById('info-pet-breed').innerText = pet.breed;
                 document.getElementById('info-pet-gender').innerText = pet.gender;
                 document.getElementById('f_weight').value = pet.weight;
-                document.getElementById('info-pet-congenital').innerText = pet.congenital_disease || 'ไม่มีประวัติแพ้ยา';
+                
+                // Logic สีอักษรแพ้ยา
+                const allergyValue = pet.congenital_disease;
+                const allergyEl = document.getElementById('info-pet-congenital');
+                
+                if (allergyValue && allergyValue.trim() !== "" && allergyValue !== "-" && allergyValue !== "ไม่มี") {
+                    allergyEl.innerText = allergyValue;
+                    allergyEl.className = "pet-info-val text-red-500"; // มีข้อมูล = สีแดง
+                } else {
+                    allergyEl.innerText = "ไม่มีประวัติแพ้ยา";
+                    allergyEl.className = "pet-info-val text-slate-400"; // ไม่มี = สีเทา
+                }
             }
         }
 
@@ -269,9 +276,7 @@
             try {
                 if (editingId) await db.from('medical_records').update(data).eq('id', editingId);
                 else await db.from('medical_records').insert([data]);
-                
                 await db.from('animals').update({ weight: parseFloat(document.getElementById('f_weight').value) }).eq('id', animalId);
-                
                 alert("✅ บันทึกเรียบร้อย");
                 location.reload();
             } catch (err) { alert(err.message); }
@@ -292,7 +297,6 @@
             document.getElementById('f_note').value = rec.note || '';
             document.getElementById('f_cost').value = rec.cost || 0;
             if (rec.appointment) document.getElementById('f_appointment')._flatpickr.setDate(rec.appointment);
-            
             document.getElementById('edit-mode-badge').classList.remove('hidden');
             document.getElementById('btn-cancel').classList.remove('hidden');
             window.scrollTo({ top: 300, behavior: 'smooth' });
@@ -307,8 +311,6 @@
 
         function resetForm() {
             editingId = null;
-            document.getElementById('edit-mode-badge').classList.add('hidden');
-            document.getElementById('btn-cancel').classList.add('hidden');
             location.reload();
         }
 
