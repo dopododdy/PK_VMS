@@ -18,33 +18,29 @@
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; }
-        
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px; color: white; width: 100%; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
-        
         .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 4px; display: block; font-weight: 600; }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 0.9rem; margin-bottom: 4px; display: block; }
-        .pet-info-val { font-size: 1.15rem; font-weight: 800; line-height: 1.5; }
-
-        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
-        .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 25px; border: 1px solid var(--border); transition: 0.3s; margin-bottom: 15px; }
-
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; }
+        .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 25px; border: 1px solid var(--border); margin-bottom: 15px; }
         .btn-base { padding: 10px 20px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; }
         .btn-teal { background-color: #0d9488 !important; }
         .btn-blue { background-color: #2563eb !important; }
         .btn-red { background-color: #dc2626 !important; }
-
         .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 12px; cursor: pointer; }
         .view-hidden { display: none; }
-
-        /* Modal Style */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* Bullet point styling */
-        .clinical-list { list-style-type: none; padding-left: 0; }
-        .clinical-list li { position: relative; padding-left: 20px; margin-bottom: 2px; color: #cbd5e1; }
+        .clinical-list { list-style-type: none; padding-left: 0; margin: 0; }
+        .clinical-list li { position: relative; padding-left: 18px; margin-bottom: 4px; color: #cbd5e1; font-size: 0.9rem; }
         .clinical-list li::before { content: "•"; position: absolute; left: 0; color: var(--teal); font-weight: bold; }
+
+        /* Route Checkbox Styling */
+        .route-chip input { display: none; }
+        .route-chip span { display: inline-block; padding: 8px 16px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 0.8rem; }
+        .route-chip input:checked + span { background: var(--teal); color: black; border-color: var(--teal); }
     </style>
 </head>
 <body class="p-4 md:p-10">
@@ -61,15 +57,6 @@
             <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl shadow-xl border border-white/5">🏠</a>
         </header>
 
-        <div class="section-card border-l-8 border-blue-500">
-            <h3 class="text-xl font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
-            <div class="grid grid-cols-12 gap-6">
-                <div class="col-span-12 md:col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><div id="info-owner-name" class="text-lg font-bold text-white">-</div></div>
-                <div class="col-span-12 md:col-span-3"><label class="label-text">เบอร์โทรศัพท์</label><div id="info-owner-phone" class="text-lg font-bold text-teal-400">-</div></div>
-                <div class="col-span-12 md:col-span-5"><label class="label-text">ที่อยู่</label><div id="info-owner-address" class="text-sm text-slate-400">-</div></div>
-            </div>
-        </div>
-
         <div id="history-view-container">
             <div class="section-card border-l-8 border-teal-500">
                 <div class="flex justify-between items-center mb-8">
@@ -77,11 +64,10 @@
                     <button onclick="showFormView()" class="btn-base btn-teal text-lg py-3 px-6 shadow-xl">+ เพิ่มประวัติการรักษา</button>
                 </div>
                 <div class="grid grid-cols-12 gap-4">
-                    <div class="col-span-6 md:col-span-2"><label class="label-text">ชื่อสัตว์</label><div id="v-pet-name" class="pet-info-val text-white">-</div></div>
-                    <div class="col-span-6 md:col-span-3"><label class="label-text">ชนิด/สายพันธุ์</label><div id="v-pet-breed" class="pet-info-val text-white">-</div></div>
-                    <div class="col-span-4 md:col-span-1"><label class="label-text">เพศ</label><div id="v-pet-gender" class="pet-info-val text-white">-</div></div>
-                    <div class="col-span-4 md:col-span-1"><label class="label-text">นน.(กก.)</label><div id="v-pet-weight" class="pet-info-val text-yellow-400">-</div></div>
-                    <div class="col-span-12 md:col-span-5"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="pet-info-val">-</div></div>
+                    <div class="col-span-6 md:col-span-3"><label class="label-text">ชื่อสัตว์/พันธุ์</label><div id="v-pet-name" class="font-bold text-white text-xl">-</div></div>
+                    <div class="col-span-3 md:col-span-2"><label class="label-text">เพศ</label><div id="v-pet-gender" class="font-bold text-white">-</div></div>
+                    <div class="col-span-3 md:col-span-2"><label class="label-text">นน.(กก.)</label><div id="v-pet-weight" class="font-bold text-yellow-400 text-xl">-</div></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="font-bold text-red-400">-</div></div>
                 </div>
             </div>
 
@@ -104,37 +90,18 @@
                         <input type="number" id="f_weight" class="input-box font-bold text-yellow-400 text-xl" step="0.1">
                     </div>
                     <div class="col-span-12 md:col-span-5"><label class="label-clinical">CC (Chief Complaint)</label><textarea id="f_cc" class="input-box h-20" placeholder="ระบุอาการสำคัญ..."></textarea></div>
-                    <div class="col-span-12 md:col-span-5"><label class="label-clinical">Hx (History)</label><textarea id="f_hx" class="input-box h-20" placeholder="ประวัติย้อนหลัง..."></textarea></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-clinical">Dx (Diagnosis)</label><textarea id="f_dx" class="input-box h-20" placeholder="การวินิจฉัย..."></textarea></div>
                     
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE (Physical Exam)</label><textarea id="f_pe" class="input-box h-32" placeholder="ผลการตรวจร่างกาย..."></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">🔬 Lab (ผลแล็บ)</label><div id="list_lab_display" class="list-box overflow-y-auto max-h-32" onclick="openCatalog('lab')">คลิกเพื่อเลือก...</div><input type="hidden" id="f_lab"></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">💉 Tx (Treatment)</label><div id="list_tx_display" class="list-box overflow-y-auto max-h-32" onclick="openCatalog('tx')">คลิกเพื่อเลือก...</div><input type="hidden" id="f_tx"></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">💊 Rx (Pharmacy)</label><div id="list_rx_display" class="list-box overflow-y-auto max-h-32 border-blue-500/30" onclick="openCatalog('rx')">คลิกเพื่อเลือก...</div><input type="hidden" id="f_rx"></div>
                     
-                    <div class="col-span-12 md:col-span-4">
-                        <label class="label-clinical">🔬 Lab (ผลแล็บ)</label>
-                        <div id="list_lab_display" class="list-box text-sm overflow-y-auto max-h-32" onclick="openCatalog('lab')">คลิกเพื่อเลือกรายการแล็บ...</div>
-                        <input type="hidden" id="f_lab">
-                    </div>
-                    
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical text-yellow-400">Dx (Diagnosis)</label><textarea id="f_dx" class="input-box h-32 border-yellow-500/30" placeholder="การวินิจฉัย..."></textarea></div>
-                    
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="label-clinical">💉 Tx (Treatment)</label>
-                        <div id="list_tx_display" class="list-box overflow-y-auto max-h-32" onclick="openCatalog('tx')">คลิกเพื่อเลือกหัตถการ...</div>
-                        <input type="hidden" id="f_tx">
-                    </div>
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="label-clinical">💊 Rx (Medication)</label>
-                        <div id="list_rx_display" class="list-box border-blue-500/50 overflow-y-auto max-h-32" onclick="openCatalog('rx')">คลิกเพื่อเลือกยา...</div>
-                        <input type="hidden" id="f_rx">
-                    </div>
-                    
-                    <div class="col-span-12 md:col-span-3"><label class="label-clinical">Plan / แผนการรักษา</label><input type="text" id="f_plan" class="input-box"></div>
-                    <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">📅 Appointment / วันนัด</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
-                    <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ</label><input type="text" id="f_app_note" class="input-box" placeholder="เหตุผลการนัด..."></div>
+                    <div class="col-span-12 md:col-span-9"><label class="label-clinical">Plan / Note</label><input type="text" id="f_plan" class="input-box" placeholder="แผนการรักษาหรือหมายเหตุเพิ่มเติม..."></div>
                     <div class="col-span-12 md:col-span-3"><label class="label-text font-bold text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-2xl font-black text-yellow-400" value="0"></div>
                 </div>
 
                 <div class="flex gap-4 mt-10">
-                    <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-xl py-4">💾 บันทึกข้อมูลการตรวจ</button>
+                    <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-xl py-4">💾 บันทึกประวัติ</button>
                     <button onclick="showHistoryView()" class="btn-base btn-red px-10">ยกเลิก</button>
                 </div>
             </div>
@@ -144,29 +111,52 @@
     <div id="catalog-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900/50">
-                <div>
-                    <h3 id="modal-title" class="text-xl font-bold text-white">เลือกรายการ</h3>
-                    <p class="text-xs text-slate-400 mt-1">คลิกที่รายการเพื่อเพิ่มไปยังบิล</p>
-                </div>
+                <h3 id="modal-title" class="text-xl font-bold text-white">เลือกรายการ</h3>
                 <button onclick="closeCatalog()" class="text-2xl opacity-50 hover:opacity-100">✕</button>
             </div>
-            
             <div class="p-4 bg-white/5 border-b border-white/5">
-                <input type="text" id="catalog-search" class="input-box" placeholder="พิมพ์เพื่อค้นหา..." oninput="filterCatalog()">
+                <input type="text" id="catalog-search" class="input-box" placeholder="ค้นหาตามชื่อ..." oninput="filterCatalog()">
             </div>
-
-            <div id="catalog-items" class="flex-1 overflow-y-auto p-4 space-y-2 bg-black/20">
-                </div>
-
-            <div id="modal-selection-preview" class="p-4 bg-teal-500/10 border-t border-teal-500/30">
-                <label class="text-[10px] font-bold text-teal-400 uppercase tracking-widest mb-2 block">รายการที่เลือกไว้แล้วในครั้งนี้:</label>
-                <div id="current-session-list" class="text-sm text-white font-medium flex flex-wrap gap-2">
-                    <span class="text-slate-500 italic">ยังไม่ได้เลือกรายการ...</span>
+            <div id="catalog-items" class="flex-1 overflow-y-auto p-4 space-y-2 bg-black/20"></div>
+            
+            <div class="p-4 bg-teal-500/10 border-t border-teal-500/20">
+                <label class="text-[10px] font-bold text-teal-400 uppercase mb-2 block text-center">รายการที่เลือกเพิ่มแล้วในรอบนี้:</label>
+                <div id="modal-session-tags" class="flex flex-wrap gap-2 justify-center">
+                    <span class="text-slate-500 text-xs italic">ยังไม่มีรายการ...</span>
                 </div>
             </div>
 
-            <div class="p-6 border-t border-white/10 bg-slate-900/50 text-right">
-                <button onclick="closeCatalog()" class="btn-base btn-blue w-full md:w-auto">เสร็จสิ้น และปิดหน้าต่าง</button>
+            <div class="p-6 border-t border-white/10 bg-slate-900/50">
+                <button onclick="closeCatalog()" class="btn-base btn-blue w-full">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="injection-modal" class="modal-overlay" style="z-index: 110;">
+        <div class="modal-content !max-w-md">
+            <div class="p-6 border-b border-white/10 bg-teal-900/20">
+                <h3 class="text-xl font-bold text-teal-400">รายละเอียดการให้ยา</h3>
+                <p id="inj-item-name" class="text-sm text-slate-300 mt-1">-</p>
+            </div>
+            <div class="p-6 space-y-6">
+                <div>
+                    <label class="label-clinical text-yellow-400">ปริมาณยา (ml)</label>
+                    <input type="number" id="inj-ml" class="input-box text-2xl font-black text-yellow-400" step="0.05" value="0.1">
+                </div>
+                <div>
+                    <label class="label-clinical mb-3">Route (ช่องทางการให้ยา)</label>
+                    <div class="flex flex-wrap gap-3">
+                        <label class="route-chip"><input type="checkbox" name="inj-route" value="SC"><span>SC</span></label>
+                        <label class="route-chip"><input type="checkbox" name="inj-route" value="IM"><span>IM</span></label>
+                        <label class="route-chip"><input type="checkbox" name="inj-route" value="IV"><span>IV</span></label>
+                        <label class="route-chip"><input type="checkbox" name="inj-route" value="ID"><span>ID</span></label>
+                        <label class="route-chip"><input type="checkbox" name="inj-route" value="Topical"><span>Topical</span></label>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="confirmInjection()" class="btn-base btn-teal flex-1">ยืนยันข้อมูล</button>
+                <button onclick="document.getElementById('injection-modal').style.display='none'" class="btn-base bg-slate-700 text-white">ยกเลิก</button>
             </div>
         </div>
     </div>
@@ -175,20 +165,18 @@
         const urlParams = new URLSearchParams(window.location.search);
         const animalId = urlParams.get('id');
         const ownerHN = urlParams.get('hn');
-        let editingId = null;
         let records = [];
         let selectedLabs = [], selectedTxs = [], selectedRxs = [];
         let currentCatalogType = '';
         let fullCatalog = [];
+        let pendingItem = null; // เก็บ item ที่กำลังรอระบุ ml/route
 
         window.onload = async () => {
             if (!animalId) return goBack();
-            flatpickr(".datepicker", { locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y" });
             await fetchInfo();
             await fetchRecords();
         };
 
-        // ฟังก์ชันช่วยแสดงผล List แบบ Bullet
         function formatToBullet(str) {
             if (!str || str.trim() === "") return "-";
             const items = str.split(', ');
@@ -197,23 +185,15 @@
 
         async function fetchInfo() {
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
-            const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN);
-            if (owner) {
-                document.getElementById('info-owner-name').innerText = owner.owner_name;
-                document.getElementById('info-owner-phone').innerText = phones?.[0]?.phone_number || '-';
-                document.getElementById('info-owner-address').innerText = owner.address || '-';
-                document.getElementById('head-hn').innerText = `HN: ${owner.hn}`;
-            }
             const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
-            if (pet) {
-                const icon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
-                document.getElementById('animal-info-head').innerHTML = `${icon} ข้อมูลสัตว์`;
+            if (owner && pet) {
                 document.getElementById('head-pet-name').innerText = pet.pet_name;
-                document.getElementById('v-pet-name').innerText = pet.pet_name;
-                document.getElementById('v-pet-breed').innerText = `${pet.pet_type} (${pet.breed || '-'})`;
-                document.getElementById('v-pet-gender').innerText = pet.gender || '-';
+                document.getElementById('head-hn').innerText = `HN: ${owner.hn} | ${owner.owner_name}`;
+                document.getElementById('v-pet-name').innerText = `${pet.pet_name} (${pet.pet_type})`;
+                document.getElementById('v-pet-gender').innerText = pet.gender;
                 document.getElementById('v-pet-weight').innerText = pet.weight || '0';
                 document.getElementById('f_weight').value = pet.weight || 0;
+                document.getElementById('v-pet-congenital').innerText = pet.congenital_disease || 'ไม่มีประวัติแพ้ยา';
             }
         }
 
@@ -226,63 +206,53 @@
         function renderRecordsList() {
             const list = document.getElementById('history-list');
             document.getElementById('record-count').innerText = `${records.length} รายการ`;
-            if (records.length === 0) {
-                list.innerHTML = `<div class="text-center py-20 opacity-30">ไม่พบประวัติการรักษา</div>`;
-                return;
-            }
             list.innerHTML = records.map(rec => {
                 const dateStr = new Date(rec.created_at).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' });
                 return `
-                    <div class="history-item overflow-hidden" id="card-${rec.id}">
+                    <div class="history-item">
                         <div class="flex items-center gap-4 cursor-pointer" onclick="toggleCollapse('${rec.id}')">
                             <div class="w-20 text-teal-400 font-black">${dateStr}</div>
                             <div class="flex-1 grid grid-cols-2 gap-4 border-l border-white/10 pl-4">
                                 <div class="truncate text-xs"><b class="text-teal-500">CC:</b> ${rec.cc || '-'}</div>
                                 <div class="truncate text-xs"><b class="text-teal-500">Dx:</b> ${rec.dx || '-'}</div>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-blue text-[10px] p-1 px-2 rounded">✏️</button>
-                                <button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-red text-[10px] p-1 px-2 rounded">🗑️</button>
-                                <div id="arrow-${rec.id}" class="text-teal-500">🔽</div>
-                            </div>
+                            <div id="arrow-${rec.id}" class="text-teal-500">🔽</div>
                         </div>
-                        <div id="detail-${rec.id}" class="hidden mt-6 pt-6 border-t border-white/5 space-y-4">
+                        <div id="detail-${rec.id}" class="hidden mt-4 pt-4 border-t border-white/5 space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
                                 <div><b class="label-clinical text-[10px]">🔬 Lab:</b> ${formatToBullet(rec.lab)}</div>
-                                <div><b class="label-clinical text-[10px]">💉 Treatment:</b> ${formatToBullet(rec.tx)}</div>
-                                <div><b class="label-clinical text-[10px]">💊 Medicine:</b> ${formatToBullet(rec.rx)}</div>
+                                <div><b class="label-clinical text-[10px]">💉 Tx:</b> ${formatToBullet(rec.tx)}</div>
+                                <div><b class="label-clinical text-[10px]">💊 Rx:</b> ${formatToBullet(rec.rx)}</div>
                             </div>
-                            <div class="text-right border-t border-white/5 pt-4">
-                                <span class="text-xl font-black text-yellow-400">฿ ${rec.cost?.toLocaleString()}</span>
+                            <div class="flex justify-between items-center bg-black/20 p-3 rounded-xl">
+                                <div class="text-xs text-slate-400">Note: ${rec.plan || '-'}</div>
+                                <div class="font-black text-yellow-400">฿ ${rec.cost?.toLocaleString()}</div>
                             </div>
                         </div>
                     </div>`;
             }).join('');
         }
 
-        // --- Catalog & Selection Logic ---
-
         async function openCatalog(type) {
             currentCatalogType = type;
             const modal = document.getElementById('catalog-modal');
             const title = document.getElementById('modal-title');
-            document.getElementById('catalog-items').innerHTML = '<div class="text-center py-10 opacity-50">กำลังโหลดข้อมูล...</div>';
             modal.style.display = 'flex';
-            updateSessionListUI();
+            updateModalSessionUI();
 
             let items = [];
             if (type === 'lab') {
                 title.innerText = '🔬 เลือกรายการ Lab';
                 const { data } = await db.from('services').select('*').or('category.eq.Lab,category.eq.ตรวจเลือด').order('service_name', { ascending: true });
-                items = (data || []).map(i => ({ name: i.service_name, price: i.price, id: i.id, config: i.price_config }));
+                items = data.map(i => ({ name: i.service_name, price: i.price, config: i.price_config }));
             } else if (type === 'tx') {
-                title.innerText = '💉 เลือกหัตถการ (Treatment)';
+                title.innerText = '💉 เลือกหัตถการ / การรักษา';
                 const { data } = await db.from('services').select('*').eq('category', 'หัตถการ').order('service_name', { ascending: true });
-                items = (data || []).map(i => ({ name: i.service_name, price: i.price, id: i.id, config: i.price_config }));
+                items = data.map(i => ({ name: i.service_name, price: i.price, config: i.price_config }));
             } else if (type === 'rx') {
                 title.innerText = '💊 เลือกยา และ สินค้า';
-                const { data } = await db.from('pharmacy').select('*').or('category.eq.ยา,category.eq.สินค้า').order('item_name', { ascending: true });
-                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, id: i.id }));
+                const { data } = await db.from('pharmacy').select('*').order('item_name', { ascending: true });
+                items = data.map(i => ({ name: i.item_name, price: i.price_per_unit }));
             }
             fullCatalog = items;
             renderCatalogItems(items);
@@ -290,75 +260,82 @@
 
         function renderCatalogItems(items) {
             const listContainer = document.getElementById('catalog-items');
-            listContainer.innerHTML = items.map(item => {
-                const itemName = item.name || item.item_name;
-                return `
-                <div class="p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-teal-500 cursor-pointer flex justify-between items-center transition-all group" 
-                     onclick="handleItemClick(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+            listContainer.innerHTML = items.map(item => `
+                <div class="p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-teal-500 cursor-pointer flex justify-between items-center group transition-all" 
+                     onclick="handleItemSelection(${JSON.stringify(item).replace(/"/g, '&quot;')})">
                     <div>
-                        <div class="font-bold text-white group-hover:text-teal-400 transition-colors">${itemName}</div>
-                        <div class="text-xs text-slate-500">ราคาเริ่มต้น: ฿${item.price || item.price_per_unit}</div>
+                        <div class="font-bold text-white group-hover:text-teal-400">${item.name || item.item_name}</div>
+                        <div class="text-xs text-slate-500">฿${item.price || item.price_per_unit}</div>
                     </div>
-                    <div class="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-400 group-hover:bg-teal-500 group-hover:text-white transition-all">+</div>
-                </div>`;
-            }).join('');
+                    <div class="text-teal-500 text-xl font-black">+</div>
+                </div>`).join('');
         }
 
-        async function handleItemClick(item) {
-            const itemName = item.name || item.item_name;
-            let finalName = itemName;
-            let finalPrice = parseFloat(item.price || item.price_per_unit);
-
-            if (currentCatalogType === 'tx') {
-                // Logic สำหรับยาฉีด / หัตถการ
-                const unit = prompt(`ระบุปริมาณสำหรับ ${itemName} (ml/ครั้ง):`, "0.1");
-                if (unit === null || unit === "" || isNaN(unit)) return;
-                
-                const route = prompt(`ระบุวิธีให้ยา (เช่น SC, IM, IV):`, "SC");
-                
-                // คำนวณตาม Tier
-                if (item.config && Array.isArray(item.config)) {
-                    const u = parseFloat(unit);
-                    // เรียงน้อยไปมากก่อนเพื่อหาช่วงที่ถูกต้อง
-                    const tiers = item.config.sort((a, b) => a.max - b.max);
-                    const match = tiers.find(t => u <= t.max);
-                    if (match) {
-                        finalPrice = parseFloat(match.price);
-                    }
-                }
-                finalName = `${itemName} (${unit} ml) ${route || ''}`.trim();
+        function handleItemSelection(item) {
+            // ถ้าเป็น Tx และมี config (คือยาฉีด) ให้เปิด Injection Modal
+            if (currentCatalogType === 'tx' && item.config && Array.isArray(item.config)) {
+                pendingItem = item;
+                document.getElementById('inj-item-name').innerText = item.name;
+                document.getElementById('inj-ml').value = 0.1;
+                // reset checkboxes
+                document.querySelectorAll('input[name="inj-route"]').forEach(cb => cb.checked = false);
+                document.getElementById('injection-modal').style.display = 'flex';
+            } else {
+                // ถ้าเป็นอย่างอื่น หรือ Tx แบบเหมา ให้เพิ่มทันที
+                addItem(item.name || item.item_name, parseFloat(item.price || item.price_per_unit));
             }
-
-            addItemToArrays(finalName, finalPrice);
         }
 
-        function addItemToArrays(name, price) {
+        function confirmInjection() {
+            if (!pendingItem) return;
+            const ml = document.getElementById('inj-ml').value;
+            if (!ml || isNaN(ml)) return alert("กรุณาระบุปริมาณยา");
+
+            // รวบรวม route จาก checkbox
+            const checkedRoutes = Array.from(document.querySelectorAll('input[name="inj-route"]:checked')).map(cb => cb.value);
+            const routeStr = checkedRoutes.length > 0 ? checkedRoutes.join('/') : '';
+            
+            // คำนวณราคากลาง Tier
+            let finalPrice = parseFloat(pendingItem.price);
+            const u = parseFloat(ml);
+            const tiers = pendingItem.config.sort((a,b) => a.max - b.max);
+            const match = tiers.find(t => u <= t.max);
+            if (match) finalPrice = parseFloat(match.price);
+
+            const finalName = `${pendingItem.name} (${ml}ml) ${routeStr}`.trim();
+            addItem(finalName, finalPrice);
+
+            document.getElementById('injection-modal').style.display = 'none';
+            pendingItem = null;
+        }
+
+        function addItem(name, price) {
             if (currentCatalogType === 'lab') selectedLabs.push(name);
             else if (currentCatalogType === 'tx') selectedTxs.push(name);
             else if (currentCatalogType === 'rx') selectedRxs.push(name);
 
-            // บวกราคา
-            const costInput = document.getElementById('f_cost');
-            costInput.value = (parseFloat(costInput.value) + price).toFixed(2);
-            
+            document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) + price).toFixed(2);
             updateDisplayLists();
-            updateSessionListUI();
+            updateModalSessionUI();
         }
 
-        function updateSessionListUI() {
-            const sessionDiv = document.getElementById('current-session-list');
-            let currentArray = [];
-            if (currentCatalogType === 'lab') currentArray = selectedLabs;
-            else if (currentCatalogType === 'tx') currentArray = selectedTxs;
-            else if (currentCatalogType === 'rx') currentArray = selectedRxs;
-
+        function updateModalSessionUI() {
+            const sessionDiv = document.getElementById('modal-session-tags');
+            let currentArray = currentCatalogType === 'lab' ? selectedLabs : (currentCatalogType === 'tx' ? selectedTxs : selectedRxs);
             if (currentArray.length === 0) {
-                sessionDiv.innerHTML = '<span class="text-slate-500 italic">ยังไม่ได้เลือกรายการ...</span>';
+                sessionDiv.innerHTML = '<span class="text-slate-500 text-xs italic">ยังไม่มีรายการ...</span>';
             } else {
-                sessionDiv.innerHTML = currentArray.map(name => 
-                    `<span class="bg-teal-500 text-black px-3 py-1 rounded-full text-[11px] font-bold shadow-sm animate-in zoom-in duration-200">✓ ${name}</span>`
-                ).join('');
+                sessionDiv.innerHTML = currentArray.map(name => `<span class="bg-teal-500 text-black px-2 py-1 rounded-lg text-[10px] font-bold">✓ ${name}</span>`).join('');
             }
+        }
+
+        function updateDisplayLists() {
+            document.getElementById('list_lab_display').innerHTML = formatToBullet(selectedLabs.join(', ')) || 'คลิกเพื่อเลือก...';
+            document.getElementById('f_lab').value = selectedLabs.join(', ');
+            document.getElementById('list_tx_display').innerHTML = formatToBullet(selectedTxs.join(', ')) || 'คลิกเพื่อเลือก...';
+            document.getElementById('f_tx').value = selectedTxs.join(', ');
+            document.getElementById('list_rx_display').innerHTML = formatToBullet(selectedRxs.join(', ')) || 'คลิกเพื่อเลือก...';
+            document.getElementById('f_rx').value = selectedRxs.join(', ');
         }
 
         function filterCatalog() {
@@ -367,87 +344,33 @@
             renderCatalogItems(filtered);
         }
 
-        function updateDisplayLists() {
-            document.getElementById('list_lab_display').innerHTML = formatToBullet(selectedLabs.join(', ')) || 'คลิกเพื่อเลือก...';
-            document.getElementById('f_lab').value = selectedLabs.join(', ');
-            
-            document.getElementById('list_tx_display').innerHTML = formatToBullet(selectedTxs.join(', ')) || 'คลิกเพื่อเลือก...';
-            document.getElementById('f_tx').value = selectedTxs.join(', ');
-            
-            document.getElementById('list_rx_display').innerHTML = formatToBullet(selectedRxs.join(', ')) || 'คลิกเพื่อเลือก...';
-            document.getElementById('f_rx').value = selectedRxs.join(', ');
-        }
-
-        function closeCatalog() { 
-            document.getElementById('catalog-modal').style.display = 'none'; 
-            document.getElementById('catalog-search').value = '';
-        }
-
-        // --- CRUD Core (เหมือนเดิม) ---
-
         async function saveMedicalRecord() {
             const data = {
                 animal_id: animalId, owner_hn: ownerHN,
-                cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value,
-                pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value,
+                weight: parseFloat(document.getElementById('f_weight').value),
+                cc: document.getElementById('f_cc').value, dx: document.getElementById('f_dx').value,
                 lab: document.getElementById('f_lab').value, tx: document.getElementById('f_tx').value,
                 rx: document.getElementById('f_rx').value, plan: document.getElementById('f_plan').value,
-                appointment: document.getElementById('f_appointment').value || null,
-                appointment_note: document.getElementById('f_app_note').value,
-                note: document.getElementById('f_note').value,
                 cost: parseFloat(document.getElementById('f_cost').value) || 0,
                 updated_at: new Date()
             };
-            try {
-                if (editingId) await db.from('medical_records').update(data).eq('id', editingId);
-                else await db.from('medical_records').insert([data]);
-                await db.from('animals').update({ weight: parseFloat(document.getElementById('f_weight').value) }).eq('id', animalId);
-                alert("✅ บันทึกสำเร็จ");
-                location.reload();
-            } catch (err) { alert(err.message); }
-        }
-
-        function editRecord(id) {
-            const rec = records.find(r => r.id === id);
-            if (!rec) return;
-            editingId = id;
-            document.getElementById('f_cc').value = rec.cc || '';
-            document.getElementById('f_hx').value = rec.hx || '';
-            document.getElementById('f_pe').value = rec.pe || '';
-            document.getElementById('f_dx').value = rec.dx || '';
-            document.getElementById('f_plan').value = rec.plan || '';
-            document.getElementById('f_app_note').value = rec.appointment_note || '';
-            document.getElementById('f_cost').value = rec.cost || 0;
-            document.getElementById('f_weight').value = rec.weight || 0;
-            
-            selectedLabs = rec.lab ? rec.lab.split(', ') : [];
-            selectedTxs = rec.tx ? rec.tx.split(', ') : [];
-            selectedRxs = rec.rx ? rec.rx.split(', ') : [];
-            updateDisplayLists();
-
-            if (rec.appointment) document.getElementById('f_appointment')._flatpickr.setDate(rec.appointment);
-            showFormView();
-            document.getElementById('edit-mode-badge').classList.remove('hidden');
-        }
-
-        async function deleteRecord(id) {
-            if(!confirm("ยืนยันการลบประวัตินี้?")) return;
-            await db.from('medical_records').delete().eq('id', id);
+            await db.from('medical_records').insert([data]);
+            await db.from('animals').update({ weight: data.weight }).eq('id', animalId);
             location.reload();
         }
 
-        function showFormView() {
-            document.getElementById('history-view-container').classList.add('view-hidden');
-            document.getElementById('form-view-container').classList.remove('view-hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        function showHistoryView() { location.reload(); }
         function toggleCollapse(id) {
             const detail = document.getElementById(`detail-${id}`);
             const arrow = document.getElementById(`arrow-${id}`);
             detail.classList.toggle('hidden');
             arrow.style.transform = detail.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
+        function showFormView() { 
+            document.getElementById('history-view-container').classList.add('view-hidden');
+            document.getElementById('form-view-container').classList.remove('view-hidden');
+        }
+        function showHistoryView() { location.reload(); }
+        function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
         function goBack() { window.location.href = 'animals.html'; }
     </script>
 </body>
