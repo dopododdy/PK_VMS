@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบสั่งยา & จัดการคลังยา | PK-VMS Pro</title>
+    <title>ระบบยา (Rx & Stock) | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -34,7 +34,6 @@
             #sticker-preview { position: absolute; left: 0; top: 0; width: 80mm; height: 50mm; box-shadow: none; border: none; }
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
@@ -47,13 +46,13 @@
         <div class="max-w-md w-full space-y-6 text-center">
             <div class="text-5xl mb-4">🐾</div>
             <h2 class="text-3xl font-black text-white">เลือกสัตว์ป่วย</h2>
-            <p class="text-slate-400">กรุณาพิมพ์ชื่อสัตว์ หรือ HN เพื่อเริ่มสั่งยา</p>
+            <p class="text-slate-400">พิมพ์ชื่อสัตว์ หรือ HN เพื่อเริ่มสั่งยา</p>
             <input type="text" id="p-search-input" class="input-box text-center text-xl py-4" placeholder="พิมพ์เพื่อค้นหา..." oninput="searchPatient()">
             <div id="p-search-results" class="space-y-2 mt-4 max-h-60 overflow-y-auto"></div>
             
             <div class="flex flex-col gap-3 mt-6">
                 <button onclick="skipPatientSelection()" class="w-full bg-white/5 hover:bg-white/10 py-3 rounded-xl font-bold border border-white/10 transition-all">🛠️ จัดการคลังยา (ไม่เลือกสัตว์ป่วย)</button>
-                <button onclick="history.back()" class="text-slate-500 font-bold hover:text-white transition-all">⬅️ กลับหน้าหลัก</button>
+                <button onclick="history.back()" class="text-slate-500 font-bold hover:text-white transition-all">⬅️ กลับ</button>
             </div>
         </div>
     </div>
@@ -64,7 +63,7 @@
                 <button onclick="goBack()" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-2xl shadow-lg">⬅️</button>
                 <div>
                     <h1 class="text-3xl font-black text-white leading-none">ระบบยา (Rx & Stock)</h1>
-                    <p class="text-teal-400 font-bold mt-1" id="animal-display">กำลังโหลดข้อมูล...</p>
+                    <p class="text-teal-400 font-bold mt-1" id="animal-display">กำลังเตรียมระบบ...</p>
                 </div>
             </div>
             <div class="flex gap-8 bg-black/20 p-4 rounded-2xl border border-white/5">
@@ -142,7 +141,7 @@
                     <label class="label-clinical mb-4 block">🖨️ Sticker Preview</label>
                     <div id="sticker-preview" class="mx-auto">
                         <div>
-                            <div class="text-[10px] font-black border-b border-black mb-1 pb-1 uppercase tracking-tighter">PK-VMS Vet Clinic - Phrakhanong</div>
+                            <div class="text-[10px] font-black border-b border-black mb-1 pb-1 uppercase tracking-tighter">PK-VMS Vet Clinic</div>
                             <div class="flex justify-between text-[9px] font-bold">
                                 <span id="s-pet-name">Animal: -</span>
                                 <span id="s-date">-</span>
@@ -161,7 +160,7 @@
                             ⚠️ <span id="s-side">ไม่มีข้อควรระวังพิเศษ</span>
                         </div>
                     </div>
-                    <div class="mt-6 space-y-3">
+                    <div class="mt-6">
                         <button onclick="window.print()" class="w-full bg-teal-500 hover:bg-teal-400 text-navy py-4 rounded-2xl text-lg font-black shadow-xl transition-all active:scale-95">
                             🖨️ พิมพ์สติ๊กเกอร์
                         </button>
@@ -178,11 +177,20 @@
         let petWeight = 0, meds = [], selectedMed = null;
 
         window.onload = async () => {
-            if (!currentAnimalId) {
-                document.getElementById('patient-search-overlay').classList.remove('hidden');
-            } else {
+            // เช็กต้นทาง: ถ้าไม่มี ID และมาจากหน้า Dashboard ให้เข้าโหมดจัดการคลังยาอัตโนมัติ
+            const isFromDashboard = document.referrer.includes('dashboard.html');
+            
+            if (currentAnimalId) {
+                // กรณีมี ID สัตว์ป่วย (เช่น มาจากหน้า medrec)
                 await loadPatient(currentAnimalId, currentHN);
+            } else if (isFromDashboard) {
+                // กรณีมาจาก Dashboard โดยตรง
+                skipPatientSelection();
+            } else {
+                // กรณีอื่นๆ หรือพิมพ์ URL เข้ามาเอง ให้แสดง Overlay ค้นหา
+                document.getElementById('patient-search-overlay').classList.remove('hidden');
             }
+
             await fetchMeds();
             document.getElementById('s-date').innerText = new Date().toLocaleDateString('th-TH');
         };
@@ -242,7 +250,6 @@
             selectedMed = meds.find(m => m.id === id);
             if (!selectedMed) return;
             
-            // Fill Form
             document.getElementById('f_name_en').value = selectedMed.item_name;
             document.getElementById('f_name_th').value = selectedMed.name_th || '';
             document.getElementById('f_dose').value = selectedMed.dosage_mg_kg || 0;
@@ -254,10 +261,11 @@
         }
 
         async function updateMedMaster() {
-            if (!selectedMed && !document.getElementById('f_name_en').value) return alert('กรุณาเลือกหรือใส่ชื่อยาก่อน');
+            const enName = document.getElementById('f_name_en').value;
+            if (!selectedMed && !enName) return alert('กรุณาระบุชื่อยาก่อนบันทึก');
             
             const payload = {
-                item_name: document.getElementById('f_name_en').value,
+                item_name: enName,
                 name_th: document.getElementById('f_name_th').value,
                 dosage_mg_kg: parseFloat(document.getElementById('f_dose').value) || 0,
                 concentration_mg_unit: parseFloat(document.getElementById('f_conc').value) || 1,
@@ -274,15 +282,14 @@
                 error = res.error;
             }
 
-            if (error) {
-                alert('เกิดข้อผิดพลาด: ' + error.message);
-            } else {
-                alert('บันทึกข้อมูลตัวยาลง Master เรียบร้อย');
+            if (error) alert('Error: ' + error.message);
+            else {
+                alert('บันทึกข้อมูล Master เรียบร้อย');
                 await fetchMeds();
             }
         }
 
-        async function addNewMed() {
+        function addNewMed() {
             selectedMed = null;
             document.getElementById('f_name_en').value = '';
             document.getElementById('f_name_th').value = '';
@@ -295,8 +302,7 @@
 
         async function deleteMed() {
             if (!selectedMed) return;
-            if (!confirm(`ยืนยันการลบยา ${selectedMed.item_name} ออกจากระบบ?`)) return;
-
+            if (!confirm(`ลบยา ${selectedMed.item_name} หรือไม่?`)) return;
             const { error } = await db.from('pharmacy').delete().eq('id', selectedMed.id);
             if (error) alert(error.message);
             else {
@@ -312,13 +318,10 @@
         function calculateTabs() {
             const dose = parseFloat(document.getElementById('f_dose').value) || 0;
             const conc = parseFloat(document.getElementById('f_conc').value) || 1;
-            
             if (petWeight > 0 && dose > 0) {
                 let tabs = (petWeight * dose) / conc;
-                // ปัดเศษที่ใกล้เคียงที่สุด (0.25, 0.5, 0.75, 1.0)
                 document.getElementById('f_tab_per_time').value = (Math.round(tabs * 4) / 4).toFixed(2);
-            } else if (petWeight === 0) {
-                // ถ้าไม่มีน้ำหนัก ให้ใส่ 0 ไว้ให้กรอกเอง
+            } else {
                 document.getElementById('f_tab_per_time').value = 0;
             }
             updateTotalTabs();
@@ -350,8 +353,7 @@
         function filterMeds() {
             const term = document.getElementById('med-search').value.toLowerCase();
             renderMedList(meds.filter(m => 
-                m.item_name.toLowerCase().includes(term) || 
-                (m.name_th && m.name_th.includes(term))
+                m.item_name.toLowerCase().includes(term) || (m.name_th && m.name_th.includes(term))
             ));
         }
 
