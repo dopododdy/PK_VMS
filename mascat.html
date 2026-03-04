@@ -10,12 +10,13 @@
     <script src="supabase-config.js"></script>
 
     <style>
-        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; font-size: 1rem; overflow: hidden; }
         
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        select.input-box option { background: var(--navy-light); color: white; }
         
         .label-clinical { color: var(--teal); font-weight: 700; font-size: 1rem; margin-bottom: 6px; display: block; text-transform: uppercase; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 20px; padding: 25px; border: 1px solid var(--border); }
@@ -24,8 +25,8 @@
         .sidebar-btn.active { background: var(--teal); color: var(--navy); box-shadow: 0 4px 15px rgba(20, 184, 177, 0.3); }
         .sidebar-btn:not(.active):hover { background: rgba(255,255,255,0.05); border-color: var(--border); }
 
-        .med-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer; transition: 0.2s; }
-        .med-item:hover { border-color: var(--teal); background: rgba(20, 184, 177, 0.05); }
+        .item-row-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer; transition: 0.2s; }
+        .item-row-card:hover { border-color: var(--teal); background: rgba(20, 184, 177, 0.05); }
         
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
@@ -37,8 +38,8 @@
         <div class="flex items-center gap-4">
             <button onclick="location.href='index.html'" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-2xl">⬅️</button>
             <div>
-                <h1 class="text-3xl font-black text-white">จัดการคลังยาและบริการ (Master)</h1>
-                <p class="text-teal-400 font-bold" id="current-mode-label">หมวด: ยาจ่ายกลับ (Take-home Meds)</p>
+                <h1 class="text-3xl font-black text-white">Master Category Management</h1>
+                <p class="text-teal-400 font-bold" id="current-mode-label">หมวด: ยาจ่ายกลับบ้าน (Take-home Meds)</p>
             </div>
         </div>
         <button onclick="addNewItem()" class="bg-teal-500 hover:bg-teal-400 text-navy px-8 py-3 rounded-xl font-black shadow-lg transition-all">+ เพิ่มรายการใหม่</button>
@@ -48,8 +49,8 @@
         
         <aside class="w-64 flex flex-col">
             <div class="section-card flex-1">
-                <label class="label-clinical mb-4">Master Category</label>
-                <button onclick="setCategory('TakeHome')" id="btn-takehome" class="sidebar-btn active"><span>💊</span> ยาจ่ายกลับ</button>
+                <label class="label-clinical mb-4">หมวดหมู่หลัก</label>
+                <button onclick="setCategory('TakeHome')" id="btn-takehome" class="sidebar-btn active"><span>💊</span> ยาจ่ายกลับบ้าน</button>
                 <button onclick="setCategory('ProcInj')" id="btn-procinj" class="sidebar-btn"><span>💉</span> หัตถการ/ยาฉีด</button>
                 <button onclick="setCategory('Lab')" id="btn-lab" class="sidebar-btn"><span>🏥</span> Lab</button>
                 <button onclick="setCategory('General')" id="btn-general" class="sidebar-btn"><span>📦</span> สินค้าทั่วไป</button>
@@ -67,59 +68,84 @@
         <section class="flex-1 overflow-y-auto">
             <div class="section-card border-t-8 border-teal-500 h-full">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div>
-                        <label class="label-clinical">ชื่อรายการ (EN)</label>
-                        <input type="text" id="f_name_en" class="input-box" placeholder="English Generic Name">
+                    <div class="md:col-span-1">
+                        <label class="label-clinical">ชื่อยา (English Generic Name)</label>
+                        <input type="text" id="f_name_en" class="input-box" placeholder="เช่น Amoxicillin">
                     </div>
-                    <div>
-                        <label class="label-clinical">ชื่อภาษาไทย</label>
-                        <input type="text" id="f_name_th" class="input-box" placeholder="ชื่อเรียกภาษาไทย">
+                    <div class="md:col-span-1">
+                        <label class="label-clinical">ชื่อภาษาไทย / ชื่อการค้า</label>
+                        <input type="text" id="f_name_th" class="input-box" placeholder="เช่น ยาฆ่าเชื้อ">
                     </div>
-                    <div>
-                        <label class="label-clinical">หน่วย (Unit)</label>
-                        <input type="text" id="f_unit" class="input-box" placeholder="เม็ด, mL, ครั้ง...">
+                    
+                    <div class="grid grid-cols-2 md:col-span-2 gap-6">
+                        <div>
+                            <label class="label-clinical">หมวดหมู่</label>
+                            <select id="f_sub_cat" class="input-box">
+                                <option value="Antibiotic">Antibiotic (ฆ่าเชื้อ)</option>
+                                <option value="NSAIDs">NSAIDs (แก้ปวดลดอักเสบ)</option>
+                                <option value="Antiprotozoal">Antiprotozoal</option>
+                                <option value="Heart">Heart (โรคหัวใจ)</option>
+                                <option value="Supplements">บำรุง / วิตามิน</option>
+                                <option value="Other">อื่นๆ</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="label-clinical">ความเข้มข้น</label>
+                                <input type="number" id="f_conc" class="input-box" placeholder="0">
+                                <span class="text-[0.85rem] text-slate-500 mt-1 block">mg/unit</span>
+                            </div>
+                            <div>
+                                <label class="label-clinical">หน่วย (Unit)</label>
+                                <select id="f_unit" class="input-box">
+                                    <option value="Tablet">Tablet (เม็ด)</option>
+                                    <option value="Capsule">Capsule (แคปซูล)</option>
+                                    <option value="mL">mL (มิลลิลิตร)</option>
+                                    <option value="Bottle">Bottle (ขวด)</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div>
+
+                    <div class="md:col-span-1">
                         <label class="label-clinical text-yellow-400">ราคาขาย (฿)</label>
-                        <input type="number" id="f_price" class="input-box text-yellow-400 font-bold">
-                    </div>
-                    <div id="med-fields" class="md:col-span-2 grid grid-cols-2 gap-6">
-                        <div>
-                            <label class="label-clinical">ความเข้มข้น (Conc.)</label>
-                            <input type="number" id="f_conc" class="input-box" placeholder="เช่น 500">
-                        </div>
-                        <div>
-                            <label class="label-clinical">หมวดหมู่ย่อย</label>
-                            <input type="text" id="f_sub_cat" class="input-box" placeholder="เช่น Antibiotic">
-                        </div>
+                        <input type="number" id="f_price" class="input-box text-yellow-400 font-bold" placeholder="0.00">
                     </div>
                 </div>
 
                 <div id="dosage-section" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="bg-blue-500/5 p-5 rounded-2xl border border-blue-500/20">
-                            <h3 class="text-blue-400 font-black text-xl mb-4">🐕 DOG DOSAGE</h3>
+                            <h3 class="text-blue-400 font-black text-xl mb-4">🐕 DOG DOSAGE GUIDE</h3>
+                            <div class="grid grid-cols-12 gap-2 mb-2 text-[0.85rem] font-black text-teal-500/50">
+                                <div class="col-span-4 uppercase">Dose (mg/kg)</div>
+                                <div class="col-span-8 uppercase">For (Indication)</div>
+                            </div>
                             <div class="space-y-3">
                                 <div class="grid grid-cols-12 gap-2">
-                                    <input type="number" id="f_dog_dose_1" class="col-span-4 input-box text-center" placeholder="mg/kg">
-                                    <input type="text" id="f_dog_for_1" class="col-span-8 input-box" placeholder="โรคที่ 1">
+                                    <input type="number" id="f_dog_dose_1" class="col-span-4 input-box text-center" placeholder="0">
+                                    <input type="text" id="f_dog_for_1" class="col-span-8 input-box" placeholder="Indication 1">
                                 </div>
                                 <div class="grid grid-cols-12 gap-2">
-                                    <input type="number" id="f_dog_dose_2" class="col-span-4 input-box text-center" placeholder="mg/kg">
-                                    <input type="text" id="f_dog_for_2" class="col-span-8 input-box" placeholder="โรคที่ 2">
+                                    <input type="number" id="f_dog_dose_2" class="col-span-4 input-box text-center" placeholder="0">
+                                    <input type="text" id="f_dog_for_2" class="col-span-8 input-box" placeholder="Indication 2">
                                 </div>
                             </div>
                         </div>
                         <div class="bg-pink-500/5 p-5 rounded-2xl border border-pink-500/20">
-                            <h3 class="text-pink-400 font-black text-xl mb-4">🐈 CAT DOSAGE</h3>
+                            <h3 class="text-pink-400 font-black text-xl mb-4">🐈 CAT DOSAGE GUIDE</h3>
+                            <div class="grid grid-cols-12 gap-2 mb-2 text-[0.85rem] font-black text-teal-500/50">
+                                <div class="col-span-4 uppercase">Dose (mg/kg)</div>
+                                <div class="col-span-8 uppercase">For (Indication)</div>
+                            </div>
                             <div class="space-y-3">
                                 <div class="grid grid-cols-12 gap-2">
-                                    <input type="number" id="f_cat_dose_1" class="col-span-4 input-box text-center" placeholder="mg/kg">
-                                    <input type="text" id="f_cat_for_1" class="col-span-8 input-box" placeholder="โรคที่ 1">
+                                    <input type="number" id="f_cat_dose_1" class="col-span-4 input-box text-center" placeholder="0">
+                                    <input type="text" id="f_cat_for_1" class="col-span-8 input-box" placeholder="Indication 1">
                                 </div>
                                 <div class="grid grid-cols-12 gap-2">
-                                    <input type="number" id="f_cat_dose_2" class="col-span-4 input-box text-center" placeholder="mg/kg">
-                                    <input type="text" id="f_cat_for_2" class="col-span-8 input-box" placeholder="โรคที่ 2">
+                                    <input type="number" id="f_cat_dose_2" class="col-span-4 input-box text-center" placeholder="0">
+                                    <input type="text" id="f_cat_for_2" class="col-span-8 input-box" placeholder="Indication 2">
                                 </div>
                             </div>
                         </div>
@@ -127,12 +153,12 @@
                 </div>
 
                 <div class="mt-8" id="warning-box">
-                    <label class="label-clinical text-red-400">🚨 คำเตือน / ข้อควรระวัง</label>
-                    <textarea id="f_side_effects" class="input-box h-24" placeholder="ข้อความที่จะพิมพ์ลงบนสติ๊กเกอร์..."></textarea>
+                    <label class="label-clinical text-red-400">🚨 คำเตือน / ข้อควรระวัง (จะแสดงบนสติ๊กเกอร์ยา)</label>
+                    <textarea id="f_side_effects" class="input-box h-24" placeholder="ระบุข้อความระวังพิเศษสำหรับยาตัวนี้..."></textarea>
                 </div>
 
                 <div class="flex justify-between items-center pt-8 mt-8 border-t border-white/10">
-                    <button onclick="deleteItem()" id="btn-delete" class="hidden text-red-500 hover:text-red-400 font-black text-lg transition-all">🗑️ ลบรายการนี้</button>
+                    <button onclick="deleteItem()" id="btn-delete" class="hidden text-red-500 hover:text-red-400 font-black text-lg transition-all">🗑️ ลบออกจากระบบ</button>
                     <div class="flex gap-4 ml-auto">
                         <button onclick="addNewItem()" class="px-8 py-3 rounded-xl bg-white/5 border border-white/10 font-bold hover:bg-white/10 transition-all">ล้างฟอร์ม</button>
                         <button onclick="saveData()" class="px-12 py-3 rounded-xl bg-teal-500 text-navy font-black text-xl hover:bg-teal-400 shadow-xl transition-all">💾 บันทึกข้อมูล Master</button>
@@ -148,14 +174,13 @@
 
         window.onload = async () => { await setCategory('TakeHome'); };
 
-        // ฟังก์ชันเปลี่ยนหมวดหมู่ Sidebar
         async function setCategory(cat) {
             currentCat = cat;
             document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             const targetBtn = document.getElementById(`btn-${cat.toLowerCase()}`);
             if (targetBtn) targetBtn.classList.add('active');
             
-            const labels = { 'TakeHome': 'ยาจ่ายกลับ', 'ProcInj': 'หัตถการ/ยาฉีด', 'Lab': 'Lab', 'General': 'สินค้าทั่วไป' };
+            const labels = { 'TakeHome': 'ยาจ่ายกลับบ้าน', 'ProcInj': 'หัตถการ/ยาฉีด', 'Lab': 'Lab', 'General': 'สินค้าทั่วไป' };
             document.getElementById('current-mode-label').innerText = `หมวด: ${labels[cat]}`;
             
             await fetchData();
@@ -164,13 +189,10 @@
 
         async function fetchData() {
             let data = [];
-            // ดึงข้อมูลตามเงื่อนไขที่คุณหมอสั่ง
             if (currentCat === 'TakeHome') {
-                // ดึงยาจาก pharmacy ที่อยู่ในกลุ่ม Oral หรือยาจ่ายกลับ
-                const res = await db.from('pharmacy').select('*').in('category', ['Oral', 'TakeHome', 'ยา']).order('item_name');
+                const res = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'Oral', 'ยา']).order('item_name');
                 data = (res.data || []).map(i => ({ ...i, source: 'pharmacy' }));
             } else if (currentCat === 'ProcInj') {
-                // รวม ยาฉีด จาก pharmacy และ หัตถการ จาก services
                 const resInj = await db.from('pharmacy').select('*').eq('category', 'Injection');
                 const resProc = await db.from('services').select('*').eq('category', 'หัตถการ');
                 data = [
@@ -190,9 +212,9 @@
 
         function renderItemList(data) {
             document.getElementById('item-list').innerHTML = data.map(i => `
-                <div class="med-item" onclick="selectItem('${i.id}')">
+                <div class="item-row-card" onclick="selectItem('${i.id}')">
                     <div class="font-black text-white text-base uppercase">${i.item_name}</div>
-                    <div class="text-sm text-teal-500/70 font-bold">${i.name_th || ''} ฿${i.price_per_unit}</div>
+                    <div class="text-sm text-teal-500/70 font-bold">${i.name_th || ''} ฿${i.price_per_unit || 0}</div>
                 </div>`).join('');
         }
 
@@ -200,25 +222,27 @@
             selectedItem = items.find(i => i.id === id);
             if (!selectedItem) return;
 
+            // Basic Mapping
             document.getElementById('f_name_en').value = selectedItem.item_name;
             document.getElementById('f_name_th').value = selectedItem.name_th || '';
-            document.getElementById('f_unit').value = selectedItem.unit || '';
             document.getElementById('f_price').value = selectedItem.price_per_unit;
             
-            // ตรวจสอบว่าเป็นยาหรือไม่ (เพื่อโชว์/ซ่อน ช่อง Dose)
             const isMed = selectedItem.source === 'pharmacy' && (currentCat === 'TakeHome' || currentCat === 'ProcInj');
-            document.getElementById('med-fields').style.display = isMed ? 'grid' : 'none';
+            
+            // UI Logic for non-meds
             document.getElementById('dosage-section').style.display = isMed ? 'block' : 'none';
             document.getElementById('warning-box').style.display = isMed ? 'block' : 'none';
 
             if (isMed) {
+                document.getElementById('f_sub_cat').value = selectedItem.sub_category || 'Other';
+                document.getElementById('f_unit').value = selectedItem.unit || 'Tablet';
                 document.getElementById('f_conc').value = selectedItem.concentration_mg_unit || 1;
-                document.getElementById('f_sub_cat').value = selectedItem.sub_category || '';
                 document.getElementById('f_side_effects').value = selectedItem.side_effects || '';
                 ['dog_dose_1', 'dog_for_1', 'dog_dose_2', 'dog_for_2', 'cat_dose_1', 'cat_for_1', 'cat_dose_2', 'cat_for_2'].forEach(f => {
-                    const val = selectedItem[f];
-                    document.getElementById(`f_${f}`).value = (val === 0 || val === null) ? '' : val;
+                    document.getElementById(`f_${f}`).value = selectedItem[f] || '';
                 });
+            } else {
+                document.getElementById('f_unit').value = selectedItem.unit || '';
             }
 
             document.getElementById('btn-delete').classList.remove('hidden');
@@ -228,13 +252,12 @@
             const nameEN = document.getElementById('f_name_en').value.trim();
             if (!nameEN) return alert('กรุณาระบุชื่อรายการ');
 
-            // ตัดสินใจเลือกตารางบันทึกตามหมวดที่เลือก
             let table = selectedItem ? selectedItem.source : (currentCat === 'Lab' ? 'services' : 'pharmacy');
             
-            // กรณีหัตถการ/ยาฉีด ถ้าไม่มี Dose ให้ถือเป็นหัตถการ (Services) ถ้ามีถือเป็นยาฉีด (Pharmacy)
+            // Logic for ProcInj Category Decision
             if (!selectedItem && currentCat === 'ProcInj') {
                 const doseCheck = parseFloat(document.getElementById('f_dog_dose_1').value);
-                table = isNaN(doseCheck) || doseCheck <= 0 ? 'services' : 'pharmacy';
+                table = (doseCheck > 0) ? 'pharmacy' : 'services';
             }
 
             const payload = table === 'services' ? {
@@ -274,17 +297,18 @@
             selectedItem = null;
             document.querySelectorAll('input, textarea').forEach(i => i.value = '');
             document.getElementById('f_conc').value = 1;
+            document.getElementById('f_sub_cat').value = 'Antibiotic';
+            document.getElementById('f_unit').value = 'Tablet';
             document.getElementById('btn-delete').classList.add('hidden');
             
-            // ตั้งค่าการแสดงผลตามหมวด
+            // Default UI state
             const isService = currentCat === 'Lab';
-            document.getElementById('med-fields').style.display = isService ? 'none' : 'grid';
             document.getElementById('dosage-section').style.display = isService ? 'none' : 'block';
             document.getElementById('warning-box').style.display = isService ? 'none' : 'block';
         }
 
         async function deleteItem() {
-            if (!selectedItem || !confirm('ยืนยันการลบออกจากระบบมาสเตอร์?')) return;
+            if (!selectedItem || !confirm('ยืนยันลบรายการ Master นี้?')) return;
             await db.from(selectedItem.source).delete().eq('id', selectedItem.id);
             fetchData(); addNewItem();
         }
