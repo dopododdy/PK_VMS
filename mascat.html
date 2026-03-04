@@ -95,8 +95,7 @@
                             <div class="col-span-4 text-center">น้ำหนักตัว (กก.)</div>
                             <div class="col-span-8">ราคาที่ต้องจ่าย (บาท)</div>
                         </div>
-                        <div id="tiers-container" class="space-y-3">
-                            </div>
+                        <div id="tiers-container" class="space-y-3"></div>
                     </div>
                 </div>
 
@@ -112,6 +111,9 @@
                             <div class="space-y-3">
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_1" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_1" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_2" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_2" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_3" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_3" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_4" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_4" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_5" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_5" class="col-span-8 input-box" placeholder="For..."></div>
                             </div>
                         </div>
                         <div class="bg-pink-500/5 p-5 rounded-2xl border border-pink-500/20">
@@ -119,6 +121,9 @@
                             <div class="space-y-3">
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_1" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_1" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_2" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_2" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_3" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_3" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_4" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_4" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_5" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_5" class="col-span-8 input-box" placeholder="For..."></div>
                             </div>
                         </div>
                     </div>
@@ -149,7 +154,6 @@
             await setCategory('TakeHome'); 
         };
 
-        // สร้างช่องกรอก 5 ช่วงราคา
         function renderTierInputs() {
             const container = document.getElementById('tiers-container');
             container.innerHTML = '';
@@ -178,12 +182,10 @@
             const labels = { 'TakeHome': 'ยาจ่ายกลับบ้าน', 'ProcInj': 'หัตถการ/ยาฉีด', 'Lab': 'Lab', 'General': 'สินค้าทั่วไป' };
             document.getElementById('current-mode-label').innerText = `หมวด: ${labels[cat]}`;
             
-            // Toggle Pricing UI
             const isTiered = cat === 'ProcInj';
             document.getElementById('tiered-price-section').classList.toggle('hidden', !isTiered);
             document.getElementById('fixed-price-section').classList.toggle('hidden', isTiered);
 
-            // Toggle Medication Info
             const isMed = (cat === 'TakeHome' || cat === 'ProcInj');
             document.getElementById('med-config-section').style.display = isMed ? 'block' : 'none';
 
@@ -231,7 +233,6 @@
             document.getElementById('f_unit').value = selectedItem.unit || '';
             document.getElementById('f_price').value = selectedItem.price_per_unit || 0;
             
-            // โหลดราคาแบบ Tier (ถ้ามี)
             if (selectedItem.price_config && Array.isArray(selectedItem.price_config)) {
                 selectedItem.price_config.forEach((tier, idx) => {
                     if (idx < 5) {
@@ -250,9 +251,13 @@
                 document.getElementById('f_conc').value = selectedItem.concentration_mg_unit || 1;
                 document.getElementById('f_sub_cat').value = selectedItem.sub_category || '';
                 document.getElementById('f_side_effects').value = selectedItem.side_effects || '';
-                ['dog_dose_1', 'dog_for_1', 'dog_dose_2', 'dog_for_2', 'cat_dose_1', 'cat_for_1', 'cat_dose_2', 'cat_for_2'].forEach(f => {
-                    document.getElementById(`f_${f}`).value = selectedItem[f] || '';
-                });
+                // Loop mapping 5 doses
+                for(let i=1; i<=5; i++) {
+                    document.getElementById(`f_dog_dose_${i}`).value = selectedItem[`dog_dose_${i}`] || '';
+                    document.getElementById(`f_dog_for_${i}`).value = selectedItem[`dog_for_${i}`] || '';
+                    document.getElementById(`f_cat_dose_${i}`).value = selectedItem[`cat_dose_${i}`] || '';
+                    document.getElementById(`f_cat_for_${i}`).value = selectedItem[`cat_for_${i}`] || '';
+                }
             }
 
             document.getElementById('btn-delete').classList.remove('hidden');
@@ -262,7 +267,6 @@
             const nameEN = document.getElementById('f_name_en').value.trim();
             if (!nameEN) return alert('กรุณาระบุชื่อ');
 
-            // รวบรวมราคา Tier
             let tierData = [];
             for(let i=1; i<=5; i++) {
                 const max = parseFloat(document.getElementById(`tier_max_${i}`).value);
@@ -277,32 +281,36 @@
                 table = document.getElementById('f_dog_dose_1').value > 0 ? 'pharmacy' : 'services';
             }
 
-            const payload = table === 'services' ? {
-                service_name: nameEN,
-                category: (currentCat === 'Lab' ? 'Lab' : 'หัตถการ'),
-                price: parseFloat(document.getElementById('f_price').value) || 0,
-                price_config: currentCat === 'ProcInj' ? tierData : null,
-                unit: document.getElementById('f_unit').value
-            } : {
-                item_name: nameEN,
-                name_th: document.getElementById('f_name_th').value,
-                category: (currentCat === 'TakeHome' ? 'TakeHome' : currentCat === 'ProcInj' ? 'Injection' : 'General'),
-                sub_category: document.getElementById('f_sub_cat').value,
-                unit: document.getElementById('f_unit').value,
-                price_per_unit: parseFloat(document.getElementById('f_price').value) || 0,
-                price_config: currentCat === 'ProcInj' ? tierData : null,
-                concentration_mg_unit: parseFloat(document.getElementById('f_conc').value) || 1,
-                side_effects: document.getElementById('f_side_effects').value,
-                dog_dose_1: parseFloat(document.getElementById('f_dog_dose_1').value) || 0,
-                dog_for_1: document.getElementById('f_dog_for_1').value,
-                dog_dose_2: parseFloat(document.getElementById('f_dog_dose_2').value) || 0,
-                dog_for_2: document.getElementById('f_dog_for_2').value,
-                cat_dose_1: parseFloat(document.getElementById('f_cat_dose_1').value) || 0,
-                cat_for_1: document.getElementById('f_cat_for_1').value,
-                cat_dose_2: parseFloat(document.getElementById('f_cat_dose_2').value) || 0,
-                cat_for_2: document.getElementById('f_cat_for_2').value,
-                is_medication: (currentCat !== 'General')
-            };
+            let payload = {};
+            if (table === 'services') {
+                payload = {
+                    service_name: nameEN,
+                    category: (currentCat === 'Lab' ? 'Lab' : 'หัตถการ'),
+                    price: parseFloat(document.getElementById('f_price').value) || 0,
+                    price_config: currentCat === 'ProcInj' ? tierData : null,
+                    unit: document.getElementById('f_unit').value
+                };
+            } else {
+                payload = {
+                    item_name: nameEN,
+                    name_th: document.getElementById('f_name_th').value,
+                    category: (currentCat === 'TakeHome' ? 'TakeHome' : currentCat === 'ProcInj' ? 'Injection' : 'General'),
+                    sub_category: document.getElementById('f_sub_cat').value,
+                    unit: document.getElementById('f_unit').value,
+                    price_per_unit: parseFloat(document.getElementById('f_price').value) || 0,
+                    price_config: currentCat === 'ProcInj' ? tierData : null,
+                    concentration_mg_unit: parseFloat(document.getElementById('f_conc').value) || 1,
+                    side_effects: document.getElementById('f_side_effects').value,
+                    is_medication: (currentCat !== 'General')
+                };
+                // Append 5 doses data
+                for(let i=1; i<=5; i++) {
+                    payload[`dog_dose_${i}`] = parseFloat(document.getElementById(`f_dog_dose_${i}`).value) || 0;
+                    payload[`dog_for_${i}`] = document.getElementById(`f_dog_for_${i}`).value;
+                    payload[`cat_dose_${i}`] = parseFloat(document.getElementById(`f_cat_dose_${i}`).value) || 0;
+                    payload[`cat_for_${i}`] = document.getElementById(`f_cat_for_${i}`).value;
+                }
+            }
 
             const { error } = selectedItem 
                 ? await db.from(table).update(payload).eq('id', selectedItem.id)
