@@ -28,26 +28,43 @@
         .pet-card:hover { background: rgba(255,255,255,0.07); }
         .pet-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
         
-        /* 1. HN ขนาดเท่าชื่อสัตว์ */
         .pet-main-name { color: #fff; font-weight: 800; font-size: 1.1rem; line-height: 1.2; }
         .hn-col { background: rgba(30, 41, 59, 1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; font-size: 1.1rem; border: 1px solid rgba(255,255,255,0.1); }
         .owner-subtext { color: #94a3b8; font-size: 0.85rem; }
         .phone-badge { color: var(--teal); font-weight: 700; font-size: 0.85rem; }
 
-        /* 2. ปรับปุ่มให้มี Background ชัดเจน */
-        .btn-base { @apply px-5 py-2.5 rounded-xl font-bold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 shadow-lg; }
-        .btn-teal { @apply bg-teal-600 hover:bg-teal-500 text-white border-b-4 border-teal-800 hover:border-teal-700; }
-        .btn-blue { @apply bg-blue-600 hover:bg-blue-500 text-white border-b-4 border-blue-800 hover:border-blue-700; }
-        .btn-red { @apply bg-red-600 hover:bg-red-500 text-white border-b-4 border-red-800 hover:border-red-700; }
-        .btn-ghost { @apply bg-slate-700 hover:bg-slate-600 text-white border-b-4 border-slate-900; }
+        /* การตั้งค่าปุ่มแบบ Standard CSS เพื่อให้มีพื้นหลังแน่นอน */
+        .btn-base {
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            color: white !important;
+        }
+        .btn-base:active { transform: scale(0.95); }
 
+        .btn-teal { background-color: #0d9488 !important; } /* Solid Teal */
+        .btn-teal:hover { background-color: #0f766e !important; }
+
+        .btn-blue { background-color: #2563eb !important; } /* Solid Blue */
+        .btn-blue:hover { background-color: #1d4ed8 !important; }
+
+        .btn-red { background-color: #dc2626 !important; } /* Solid Red */
+        .btn-red:hover { background-color: #b91c1c !important; }
+
+        /* Form Controls */
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         .zone-pet { background: rgba(30, 41, 59, 0.4); border-radius: 25px; padding: 25px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
         .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px; display: block; font-weight: 700; }
         
         .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; border: 2px solid #ef4444 !important; }
-        .flatpickr-input { cursor: pointer; color: var(--teal) !important; font-weight: 700 !important; }
     </style>
 </head>
 <body>
@@ -62,8 +79,8 @@
             </div>
             <div id="owner-list" class="flex-1 overflow-y-auto px-2 pb-10"></div>
             <div class="p-5">
-                <button onclick="createNewForm()" class="w-full btn-base btn-teal py-4 text-xl">
-                    <span>+ ลงทะเบียนสัตว์ใหม่</span>
+                <button onclick="createNewForm()" class="w-full btn-base btn-teal py-4 text-xl shadow-lg">
+                    + ลงทะเบียนสัตว์ใหม่
                 </button>
             </div>
         </aside>
@@ -103,11 +120,8 @@
             container.innerHTML = filtered.map(pet => {
                 const owner = allOwners.find(o => o.hn === pet.owner_hn);
                 const p1 = allPhones.find(p => p.owner_hn === pet.owner_hn && p.label === 'เบอร์หลัก')?.phone_number || '-';
-                
-                // Icon ชนิดสัตว์
                 const typeIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
                 
-                // 2. Icon เพศต่อท้าย
                 let genderIcon = '';
                 if(pet.gender === 'ผู้') genderIcon = '♂️';
                 else if(pet.gender === 'เมีย') genderIcon = '♀️';
@@ -138,7 +152,7 @@
                         <div class="flex justify-between items-center mb-8">
                             <h3 class="text-3xl font-black text-blue-400 flex items-center gap-3">👤 ข้อมูลเจ้าของสัตว์</h3>
                             <div class="flex gap-3">
-                                <button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตร ปชช</button>
+                                <button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตรประชาชน</button>
                                 ${owner.hn !== 'AUTO' ? `<button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>` : ''}
                             </div>
                         </div>
@@ -156,7 +170,7 @@
                         <button onclick="addNewPetRow()" class="w-full border-4 border-dashed border-white/5 py-6 rounded-3xl text-slate-500 hover:text-teal-400 transition-all font-black text-xl">+ เพิ่มสัตว์เลี้ยงรายการใหม่</button>
                     </div>
 
-                    <button onclick="saveAllData()" class="w-full btn-base btn-teal py-6 text-3xl mt-10">💾 บันทึกข้อมูลทั้งหมด</button>
+                    <button onclick="saveAllData()" class="w-full btn-base btn-teal py-6 text-3xl mt-10 shadow-2xl">💾 บันทึกข้อมูลทั้งหมด</button>
                 </div>`;
             initAllPickers();
             updateBreedOptions();
@@ -164,7 +178,6 @@
 
         function petRowHtml(pet) {
             const ageInfo = getAgeDetail(pet.birth_date);
-            // 3. เปลี่ยนไอคอนรอยเท้าเป็นหมา/แมวหน้าชื่อสัตว์
             const headIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
             
             return `
