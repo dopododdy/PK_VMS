@@ -26,12 +26,13 @@
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 0.9rem; margin-bottom: 4px; display: block; }
         .pet-info-val { font-size: 1.125rem; font-weight: 800; line-height: 1.5; }
 
-        /* Cards */
+        /* Section Cards */
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; }
-        .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 25px; border: 1px solid var(--border); transition: 0.3s; }
+        .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 25px; border: 1px solid var(--border); transition: 0.3s; margin-bottom: 15px; }
 
-        /* ปุ่มที่มีพื้นหลังชัดเจน */
+        /* Buttons with Solid Backgrounds */
         .btn-base { padding: 10px 20px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; }
+        .btn-base:active { transform: scale(0.95); }
         .btn-teal { background-color: #0d9488 !important; }
         .btn-teal:hover { background-color: #0f766e !important; transform: translateY(-2px); }
         .btn-blue { background-color: #2563eb !important; }
@@ -40,8 +41,7 @@
         .btn-red:hover { background-color: #b91c1c !important; }
 
         .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 10px; cursor: pointer; }
-        .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; border: 2px solid #ef4444 !important; }
-        
+        .list-box:hover { background: rgba(20, 184, 177, 0.1); }
         .view-hidden { display: none; }
     </style>
 </head>
@@ -56,7 +56,7 @@
                     <p class="text-teal-400 font-bold text-lg" id="head-hn">HN: -</p>
                 </div>
             </div>
-            <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl shadow-xl border border-white/5">🏠</a>
+            <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-3xl shadow-xl border border-white/5">🏠</a>
         </header>
 
         <div class="section-card border-l-8 border-blue-500">
@@ -78,7 +78,7 @@
                     <div class="col-span-6 md:col-span-3"><label class="label-text">ชนิด/สายพันธุ์</label><div id="v-pet-breed" class="pet-info-val text-white">-</div></div>
                     <div class="col-span-4 md:col-span-1"><label class="label-text">เพศ</label><div id="v-pet-gender" class="pet-info-val text-white">-</div></div>
                     <div class="col-span-4 md:col-span-1"><label class="label-text">นน.(กก.)</label><div id="v-pet-weight" class="pet-info-val text-yellow-400">-</div></div>
-                    <div class="col-span-12 md:col-span-5"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="pet-info-val">-</div></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-text" id="allergy-label">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="pet-info-val">-</div></div>
                 </div>
             </div>
 
@@ -88,14 +88,12 @@
                         ⏳ ประวัติการรักษาย้อนหลัง
                         <span id="record-count" class="bg-white/10 text-sm px-3 py-1 rounded-full font-normal">0 รายการ</span>
                     </h3>
-                    <button onclick="showFormView()" class="btn-base btn-teal text-lg py-3 px-6 shadow-xl">
+                    <button id="btn-add-record" onclick="showFormView()" class="btn-base btn-teal text-lg py-3 px-6 shadow-xl">
                         + เพิ่มบันทึกการรักษา
                     </button>
                 </div>
-                
-                <div id="history-list" class="space-y-6">
-                    <div class="text-center py-20 opacity-20">กำลังโหลด...</div>
-                </div>
+                <div id="history-list" class="space-y-4">
+                    </div>
             </section>
         </div>
 
@@ -110,10 +108,10 @@
                     <div class="col-span-12 md:col-span-6"><label class="label-clinical">CC (Chief Complaint)</label><textarea id="f_cc" class="input-box h-20"></textarea></div>
                     <div class="col-span-12 md:col-span-6"><label class="label-clinical">Hx (History)</label><textarea id="f_hx" class="input-box h-20"></textarea></div>
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE (Physical Exam)</label><textarea id="f_pe" class="input-box h-32"></textarea></div>
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">🔬 Lab (คลิกเพื่อเลือก)</label><div class="list-box text-sm" onclick="alert('Module Lab กำลังพัฒนา')">เลือกรายการแล็บ...</div><textarea id="f_lab" class="hidden"></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">🔬 Lab (เลือกจากรายการ)</label><div class="list-box text-sm" onclick="alert('Module Lab กำลังพัฒนา')">คลิกเพื่อเลือกผลแล็บ...</div><textarea id="f_lab" class="hidden"></textarea></div>
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical text-yellow-400">Dx (Diagnosis)</label><textarea id="f_dx" class="input-box h-32 border-yellow-500/30"></textarea></div>
-                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💉 Tx (Treatment)</label><div class="list-box" onclick="alert('Module Tx กำลังพัฒนา')">เลือกหัตถการ...</div><textarea id="f_tx" class="hidden"></textarea></div>
-                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💊 Rx (Medication)</label><div class="list-box border-blue-500/50" onclick="alert('Module Rx กำลังพัฒนา')">เลือกรายการยา...</div><textarea id="f_rx" class="hidden"></textarea></div>
+                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💉 Tx (Treatment)</label><div class="list-box" onclick="alert('Module Tx กำลังพัฒนา')">คลิกเพื่อเลือกหัตถการ...</div><textarea id="f_tx" class="hidden"></textarea></div>
+                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💊 Rx (Medication)</label><div class="list-box border-blue-500/50" onclick="alert('Module Rx กำลังพัฒนา')">คลิกเพื่อเลือกรายการยา...</div><textarea id="f_rx" class="hidden"></textarea></div>
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical">Plan</label><input type="text" id="f_plan" class="input-box"></div>
                     <div class="col-span-6 md:col-span-4"><label class="label-clinical text-orange-400">📅 Appointment</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
                     <div class="col-span-6 md:col-span-4"><label class="label-text font-bold text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-2xl font-black text-yellow-400" value="0"></div>
@@ -162,9 +160,10 @@
                 document.getElementById('v-pet-gender').innerText = pet.gender || '-';
                 document.getElementById('v-pet-weight').innerText = pet.weight || '0';
                 
+                // Allergy Logic
                 const allergyValue = pet.congenital_disease;
                 const allergyEl = document.getElementById('v-pet-congenital');
-                if (allergyValue && allergyValue.trim() !== "" && allergyValue !== "ไม่มี") {
+                if (allergyValue && allergyValue.trim() !== "" && allergyValue !== "ไม่มี" && allergyValue !== "-") {
                     allergyEl.innerText = allergyValue;
                     allergyEl.className = "pet-info-val text-red-500";
                 } else {
@@ -177,7 +176,10 @@
         async function fetchRecords() {
             const { data } = await db.from('medical_records').select('*').eq('animal_id', animalId).order('created_at', { ascending: false });
             records = data || [];
-            
+            renderRecordsList();
+        }
+
+        function renderRecordsList() {
             const list = document.getElementById('history-list');
             document.getElementById('record-count').innerText = `${records.length} รายการ`;
 
@@ -190,35 +192,70 @@
                             + เพิ่มประวัติการรักษาครั้งแรก
                         </button>
                     </div>`;
+                return;
+            }
+
+            list.innerHTML = records.map(rec => {
+                const dateStr = new Date(rec.created_at).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' });
+                return `
+                    <div class="history-item overflow-hidden" id="card-${rec.id}">
+                        <div class="flex flex-wrap md:flex-nowrap items-center gap-4 cursor-pointer" onclick="toggleCollapse('${rec.id}')">
+                            <div class="w-24 flex-shrink-0">
+                                <div class="text-teal-400 font-black text-lg">${dateStr}</div>
+                            </div>
+                            <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 border-l border-white/10 pl-4">
+                                <div class="truncate text-sm"><b class="text-teal-500 mr-1">CC:</b> <span class="text-slate-300">${rec.cc || '-'}</span></div>
+                                <div class="truncate text-sm"><b class="text-teal-500 mr-1">PE:</b> <span class="text-slate-300">${rec.pe || '-'}</span></div>
+                            </div>
+                            <div class="flex items-center gap-2 ml-auto">
+                                <button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-base btn-blue !py-1.5 !px-3 text-xs">✏️ แก้ไข</button>
+                                <button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-base btn-red !py-1.5 !px-3 text-xs">🗑️</button>
+                                <div class="text-teal-400 ml-2 transition-transform duration-300" id="arrow-${rec.id}">🔽</div>
+                            </div>
+                        </div>
+
+                        <div id="detail-${rec.id}" class="hidden mt-6 pt-6 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm mb-6">
+                                ${rec.hx ? `<div><b class="label-clinical text-xs">Hx:</b><p class="text-slate-300">${rec.hx}</p></div>` : ''}
+                                ${rec.lab ? `<div><b class="label-clinical text-xs">🔬 Lab:</b><p class="text-slate-300">${rec.lab}</p></div>` : ''}
+                                ${rec.dx ? `<div><b class="label-clinical text-xs text-yellow-400">Dx:</b><p class="text-yellow-100 font-bold">${rec.dx}</p></div>` : ''}
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div class="bg-black/40 p-4 rounded-xl border border-white/5 text-slate-200">
+                                    <div class="text-teal-400 font-bold mb-2">หัตถการ (Tx):</div> ${rec.tx || '-'}
+                                </div>
+                                <div class="bg-black/40 p-4 rounded-xl border border-white/5 text-slate-200">
+                                    <div class="text-blue-400 font-bold mb-2">รายการยา (Rx):</div> ${rec.rx || '-'}
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center pt-4 border-t border-white/5">
+                                <div class="text-sm"><b>Plan:</b> ${rec.plan || '-'}</div>
+                                <div class="text-2xl font-black text-yellow-400">฿ ${rec.cost?.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function toggleCollapse(id) {
+            const detail = document.getElementById(`detail-${id}`);
+            const arrow = document.getElementById(`arrow-${id}`);
+            const card = document.getElementById(`card-${id}`);
+            if (detail.classList.contains('hidden')) {
+                detail.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+                card.style.backgroundColor = 'rgba(20, 184, 177, 0.05)';
             } else {
-                list.innerHTML = records.map(rec => `
-                    <div class="history-item">
-                        <div class="flex justify-between items-start mb-6">
-                            <div><span class="text-teal-400 font-black text-xl">${new Date(rec.created_at).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' })}</span></div>
-                            <div class="flex gap-2">
-                                <button onclick="editRecord('${rec.id}')" class="btn-base btn-blue py-1.5 px-4 text-sm">✏️ แก้ไข</button>
-                                <button onclick="deleteRecord('${rec.id}')" class="btn-base btn-red py-1.5 px-4 text-sm">🗑️</button>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div class="text-slate-300"><b>CC:</b> ${rec.cc || '-'}</div>
-                            <div class="text-yellow-200"><b>Dx:</b> ${rec.dx || '-'}</div>
-                            <div class="col-span-full bg-black/40 p-4 rounded-xl border border-white/5 text-white">
-                                <div class="text-teal-400 font-bold mb-2">หัตถการและรายการยา:</div>
-                                <div class="whitespace-pre-line">${rec.tx ? '• '+rec.tx : ''}\n${rec.rx ? '• '+rec.rx : ''}</div>
-                            </div>
-                        </div>
-                        <div class="mt-4 text-right font-black text-yellow-400 text-2xl">฿ ${rec.cost?.toLocaleString()}</div>
-                    </div>
-                `).join('');
+                detail.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+                card.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
             }
         }
 
         function showFormView() {
             editingId = null;
             document.querySelectorAll('#form-view-container textarea, #form-view-container input').forEach(el => {
-                if(el.id !== 'f_cost') el.value = '';
-                else el.value = 0;
+                if(el.id !== 'f_cost') el.value = ''; else el.value = 0;
             });
             document.getElementById('history-view-container').classList.add('view-hidden');
             document.getElementById('form-view-container').classList.remove('view-hidden');
@@ -247,6 +284,7 @@
             try {
                 if (editingId) await db.from('medical_records').update(data).eq('id', editingId);
                 else await db.from('medical_records').insert([data]);
+                await db.from('animals').update({ weight: parseFloat(document.getElementById('f_weight').value) }).eq('id', animalId);
                 alert("✅ บันทึกสำเร็จ");
                 showHistoryView();
             } catch (err) { alert(err.message); }
@@ -267,7 +305,6 @@
             document.getElementById('f_note').value = rec.note || '';
             document.getElementById('f_cost').value = rec.cost || 0;
             if (rec.appointment) document.getElementById('f_appointment')._flatpickr.setDate(rec.appointment);
-
             document.getElementById('history-view-container').classList.add('view-hidden');
             document.getElementById('form-view-container').classList.remove('view-hidden');
             document.getElementById('edit-mode-badge').classList.remove('hidden');
