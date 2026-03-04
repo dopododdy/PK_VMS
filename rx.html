@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบสั่งยา (Rx) | PK-VMS Pro</title>
+    <title>ระบบสั่งยา & จัดการคลังยา | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -17,7 +17,7 @@
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 0.85rem; margin-bottom: 6px; display: block; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 25px; padding: 25px; border: 1px solid var(--border); }
-        .med-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 15px; padding: 12px; cursor: pointer; transition: 0.2s; }
+        .med-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 15px; padding: 12px; cursor: pointer; transition: 0.2s; position: relative; }
         .med-item:hover { border-color: var(--teal); background: rgba(20, 184, 177, 0.05); }
         
         #sticker-preview {
@@ -33,6 +33,12 @@
             #sticker-preview, #sticker-preview * { visibility: visible; }
             #sticker-preview { position: absolute; left: 0; top: 0; width: 80mm; height: 50mm; box-shadow: none; border: none; }
         }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--teal); }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -44,39 +50,48 @@
             <p class="text-slate-400">กรุณาพิมพ์ชื่อสัตว์ หรือ HN เพื่อเริ่มสั่งยา</p>
             <input type="text" id="p-search-input" class="input-box text-center text-xl py-4" placeholder="พิมพ์เพื่อค้นหา..." oninput="searchPatient()">
             <div id="p-search-results" class="space-y-2 mt-4 max-h-60 overflow-y-auto"></div>
-            <button onclick="history.back()" class="text-slate-500 font-bold mt-4">⬅️ กลับหน้าหลัก</button>
+            
+            <div class="flex flex-col gap-3 mt-6">
+                <button onclick="skipPatientSelection()" class="w-full bg-white/5 hover:bg-white/10 py-3 rounded-xl font-bold border border-white/10 transition-all">🛠️ จัดการคลังยา (ไม่เลือกสัตว์ป่วย)</button>
+                <button onclick="history.back()" class="text-slate-500 font-bold hover:text-white transition-all">⬅️ กลับหน้าหลัก</button>
+            </div>
         </div>
     </div>
 
     <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-center mb-8">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div class="flex items-center gap-6">
                 <button onclick="goBack()" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-2xl shadow-lg">⬅️</button>
                 <div>
-                    <h1 class="text-3xl font-black text-white">ระบบสั่งยาและพิมพ์สติ๊กเกอร์</h1>
-                    <p class="text-teal-400 font-bold" id="animal-display">กำลังโหลดข้อมูล...</p>
+                    <h1 class="text-3xl font-black text-white leading-none">ระบบยา (Rx & Stock)</h1>
+                    <p class="text-teal-400 font-bold mt-1" id="animal-display">กำลังโหลดข้อมูล...</p>
                 </div>
             </div>
-            <div class="text-right">
-                <div class="text-xs text-slate-500 font-bold uppercase tracking-widest">Weight (kg)</div>
-                <div id="pet-weight" class="text-3xl font-black text-yellow-400">0.00</div>
+            <div class="flex gap-8 bg-black/20 p-4 rounded-2xl border border-white/5">
+                <div class="text-right">
+                    <div class="text-xs text-slate-500 font-bold uppercase tracking-widest">Weight (kg)</div>
+                    <div id="pet-weight" class="text-3xl font-black text-yellow-400">0.00</div>
+                </div>
             </div>
         </header>
 
         <div class="grid grid-cols-12 gap-6">
             <div class="col-span-12 lg:col-span-4 space-y-4">
-                <div class="section-card">
-                    <label class="label-clinical">🔍 ค้นหายา</label>
-                    <input type="text" id="med-search" class="input-box mb-4" placeholder="พิมพ์ชื่อยา..." oninput="filterMeds()">
-                    <div id="med-list" class="space-y-3 overflow-y-auto max-h-[55vh] pr-2"></div>
+                <div class="section-card h-full">
+                    <div class="flex justify-between items-center mb-4">
+                        <label class="label-clinical mb-0">🔍 คลังยา</label>
+                        <button onclick="addNewMed()" class="text-xs bg-teal-500/20 text-teal-400 px-3 py-1 rounded-full border border-teal-500/30 hover:bg-teal-500 hover:text-white transition-all">+ เพิ่มยาใหม่</button>
+                    </div>
+                    <input type="text" id="med-search" class="input-box mb-4" placeholder="ค้นหาชื่อยา..." oninput="filterMeds()">
+                    <div id="med-list" class="space-y-3 overflow-y-auto max-h-[60vh] pr-2"></div>
                 </div>
             </div>
 
             <div class="col-span-12 lg:col-span-5 space-y-6">
                 <div class="section-card border-t-4 border-teal-500">
                     <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div><label class="label-clinical">ชื่อยา (EN)</label><input type="text" id="f_name_en" class="input-box font-bold" readonly></div>
-                        <div><label class="label-clinical">ชื่อยา (TH)</label><input type="text" id="f_name_th" class="input-box"></div>
+                        <div><label class="label-clinical">ชื่อยา (EN)</label><input type="text" id="f_name_en" class="input-box font-bold bg-white/5" placeholder="Generic name"></div>
+                        <div><label class="label-clinical">ชื่อยา (TH)</label><input type="text" id="f_name_th" class="input-box" placeholder="ชื่อเรียกภาษาไทย"></div>
                     </div>
                     <div class="grid grid-cols-3 gap-4 mb-4">
                         <div><label class="label-clinical">Dose (mg/kg)</label><input type="number" id="f_dose" class="input-box" oninput="calculateTabs()"></div>
@@ -84,14 +99,40 @@
                         <div><label class="label-clinical text-yellow-400">จำนวนเม็ด/ครั้ง</label><input type="number" id="f_tab_per_time" class="input-box text-yellow-400 font-bold" step="0.25" oninput="updateTotalTabs()"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div><label class="label-clinical">ความถี่ (ครั้ง/วัน)</label><select id="f_freq" class="input-box" onchange="updateTotalTabs()"><option value="1">วันละ 1 ครั้ง</option><option value="2">วันละ 2 ครั้ง</option><option value="3">วันละ 3 ครั้ง</option><option value="4">วันละ 4 ครั้ง</option></select></div>
-                        <div><label class="label-clinical">เวลากิน</label><select id="f_timing" class="input-box" onchange="updateSticker()"><option value="หลังอาหารทันที">หลังอาหารทันที</option><option value="พร้อมอาหาร">พร้อมอาหาร</option><option value="ก่อนอาหาร 30 นาที">ก่อนอาหาร 30 นาที</option></select></div>
+                        <div>
+                            <label class="label-clinical">ความถี่ (ครั้ง/วัน)</label>
+                            <select id="f_freq" class="input-box" onchange="updateTotalTabs()">
+                                <option value="1">วันละ 1 ครั้ง</option>
+                                <option value="2">วันละ 2 ครั้ง</option>
+                                <option value="3">วันละ 3 ครั้ง</option>
+                                <option value="4">วันละ 4 ครั้ง</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label-clinical">เวลากิน</label>
+                            <select id="f_timing" class="input-box" onchange="updateSticker()">
+                                <option value="หลังอาหารทันที">หลังอาหารทันที</option>
+                                <option value="พร้อมอาหาร">พร้อมอาหาร</option>
+                                <option value="ก่อนอาหาร 30 นาที">ก่อนอาหาร 30 นาที</option>
+                                <option value="ตอนท้องว่าง">ตอนท้องว่าง</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="mb-4"><label class="label-clinical text-red-400">คำเตือน/ผลข้างเคียง</label><textarea id="f_side_effects" class="input-box h-16" oninput="updateSticker()"></textarea></div>
-                    <div class="grid grid-cols-3 gap-4 border-t border-white/5 pt-4">
+                    <div class="mb-4"><label class="label-clinical text-red-400">คำเตือน/ผลข้างเคียง (Master Data)</label><textarea id="f_side_effects" class="input-box h-20" oninput="updateSticker()"></textarea></div>
+                    
+                    <div class="grid grid-cols-3 gap-4 border-t border-white/5 pt-4 mb-6">
                         <div><label class="label-clinical">จำนวนวัน</label><input type="number" id="f_days" class="input-box" value="7" oninput="updateTotalTabs()"></div>
                         <div><label class="label-clinical">รวมเม็ด</label><input type="number" id="f_total_tabs" class="input-box font-bold" readonly></div>
                         <div><label class="label-clinical text-yellow-400">ราคารวม (฿)</label><input type="number" id="f_total_price" class="input-box text-yellow-400 font-black" readonly></div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="updateMedMaster()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2">
+                            <span>💾</span> บันทึกข้อมูล Master
+                        </button>
+                        <button onclick="deleteMed()" id="btn-delete" class="hidden bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-4 rounded-xl transition-all border border-red-500/20">
+                            🗑️
+                        </button>
                     </div>
                 </div>
             </div>
@@ -99,29 +140,31 @@
             <div class="col-span-12 lg:col-span-3 space-y-6">
                 <div class="section-card">
                     <label class="label-clinical mb-4 block">🖨️ Sticker Preview</label>
-                    <div id="sticker-preview">
+                    <div id="sticker-preview" class="mx-auto">
                         <div>
-                            <div class="text-[10px] font-black border-b border-black mb-1 pb-1 uppercase">PK-VMS Vet Clinic</div>
+                            <div class="text-[10px] font-black border-b border-black mb-1 pb-1 uppercase tracking-tighter">PK-VMS Vet Clinic - Phrakhanong</div>
                             <div class="flex justify-between text-[9px] font-bold">
                                 <span id="s-pet-name">Animal: -</span>
                                 <span id="s-date">-</span>
                             </div>
                         </div>
                         <div class="py-2">
-                            <div id="s-med-en" class="font-black text-sm uppercase">-</div>
+                            <div id="s-med-en" class="font-black text-sm uppercase leading-tight">-</div>
                             <div id="s-med-th" class="text-xs font-bold text-slate-700">-</div>
                             <div class="mt-2 text-[11px] leading-tight font-black">
-                                กินครั้งละ <span id="s-tabs" class="text-lg underline">0</span> เม็ด 
+                                กินครั้งละ <span id="s-tabs" class="text-lg underline mx-1">0</span> เม็ด 
                                 <span id="s-freq">วันละ - ครั้ง</span>
-                                <br><span id="s-timing" class="text-blue-700">เวลากิน</span>
+                                <br><span id="s-timing" class="text-blue-700">เวลากิน: -</span>
                             </div>
                         </div>
                         <div class="text-[8px] italic text-red-600 border-t border-dashed border-black/20 pt-1">
-                            ⚠️ <span id="s-side">-</span>
+                            ⚠️ <span id="s-side">ไม่มีข้อควรระวังพิเศษ</span>
                         </div>
                     </div>
                     <div class="mt-6 space-y-3">
-                        <button onclick="window.print()" class="btn-base btn-teal w-full py-4 text-lg">🖨️ พิมพ์สติ๊กเกอร์</button>
+                        <button onclick="window.print()" class="w-full bg-teal-500 hover:bg-teal-400 text-navy py-4 rounded-2xl text-lg font-black shadow-xl transition-all active:scale-95">
+                            🖨️ พิมพ์สติ๊กเกอร์
+                        </button>
                     </div>
                 </div>
             </div>
@@ -144,6 +187,8 @@
             document.getElementById('s-date').innerText = new Date().toLocaleDateString('th-TH');
         };
 
+        // --- ระบบสัตว์ป่วย ---
+
         async function searchPatient() {
             const term = document.getElementById('p-search-input').value;
             if (term.length < 2) return;
@@ -151,7 +196,7 @@
             document.getElementById('p-search-results').innerHTML = (data || []).map(p => `
                 <div class="p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-teal-500 hover:text-black transition-all" 
                      onclick="loadPatient('${p.id}', '${p.owner_hn}')">
-                    <span class="font-bold">${p.pet_name}</span> <span class="text-xs opacity-50">(HN: ${p.owner_hn})</span>
+                    <span class="font-bold text-lg">${p.pet_name}</span> <span class="text-xs opacity-60 ml-2">(HN: ${p.owner_hn})</span>
                 </div>`).join('');
         }
 
@@ -166,6 +211,18 @@
                 document.getElementById('patient-search-overlay').classList.add('hidden');
             }
         }
+
+        function skipPatientSelection() {
+            currentAnimalId = null;
+            currentHN = null;
+            petWeight = 0;
+            document.getElementById('animal-display').innerText = "🔴 โหมดจัดการคลังยา (Master Data)";
+            document.getElementById('pet-weight').innerText = "0.00";
+            document.getElementById('patient-search-overlay').classList.add('hidden');
+            document.getElementById('s-pet-name').innerText = `Animal: - `;
+        }
+
+        // --- ระบบจัดการยา ---
 
         async function fetchMeds() {
             const { data } = await db.from('pharmacy').select('*').eq('is_medication', true).order('item_name');
@@ -184,19 +241,86 @@
         function selectMed(id) {
             selectedMed = meds.find(m => m.id === id);
             if (!selectedMed) return;
+            
+            // Fill Form
             document.getElementById('f_name_en').value = selectedMed.item_name;
             document.getElementById('f_name_th').value = selectedMed.name_th || '';
             document.getElementById('f_dose').value = selectedMed.dosage_mg_kg || 0;
             document.getElementById('f_conc').value = selectedMed.concentration_mg_unit || 1;
             document.getElementById('f_side_effects').value = selectedMed.side_effects || '';
+            document.getElementById('btn-delete').classList.remove('hidden');
+            
             calculateTabs();
         }
+
+        async function updateMedMaster() {
+            if (!selectedMed && !document.getElementById('f_name_en').value) return alert('กรุณาเลือกหรือใส่ชื่อยาก่อน');
+            
+            const payload = {
+                item_name: document.getElementById('f_name_en').value,
+                name_th: document.getElementById('f_name_th').value,
+                dosage_mg_kg: parseFloat(document.getElementById('f_dose').value) || 0,
+                concentration_mg_unit: parseFloat(document.getElementById('f_conc').value) || 1,
+                side_effects: document.getElementById('f_side_effects').value,
+                is_medication: true
+            };
+
+            let error;
+            if (selectedMed) {
+                const res = await db.from('pharmacy').update(payload).eq('id', selectedMed.id);
+                error = res.error;
+            } else {
+                const res = await db.from('pharmacy').insert([payload]);
+                error = res.error;
+            }
+
+            if (error) {
+                alert('เกิดข้อผิดพลาด: ' + error.message);
+            } else {
+                alert('บันทึกข้อมูลตัวยาลง Master เรียบร้อย');
+                await fetchMeds();
+            }
+        }
+
+        async function addNewMed() {
+            selectedMed = null;
+            document.getElementById('f_name_en').value = '';
+            document.getElementById('f_name_th').value = '';
+            document.getElementById('f_dose').value = 0;
+            document.getElementById('f_conc').value = 1;
+            document.getElementById('f_side_effects').value = '';
+            document.getElementById('btn-delete').classList.add('hidden');
+            document.getElementById('f_name_en').focus();
+        }
+
+        async function deleteMed() {
+            if (!selectedMed) return;
+            if (!confirm(`ยืนยันการลบยา ${selectedMed.item_name} ออกจากระบบ?`)) return;
+
+            const { error } = await db.from('pharmacy').delete().eq('id', selectedMed.id);
+            if (error) alert(error.message);
+            else {
+                alert('ลบเรียบร้อย');
+                selectedMed = null;
+                await fetchMeds();
+                addNewMed();
+            }
+        }
+
+        // --- ระบบคำนวณ ---
 
         function calculateTabs() {
             const dose = parseFloat(document.getElementById('f_dose').value) || 0;
             const conc = parseFloat(document.getElementById('f_conc').value) || 1;
-            let tabs = (petWeight * dose) / conc;
-            document.getElementById('f_tab_per_time').value = (Math.round(tabs * 4) / 4).toFixed(2);
+            
+            if (petWeight > 0 && dose > 0) {
+                let tabs = (petWeight * dose) / conc;
+                // ปัดเศษที่ใกล้เคียงที่สุด (0.25, 0.5, 0.75, 1.0)
+                document.getElementById('f_tab_per_time').value = (Math.round(tabs * 4) / 4).toFixed(2);
+            } else if (petWeight === 0) {
+                // ถ้าไม่มีน้ำหนัก ให้ใส่ 0 ไว้ให้กรอกเอง
+                document.getElementById('f_tab_per_time').value = 0;
+            }
             updateTotalTabs();
         }
 
@@ -206,6 +330,7 @@
             const days = parseInt(document.getElementById('f_days').value) || 1;
             const total = tabs * freq * days;
             document.getElementById('f_total_tabs').value = total;
+            
             if (selectedMed) {
                 let price = total * (selectedMed.price_per_unit || 0);
                 document.getElementById('f_total_price').value = Math.ceil(price / 10) * 10;
@@ -214,22 +339,25 @@
         }
 
         function updateSticker() {
-            document.getElementById('s-med-en').innerText = document.getElementById('f_name_en').value;
-            document.getElementById('s-med-th').innerText = document.getElementById('f_name_th').value;
+            document.getElementById('s-med-en').innerText = document.getElementById('f_name_en').value || '-';
+            document.getElementById('s-med-th').innerText = document.getElementById('f_name_th').value || '-';
             document.getElementById('s-tabs').innerText = document.getElementById('f_tab_per_time').value;
             document.getElementById('s-freq').innerText = `วันละ ${document.getElementById('f_freq').value} ครั้ง`;
-            document.getElementById('s-timing').innerText = document.getElementById('f_timing').value;
+            document.getElementById('s-timing').innerText = `เวลากิน: ${document.getElementById('f_timing').value}`;
             document.getElementById('s-side').innerText = document.getElementById('f_side_effects').value || 'ไม่มีข้อควรระวังพิเศษ';
         }
 
         function filterMeds() {
             const term = document.getElementById('med-search').value.toLowerCase();
-            renderMedList(meds.filter(m => m.item_name.toLowerCase().includes(term) || (m.name_th && m.name_th.includes(term))));
+            renderMedList(meds.filter(m => 
+                m.item_name.toLowerCase().includes(term) || 
+                (m.name_th && m.name_th.includes(term))
+            ));
         }
 
         function goBack() { 
             if (urlParams.get('id')) history.back();
-            else window.location.href = 'index.html';
+            else window.location.href = 'dashboard.html';
         }
     </script>
 </body>
