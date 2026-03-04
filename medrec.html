@@ -298,8 +298,9 @@
                 const { data } = await db.from('services').select('*').eq('category', 'หัตถการ').order('service_name');
                 items = data.map(i => ({ name: i.service_name, price: i.price, config: i.price_config }));
             } else if (type === 'rx') {
-                title.innerText = '💊 เลือกยา และ สินค้า';
-                const { data } = await db.from('pharmacy').select('*').order('item_name');
+                // ส่วนที่ปรับปรุงใหม่: แสดงปุ่มไปหน้าสั่งยา และแสดงสินค้าทั่วไป
+                title.innerHTML = `💊 สินค้า / ยา <button onclick="window.location.href='rx.html?id=${animalId}&hn=${ownerHN}'" class="ml-4 btn-base bg-orange-500 !py-1 !px-3 text-[10px]">ระบบจ่ายยาคำนวณโดส ➔</button>`;
+                const { data } = await db.from('pharmacy').select('*').eq('category', 'สินค้า').order('item_name');
                 items = data.map(i => ({ name: i.item_name, price: i.price_per_unit }));
             }
             fullCatalog = items;
