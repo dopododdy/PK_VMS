@@ -19,25 +19,30 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; }
         
+        /* Input & Label */
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px; color: white; width: 100%; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
-        
         .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 4px; display: block; font-weight: 600; }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 0.9rem; margin-bottom: 4px; display: block; }
-        
         .pet-info-val { font-size: 1.125rem; font-weight: 800; line-height: 1.5; }
 
+        /* Cards */
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; }
-        .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 20px; border: 1px solid var(--border); transition: 0.3s; }
+        .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 25px; border: 1px solid var(--border); transition: 0.3s; }
 
-        .btn-base { padding: 12px 24px; border-radius: 15px; font-weight: 800; transition: 0.2s; display: flex; align-items: center; gap: 8px; justify-content: center; color: white !important; }
+        /* ปุ่มที่มีพื้นหลังชัดเจน */
+        .btn-base { padding: 10px 20px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; }
         .btn-teal { background-color: #0d9488 !important; }
         .btn-teal:hover { background-color: #0f766e !important; transform: translateY(-2px); }
-        .btn-red { background-color: #dc2626 !important; }
         .btn-blue { background-color: #2563eb !important; }
+        .btn-blue:hover { background-color: #1d4ed8 !important; }
+        .btn-red { background-color: #dc2626 !important; }
+        .btn-red:hover { background-color: #b91c1c !important; }
 
-        .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 10px; cursor: pointer; transition: 0.2s; }
-        .list-box:hover { background: rgba(20, 184, 177, 0.1); }
+        .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 10px; cursor: pointer; }
+        .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; border: 2px solid #ef4444 !important; }
+        
+        .view-hidden { display: none; }
     </style>
 </head>
 <body class="p-4 md:p-10">
@@ -51,128 +56,76 @@
                     <p class="text-teal-400 font-bold text-lg" id="head-hn">HN: -</p>
                 </div>
             </div>
-            <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-3xl shadow-xl border border-white/5">
-                🏠
-            </a>
+            <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl shadow-xl border border-white/5">🏠</a>
         </header>
 
         <div class="section-card border-l-8 border-blue-500">
             <h3 class="text-xl font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
             <div class="grid grid-cols-12 gap-6">
-                <div class="col-span-12 md:col-span-4">
-                    <label class="label-text">ชื่อ-นามสกุล เจ้าของ</label>
-                    <div id="info-owner-name" class="text-lg font-bold text-white">-</div>
-                </div>
-                <div class="col-span-12 md:col-span-3">
-                    <label class="label-text">เบอร์โทรศัพท์</label>
-                    <div id="info-owner-phone" class="text-lg font-bold text-teal-400">-</div>
-                </div>
-                <div class="col-span-12 md:col-span-5">
-                    <label class="label-text">ที่อยู่</label>
-                    <div id="info-owner-address" class="text-sm text-slate-400">-</div>
-                </div>
+                <div class="col-span-12 md:col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><div id="info-owner-name" class="text-lg font-bold text-white">-</div></div>
+                <div class="col-span-12 md:col-span-3"><label class="label-text">เบอร์โทรศัพท์</label><div id="info-owner-phone" class="text-lg font-bold text-teal-400">-</div></div>
+                <div class="col-span-12 md:col-span-5"><label class="label-text">ที่อยู่</label><div id="info-owner-address" class="text-sm text-slate-400">-</div></div>
             </div>
         </div>
 
-        <div class="section-card border-l-8 border-teal-500">
-            <div class="flex justify-between items-center mb-8">
-                <h3 class="text-xl font-bold text-white flex items-center gap-2" id="animal-title-icon">🐾 ข้อมูลสัตว์และการตรวจรักษา</h3>
-                <div id="edit-mode-badge" class="hidden bg-orange-500 text-black px-4 py-1 rounded-full text-xs font-black animate-pulse">กำลังแก้ไขข้อมูลเดิม ✏️</div>
-            </div>
-
-            <div class="grid grid-cols-12 gap-4 mb-10 pb-8 border-b border-white/5">
-                <div class="col-span-6 md:col-span-2">
-                    <label class="label-text">ชื่อสัตว์</label>
-                    <div id="info-pet-name" class="pet-info-val text-white">-</div>
+        <div id="history-view-container">
+            <div class="section-card border-l-8 border-teal-500">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2" id="animal-info-head">🐾 ข้อมูลสัตว์</h3>
                 </div>
-                <div class="col-span-6 md:col-span-2">
-                    <label class="label-text">ชนิด/สายพันธุ์</label>
-                    <div id="info-pet-breed" class="pet-info-val text-white">-</div>
-                </div>
-                <div class="col-span-3 md:col-span-1">
-                    <label class="label-text">เพศ</label>
-                    <div id="info-pet-gender" class="pet-info-val text-white">-</div>
-                </div>
-                <div class="col-span-3 md:col-span-1">
-                    <label class="label-text">นน.(กก.)</label>
-                    <input type="number" id="f_weight" class="input-box text-center pet-info-val text-yellow-400 p-1" step="0.1">
-                </div>
-                <div class="col-span-12 md:col-span-6">
-                    <label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง (Drug Allergy & Warning)</label>
-                    <div id="info-pet-congenital" class="pet-info-val whitespace-normal text-slate-400">-</div>
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-6 md:col-span-2"><label class="label-text">ชื่อสัตว์</label><div id="v-pet-name" class="pet-info-val text-white">-</div></div>
+                    <div class="col-span-6 md:col-span-3"><label class="label-text">ชนิด/สายพันธุ์</label><div id="v-pet-breed" class="pet-info-val text-white">-</div></div>
+                    <div class="col-span-4 md:col-span-1"><label class="label-text">เพศ</label><div id="v-pet-gender" class="pet-info-val text-white">-</div></div>
+                    <div class="col-span-4 md:col-span-1"><label class="label-text">นน.(กก.)</label><div id="v-pet-weight" class="pet-info-val text-yellow-400">-</div></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="pet-info-val">-</div></div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-12 gap-5">
-                <div class="col-span-12 md:col-span-6">
-                    <label class="label-clinical">CC (Chief Complaint) / อาการสำคัญ</label>
-                    <textarea id="f_cc" class="input-box h-20" placeholder="ระบุเหตุผลที่มา..."></textarea>
-                </div>
-                <div class="col-span-12 md:col-span-6">
-                    <label class="label-clinical">Hx (History) / ประวัติการเจ็บป่วย</label>
-                    <textarea id="f_hx" class="input-box h-20" placeholder="ประวัติย้อนหลัง..."></textarea>
-                </div>
-                <div class="col-span-12 md:col-span-4">
-                    <label class="label-clinical">PE (Physical Exam) / ตรวจร่างกาย</label>
-                    <textarea id="f_pe" class="input-box h-32" placeholder="ผลการตรวจร่างกาย..."></textarea>
-                </div>
-
-                <div class="col-span-12 md:col-span-4">
-                    <label class="label-clinical">🔬 Lab / ผลแล็บ (คลิกเพื่อเลือก)</label>
-                    <div id="list_lab" class="list-box text-sm" onclick="alert('Module lab.html กำลังพัฒนา')">เลือกรายการแล็บ...</div>
-                    <textarea id="f_lab" class="hidden"></textarea>
-                </div>
-                <div class="col-span-12 md:col-span-4">
-                    <label class="label-clinical text-yellow-400">Dx (Diagnosis) / วินิจฉัย</label>
-                    <textarea id="f_dx" class="input-box h-32 border-yellow-500/30" placeholder="ระบุการวินิจฉัย..."></textarea>
+            <section class="mt-12 pb-20">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-2xl font-black text-white flex items-center gap-3">
+                        ⏳ ประวัติการรักษาย้อนหลัง
+                        <span id="record-count" class="bg-white/10 text-sm px-3 py-1 rounded-full font-normal">0 รายการ</span>
+                    </h3>
+                    <button onclick="showFormView()" class="btn-base btn-teal text-lg py-3 px-6 shadow-xl">
+                        + เพิ่มบันทึกการรักษา
+                    </button>
                 </div>
                 
-                <div class="col-span-12 md:col-span-6">
-                    <label class="label-clinical">💉 Tx (Treatment) / การรักษา (คลิกเพื่อเลือก)</label>
-                    <div id="list_tx" class="list-box" onclick="alert('Module tx.html กำลังพัฒนา')">เลือกหัตถการ/การรักษา...</div>
-                    <textarea id="f_tx" class="hidden"></textarea>
+                <div id="history-list" class="space-y-6">
+                    <div class="text-center py-20 opacity-20">กำลังโหลด...</div>
                 </div>
-                <div class="col-span-12 md:col-span-6">
-                    <label class="label-clinical">💊 Rx (Medication) / สั่งยา (คลิกเพื่อเลือก)</label>
-                    <div id="list_rx" class="list-box border-blue-500/50" onclick="alert('Module rx.html กำลังพัฒนา')">เลือกรายการยา...</div>
-                    <textarea id="f_rx" class="hidden"></textarea>
-                </div>
-
-                <div class="col-span-12 md:col-span-4">
-                    <label class="label-clinical">Plan / แผนการรักษาต่อไป</label>
-                    <input type="text" id="f_plan" class="input-box" placeholder="แผนในอนาคต...">
-                </div>
-                <div class="col-span-6 md:col-span-4">
-                    <label class="label-clinical text-orange-400">📅 Appointment / วันนัด</label>
-                    <input type="text" id="f_appointment" class="input-box datepicker" placeholder="เลือกวันนัด...">
-                </div>
-                <div class="col-span-6 md:col-span-4">
-                    <label class="label-text font-bold text-yellow-400">รวมค่ารักษาทั้งหมด (฿)</label>
-                    <input type="number" id="f_cost" class="input-box text-2xl font-black text-yellow-400" value="0">
-                </div>
-                <div class="col-span-12">
-                    <label class="label-text">Note / หมายเหตุเพิ่มเติม</label>
-                    <input type="text" id="f_note" class="input-box">
-                </div>
-            </div>
-
-            <div class="flex gap-4 mt-10">
-                <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-xl">
-                    💾 บันทึกการรักษา
-                </button>
-                <button id="btn-cancel" onclick="resetForm()" class="hidden btn-base btn-red">
-                    ยกเลิกแก้ไข
-                </button>
-            </div>
+            </section>
         </div>
 
-        <section class="mt-16 pb-20">
-            <h3 class="text-2xl font-black text-white mb-8 flex items-center gap-3">
-                ⏳ ประวัติการรักษาย้อนหลัง
-                <span id="record-count" class="bg-white/10 text-sm px-3 py-1 rounded-full font-normal">0 รายการ</span>
-            </h3>
-            <div id="history-container" class="space-y-6"></div>
-        </section>
+        <div id="form-view-container" class="view-hidden">
+            <div class="section-card border-l-8 border-teal-500">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">🏥 บันทึกการตรวจรักษา</h3>
+                    <div id="edit-mode-badge" class="hidden bg-orange-500 text-black px-4 py-1 rounded-full text-xs font-black animate-pulse">กำลังแก้ไขข้อมูลเดิม ✏️</div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-5">
+                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">CC (Chief Complaint)</label><textarea id="f_cc" class="input-box h-20"></textarea></div>
+                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">Hx (History)</label><textarea id="f_hx" class="input-box h-20"></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE (Physical Exam)</label><textarea id="f_pe" class="input-box h-32"></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">🔬 Lab (คลิกเพื่อเลือก)</label><div class="list-box text-sm" onclick="alert('Module Lab กำลังพัฒนา')">เลือกรายการแล็บ...</div><textarea id="f_lab" class="hidden"></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical text-yellow-400">Dx (Diagnosis)</label><textarea id="f_dx" class="input-box h-32 border-yellow-500/30"></textarea></div>
+                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💉 Tx (Treatment)</label><div class="list-box" onclick="alert('Module Tx กำลังพัฒนา')">เลือกหัตถการ...</div><textarea id="f_tx" class="hidden"></textarea></div>
+                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💊 Rx (Medication)</label><div class="list-box border-blue-500/50" onclick="alert('Module Rx กำลังพัฒนา')">เลือกรายการยา...</div><textarea id="f_rx" class="hidden"></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">Plan</label><input type="text" id="f_plan" class="input-box"></div>
+                    <div class="col-span-6 md:col-span-4"><label class="label-clinical text-orange-400">📅 Appointment</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
+                    <div class="col-span-6 md:col-span-4"><label class="label-text font-bold text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-2xl font-black text-yellow-400" value="0"></div>
+                    <div class="col-span-12"><label class="label-text">Note / หมายเหตุ</label><input type="text" id="f_note" class="input-box"></div>
+                </div>
+
+                <div class="flex gap-4 mt-10">
+                    <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-xl py-4">💾 บันทึกการรักษา</button>
+                    <button onclick="showHistoryView()" class="btn-base btn-red px-10">ยกเลิก</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -202,23 +155,21 @@
             const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
             if (pet) {
                 const icon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
-                document.getElementById('animal-title-icon').innerHTML = `${icon} ข้อมูลสัตว์และการตรวจรักษา`;
+                document.getElementById('animal-info-head').innerHTML = `${icon} ข้อมูลสัตว์`;
                 document.getElementById('head-pet-name').innerText = pet.pet_name;
-                document.getElementById('info-pet-name').innerText = pet.pet_name;
-                document.getElementById('info-pet-breed').innerText = pet.breed;
-                document.getElementById('info-pet-gender').innerText = pet.gender;
-                document.getElementById('f_weight').value = pet.weight;
+                document.getElementById('v-pet-name').innerText = pet.pet_name;
+                document.getElementById('v-pet-breed').innerText = pet.breed || '-';
+                document.getElementById('v-pet-gender').innerText = pet.gender || '-';
+                document.getElementById('v-pet-weight').innerText = pet.weight || '0';
                 
-                // Logic สีอักษรแพ้ยา
                 const allergyValue = pet.congenital_disease;
-                const allergyEl = document.getElementById('info-pet-congenital');
-                
-                if (allergyValue && allergyValue.trim() !== "" && allergyValue !== "-" && allergyValue !== "ไม่มี") {
+                const allergyEl = document.getElementById('v-pet-congenital');
+                if (allergyValue && allergyValue.trim() !== "" && allergyValue !== "ไม่มี") {
                     allergyEl.innerText = allergyValue;
-                    allergyEl.className = "pet-info-val text-red-500"; // มีข้อมูล = สีแดง
+                    allergyEl.className = "pet-info-val text-red-500";
                 } else {
                     allergyEl.innerText = "ไม่มีประวัติแพ้ยา";
-                    allergyEl.className = "pet-info-val text-slate-400"; // ไม่มี = สีเทา
+                    allergyEl.className = "pet-info-val text-slate-400";
                 }
             }
         }
@@ -226,38 +177,59 @@
         async function fetchRecords() {
             const { data } = await db.from('medical_records').select('*').eq('animal_id', animalId).order('created_at', { ascending: false });
             records = data || [];
-            renderRecords();
+            
+            const list = document.getElementById('history-list');
+            document.getElementById('record-count').innerText = `${records.length} รายการ`;
+
+            if (records.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-20 bg-slate-800/20 rounded-[40px] border-4 border-dashed border-white/5">
+                        <div class="text-6xl mb-6">🩺</div>
+                        <p class="text-slate-400 text-xl mb-8">ยังไม่เคยมีประวัติการรักษาในระบบ</p>
+                        <button onclick="showFormView()" class="btn-base btn-teal mx-auto text-2xl py-6 px-10 shadow-2xl scale-110">
+                            + เพิ่มประวัติการรักษาครั้งแรก
+                        </button>
+                    </div>`;
+            } else {
+                list.innerHTML = records.map(rec => `
+                    <div class="history-item">
+                        <div class="flex justify-between items-start mb-6">
+                            <div><span class="text-teal-400 font-black text-xl">${new Date(rec.created_at).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' })}</span></div>
+                            <div class="flex gap-2">
+                                <button onclick="editRecord('${rec.id}')" class="btn-base btn-blue py-1.5 px-4 text-sm">✏️ แก้ไข</button>
+                                <button onclick="deleteRecord('${rec.id}')" class="btn-base btn-red py-1.5 px-4 text-sm">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="text-slate-300"><b>CC:</b> ${rec.cc || '-'}</div>
+                            <div class="text-yellow-200"><b>Dx:</b> ${rec.dx || '-'}</div>
+                            <div class="col-span-full bg-black/40 p-4 rounded-xl border border-white/5 text-white">
+                                <div class="text-teal-400 font-bold mb-2">หัตถการและรายการยา:</div>
+                                <div class="whitespace-pre-line">${rec.tx ? '• '+rec.tx : ''}\n${rec.rx ? '• '+rec.rx : ''}</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-right font-black text-yellow-400 text-2xl">฿ ${rec.cost?.toLocaleString()}</div>
+                    </div>
+                `).join('');
+            }
         }
 
-        function renderRecords() {
-            const container = document.getElementById('history-container');
-            document.getElementById('record-count').innerText = `${records.length} รายการ`;
-            if (records.length === 0) {
-                container.innerHTML = `<div class="text-center p-20 border-2 border-dashed border-white/5 rounded-3xl text-slate-500 font-bold">ยังไม่มีประวัติการรักษา</div>`;
-                return;
-            }
-            container.innerHTML = records.map(rec => `
-                <div class="history-item">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <span class="text-teal-400 font-black text-lg">${new Date(rec.created_at).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' })}</span>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="editRecord('${rec.id}')" class="btn-base btn-blue py-1 px-3 text-sm">✏️ แก้ไข</button>
-                            <button onclick="deleteRecord('${rec.id}')" class="btn-base btn-red py-1 px-3 text-sm">🗑️</button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div class="text-slate-300"><b>CC:</b> ${rec.cc || '-'}</div>
-                        <div class="text-yellow-200"><b>Dx:</b> ${rec.dx || '-'}</div>
-                        <div class="col-span-full bg-black/40 p-3 rounded-lg border border-white/5">
-                            <div class="text-teal-400 font-bold mb-1">การรักษาและยา:</div>
-                            <div class="text-white whitespace-pre-line">${rec.tx ? 'Tx: '+rec.tx : ''}\n${rec.rx ? 'Rx: '+rec.rx : ''}</div>
-                        </div>
-                    </div>
-                    <div class="mt-4 text-right font-black text-yellow-400">฿ ${rec.cost?.toLocaleString()}</div>
-                </div>
-            `).join('');
+        function showFormView() {
+            editingId = null;
+            document.querySelectorAll('#form-view-container textarea, #form-view-container input').forEach(el => {
+                if(el.id !== 'f_cost') el.value = '';
+                else el.value = 0;
+            });
+            document.getElementById('history-view-container').classList.add('view-hidden');
+            document.getElementById('form-view-container').classList.remove('view-hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showHistoryView() {
+            document.getElementById('history-view-container').classList.remove('view-hidden');
+            document.getElementById('form-view-container').classList.add('view-hidden');
+            document.getElementById('edit-mode-badge').classList.add('hidden');
+            fetchRecords();
         }
 
         async function saveMedicalRecord() {
@@ -272,13 +244,11 @@
                 cost: parseFloat(document.getElementById('f_cost').value) || 0,
                 updated_at: new Date()
             };
-
             try {
                 if (editingId) await db.from('medical_records').update(data).eq('id', editingId);
                 else await db.from('medical_records').insert([data]);
-                await db.from('animals').update({ weight: parseFloat(document.getElementById('f_weight').value) }).eq('id', animalId);
-                alert("✅ บันทึกเรียบร้อย");
-                location.reload();
+                alert("✅ บันทึกสำเร็จ");
+                showHistoryView();
             } catch (err) { alert(err.message); }
         }
 
@@ -297,21 +267,18 @@
             document.getElementById('f_note').value = rec.note || '';
             document.getElementById('f_cost').value = rec.cost || 0;
             if (rec.appointment) document.getElementById('f_appointment')._flatpickr.setDate(rec.appointment);
+
+            document.getElementById('history-view-container').classList.add('view-hidden');
+            document.getElementById('form-view-container').classList.remove('view-hidden');
             document.getElementById('edit-mode-badge').classList.remove('hidden');
-            document.getElementById('btn-cancel').classList.remove('hidden');
-            window.scrollTo({ top: 300, behavior: 'smooth' });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         async function deleteRecord(id) {
-            if (confirm("ยืนยันการลบ?")) {
+            if (confirm("ยืนยันการลบประวัตินี้?")) {
                 await db.from('medical_records').delete().eq('id', id);
                 fetchRecords();
             }
-        }
-
-        function resetForm() {
-            editingId = null;
-            location.reload();
         }
 
         function goBack() { window.location.href = 'animals.html'; }
