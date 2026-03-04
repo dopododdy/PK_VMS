@@ -46,7 +46,7 @@
                 <div class="w-14 h-14 rounded-2xl bg-teal-500/20 flex items-center justify-center text-3xl shadow-lg border border-teal-500/20">🗂️</div>
                 <div>
                     <h1 class="text-4xl font-black text-white">ฐานข้อมูลรายการกลาง</h1>
-                    <p class="text-slate-400 mt-2 font-medium">จัดการรายการ ยา (Rx), หัตถการ (Tx), สินค้า และผลแล็บ (Lab)</p>
+                    <p class="text-slate-400 mt-2 font-medium">จัดการรายการ ยา, สินค้า, หัตถการ และผลแล็บ (Master Catalog)</p>
                 </div>
             </div>
             <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl shadow-xl border border-white/5">🏠</a>
@@ -54,7 +54,7 @@
 
         <div class="flex border-b border-white/10 mb-8">
             <div id="tab-pharmacy" class="tab-btn active" onclick="switchTab('pharmacy')">💊 ยาและสินค้า (Rx)</div>
-            <div id="tab-services" class="tab-btn" onclick="switchTab('services')">🔬 หัตถการและแล็บ (Tx/Lab)</div>
+            <div id="tab-services" class="tab-btn" onclick="switchTab('services')">🩺 หัตถการและแล็บ (Tx/Lab)</div>
         </div>
 
         <div class="grid grid-cols-12 gap-8">
@@ -66,18 +66,18 @@
                         
                         <div>
                             <label class="label-text">ชื่อรายการ</label>
-                            <input type="text" id="f_name" class="input-box font-bold" placeholder="เช่น Amoxy 500mg, ตรวจเลือด..." required>
+                            <input type="text" id="f_name" class="input-box font-bold" placeholder="ชื่อรายการ..." required>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="label-text">หมวดหมู่</label>
                                 <select id="f_category" class="input-box font-bold">
-                                </select>
+                                    </select>
                             </div>
                             <div>
                                 <label class="label-text">หน่วยเรียก</label>
-                                <input type="text" id="f_unit" class="input-box" placeholder="เม็ด / ml / ครั้ง">
+                                <input type="text" id="f_unit" class="input-box" placeholder="เม็ด/ครั้ง/ml">
                             </div>
                         </div>
 
@@ -97,7 +97,7 @@
             <div class="col-span-12 lg:col-span-8">
                 <div class="section-card">
                     <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-xl font-bold text-white" id="list-title">รายการ Rx ทั้งหมด</h3>
+                        <h3 class="text-xl font-bold text-white" id="list-title">รายการทั้งหมด</h3>
                         <div class="w-64">
                             <input type="text" id="search-box" class="input-box py-2 text-sm" placeholder="🔍 ค้นหาเร็ว..." oninput="renderTable()">
                         </div>
@@ -127,8 +127,8 @@
         let allData = [];
         let editingId = null;
 
-        // ปรับปรุงหมวดหมู่ตามคำขอ
-        const CATEGORIES = {
+        // กำหนดหมวดหมู่ตาม Tab
+        const CATEGORIES_MAP = {
             pharmacy: ['ยา', 'สินค้า'],
             services: ['หัตถการ', 'Lab']
         };
@@ -143,10 +143,11 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.add('active');
             
-            document.getElementById('list-title').innerText = (tab === 'pharmacy') ? 'รายการ Rx ทั้งหมด' : 'รายการ Tx/Lab ทั้งหมด';
-            
+            // อัปเดต Dropdown หมวดหมู่ในฟอร์ม
             const catSelect = document.getElementById('f_category');
-            catSelect.innerHTML = CATEGORIES[tab].map(c => `<option value="${c}">${c}</option>`).join('');
+            catSelect.innerHTML = CATEGORIES_MAP[tab].map(c => `<option value="${c}">${c}</option>`).join('');
+            
+            document.getElementById('list-title').innerText = (tab === 'pharmacy') ? '📦 รายการยาและสินค้า' : '🏥 รายการหัตถการและแล็บ';
             
             resetForm();
             await loadData();
@@ -173,7 +174,7 @@
             });
 
             if (filtered.length === 0) {
-                body.innerHTML = `<tr><td colspan="4" class="py-20 text-center text-slate-600 font-bold">ไม่พบข้อมูลในหมวดนี้</td></tr>`;
+                body.innerHTML = `<tr><td colspan="4" class="py-20 text-center text-slate-600 font-bold">ไม่พบข้อมูล</td></tr>`;
                 return;
             }
 
@@ -218,10 +219,12 @@
             }
 
             try {
-                if (editingId) await db.from(table).update(payload).eq('id', editingId);
-                else await db.from(table).insert([payload]);
-                
-                alert("✅ บันทึกข้อมูลสำเร็จ");
+                if (editingId) {
+                    await db.from(table).update(payload).eq('id', editingId);
+                } else {
+                    await db.from(table).insert([payload]);
+                }
+                alert("✅ บันทึกสำเร็จ");
                 switchTab(currentTab);
             } catch (err) { alert(err.message); }
         };
@@ -229,18 +232,21 @@
         function editItem(id) {
             const item = allData.find(i => i.id === id);
             if (!item) return;
+
             editingId = id;
             document.getElementById('form-title').innerText = "✏️ แก้ไขข้อมูล";
             document.getElementById('btn-cancel').classList.remove('hidden');
+            
             document.getElementById('f_name').value = item.item_name || item.service_name;
             document.getElementById('f_category').value = item.category || '';
             document.getElementById('f_unit').value = item.unit || '';
             document.getElementById('f_price').value = item.price_per_unit || item.price;
+
             window.scrollTo({ top: 150, behavior: 'smooth' });
         }
 
         async function deleteItem(id) {
-            if (!confirm("ยืนยันการลบรายการนี้?")) return;
+            if (!confirm("ลบรายการนี้?")) return;
             const table = (currentTab === 'pharmacy') ? 'pharmacy' : 'services';
             await db.from(table).delete().eq('id', id);
             loadData();
