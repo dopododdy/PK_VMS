@@ -19,33 +19,34 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
-        /* Sidebar Style */
+        /* Sidebar Style ปรับเป็น 3 ส่วน */
         .sidebar-container { position: relative; width: 480px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .pet-card { 
-            padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
-            display: grid; grid-template-columns: 85px 1fr; gap: 16px; align-items: start; transition: 0.2s;
+            padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
+            display: grid; grid-template-columns: 75px 1fr 65px; gap: 12px; align-items: stretch; transition: 0.2s;
         }
         .pet-card:hover { background: rgba(255,255,255,0.07); }
-        .pet-card.active { background: rgba(20, 184, 177, 0.18); border-left: 6px solid var(--teal); }
+        .pet-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
         
-        /* ชื่อสัตว์ใหญ่เท่าหัวข้อ */
-        .pet-main-name { color: #fff; font-weight: 900; font-size: 1.5rem; line-height: 1.2; margin-bottom: 2px; }
-        .hn-badge { background: #1e293b; color: #60a5fa; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 13px; display: inline-block; margin-bottom: 6px; }
-        .owner-subtext { color: #94a3b8; font-size: 14px; }
-        .phone-badge { color: var(--teal); font-weight: 700; font-size: 13px; margin-top: 4px; display: block; }
+        .pet-main-name { color: #fff; font-weight: 800; font-size: 1.1rem; line-height: 1.2; }
+        .hn-col { background: rgba(30, 41, 59, 0.8); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; font-size: 0.85rem; }
+        .owner-subtext { color: #94a3b8; font-size: 0.85rem; }
+        .phone-badge { color: var(--teal); font-weight: 700; font-size: 0.85rem; }
 
-        /* Form */
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 16px; }
+        /* Button consistency */
+        .btn-base { @apply px-4 py-2 rounded-xl font-bold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2; }
+        .btn-teal { @apply bg-teal-600 hover:bg-teal-500 text-white; }
+        .btn-blue { @apply bg-blue-600 hover:bg-blue-500 text-white; }
+        .btn-red { @apply bg-red-600/20 text-red-400 border border-red-600/30 hover:bg-red-600 hover:text-white; }
+        .btn-ghost { @apply border border-white/10 text-slate-400 hover:bg-white/5; }
+
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         .zone-pet { background: rgba(30, 41, 59, 0.4); border-radius: 25px; padding: 25px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
         .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px; display: block; font-weight: 700; }
         
-        .btn-read-card { background: #2563eb; color: white; padding: 8px 18px; border-radius: 12px; font-weight: 800; transition: 0.2s; }
-        .btn-read-card:hover { background: #3b82f6; transform: translateY(-2px); }
-        .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; font-size: 1.2rem !important; border: 2px solid #ef4444 !important; }
-
-        /* Custom Datepicker Style */
-        .flatpickr-input { cursor: pointer; background: rgba(20, 184, 177, 0.05) !important; color: var(--teal) !important; font-weight: 700 !important; border-color: rgba(20, 184, 177, 0.3) !important; }
+        .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; border: 2px solid #ef4444 !important; }
+        .flatpickr-input { cursor: pointer; color: var(--teal) !important; font-weight: 700 !important; }
     </style>
 </head>
 <body>
@@ -54,16 +55,14 @@
             <div class="p-6 flex-shrink-0 border-b border-white/5">
                 <div class="flex justify-between items-center mb-5">
                     <h2 class="text-2xl font-black text-white">เวชระเบียนสัตว์</h2>
-                    <div class="flex gap-4 items-center">
-                        <a href="index.html" class="text-3xl opacity-60 hover:opacity-100 transition-all">🏠</a>
-                    </div>
+                    <a href="index.html" class="text-3xl opacity-60 hover:opacity-100 transition-all">🏠</a>
                 </div>
                 <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อสัตว์, HN, เจ้าของ..." oninput="renderSidebar()">
             </div>
             <div id="owner-list" class="flex-1 overflow-y-auto px-2 pb-10"></div>
             <div class="p-5">
-                <button onclick="createNewForm()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-black py-4 rounded-2xl text-xl shadow-xl transition-all">
-                    + ลงทะเบียนสัตว์ใหม่
+                <button onclick="createNewForm()" class="w-full btn-base btn-teal py-4 text-xl shadow-xl">
+                    <span>+ ลงทะเบียนสัตว์ใหม่</span>
                 </button>
             </div>
         </aside>
@@ -78,7 +77,6 @@
 
     <script>
         let allAnimals = []; let allOwners = []; let allPhones = [];
-        const TH_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
         async function loadData() {
             const [resO, resA, resP] = await Promise.all([
@@ -95,10 +93,7 @@
         function renderSidebar() {
             const term = document.getElementById('search-box').value.toLowerCase();
             const container = document.getElementById('owner-list');
-            
-            // เรียงลำดับตาม HN (Numeric Sort)
             const sorted = [...allAnimals].sort((a, b) => parseInt(a.owner_hn) - parseInt(b.owner_hn));
-
             const filtered = sorted.filter(pet => {
                 const owner = allOwners.find(o => o.hn === pet.owner_hn);
                 return pet.pet_name.toLowerCase().includes(term) || pet.owner_hn.includes(term) || owner?.owner_name.toLowerCase().includes(term);
@@ -111,15 +106,13 @@
                 
                 return `
                     <div class="pet-card" onclick="editOwner('${pet.owner_hn}')" id="pet-${pet.id}">
-                        <div class="text-center">
-                            <span class="hn-badge">#${pet.owner_hn}</span>
-                            <div class="text-4xl mt-1">${typeIcon}</div>
-                        </div>
-                        <div class="flex flex-col">
+                        <div class="hn-col">#${pet.owner_hn}</div>
+                        <div class="flex flex-col justify-center min-w-0">
                             <span class="pet-main-name truncate">${pet.pet_name}</span>
                             <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
                             <span class="phone-badge">📞 ${p1}</span>
                         </div>
+                        <div class="flex items-center justify-center text-4xl">${typeIcon}</div>
                     </div>`;
             }).join('');
         }
@@ -131,7 +124,10 @@
                     <div class="bg-slate-800/40 p-10 rounded-[40px] border border-white/5 mb-8 shadow-2xl">
                         <div class="flex justify-between items-center mb-8">
                             <h3 class="text-3xl font-black text-blue-400 flex items-center gap-3">👤 ข้อมูลเจ้าของสัตว์</h3>
-                            <button onclick="readSmartCard()" class="btn-read-card">🪪 อ่านบัตรประชาชน</button>
+                            <div class="flex gap-2">
+                                <button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตร ปชช</button>
+                                ${owner.hn !== 'AUTO' ? `<button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>` : ''}
+                            </div>
                         </div>
                         <div class="grid grid-cols-12 gap-6">
                             <div class="col-span-2"><label class="label-text">HN</label><input type="text" id="f_hn" class="input-box font-black text-blue-400 text-center text-xl" value="${owner.hn}" readonly></div>
@@ -147,7 +143,7 @@
                         <button onclick="addNewPetRow()" class="w-full border-4 border-dashed border-white/5 py-6 rounded-3xl text-slate-500 hover:text-teal-400 transition-all font-black">+ เพิ่มสัตว์เลี้ยงรายการใหม่</button>
                     </div>
 
-                    <button onclick="saveAllData()" class="w-full bg-teal-500 py-6 rounded-[30px] text-navy font-black text-3xl mt-10 shadow-2xl hover:bg-teal-400 transition-all active:scale-95">💾 บันทึกข้อมูลทั้งหมด</button>
+                    <button onclick="saveAllData()" class="w-full btn-base btn-teal py-6 text-3xl mt-10 shadow-2xl">💾 บันทึกข้อมูลทั้งหมด</button>
                 </div>`;
             initAllPickers();
             updateBreedOptions();
@@ -159,7 +155,10 @@
                 <div class="zone-pet border-l-[12px] border-teal-500 shadow-2xl" data-pet-id="${pet.id || ''}">
                     <div class="flex justify-between items-center mb-8">
                         <h4 class="text-3xl font-black text-white">🐾 ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'}</h4>
-                        <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="text-red-400 font-bold hover:underline">🗑️ ลบรายการนี้</button>
+                        <div class="flex gap-2">
+                            ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติการรักษา</button>` : ''}
+                            <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red">🗑️ ลบ</button>
+                        </div>
                     </div>
                     <div class="grid grid-cols-12 gap-5">
                         <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-black text-xl" value="${pet.pet_name || ''}"></div>
@@ -180,11 +179,7 @@
                             </select>
                         </div>
                         <div class="col-span-2"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="p_weight input-box text-center text-yellow-400 font-black text-xl" value="${pet.weight || ''}"></div>
-                        
-                        <div class="col-span-4"><label class="label-text">วดป. เกิด</label>
-                            <input type="text" class="p_dob input-box datepicker-thai" value="${pet.birth_date || ''}" placeholder="เลือกวันที่...">
-                        </div>
-                        
+                        <div class="col-span-4"><label class="label-text">วดป. เกิด</label><input type="text" class="p_dob input-box datepicker-thai" value="${pet.birth_date || ''}" placeholder="เลือกวันที่..."></div>
                         <div class="col-span-2"><label class="label-text">อายุ (ปี)</label><input type="number" class="p_age_years input-box text-center font-bold" value="${ageInfo.y}" oninput="syncFromAge(this)"></div>
                         <div class="col-span-2"><label class="label-text">อายุ (เดือน)</label><input type="number" class="p_age_months input-box text-center font-bold" value="${ageInfo.m}" oninput="syncFromAge(this)"></div>
                         <div class="col-span-4"><label class="label-text">เลขไมโครชิพ</label><input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}"></div>
@@ -193,28 +188,22 @@
                 </div>`;
         }
 
-        // --- ระบบ Datepicker ภาษาไทย (Flatpickr) ---
+        // ส่วนฟังก์ชันอื่นๆ (Logic เหมือนเดิม)
         function initAllPickers() {
             flatpickr(".datepicker-thai", {
-                locale: "th",
-                dateFormat: "Y-m-d", // ส่งค่าเข้า DB แบบสากล
-                altInput: true,
-                altFormat: "j F Y", // รูปแบบที่โชว์ให้คนดู
-                onReady: function(selectedDates, dateStr, instance) {
-                    // แปลงปีในช่องที่โชว์ให้เป็น พ.ศ.
+                locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y",
+                onReady: (selectedDates, dateStr, instance) => {
                     const altInp = instance.altInput;
                     if (dateStr) {
                         const yearBE = new Date(dateStr).getFullYear() + 543;
                         altInp.value = altInp.value.replace(new Date(dateStr).getFullYear(), yearBE);
                     }
                 },
-                onChange: function(selectedDates, dateStr, instance) {
+                onChange: (selectedDates, dateStr, instance) => {
                     const row = instance.element.closest('.zone-pet');
                     const age = getAgeDetail(dateStr);
                     row.querySelector('.p_age_years').value = age.y;
                     row.querySelector('.p_age_months').value = age.m;
-                    
-                    // อัปเดตปี พ.ศ. ในช่องกรอกทันทีที่เลือก
                     const yearBE = new Date(dateStr).getFullYear() + 543;
                     instance.altInput.value = instance.altInput.value.replace(new Date(dateStr).getFullYear(), yearBE);
                 }
@@ -227,14 +216,12 @@
             const months = parseInt(row.querySelector('.p_age_months').value) || 0;
             const d = new Date(); d.setFullYear(d.getFullYear() - years); d.setMonth(d.getMonth() - months);
             const dateStr = d.toISOString().split('T')[0];
-            
-            // อัปเดตค่าใน Flatpickr
             const picker = row.querySelector('.datepicker-thai')._flatpickr;
             picker.setDate(dateStr, true);
         }
 
         function getAgeDetail(dob) {
-            if (!dob) return { y: 0, m: 0, text: "" };
+            if (!dob) return { y: 0, m: 0 };
             const birth = new Date(dob); const now = new Date();
             let years = now.getFullYear() - birth.getFullYear();
             let months = now.getMonth() - birth.getMonth();
@@ -242,7 +229,12 @@
             return { y: years, m: months };
         }
 
-        // ฟังก์ชันช่วยเหลืออื่นๆ
+        const BREEDS = {
+            "สุนัข": ["ไทย", "ไทยหลังอาน", "บางแก้ว", "โกลเด้น รีทรีฟเวอร์", "ชิสุ", "พุดเดิ้ล", "ปอมเมอเรเนียน", "ไซบีเรียน ฮัสกี้", "เฟรนช์ บูลด็อก", "บีเกิ้ล", "ชิวาวา", "ร็อตไวเลอร์", "ดัชชุน", "ลาบราดอร์", "ผสม"],
+            "แมว": ["ไทย", "เปอร์เซีย", "บริติช ชอร์ตแฮร์", "สก๊อตติช โฟลด์", "เบงกอล", "เมนคูน", "สฟิงซ์", "อเมริกัน ชอร์ตแฮร์", "แมวส้ม", "ผสม"],
+            "อื่นๆ": ["นก", "กระต่าย", "หนูแฮมสเตอร์", "เต่า", "ชูการ์ไกลเดอร์", "อื่น ๆ"]
+        };
+
         function updateBreedOptions(el) {
             const rows = el ? [el.closest('.zone-pet')] : document.querySelectorAll('.zone-pet');
             rows.forEach(row => {
@@ -317,6 +309,24 @@
                 editOwner(hn);
             } catch (err) { alert(err.message); }
         }
+
+        async function deleteOwner(hn, name) {
+            if (!confirm(`⚠️ ยืนยันการลบเจ้าของ: ${name}?\nข้อมูลสัตว์ทั้งหมดจะหายไป`)) return;
+            await db.from('owner_phones').delete().eq('owner_hn', hn);
+            await db.from('animals').delete().eq('owner_hn', hn);
+            await db.from('owners').delete().eq('hn', hn);
+            await loadData();
+            document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><h3>เลือกรายการสัตว์</h3></div>`;
+        }
+
+        async function deletePetRecord(petId, petName) {
+            if (!confirm(`ลบสัตว์ "${petName}"?`)) return;
+            await db.from('animals').delete().eq('id', petId);
+            await loadData();
+            editOwner(document.getElementById('f_hn').value);
+        }
+
+        function gotoMedicalRecord(petId, petName, hn) { window.location.href = `medical_records.html?id=${petId}&name=${encodeURIComponent(petName)}&hn=${hn}`; }
 
         window.onload = async () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
