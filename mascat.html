@@ -22,7 +22,6 @@
         .tab-btn { @apply px-6 py-3 font-bold transition-all border-b-4 border-transparent cursor-pointer opacity-50; }
         .tab-btn.active { @apply border-teal-500 text-teal-400 opacity-100 bg-teal-500/5; }
 
-        /* Button Style */
         .btn-base { padding: 12px 24px; border-radius: 15px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; }
         .btn-teal { background-color: #0d9488 !important; }
         .btn-teal:hover { background-color: #0f766e !important; transform: translateY(-2px); }
@@ -34,8 +33,9 @@
         
         .badge { padding: 2px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; }
         .badge-ยา { background: rgba(20, 184, 177, 0.2); color: var(--teal); }
-        .badge-หัตถการ { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
         .badge-สินค้า { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+        .badge-หัตถการ { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .badge-Lab { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
     </style>
 </head>
 <body class="p-4 md:p-10">
@@ -46,15 +46,15 @@
                 <div class="w-14 h-14 rounded-2xl bg-teal-500/20 flex items-center justify-center text-3xl shadow-lg border border-teal-500/20">🗂️</div>
                 <div>
                     <h1 class="text-4xl font-black text-white">ฐานข้อมูลรายการกลาง</h1>
-                    <p class="text-slate-400 mt-2 font-medium">จัดการราคา ยา หัตถการ และสินค้าทั่วไป (Master Catalog)</p>
+                    <p class="text-slate-400 mt-2 font-medium">จัดการรายการ ยา (Rx), หัตถการ (Tx), สินค้า และผลแล็บ (Lab)</p>
                 </div>
             </div>
             <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl shadow-xl border border-white/5">🏠</a>
         </header>
 
         <div class="flex border-b border-white/10 mb-8">
-            <div id="tab-pharmacy" class="tab-btn active" onclick="switchTab('pharmacy')">💊 ยาและสินค้า</div>
-            <div id="tab-services" class="tab-btn" onclick="switchTab('services')">🩺 ค่าบริการและหัตถการ</div>
+            <div id="tab-pharmacy" class="tab-btn active" onclick="switchTab('pharmacy')">💊 ยาและสินค้า (Rx)</div>
+            <div id="tab-services" class="tab-btn" onclick="switchTab('services')">🔬 หัตถการและแล็บ (Tx/Lab)</div>
         </div>
 
         <div class="grid grid-cols-12 gap-8">
@@ -66,14 +66,14 @@
                         
                         <div>
                             <label class="label-text">ชื่อรายการ</label>
-                            <input type="text" id="f_name" class="input-box font-bold" placeholder="ระบุชื่อรายการ..." required>
+                            <input type="text" id="f_name" class="input-box font-bold" placeholder="เช่น Amoxy 500mg, ตรวจเลือด..." required>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="label-text">หมวดหมู่</label>
                                 <select id="f_category" class="input-box font-bold">
-                                    </select>
+                                </select>
                             </div>
                             <div>
                                 <label class="label-text">หน่วยเรียก</label>
@@ -97,7 +97,7 @@
             <div class="col-span-12 lg:col-span-8">
                 <div class="section-card">
                     <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-xl font-bold text-white">รายการทั้งหมดในระบบ</h3>
+                        <h3 class="text-xl font-bold text-white" id="list-title">รายการ Rx ทั้งหมด</h3>
                         <div class="w-64">
                             <input type="text" id="search-box" class="input-box py-2 text-sm" placeholder="🔍 ค้นหาเร็ว..." oninput="renderTable()">
                         </div>
@@ -114,7 +114,7 @@
                                 </tr>
                             </thead>
                             <tbody id="data-table-body">
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -127,10 +127,10 @@
         let allData = [];
         let editingId = null;
 
-        // ปรับหมวดหมู่ตามคำขอ
+        // ปรับปรุงหมวดหมู่ตามคำขอ
         const CATEGORIES = {
             pharmacy: ['ยา', 'สินค้า'],
-            services: ['หัตถการ']
+            services: ['หัตถการ', 'Lab']
         };
 
         window.onload = () => {
@@ -142,6 +142,8 @@
             editingId = null;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.add('active');
+            
+            document.getElementById('list-title').innerText = (tab === 'pharmacy') ? 'รายการ Rx ทั้งหมด' : 'รายการ Tx/Lab ทั้งหมด';
             
             const catSelect = document.getElementById('f_category');
             catSelect.innerHTML = CATEGORIES[tab].map(c => `<option value="${c}">${c}</option>`).join('');
@@ -182,7 +184,7 @@
                         <div class="text-slate-500 text-xs font-medium">หน่วย: ${item.unit || 'ไม่ระบุ'}</div>
                     </td>
                     <td class="py-5">
-                        <span class="badge badge-${item.category}">${item.category || 'ทั่วไป'}</span>
+                        <span class="badge badge-${item.category}">${item.category}</span>
                     </td>
                     <td class="py-5 text-right font-black text-2xl text-yellow-400">
                         <span class="text-sm font-bold mr-1">฿</span>${parseFloat(item[priceKey] || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
@@ -216,11 +218,9 @@
             }
 
             try {
-                if (editingId) {
-                    await db.from(table).update(payload).eq('id', editingId);
-                } else {
-                    await db.from(table).insert([payload]);
-                }
+                if (editingId) await db.from(table).update(payload).eq('id', editingId);
+                else await db.from(table).insert([payload]);
+                
                 alert("✅ บันทึกข้อมูลสำเร็จ");
                 switchTab(currentTab);
             } catch (err) { alert(err.message); }
@@ -229,21 +229,18 @@
         function editItem(id) {
             const item = allData.find(i => i.id === id);
             if (!item) return;
-
             editingId = id;
             document.getElementById('form-title').innerText = "✏️ แก้ไขข้อมูล";
             document.getElementById('btn-cancel').classList.remove('hidden');
-            
             document.getElementById('f_name').value = item.item_name || item.service_name;
             document.getElementById('f_category').value = item.category || '';
             document.getElementById('f_unit').value = item.unit || '';
             document.getElementById('f_price').value = item.price_per_unit || item.price;
-
             window.scrollTo({ top: 150, behavior: 'smooth' });
         }
 
         async function deleteItem(id) {
-            if (!confirm("ยืนยันการลบรายการนี้ออกจากฐานข้อมูล?")) return;
+            if (!confirm("ยืนยันการลบรายการนี้?")) return;
             const table = (currentTab === 'pharmacy') ? 'pharmacy' : 'services';
             await db.from(table).delete().eq('id', id);
             loadData();
