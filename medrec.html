@@ -276,16 +276,17 @@
         async function openCatalog(type) {
             currentCatalogType = type;
             const modal = document.getElementById('catalog-modal');
+            const title = document.getElementById('modal-title');
             modal.style.display = 'flex';
             updateModalUI();
 
             let items = [];
             if (type === 'lab') {
-                document.getElementById('modal-title').innerText = '🔬 เลือกรายการ Lab';
+                title.innerText = '🔬 เลือกรายการ Lab';
                 const { data } = await db.from('services').select('*').eq('category', 'Lab').order('service_name');
                 items = data.map(i => ({ name: i.service_name, price: i.price, config: i.price_config, type: 'service' }));
             } else if (type === 'tx') {
-                document.getElementById('modal-title').innerText = '💉 หัตถการ และ ยาฉีด';
+                title.innerText = '💉 หัตถการ และ ยาฉีด';
                 const [resInj, resProc] = await Promise.all([
                     db.from('pharmacy').select('*').eq('category', 'Injection').order('item_name'),
                     db.from('services').select('*').eq('category', 'หัตถการ').order('service_name')
@@ -295,8 +296,8 @@
                     ...(resProc.data || []).map(i => ({ name: i.service_name, price: i.price, config: i.price_config, type: 'procedure' }))
                 ];
             } else if (type === 'rx') {
-                document.getElementById('modal-title').innerHTML = `💊 สินค้า / ยา <button onclick="window.location.href='rx.html?id=${animalId}&hn=${ownerHN}'" class="ml-4 btn-base bg-orange-500 !py-1 !px-4 text-sm">ระบบจ่ายยาคำนวณโดส ➔</button>`;
-                const { data } = await db.from('pharmacy').select('*').eq('category', 'General').order('item_name');
+                title.innerHTML = `💊 สินค้า / ยาจ่ายกลับ <button onclick="window.location.href='rx.html?id=${animalId}&hn=${ownerHN}'" class="ml-4 btn-base bg-orange-500 !py-1 !px-4 text-sm">ระบบจ่ายยาคำนวณโดส ➔</button>`;
+                const { data } = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']).order('item_name');
                 items = data.map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'product' }));
             }
             fullCatalog = items;
