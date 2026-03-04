@@ -295,28 +295,27 @@
             let items = [];
             if (type === 'lab') {
                 title.innerText = 'เลือกรายการ Lab';
-                // แก้ไข: ดึงจากหมวดหมู่ที่อาจเป็น Lab, ตรวจเลือด หรือ หัตถการทั้งหมด แล้วค่อยให้ผู้ใช้ค้นหา
+                // แสดงเฉพาะ Lab (ไม่แสดงหัตถการ)
                 const { data } = await db.from('services')
                     .select('*')
-                    .or('category.eq.หัตถการ,category.eq.Lab,category.eq.ตรวจเลือด,category.eq.ห้องแล็บ');
+                    .or('category.eq.Lab,category.eq.ตรวจเลือด,category.eq.ห้องแล็บ');
+                if (data) items = data.map(i => ({ name: i.service_name, price: i.price, id: i.id }));
                 
-                if (data) {
-                    items = data.map(i => ({ name: i.service_name, price: i.price, id: i.id }));
-                }
             } else if (type === 'tx') {
-                title.innerText = 'เลือกหัตถการ / ยาฉีด';
-                const { data: srv } = await db.from('services').select('*').eq('category', 'หัตถการ');
-                const { data: phr } = await db.from('pharmacy').select('*').eq('category', 'ยา'); 
-                items = [
-                    ...(srv || []).map(i => ({ name: i.service_name, price: i.price, id: i.id })),
-                    ...(phr || []).map(i => ({ name: i.item_name, price: i.price_per_unit, id: i.id }))
-                ];
+                title.innerText = 'เลือกหัตถการ';
+                // แสดงเฉพาะหัตถการ
+                const { data } = await db.from('services')
+                    .select('*')
+                    .eq('category', 'หัตถการ');
+                if (data) items = data.map(i => ({ name: i.service_name, price: i.price, id: i.id }));
+                
             } else if (type === 'rx') {
-                title.innerText = 'สั่งยา (ยากิน/สินค้า)';
-                const { data } = await db.from('pharmacy').select('*');
-                if (data) {
-                    items = data.map(i => ({ name: i.item_name, price: i.price_per_unit, id: i.id }));
-                }
+                title.innerText = 'เลือกยา และ สินค้า';
+                // แสดง ยา และ สินค้า
+                const { data } = await db.from('pharmacy')
+                    .select('*')
+                    .or('category.eq.ยา,category.eq.สินค้า');
+                if (data) items = data.map(i => ({ name: i.item_name, price: i.price_per_unit, id: i.id }));
             }
             
             fullCatalog = items;
