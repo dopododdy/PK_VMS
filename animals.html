@@ -39,6 +39,9 @@
         .btn-delete-pet { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1.5px solid rgba(239, 68, 68, 0.3); padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; transition: 0.2s; }
         .btn-delete-pet:hover { background: #ef4444; color: white; }
 
+        .btn-read-card { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1.5px solid rgba(59, 130, 246, 0.3); padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; transition: 0.2s; }
+        .btn-read-card:hover { background: #3b82f6; color: white; }
+
         .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; font-size: 1.25rem !important; border: 2px solid #ef4444 !important; }
         
         /* Merge Tool Styles */
@@ -84,13 +87,14 @@
 
         function removePrefix(name) { return name ? name.replace(/^(นาย|นางสาว|นาง|เด็กชาย|เด็กหญิง|คุณ|ด\.ช\.|ด\.ญ\.)/g, "").trim() : "-"; }
 
-        function calculateAge(dob) {
-            if (!dob) return "ไม่ระบุ";
+        // ฟังก์ชันคำนวณอายุแบบส่งกลับเป็น วัตถุ ปี/เดือน
+        function getAgeDetail(dob) {
+            if (!dob) return { y: 0, m: 0, text: "ไม่ระบุ" };
             const birth = new Date(dob); const now = new Date();
             let years = now.getFullYear() - birth.getFullYear();
             let months = now.getMonth() - birth.getMonth();
             if (months < 0) { years--; months += 12; }
-            return `${years} ปี ${months} เดือน`;
+            return { y: years, m: months, text: `${years} ปี ${months} เดือน` };
         }
 
         async function loadData() {
@@ -137,7 +141,8 @@
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-2xl font-bold text-blue-400 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
                             <div class="flex gap-2">
-                                ${owner.hn !== 'AUTO' ? `<button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-delete-pet">🗑️ ลบข้อมูลเจ้าของ</button>` : ''}
+                                <button onclick="readSmartCard()" class="btn-read-card">🪪 อ่านบัตรประชาชน</button>
+                                <button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-delete-pet">🗑️ ลบข้อมูลเจ้าของ</button>
                             </div>
                         </div>
                         <div class="grid grid-cols-12 gap-5">
@@ -160,30 +165,58 @@
         }
 
         function petRowHtml(pet) {
-            const ageText = calculateAge(pet.birth_date);
+            const ageInfo = getAgeDetail(pet.birth_date);
             const thaiDate = pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }) : "ยังไม่ระบุ";
             return `
                 <div class="zone-pet border-l-8 border-teal-500 shadow-lg" data-pet-id="${pet.id || ''}">
                     <div class="flex justify-between items-center mb-6">
-                        <h4 class="text-xl font-bold text-white flex items-center gap-3">🐾 ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'} <span class="bg-teal-500/10 text-teal-400 px-4 py-1 rounded-full text-sm font-bold age-display">${ageText}</span></h4>
+                        <h4 class="text-xl font-bold text-white flex items-center gap-3">🐾 ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'} <span class="bg-teal-500/10 text-teal-400 px-4 py-1 rounded-full text-sm font-bold age-display">${ageInfo.text}</span></h4>
                         <div class="flex gap-2">
                             ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-medical-record">🏥 ประวัติรักษา</button>` : ''}
-                            ${pet.id ? `<button onclick="deletePetRecord('${pet.id}', '${pet.pet_name}')" class="btn-delete-pet">🗑️ ลบ</button>` : ''}
+                            <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-delete-pet">🗑️ ${pet.id ? 'ลบ' : 'นำแถวนี้ออก'}</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-bold" value="${pet.pet_name || ''}"></div>
-                        <div class="col-span-2"><label class="label-text">ชนิด</label><select class="p_type input-box" onchange="updateBreedOptions(this)"><option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>สุนัข</option><option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>แมว</option><option value="อื่นๆ" ${pet.pet_type==='อื่นๆ'?'selected':''}>อื่นๆ</option></select></div>
+                        <div class="col-span-2"><label class="label-text">🧬 ชนิด</label><select class="p_type input-box" onchange="updateBreedOptions(this)"><option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>สุนัข</option><option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>แมว</option><option value="อื่นๆ" ${pet.pet_type==='อื่นๆ'?'selected':''}>อื่นๆ</option></select></div>
                         <div class="col-span-3"><label class="label-text">สายพันธุ์</label><select class="p_breed input-box" data-val="${pet.breed || 'ไทย'}"></select></div>
-                        <div class="col-span-2"><label class="label-text">เพศ</label><select class="p_gender input-box"><option value="เมีย" ${pet.gender==='เมีย'?'selected':''}>เมีย</option><option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>ผู้</option><option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>ผู้ตอน</option><option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>เมียหมัน</option></select></div>
+                        <div class="col-span-2"><label class="label-text">⚤ เพศ</label><select class="p_gender input-box"><option value="เมีย" ${pet.gender==='เมีย'?'selected':''}>เมีย</option><option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>ผู้</option><option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>ผู้ตอน</option><option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>เมียหมัน</option></select></div>
                         <div class="col-span-2"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="p_weight input-box text-center text-yellow-400 font-bold" value="${pet.weight || ''}"></div>
                         <div class="col-span-4"><label class="label-text">วดป. เกิด (<span class="thai-date-text text-teal-400">${thaiDate}</span>)</label><input type="date" class="p_dob input-box" value="${pet.birth_date || ''}" onchange="handleDobChange(this)"></div>
-                        <div class="col-span-2"><label class="label-text">อายุ (ปี)</label><input type="number" class="p_age_years input-box text-center" placeholder="0" oninput="handleAgeInput(this)"></div>
-                        <div class="col-span-2"><label class="label-text">อายุ (เดือน)</label><input type="number" class="p_age_months input-box text-center" placeholder="0" oninput="handleAgeInput(this)"></div>
+                        <div class="col-span-2"><label class="label-text">อายุ (ปี)</label><input type="number" class="p_age_years input-box text-center" placeholder="0" value="${ageInfo.y}" oninput="handleAgeInput(this)"></div>
+                        <div class="col-span-2"><label class="label-text">อายุ (เดือน)</label><input type="number" class="p_age_months input-box text-center" placeholder="0" value="${ageInfo.m}" oninput="handleAgeInput(this)"></div>
                         <div class="col-span-4"><label class="label-text">เลขไมโครชิพ</label><input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}"></div>
                         <div class="col-span-12"><label class="label-text text-red-400 font-bold">🚨 ข้อควรระวัง / แพ้ยา</label><textarea class="p_congenital input-box critical-box h-[80px]">${pet.congenital_disease || ''}</textarea></div>
                     </div>
                 </div>`;
+        }
+
+        // ฟังก์ชันอ่านบัตรประชาชน
+        async function readSmartCard() {
+            try {
+                const btn = event.currentTarget;
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = "⏳ กำลังอ่านบัตร...";
+
+                const res = await fetch('http://127.0.0.1:8080/read');
+                const result = await res.json();
+
+                if (result.status === "success") {
+                    const p = result.data;
+                    document.getElementById("f_owner_name").value = p.prefix + p.firstname + " " + p.lastname;
+                    document.getElementById("f_address").value = p.address;
+                    document.getElementById("f_phone1").focus();
+                } else {
+                    alert("❌ " + result.message);
+                }
+            } catch (e) {
+                alert("❌ โปรดเปิดโปรแกรม Agent บัตรประชาชนก่อนใช้งาน");
+            } finally {
+                const btn = document.querySelector('.btn-read-card');
+                btn.disabled = false;
+                btn.innerHTML = "🪪 อ่านบัตรประชาชน";
+            }
         }
 
         async function saveAllData() {
@@ -308,28 +341,16 @@
             if (!confirm(confirmMsg)) return;
 
             try {
-                // 1. ย้ายสัตว์เลี้ยง (Animals)
                 await db.from('animals').update({ owner_hn: targetHN }).in('owner_hn', sourceHNs);
-                
-                // 2. ย้ายเบอร์โทรศัพท์ (Phones)
                 await db.from('owner_phones').update({ owner_hn: targetHN }).in('owner_hn', sourceHNs);
-
-                // 3. ย้ายประวัติการรักษา (ถ้ามีตาราง medical_records)
-                // ตรวจสอบชื่อตารางในฐานข้อมูลของคุณด้วย หากชื่อต่างกันให้แก้ไขตรงนี้
                 try {
                     await db.from('medical_records').update({ owner_hn: targetHN }).in('owner_hn', sourceHNs);
-                } catch(e) { console.log("No medical_records table or error moving records."); }
-
-                // 4. ลบเจ้าของที่ซ้ำ (Old Owners)
+                } catch(e) { console.log("No medical_records table."); }
                 await db.from('owners').delete().in('hn', sourceHNs);
-
                 alert("✅ รวมข้อมูลสำเร็จ!");
                 await loadData();
                 editOwner(targetHN);
-            } catch (err) {
-                alert("เกิดข้อผิดพลาด: " + err.message);
-                console.error(err);
-            }
+            } catch (err) { alert("เกิดข้อผิดพลาด: " + err.message); }
         }
 
         // --- ฟังก์ชันช่วยเหลืออื่นๆ ---
@@ -337,16 +358,26 @@
             const row = el.closest('.zone-pet');
             const years = parseInt(row.querySelector('.p_age_years').value) || 0;
             const months = parseInt(row.querySelector('.p_age_months').value) || 0;
-            if (years > 0 || months > 0) {
+            if (years >= 0 || months >= 0) {
                 const d = new Date(); d.setFullYear(d.getFullYear() - years); d.setMonth(d.getMonth() - months);
-                const dobInput = row.querySelector('.p_dob'); dobInput.value = d.toISOString().split('T')[0];
-                handleDobChange(dobInput);
+                const dobInput = row.querySelector('.p_dob'); 
+                dobInput.value = d.toISOString().split('T')[0];
+                
+                // อัปเดตการแสดงผลวันที่ไทยและข้อความอายุ (ไม่แก้ไข textbox ซ้ำซ้อนขณะพิมพ์)
+                row.querySelector('.age-display').innerText = `${years} ปี ${months} เดือน`;
+                row.querySelector('.thai-date-text').innerText = dobInput.value ? new Date(dobInput.value).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }) : "ยังไม่ระบุ";
             }
         }
 
         function handleDobChange(el) {
             const row = el.closest('.zone-pet');
-            row.querySelector('.age-display').innerText = calculateAge(el.value);
+            const ageInfo = getAgeDetail(el.value);
+            
+            // อัปเดต Textbox ปี และ เดือน
+            row.querySelector('.p_age_years').value = ageInfo.y;
+            row.querySelector('.p_age_months').value = ageInfo.m;
+            
+            row.querySelector('.age-display').innerText = ageInfo.text;
             row.querySelector('.thai-date-text').innerText = el.value ? new Date(el.value).toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }) : "ยังไม่ระบุ";
         }
 
@@ -389,6 +420,10 @@
         }
 
         async function deleteOwner(hn, name) {
+            if (hn === "AUTO") {
+                document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><div class="text-9xl mb-4">📋</div><h3 class="text-3xl font-bold">เลือกรายชื่อจากด้านซ้ายเพื่อแก้ไข</h3></div>`;
+                return;
+            }
             if (!confirm(`⚠️ ยืนยันการลบข้อมูลของเจ้าของ: ${name} (HN: ${hn})?\nข้อมูลสัตว์เลี้ยงและประวัติทั้งหมดจะถูกลบออกถาวร`)) return;
             try {
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
