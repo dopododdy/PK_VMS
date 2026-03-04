@@ -40,12 +40,10 @@
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* Custom Bullet List */
         .bullet-list { list-style: none; padding: 0; margin: 0; }
         .bullet-list li { position: relative; padding-left: 15px; font-size: 0.9rem; margin-bottom: 2px; }
         .bullet-list li::before { content: "•"; position: absolute; left: 0; color: var(--teal); }
 
-        /* Route Checkbox */
         .route-opt input { display: none; }
         .route-opt span { display: inline-block; padding: 6px 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
         .route-opt input:checked + span { background: var(--teal); color: black; border-color: var(--teal); }
@@ -121,7 +119,7 @@
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical text-yellow-400">Dx (Diagnosis)</label><textarea id="f_dx" class="input-box h-32 border-yellow-500/30" placeholder="การวินิจฉัย..."></textarea></div>
                     
                     <div class="col-span-12 md:col-span-6">
-                        <label class="label-clinical">💉 Tx (Treatment)</label>
+                        <label class="label-clinical">💉 Tx (หัตถการ และ ยาฉีด)</label>
                         <div id="list_tx_display" class="list-box overflow-y-auto max-h-32" onclick="openCatalog('tx')">คลิกเพื่อเลือก...</div>
                         <input type="hidden" id="f_tx">
                     </div>
@@ -132,7 +130,7 @@
                     </div>
                     
                     <div class="col-span-12 md:col-span-3"><label class="label-clinical">Plan / แผนการรักษา</label><input type="text" id="f_plan" class="input-box"></div>
-                    <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">📅 Appointment / วันนัด</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
+                    <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">📅 วันนัด</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
                     <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ</label><input type="text" id="f_app_note" class="input-box" placeholder="เหตุผลการนัด..."></div>
                     <div class="col-span-12 md:col-span-3"><label class="label-text font-bold text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-2xl font-black text-yellow-400" value="0"></div>
                     
@@ -182,7 +180,7 @@
                     <input type="number" id="inj-ml" class="input-box text-xl font-bold" step="0.1" value="0.1">
                 </div>
                 <div>
-                    <label class="label-clinical">Route (ติ๊กเลือก)</label>
+                    <label class="label-clinical">Route (ทางที่ให้ยา)</label>
                     <div class="flex flex-wrap gap-2">
                         <label class="route-opt"><input type="checkbox" name="route" value="SC"><span>SC</span></label>
                         <label class="route-opt"><input type="checkbox" name="route" value="IM"><span>IM</span></label>
@@ -216,7 +214,6 @@
             await fetchRecords();
         };
 
-        // Helper: แปลง comma string เป็น Bullet List
         function drawBullets(str) {
             if (!str || str.trim() === "") return "-";
             return `<ul class="bullet-list">${str.split(', ').map(i => `<li>${i}</li>`).join('')}</ul>`;
@@ -291,17 +288,24 @@
             let items = [];
             if (type === 'lab') {
                 title.innerText = '🔬 เลือกรายการ Lab';
-                const { data } = await db.from('services').select('*').or('category.eq.Lab,category.eq.ตรวจเลือด').order('service_name');
-                items = data.map(i => ({ name: i.service_name, price: i.price, config: i.price_config }));
+                const { data } = await db.from('services').select('*').eq('category', 'Lab').order('service_name');
+                items = data.map(i => ({ name: i.service_name, price: i.price, config: i.price_config, type: 'service' }));
             } else if (type === 'tx') {
-                title.innerText = '💉 เลือกหัตถการ';
-                const { data } = await db.from('services').select('*').eq('category', 'หัตถการ').order('service_name');
-                items = data.map(i => ({ name: i.service_name, price: i.price, config: i.price_config }));
+                title.innerText = '💉 หัตถการ และ ยาฉีด';
+                
+                const [resInj, resProc] = await Promise.all([
+                    db.from('pharmacy').select('*').eq('category', 'Injection').order('item_name'),
+                    db.from('services').select('*').eq('category', 'หัตถการ').order('service_name')
+                ]);
+
+                items = [
+                    ...(resInj.data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, config: i.price_config, type: 'injection' })),
+                    ...(resProc.data || []).map(i => ({ name: i.service_name, price: i.price, config: i.price_config, type: 'procedure' }))
+                ];
             } else if (type === 'rx') {
-                // ส่วนที่ปรับปรุงใหม่: แสดงปุ่มไปหน้าสั่งยา และแสดงสินค้าทั่วไป
-                title.innerHTML = `💊 สินค้า / ยา <button onclick="window.location.href='rx.html?id=${animalId}&hn=${ownerHN}'" class="ml-4 btn-base bg-orange-500 !py-1 !px-3 text-[10px]">ระบบจ่ายยาคำนวณโดส ➔</button>`;
-                const { data } = await db.from('pharmacy').select('*').eq('category', 'สินค้า').order('item_name');
-                items = data.map(i => ({ name: i.item_name, price: i.price_per_unit }));
+                title.innerHTML = `💊 สินค้า / ยาจ่ายกลับ <button onclick="window.location.href='rx.html?id=${animalId}&hn=${ownerHN}'" class="ml-4 btn-base bg-orange-500 !py-1 !px-3 text-[10px]">ระบบจ่ายยาคำนวณโดส ➔</button>`;
+                const { data } = await db.from('pharmacy').select('*').eq('category', 'General').order('item_name');
+                items = data.map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'product' }));
             }
             fullCatalog = items;
             renderItems(items);
@@ -311,24 +315,32 @@
             const list = document.getElementById('catalog-items');
             list.innerHTML = items.map(item => `
                 <div class="p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-teal-500 cursor-pointer flex justify-between items-center group transition-all" 
-                     onclick="handleItemSelection(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                     onclick='handleItemSelection(${JSON.stringify(item)})'>
                     <div>
-                        <div class="font-bold text-white group-hover:text-teal-400">${item.name || item.item_name}</div>
-                        <div class="text-xs text-slate-500">฿${item.price}</div>
+                        <div class="font-bold text-white group-hover:text-teal-400">${item.name}</div>
+                        <div class="text-xs text-slate-500">฿${item.price || 0}</div>
                     </div>
                     <div class="text-teal-500 text-xl font-black">+</div>
                 </div>`).join('');
         }
 
         function handleItemSelection(item) {
-            if (currentCatalogType === 'tx' && item.config && Array.isArray(item.config)) {
+            const weight = parseFloat(document.getElementById('f_weight').value) || 0;
+            
+            if (item.type === 'injection') {
                 pendingItem = item;
                 document.getElementById('inj-name').innerText = item.name;
                 document.getElementById('inj-ml').value = 0.1;
                 document.querySelectorAll('input[name="route"]').forEach(c => c.checked = false);
                 document.getElementById('inj-modal').style.display = 'flex';
             } else {
-                addItemToList(item.name || item.item_name, parseFloat(item.price));
+                let finalPrice = parseFloat(item.price) || 0;
+                if (item.config && Array.isArray(item.config)) {
+                    const sortedTiers = [...item.config].sort((a,b) => a.max - b.max);
+                    const tier = sortedTiers.find(t => weight <= t.max);
+                    if (tier) finalPrice = tier.price;
+                }
+                addItemToList(item.name, finalPrice);
             }
         }
 
@@ -337,10 +349,13 @@
             const routes = Array.from(document.querySelectorAll('input[name="route"]:checked')).map(c => c.value);
             const routeStr = routes.length > 0 ? routes.join('/') : '';
             
-            let finalPrice = parseFloat(pendingItem.price);
-            const u = parseFloat(ml);
-            const tier = pendingItem.config.sort((a,b)=>a.max-b.max).find(t => u <= t.max);
-            if (tier) finalPrice = tier.price;
+            let finalPrice = parseFloat(pendingItem.price) || 0;
+            if (pendingItem.config && Array.isArray(pendingItem.config)) {
+                const mlVal = parseFloat(ml);
+                const sortedTiers = [...pendingItem.config].sort((a,b) => a.max - b.max);
+                const tier = sortedTiers.find(t => mlVal <= t.max);
+                if (tier) finalPrice = tier.price;
+            }
 
             const finalName = `${pendingItem.name} (${ml}ml) ${routeStr}`.trim();
             addItemToList(finalName, finalPrice);
@@ -352,7 +367,8 @@
             else if (currentCatalogType === 'tx') selectedTxs.push(name);
             else if (currentCatalogType === 'rx') selectedRxs.push(name);
 
-            document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) + price).toFixed(2);
+            const costInput = document.getElementById('f_cost');
+            costInput.value = (parseFloat(costInput.value) + price).toFixed(2);
             updateFormDisplays();
             updateModalUI();
         }
@@ -360,7 +376,7 @@
         function updateModalUI() {
             const div = document.getElementById('modal-session-list');
             let arr = currentCatalogType === 'lab' ? selectedLabs : (currentCatalogType === 'tx' ? selectedTxs : selectedRxs);
-            div.innerHTML = arr.length ? arr.map(n => `<span class="bg-teal-500 text-black px-2 py-1 rounded-lg text-[10px] font-bold animate-in zoom-in duration-200">✓ ${n}</span>`).join('') : '<span class="text-slate-500 text-xs italic">ยังไม่ได้เลือก...</span>';
+            div.innerHTML = arr.length ? arr.map(n => `<span class="bg-teal-500 text-black px-2 py-1 rounded-lg text-[10px] font-bold">✓ ${n}</span>`).join('') : '<span class="text-slate-500 text-xs italic">ยังไม่ได้เลือก...</span>';
         }
 
         function updateFormDisplays() {
@@ -374,12 +390,13 @@
 
         function filterCatalog() {
             const term = document.getElementById('catalog-search').value.toLowerCase();
-            renderItems(fullCatalog.filter(i => (i.name || i.item_name).toLowerCase().includes(term)));
+            renderItems(fullCatalog.filter(i => i.name.toLowerCase().includes(term)));
         }
 
         async function saveMedicalRecord() {
             const data = {
                 animal_id: animalId, owner_hn: ownerHN,
+                weight: parseFloat(document.getElementById('f_weight').value),
                 cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value,
                 pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value,
                 lab: document.getElementById('f_lab').value, tx: document.getElementById('f_tx').value,
@@ -393,7 +410,7 @@
             try {
                 if (editingId) await db.from('medical_records').update(data).eq('id', editingId);
                 else await db.from('medical_records').insert([data]);
-                await db.from('animals').update({ weight: parseFloat(document.getElementById('f_weight').value) }).eq('id', animalId);
+                await db.from('animals').update({ weight: data.weight }).eq('id', animalId);
                 location.reload();
             } catch (err) { alert(err.message); }
         }
@@ -411,19 +428,17 @@
             document.getElementById('f_cost').value = rec.cost || 0;
             document.getElementById('f_weight').value = rec.weight || 0;
             document.getElementById('f_note').value = rec.note || '';
-            
             selectedLabs = rec.lab ? rec.lab.split(', ') : [];
             selectedTxs = rec.tx ? rec.tx.split(', ') : [];
             selectedRxs = rec.rx ? rec.rx.split(', ') : [];
             updateFormDisplays();
-
             if (rec.appointment) document.getElementById('f_appointment')._flatpickr.setDate(rec.appointment);
             showFormView();
             document.getElementById('edit-mode-badge').classList.remove('hidden');
         }
 
         async function deleteRecord(id) {
-            if(!confirm("ยืนยันการลบ?")) return;
+            if(!confirm("ยืนยันการลบประวัตินี้?")) return;
             await db.from('medical_records').delete().eq('id', id);
             location.reload();
         }
@@ -434,11 +449,13 @@
             d.classList.toggle('hidden');
             a.style.transform = d.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
+
         function showFormView() { 
             document.getElementById('history-view-container').classList.add('view-hidden');
             document.getElementById('form-view-container').classList.remove('view-hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
         function showHistoryView() { location.reload(); }
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
         function goBack() { window.location.href = 'animals.html'; }
