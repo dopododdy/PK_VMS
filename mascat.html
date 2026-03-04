@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ฐานข้อมูลรายการกลาง | PK-VMS Pro</title>
+    <title>รายการหมวดหมู่ราคา | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,221 +12,160 @@
     <style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
-        body { background: var(--navy); color: #e2e8f0; }
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
-        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
-        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; }
-        .btn-base { padding: 12px 24px; border-radius: 15px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; }
-        .btn-teal { background-color: #0d9488 !important; }
-        .btn-blue { background-color: #2563eb !important; }
-        .btn-red { background-color: #dc2626 !important; }
-        .badge { padding: 4px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 900; }
-        .badge-ยา { background: rgba(20, 184, 177, 0.2); color: var(--teal); }
-        .badge-สินค้า { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
-        .badge-หัตถการ { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-        .badge-Lab { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        body { background: var(--navy); color: #e2e8f0; font-size: 1rem; }
+        
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 20px; padding: 25px; border: 1px solid var(--border); }
+        .item-row { 
+            border-bottom: 1px solid var(--border); 
+            transition: 0.2s;
+        }
+        .item-row:hover { background: rgba(255,255,255,0.02); }
+        .badge-med { background: rgba(20, 184, 177, 0.1); color: var(--teal); border: 1px solid rgba(20, 184, 177, 0.3); padding: 2px 10px; border-radius: 99px; font-weight: 700; font-size: 0.85rem; }
+        .badge-service { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 10px; border-radius: 99px; font-weight: 700; font-size: 0.85rem; }
+        .badge-lab { background: rgba(168, 85, 247, 0.1); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); padding: 2px 10px; border-radius: 99px; font-weight: 700; font-size: 0.85rem; }
     </style>
 </head>
-<body class="p-4 md:p-10">
+<body class="p-4 md:p-8">
 
-    <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-center mb-10">
-            <div class="flex items-center gap-6">
-                <div class="w-16 h-16 rounded-3xl bg-teal-500/20 flex items-center justify-center text-4xl shadow-2xl">🗂️</div>
-                <div>
-                    <h1 class="text-4xl font-black text-white">ฐานข้อมูลรายการกลาง</h1>
-                    <p class="text-slate-400 mt-2 text-lg">จัดการราคา ยา, สินค้า, หัตถการ และผลแล็บ</p>
-                </div>
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-4">
+                <a href="dashboard.html" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-xl">⬅️</a>
+                <h1 class="text-3xl font-black text-white">รายการหมวดหมู่ราคา</h1>
             </div>
-            <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl shadow-xl">🏠</a>
+            <div class="flex gap-3">
+                <button onclick="location.href='rx.html'" class="bg-teal-500 hover:bg-teal-400 text-navy px-6 py-2 rounded-xl font-black shadow-lg transition-all">+ จัดการคลังยา</button>
+            </div>
         </header>
 
-        <div class="grid grid-cols-12 gap-8">
-            <div class="col-span-12 lg:col-span-4">
-                <div class="section-card sticky top-10">
-                    <h3 id="form-title" class="text-2xl font-black text-white mb-8">➕ เพิ่มรายการใหม่</h3>
-                    <form id="master-form" class="space-y-6">
-                        <input type="hidden" id="f_id">
-                        <input type="hidden" id="f_table">
-                        
-                        <div>
-                            <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">ชื่อรายการ</label>
-                            <input type="text" id="f_name" class="input-box font-bold text-lg" required>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">หมวดหมู่</label>
-                                <select id="f_category" class="input-box font-bold">
-                                    <option value="ยา">💊 ยา</option>
-                                    <option value="สินค้า">🛍️ สินค้า</option>
-                                    <option value="หัตถการ">💉 หัตถการ</option>
-                                    <option value="Lab">🔬 Lab</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-slate-400 text-sm font-bold mb-2 ml-1">หน่วยเรียก</label>
-                                <input type="text" id="f_unit" class="input-box" placeholder="เม็ด/ครั้ง">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-yellow-400 text-sm font-bold mb-2 ml-1">ราคาขายต่อหน่วย (฿)</label>
-                            <input type="number" id="f_price" class="input-box text-3xl font-black text-yellow-400" step="0.01" required>
-                        </div>
-
-                        <div class="pt-4 space-y-3">
-                            <button type="submit" class="btn-base btn-teal w-full text-xl shadow-lg">💾 บันทึกรายการ</button>
-                            <button type="button" id="btn-cancel" class="btn-base btn-red w-full hidden" onclick="resetForm()">ยกเลิก</button>
-                        </div>
-                    </form>
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+            <div class="md:col-span-8">
+                <input type="text" id="search-input" class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-teal-500 transition-all" placeholder="ค้นหาชื่อรายการ..." oninput="renderAll()">
             </div>
+            <div class="md:col-span-4">
+                <select id="filter-type" class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-teal-500 transition-all" onchange="renderAll()">
+                    <option value="all">ทั้งหมด</option>
+                    <option value="ยา">เฉพาะรายการยา</option>
+                    <option value="หัตถการ">เฉพาะหัตถการ</option>
+                    <option value="Lab">เฉพาะรายการ Lab</option>
+                </select>
+            </div>
+        </div>
 
-            <div class="col-span-12 lg:col-span-8">
-                <div class="section-card">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                        <h3 class="text-2xl font-bold text-white">📦 รายการทั้งหมด <span id="total-count" class="text-sm font-normal text-slate-500 ml-2"></span></h3>
-                        <div class="w-full md:w-80">
-                            <input type="text" id="search-box" class="input-box py-3 text-sm" placeholder="🔍 ค้นหา..." oninput="renderTable()">
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="text-slate-500 text-xs uppercase tracking-widest border-b border-white/10">
-                                    <th class="pb-5 pl-2">รายการ</th>
-                                    <th class="pb-5">หมวดหมู่</th>
-                                    <th class="pb-5 text-right">ราคา</th>
-                                    <th class="pb-5 text-center">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="data-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
+        <div class="section-card overflow-hidden p-0">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-black/40 text-teal-400 text-sm uppercase">
+                        <tr>
+                            <th class="px-6 py-4">ชื่อรายการ / หน่วย</th>
+                            <th class="px-6 py-4">หมวดหมู่</th>
+                            <th class="px-6 py-4 text-right">ราคา (฿)</th>
+                            <th class="px-6 py-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="master-table-body">
+                        </tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script>
-        let allCombinedData = [];
-        let editingId = null;
+        let allItems = [];
 
-        window.onload = async () => { await loadAllData(); };
+        window.onload = async () => {
+            await fetchData();
+        };
 
-        async function loadAllData() {
-            try {
-                const [pharma, serv] = await Promise.all([
-                    db.from('pharmacy').select('*'),
-                    db.from('services').select('*')
-                ]);
+        async function fetchData() {
+            // 1. ดึงข้อมูลจากตารางยา (Pharmacy)
+            const { data: pharmacyData } = await db.from('pharmacy').select('*');
+            
+            // 2. ดึงข้อมูลจากตารางบริการ (Services)
+            const { data: servicesData } = await db.from('services').select('*');
 
-                allCombinedData = [
-                    ...(pharma.data || []).map(i => ({...i, _table: 'pharmacy', _name: i.item_name, _price: i.price_per_unit})),
-                    ...(serv.data || []).map(i => ({...i, _table: 'services', _name: i.service_name, _price: i.price}))
-                ].sort((a, b) => a._name.localeCompare(b._name));
-                
-                document.getElementById('total-count').innerText = `${allCombinedData.length} รายการ`;
-                renderTable();
-            } catch (err) { console.error(err); }
+            // รวมข้อมูลเข้าด้วยกันและจัด Format
+            allItems = [
+                ...(pharmacyData || []).map(item => ({
+                    id: item.id,
+                    name: item.item_name,
+                    name_th: item.name_th,
+                    unit: item.unit || 'ชิ้น',
+                    price: item.price_per_unit,
+                    type: 'ยา',
+                    source: 'pharmacy'
+                })),
+                ...(servicesData || []).map(item => ({
+                    id: item.id,
+                    name: item.service_name,
+                    name_th: '',
+                    unit: item.unit || 'ครั้ง',
+                    price: item.price,
+                    type: item.category, // หัตถการ หรือ Lab
+                    source: 'services'
+                }))
+            ];
+
+            renderAll();
         }
 
-        function renderTable() {
-            const term = document.getElementById('search-box').value.toLowerCase();
-            const body = document.getElementById('data-table-body');
-            const filtered = allCombinedData.filter(i => i._name.toLowerCase().includes(term) || i.category.toLowerCase().includes(term));
+        function renderAll() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filterType = document.getElementById('filter-type').value;
+            const container = document.getElementById('master-table-body');
+            
+            let filtered = allItems.filter(item => {
+                const matchSearch = item.name.toLowerCase().includes(searchTerm) || (item.name_th && item.name_th.includes(searchTerm));
+                const matchType = filterType === 'all' || item.type === filterType;
+                return matchSearch && matchType;
+            });
 
-            if (filtered.length === 0) {
-                body.innerHTML = `<tr><td colspan="4" class="py-20 text-center text-slate-600 font-bold">ไม่พบข้อมูล</td></tr>`;
-                return;
-            }
-
-            body.innerHTML = filtered.map(item => `
-                <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
-                    <td class="py-5 pl-2">
-                        <div class="font-bold text-white text-lg">${item._name}</div>
-                        <div class="text-slate-500 text-xs uppercase">หน่วย: ${item.unit || '-'}</div>
+            container.innerHTML = filtered.map(item => `
+                <tr class="item-row">
+                    <td class="px-6 py-4">
+                        <div class="font-black text-white">${item.name}</div>
+                        <div class="text-xs text-slate-400 mt-1">${item.name_th ? item.name_th + ' | ' : ''} หน่วย: ${item.unit}</div>
                     </td>
-                    <td class="py-5"><span class="badge badge-${item.category}">${item.category}</span></td>
-                    <td class="py-5 text-right font-black text-2xl text-yellow-400">฿${parseFloat(item._price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    <td class="py-5 text-center">
-                        <div class="flex justify-center gap-2">
-                            <button onclick="editItem('${item.id}', '${item._table}')" class="btn-base btn-blue !py-2 !px-4 text-xs">✏️</button>
-                            <button onclick="deleteItem('${item.id}', '${item._table}')" class="btn-base btn-red !py-2 !px-4 text-xs">🗑️</button>
+                    <td class="px-6 py-4">
+                        <span class="${getBadgeClass(item.type)}">${item.type}</span>
+                    </td>
+                    <td class="px-6 py-4 text-right font-black text-yellow-400">
+                        ${item.price.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex justify-center gap-4 text-xl">
+                            <button onclick="editItem('${item.id}', '${item.source}')" class="hover:scale-125 transition-all">✏️</button>
+                            <button onclick="deleteItem('${item.id}', '${item.source}')" class="hover:scale-125 transition-all">🗑️</button>
                         </div>
                     </td>
                 </tr>
             `).join('');
         }
 
-        document.getElementById('master-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const cat = document.getElementById('f_category').value;
-            const name = document.getElementById('f_name').value;
-            const price = parseFloat(document.getElementById('f_price').value);
-            const unit = document.getElementById('f_unit').value;
-            const targetTable = (cat === 'ยา' || cat === 'สินค้า') ? 'pharmacy' : 'services';
+        function getBadgeClass(type) {
+            if (type === 'ยา') return 'badge-med';
+            if (type === 'หัตถการ') return 'badge-service';
+            if (type === 'Lab') return 'badge-lab';
+            return 'badge-service';
+        }
+
+        function editItem(id, source) {
+            if (source === 'pharmacy') {
+                location.href = `rx.html?id_med=${id}`;
+            } else {
+                alert('ฟังก์ชันแก้ไขบริการกำลังพัฒนา...');
+            }
+        }
+
+        async function deleteItem(id, source) {
+            if (!confirm('ยืนยันการลบรายการนี้ออกจากฐานข้อมูล?')) return;
             
-            const payload = { category: cat, unit, updated_at: new Date() };
-            if (targetTable === 'pharmacy') { payload.item_name = name; payload.price_per_unit = price; }
-            else { payload.service_name = name; payload.price = price; }
-
-            try {
-                let result;
-                if (editingId) {
-                    const oldTable = document.getElementById('f_table').value;
-                    if (oldTable !== targetTable) {
-                        await db.from(oldTable).delete().eq('id', editingId);
-                        result = await db.from(targetTable).insert([payload]);
-                    } else {
-                        result = await db.from(targetTable).update(payload).eq('id', editingId);
-                    }
-                } else {
-                    result = await db.from(targetTable).insert([payload]);
-                }
-
-                if (result.error) throw result.error; // ตรวจสอบ Error จาก Supabase
-
-                alert("✅ บันทึกสำเร็จ");
-                resetForm();
-                await loadAllData();
-            } catch (err) { 
-                alert("❌ เกิดข้อผิดพลาด: " + err.message); 
-                console.error(err);
-            }
-        };
-
-        function editItem(id, table) {
-            const item = allCombinedData.find(i => i.id === id && i._table === table);
-            if (!item) return;
-            editingId = id;
-            document.getElementById('f_id').value = id;
-            document.getElementById('f_table').value = table;
-            document.getElementById('form-title').innerText = "✏️ แก้ไขข้อมูล";
-            document.getElementById('btn-cancel').classList.remove('hidden');
-            document.getElementById('f_name').value = item._name;
-            document.getElementById('f_category').value = item.category;
-            document.getElementById('f_unit').value = item.unit || '';
-            document.getElementById('f_price').value = item._price;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const table = source === 'pharmacy' ? 'pharmacy' : 'services';
+            const { error } = await db.from(table).delete().eq('id', id);
+            
+            if (error) alert(error.message);
+            else fetchData();
         }
-
-        async function deleteItem(id, table) {
-            if (confirm("ลบรายการนี้?")) {
-                await db.from(table).delete().eq('id', id);
-                await loadAllData();
-            }
-        }
-
-        function resetForm() {
-            editingId = null;
-            document.getElementById('master-form').reset();
-            document.getElementById('form-title').innerText = "➕ เพิ่มรายการใหม่";
-            document.getElementById('btn-cancel').classList.add('hidden');
-        }
-
-        function goBack() { window.location.href = 'index.html'; }
     </script>
 </body>
 </html>
