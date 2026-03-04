@@ -12,23 +12,29 @@
     <style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
-        body { background: var(--navy); color: #e2e8f0; font-size: 1rem; } /* ปรับขนาดฟอนต์พื้นฐาน */
+        body { background: var(--navy); color: #e2e8f0; font-size: 1rem; }
         
-        /* ปรับขนาดตัวหนังสือเล็กสุดตามเงื่อนไข (SID) */
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1rem; }
+        /* ปรับขนาดตัวหนังสือใน input ให้ชัดเจนและเท่ากันทั้งหมด */
+        .input-box { 
+            background: rgba(0,0,0,0.3); 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            padding: 10px 14px; 
+            color: white; 
+            width: 100%; 
+            outline: none; 
+            transition: 0.2s; 
+            font-size: 1rem; /* ขนาดเท่ากับตัวหนังสือ SID เดิม */
+        }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
-        .label-clinical { color: var(--teal); font-weight: 700; font-size: 0.95rem; margin-bottom: 6px; display: block; text-transform: uppercase; }
+        .label-clinical { color: var(--teal); font-weight: 700; font-size: 1rem; margin-bottom: 6px; display: block; text-transform: uppercase; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 20px; padding: 25px; border: 1px solid var(--border); }
         
         .med-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer; transition: 0.2s; }
         .med-item:hover { border-color: var(--teal); background: rgba(20, 184, 177, 0.05); }
         
-        .check-group { display: flex; align-items: center; gap: 10px; font-size: 1rem; cursor: pointer; color: #cbd5e1; }
-        .check-group input { width: 20px; height: 20px; accent-color: var(--teal); }
-        
-        /* Dosage Table Style */
-        .dose-table-header { font-size: 0.85rem; font-weight: 800; color: var(--teal); opacity: 0.8; margin-bottom: 4px; padding: 0 8px; }
+        .dose-table-header { font-size: 0.9rem; font-weight: 800; color: var(--teal); opacity: 0.8; margin-bottom: 4px; padding: 0 8px; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
@@ -42,7 +48,7 @@
                 <button onclick="goBack()" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-2xl">⬅️</button>
                 <div>
                     <h1 class="text-3xl font-black text-white">จัดการคลังยา (Master Data)</h1>
-                    <p class="text-teal-400 text-base font-bold">กำหนดมาตรฐานการจ่ายยาสำหรับสุนัขและแมว</p>
+                    <p class="text-teal-400 text-base font-bold">บันทึกข้อมูลยาและ Dose ไกด์ไลน์สำหรับสัตว์</p>
                 </div>
             </div>
             <button onclick="addNewMed()" class="bg-teal-500 hover:bg-teal-400 text-navy px-8 py-3 rounded-full font-black shadow-lg transition-all text-lg">+ เพิ่มยาใหม่</button>
@@ -62,7 +68,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                         <div class="md:col-span-2">
                             <label class="label-clinical">ชื่อยา (English Generic Name)</label>
-                            <input type="text" id="f_name_en" class="input-box font-bold text-xl" placeholder="เช่น Amoxicillin">
+                            <input type="text" id="f_name_en" class="input-box" placeholder="เช่น Amoxicillin">
                         </div>
                         <div class="md:col-span-2">
                             <label class="label-clinical">ชื่อภาษาไทย / ชื่อการค้า</label>
@@ -75,6 +81,7 @@
                                 <option value="NSAIDs">NSAIDs (แก้ปวดลดอักเสบ)</option>
                                 <option value="Antiprotozoal">Antiprotozoal</option>
                                 <option value="Heart">Heart (โรคหัวใจ)</option>
+                                <option value="Supplements">บำรุง / วิตามิน</option>
                                 <option value="Other">อื่นๆ</option>
                             </select>
                         </div>
@@ -91,6 +98,7 @@
                                 <option value="tablet">Tablet (เม็ด)</option>
                                 <option value="capsule">Capsule (แคปซูล)</option>
                                 <option value="mL">mL (มิลลิลิตร)</option>
+                                <option value="bottle">Bottle (ขวด)</option>
                             </select>
                         </div>
                         <div>
@@ -104,20 +112,20 @@
                             <h3 class="text-blue-400 font-black text-xl mb-4 flex items-center gap-2">🐕 DOG DOSAGE GUIDE</h3>
                             <div class="grid grid-cols-12 gap-2 dose-table-header uppercase">
                                 <div class="col-span-4">Dose (mg/kg)</div>
-                                <div class="col-span-8">For (Indication / Disease)</div>
+                                <div class="col-span-8">For (Indication)</div>
                             </div>
                             <div class="space-y-3">
                                 <div class="grid grid-cols-12 gap-2">
                                     <input type="number" id="f_dog_dose_1" class="col-span-4 input-box text-center" placeholder="0">
-                                    <input type="text" id="f_dog_for_1" class="col-span-8 input-box" placeholder="เช่น General Infection">
+                                    <input type="text" id="f_dog_for_1" class="col-span-8 input-box" placeholder="Dose 1: เช่น General">
                                 </div>
                                 <div class="grid grid-cols-12 gap-2">
                                     <input type="number" id="f_dog_dose_2" class="col-span-4 input-box text-center" placeholder="0">
-                                    <input type="text" id="f_dog_for_2" class="col-span-8 input-box" placeholder="เช่น Skin / Ortho">
+                                    <input type="text" id="f_dog_for_2" class="col-span-8 input-box" placeholder="Dose 2: เช่น Skin">
                                 </div>
                                 <div class="grid grid-cols-12 gap-2">
                                     <input type="number" id="f_dog_dose_3" class="col-span-4 input-box text-center" placeholder="0">
-                                    <input type="text" id="f_dog_for_3" class="col-span-8 input-box" placeholder="เช่น UTI">
+                                    <input type="text" id="f_dog_for_3" class="col-span-8 input-box" placeholder="Dose 3: เช่น Ortho">
                                 </div>
                             </div>
                         </div>
@@ -126,7 +134,7 @@
                             <h3 class="text-pink-400 font-black text-xl mb-4 flex items-center gap-2">🐈 CAT DOSAGE GUIDE</h3>
                             <div class="grid grid-cols-12 gap-2 dose-table-header uppercase">
                                 <div class="col-span-4">Dose (mg/kg)</div>
-                                <div class="col-span-8">For (Indication / Disease)</div>
+                                <div class="col-span-8">For (Indication)</div>
                             </div>
                             <div class="space-y-3">
                                 <div class="grid grid-cols-12 gap-2">
@@ -145,29 +153,9 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                        <div>
-                            <label class="label-clinical">ความถี่ (Frequency Options)</label>
-                            <div class="flex gap-6 mt-3 bg-black/20 p-4 rounded-xl">
-                                <label class="check-group"><input type="checkbox" name="freq" value="SID"> SID (วันละครั้ง)</label>
-                                <label class="check-group"><input type="checkbox" name="freq" value="BID" checked> BID (วันละ 2 ครั้ง)</label>
-                                <label class="check-group"><input type="checkbox" name="freq" value="TID"> TID (วันละ 3 ครั้ง)</label>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="label-clinical">เวลากิน (Timing Options)</label>
-                            <div class="flex flex-wrap gap-6 mt-3 bg-black/20 p-4 rounded-xl">
-                                <label class="check-group"><input type="checkbox" name="time" value="ก่อนอาหาร"> ก่อนอาหาร</label>
-                                <label class="check-group"><input type="checkbox" name="time" value="พร้อมอาหาร"> พร้อมอาหาร</label>
-                                <label class="check-group"><input type="checkbox" name="time" value="หลังอาหาร" checked> หลังอาหาร</label>
-                                <label class="check-group"><input type="checkbox" name="time" value="หลังอาหารทันที"> หลังอาหารทันที</label>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="mb-8">
-                        <label class="label-clinical text-red-400">🚨 คำเตือน / ข้อควรระวัง (จะแสดงบนฉลาก)</label>
-                        <textarea id="f_side_effects" class="input-box h-28 text-lg" placeholder="ระบุคำเตือนสำคัญ..."></textarea>
+                        <label class="label-clinical text-red-400">🚨 คำเตือน / ข้อควรระวัง (จะแสดงบนฉลากยา)</label>
+                        <textarea id="f_side_effects" class="input-box h-28 text-lg" placeholder="ระบุคำเตือนที่จำเป็นสำหรับสติ๊กเกอร์ยา..."></textarea>
                     </div>
 
                     <div class="flex justify-between items-center pt-6 border-t border-white/10">
@@ -213,7 +201,7 @@
             document.getElementById('f_price').value = selectedMed.price_per_unit || 0;
             document.getElementById('f_side_effects').value = selectedMed.side_effects || '';
 
-            // Map Dogs
+            // Mapping Dog Doses
             document.getElementById('f_dog_dose_1').value = selectedMed.dog_dose_1 || 0;
             document.getElementById('f_dog_for_1').value = selectedMed.dog_for_1 || '';
             document.getElementById('f_dog_dose_2').value = selectedMed.dog_dose_2 || 0;
@@ -221,7 +209,7 @@
             document.getElementById('f_dog_dose_3').value = selectedMed.dog_dose_3 || 0;
             document.getElementById('f_dog_for_3').value = selectedMed.dog_for_3 || '';
 
-            // Map Cats
+            // Mapping Cat Doses
             document.getElementById('f_cat_dose_1').value = selectedMed.cat_dose_1 || 0;
             document.getElementById('f_cat_for_1').value = selectedMed.cat_for_1 || '';
             document.getElementById('f_cat_dose_2').value = selectedMed.cat_dose_2 || 0;
@@ -229,21 +217,12 @@
             document.getElementById('f_cat_dose_3').value = selectedMed.cat_dose_3 || 0;
             document.getElementById('f_cat_for_3').value = selectedMed.cat_for_3 || '';
 
-            // Checkboxes
-            const freqs = (selectedMed.available_freq || 'BID').split(',');
-            document.querySelectorAll('input[name="freq"]').forEach(cb => cb.checked = freqs.includes(cb.value));
-            const timings = (selectedMed.available_timing || 'หลังอาหาร').split(',');
-            document.querySelectorAll('input[name="time"]').forEach(cb => cb.checked = timings.includes(cb.value));
-
             document.getElementById('btn-delete').classList.remove('hidden');
         }
 
         async function saveMedMaster() {
             const enName = document.getElementById('f_name_en').value.trim();
             if (!enName) return alert('กรุณาระบุชื่อยา');
-
-            const freqs = Array.from(document.querySelectorAll('input[name="freq"]:checked')).map(cb => cb.value).join(',');
-            const timings = Array.from(document.querySelectorAll('input[name="time"]:checked')).map(cb => cb.value).join(',');
 
             const payload = {
                 item_name: enName,
@@ -253,22 +232,19 @@
                 unit: document.getElementById('f_unit').value,
                 price_per_unit: parseFloat(document.getElementById('f_price').value),
                 side_effects: document.getElementById('f_side_effects').value,
-                // Dogs
+                // Doses & Labels
                 dog_dose_1: parseFloat(document.getElementById('f_dog_dose_1').value),
                 dog_for_1: document.getElementById('f_dog_for_1').value,
                 dog_dose_2: parseFloat(document.getElementById('f_dog_dose_2').value),
                 dog_for_2: document.getElementById('f_dog_for_2').value,
                 dog_dose_3: parseFloat(document.getElementById('f_dog_dose_3').value),
                 dog_for_3: document.getElementById('f_dog_for_3').value,
-                // Cats
                 cat_dose_1: parseFloat(document.getElementById('f_cat_dose_1').value),
                 cat_for_1: document.getElementById('f_cat_for_1').value,
                 cat_dose_2: parseFloat(document.getElementById('f_cat_dose_2').value),
                 cat_for_2: document.getElementById('f_cat_for_2').value,
                 cat_dose_3: parseFloat(document.getElementById('f_cat_dose_3').value),
                 cat_for_3: document.getElementById('f_cat_for_3').value,
-                available_freq: freqs,
-                available_timing: timings,
                 is_medication: true
             };
 
@@ -278,7 +254,7 @@
 
             if (error) alert('Error: ' + error.message);
             else {
-                alert('บันทึกสำเร็จ!');
+                alert('บันทึกข้อมูลคลังยาสำเร็จ!');
                 fetchMeds();
                 addNewMed();
             }
