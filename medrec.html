@@ -18,38 +18,33 @@
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; font-size: 1rem; }
-        
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1.1rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
-        
         .label-text { color: #94a3b8; font-size: 1rem; margin-bottom: 4px; display: block; font-weight: 600; }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; display: block; }
-        .pet-info-val { font-size: 1.2rem; font-weight: 800; line-height: 1.5; }
-
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
         .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 25px; border: 1px solid var(--border); transition: 0.3s; margin-bottom: 15px; }
-
         .btn-base { padding: 12px 24px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; font-size: 1.1rem; }
         .btn-teal { background-color: #0d9488 !important; }
         .btn-blue { background-color: #2563eb !important; }
         .btn-red { background-color: #dc2626 !important; }
-
-        .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 12px; cursor: pointer; font-size: 1rem; }
+        .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 12px; cursor: pointer; }
         .view-hidden { display: none; }
-
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
-
+        .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 2xl; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
         .bullet-list { list-style: none; padding: 0; margin: 0; }
         .bullet-list li { position: relative; padding-left: 20px; font-size: 1.1rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
         .bullet-list li::before { content: "•"; position: absolute; left: 0; color: var(--teal); font-weight: bold; }
+        .route-opt input { display: none; }
+        .route-opt span { display: inline-block; padding: 10px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; }
+        .route-opt input:checked + span { background: var(--teal); color: black; border-color: var(--teal); }
 
-        /* Sticker Styles for Printing 80x50mm */
+        /* Sticker (80x50mm) */
         #sticker-container { display: none; width: 80mm; height: 50mm; background: white; color: black; padding: 4mm; box-sizing: border-box; font-family: "Sarabun", sans-serif; }
         @media print {
             body * { visibility: hidden; }
             #sticker-container, #sticker-container * { visibility: visible; }
-            #sticker-container { display: block !important; position: fixed; left: 0; top: 0; border: none; }
+            #sticker-container { display: block !important; position: fixed; left: 0; top: 0; }
             @page { size: 80mm 50mm; margin: 0; }
         }
     </style>
@@ -57,12 +52,12 @@
 <body class="p-4 md:p-10">
 
     <div id="sticker-container">
-        <div style="font-size: 8pt; font-weight: 800; border-bottom: 1px solid black; padding-bottom: 1px;">PK-VMS Professional Vet Suite</div>
+        <div style="font-size: 8pt; font-weight: 800; border-bottom: 1px solid black; padding-bottom: 2px;">PK-VMS Professional Vet Clinic</div>
         <div style="display: flex; justify-content: space-between; font-size: 7pt; margin-top: 1px;">
             <span id="st-pet-name">Pet: -</span><span id="st-date">Date: -</span>
         </div>
         <div style="margin-top: 4px;">
-            <div id="st-med-en" style="font-size: 10pt; font-weight: 900; line-height: 1;">Generic Name</div>
+            <div id="st-med-en" style="font-size: 10pt; font-weight: 900; line-height: 1;">Medicine Name</div>
             <div id="st-med-th" style="font-size: 8pt; font-weight: 700;">ชื่อยาไทย</div>
         </div>
         <div style="margin-top: 6px; font-size: 10pt; font-weight: 800; line-height: 1.3;" id="st-instruction">...</div>
@@ -95,37 +90,26 @@
                 </div>
                 <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-6 md:col-span-2"><label class="label-text">ชื่อสัตว์</label><div id="v-pet-name" class="text-xl font-bold text-white">-</div></div>
-                    <div class="col-span-6 md:col-span-3"><label class="label-text">ชนิด/สายพันธุ์</label><div id="v-pet-breed" class="text-xl font-bold text-white">-</div></div>
-                    <div class="col-span-4 md:col-span-1"><label class="label-text">เพศ</label><div id="v-pet-gender" class="text-xl font-bold text-white">-</div></div>
-                    <div class="col-span-4 md:col-span-1"><label class="label-text">นน.(กก.)</label><div id="v-pet-weight" class="text-xl font-bold text-yellow-400">-</div></div>
-                    <div class="col-span-12 md:col-span-5"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="text-lg font-bold text-red-400">-</div></div>
+                    <div class="col-span-6 md:col-span-3"><label class="label-text">นน.(กก.)</label><div id="v-pet-weight" class="text-xl font-bold text-yellow-400">-</div></div>
+                    <div class="col-span-12 md:col-span-7"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="text-lg font-bold text-red-400">-</div></div>
                 </div>
             </div>
-            <section class="mt-8 pb-20">
-                <h3 class="text-3xl font-black text-white mb-8 flex items-center gap-3">⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full font-normal">0</span></h3>
-                <div id="history-list" class="space-y-4"></div>
-            </section>
+            <h3 class="text-3xl font-black text-white mb-8 flex items-center gap-3">⏳ ประวัติ <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span></h3>
+            <div id="history-list" class="space-y-4"></div>
         </div>
 
         <div id="form-view-container" class="view-hidden">
             <div class="section-card border-l-8 border-teal-400">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">🏥 บันทึกการตรวจรักษา</h3>
-                    <div id="edit-mode-badge" class="hidden bg-orange-500 text-black px-4 py-2 rounded-full text-sm font-black animate-pulse">แก้ไข ✏️</div>
-                </div>
+                <h3 class="text-2xl font-bold text-white mb-8">🏥 บันทึกการตรวจรักษา</h3>
                 <div class="grid grid-cols-12 gap-5">
                     <div class="col-span-12 md:col-span-2"><label class="label-clinical text-yellow-400">น้ำหนัก (กก.)</label><input type="number" id="f_weight" class="input-box font-bold text-yellow-400 text-2xl" step="0.1"></div>
-                    <div class="col-span-12 md:col-span-5"><label class="label-clinical">CC</label><textarea id="f_cc" class="input-box h-24" placeholder="ระบุอาการสำคัญ..."></textarea></div>
-                    <div class="col-span-12 md:col-span-5"><label class="label-clinical">Hx</label><textarea id="f_hx" class="input-box h-24" placeholder="ประวัติย้อนหลัง..."></textarea></div>
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE</label><textarea id="f_pe" class="input-box h-32" placeholder="ร่างกาย..."></textarea></div>
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">🔬 Lab</label><div id="list_lab_display" class="list-box overflow-y-auto max-h-40" onclick="if(event.target === this) openCatalog('lab')">คลิกเพื่อเลือก...</div><input type="hidden" id="f_lab"></div>
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical text-yellow-400">Dx</label><textarea id="f_dx" class="input-box h-32 border-yellow-500/30" placeholder="วินิจฉัย..."></textarea></div>
-                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💉 Tx (หัตถการ/ยาฉีด)</label><div id="list_tx_display" class="list-box overflow-y-auto max-h-40" onclick="if(event.target === this) openCatalog('tx')">คลิกเพื่อเลือก...</div><input type="hidden" id="f_tx"></div>
-                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💊 Rx (ยาจ่ายกลับ)</label><div id="list_rx_display" class="list-box border-blue-500/50 overflow-y-auto max-h-40" onclick="if(event.target === this) openCatalog('rx')">คลิกเพื่อเลือก...</div><input type="hidden" id="f_rx"></div>
-                    <div class="col-span-12 md:col-span-3"><label class="label-clinical">Plan</label><input type="text" id="f_plan" class="input-box"></div>
-                    <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">📅 วันนัด</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
-                    <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">นัดเพื่อ</label><input type="text" id="f_app_note" class="input-box"></div>
-                    <div class="col-span-12 md:col-span-3"><label class="label-text font-bold text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-3xl font-black text-yellow-400" value="0"></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-clinical">CC</label><textarea id="f_cc" class="input-box h-24"></textarea></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-clinical">Hx</label><textarea id="f_hx" class="input-box h-24"></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">🔬 Lab</label><div id="list_lab_display" class="list-box overflow-y-auto max-h-40" onclick="if(event.target === this) openCatalog('lab')">คลิก...</div><input type="hidden" id="f_lab"></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical text-yellow-400">Dx</label><textarea id="f_dx" class="input-box h-32"></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">💉 Tx (ยาฉีด/หัตถการ)</label><div id="list_tx_display" class="list-box overflow-y-auto max-h-40" onclick="if(event.target === this) openCatalog('tx')">คลิก...</div><input type="hidden" id="f_tx"></div>
+                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💊 Rx (ยากลับบ้าน)</label><div id="list_rx_display" class="list-box border-blue-500/50 overflow-y-auto max-h-40" onclick="if(event.target === this) openCatalog('rx')">คลิก...</div><input type="hidden" id="f_rx"></div>
+                    <div class="col-span-12 md:col-span-3"><label class="label-text text-yellow-400">ค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-3xl font-black text-yellow-400" value="0"></div>
                 </div>
                 <div class="flex gap-4 mt-10">
                     <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-2xl py-5">💾 บันทึกข้อมูลการตรวจ</button>
@@ -135,69 +119,69 @@
         </div>
     </div>
 
-    <div id="catalog-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="p-6 border-b border-white/10 flex justify-between bg-slate-900/50">
-                <h3 id="modal-title" class="text-2xl font-bold">เลือกรายการ</h3><button onclick="closeCatalog()" class="text-3xl opacity-50 hover:opacity-100">✕</button>
-            </div>
-            <div class="p-4 bg-white/5"><input type="text" id="catalog-search" class="input-box" placeholder="ค้นหา..." oninput="filterCatalog()"></div>
-            <div id="catalog-items" class="flex-1 overflow-y-auto p-4 space-y-3 bg-black/20"></div>
-            <div class="p-5 bg-teal-500/10 border-t border-teal-500/20"><div id="modal-session-list" class="flex flex-wrap gap-3"></div></div>
-            <div class="p-6 border-t border-white/10 bg-slate-900/50"><button onclick="closeCatalog()" class="btn-base btn-blue w-full text-xl py-4">เสร็จสิ้น</button></div>
-        </div>
-    </div>
-
     <div id="rx-calc-modal" class="modal-overlay" style="z-index: 120;">
-        <div class="modal-content !max-w-2xl">
+        <div class="modal-content">
             <div class="p-6 border-b border-white/10 bg-blue-900/30"><h4 id="rx-calc-name" class="text-2xl font-black text-blue-400">💊 กำหนดปริมาณยา</h4></div>
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
                 <div class="space-y-4">
                     <div>
                         <label class="label-clinical">โดสแนะนำ (mg/kg)</label>
-                        <select id="rx-dose-select" class="input-box w-full" onchange="applyDoseSelect(this.value)"></select>
+                        <select id="rx-dose-select" class="input-box w-full" onchange="document.getElementById('rx-dose-val').value=this.value; calculateRxTablets();"></select>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div><label class="label-clinical">โดสใช้จริง</label><input type="number" id="rx-dose-val" class="input-box" step="0.1" oninput="calculateRxTablets()"></div>
                         <div><label class="label-clinical">ความเข้มข้น</label><input type="number" id="rx-conc-val" class="input-box bg-white/5" readonly></div>
                     </div>
-                    <div class="p-4 bg-teal-500/10 rounded-2xl border border-teal-500/20">
-                        <label class="label-clinical text-teal-400">ป้อนครั้งละ</label>
-                        <div id="rx-tabs-display" class="text-3xl font-black text-white">0</div>
-                        <input type="hidden" id="rx-tabs-val">
-                    </div>
+                    <div class="p-4 bg-teal-500/10 rounded-2xl border border-teal-500/20"><label class="label-clinical text-teal-400">ป้อนครั้งละ</label><div id="rx-tabs-display" class="text-3xl font-black text-white">0</div><input type="hidden" id="rx-tabs-val"></div>
                 </div>
                 <div class="space-y-4 border-l border-white/5 pl-6">
                     <div>
-                        <label class="label-clinical">ความถี่</label>
-                        <select id="rx-freq" class="input-box" onchange="calculateRxTotal()">
-                            <option value="1">SID (วันละ 1 ครั้ง)</option>
-                            <option value="2" selected>BID (วันละ 2 ครั้ง)</option>
-                            <option value="3">TID (วันละ 3 ครั้ง)</option>
-                            <option value="4">QID (วันละ 4 ครั้ง)</option>
-                            <option value="0.5">EOD (วันเว้นวัน)</option>
-                        </select>
+                        <label class="label-clinical">ความถี่ และ วันที่จ่าย</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="rx-freq" class="input-box" onchange="calculateRxTotal()">
+                                <option value="1">SID (วันละครั้ง)</option>
+                                <option value="2" selected>BID (วันละ 2 ครั้ง เช้า-เย็น)</option>
+                                <option value="3">TID (วันละ 3 ครั้ง เช้า-กลางวัน-เย็น)</option>
+                                <option value="4">QID (วันละ 4 ครั้ง)</option>
+                                <option value="0.5">EOD (วันเว้นวัน)</option>
+                            </select>
+                            <input type="number" id="rx-days" class="input-box" value="7" oninput="calculateRxTotal()">
+                        </div>
                     </div>
-                    <div><label class="label-clinical">จำนวนวัน</label><input type="number" id="rx-days" class="input-box" value="7" oninput="calculateRxTotal()"></div>
                     <div>
                         <label class="label-clinical">เวลากิน</label>
                         <select id="rx-timing" class="input-box">
-                            <option value="หลังอาหาร">หลังอาหาร</option>
                             <option value="หลังอาหารทันที">หลังอาหารทันที</option>
+                            <option value="หลังอาหาร">หลังอาหาร</option>
                             <option value="พร้อมอาหาร">พร้อมอาหาร</option>
                             <option value="ก่อนอาหาร 30 นาที">ก่อนอาหาร 30 นาที</option>
                             <option value="ก่อนอาหาร 1 ชั่วโมง">ก่อนอาหาร 1 ชั่วโมง</option>
                         </select>
                     </div>
                     <div class="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 text-sm">
-                        <div id="rx-info-text" class="text-slate-300 font-bold mb-1">ราคาต่อเม็ด: ฿0 | ทั้งหมด 0 เม็ด</div>
-                        <div id="rx-total-price" class="text-2xl font-black text-white text-right">฿ 0</div>
+                        <div id="rx-info-text" class="text-slate-300 font-bold mb-1">ราคาต่อหน่วย: ฿0 | ทั้งหมด 0 เม็ด</div>
+                        <div id="rx-total-price-display" class="text-2xl font-black text-white text-right">฿ 0</div>
+                        <input type="hidden" id="rx-final-price-val">
                     </div>
                 </div>
             </div>
             <div class="p-6 border-t border-white/10 flex gap-4">
                 <button onclick="printRxSticker()" class="btn-base bg-slate-700 px-6">🖨️ พิมพ์สติ๊กเกอร์</button>
                 <button onclick="confirmRxCalc()" class="btn-base btn-teal flex-1">✅ เพิ่มรายการ</button>
+                <button onclick="document.getElementById('rx-calc-modal').style.display='none'" class="btn-base bg-red-900/50">ยกเลิก</button>
             </div>
+        </div>
+    </div>
+
+    <div id="catalog-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="p-6 border-b border-white/10 flex justify-between bg-slate-900/50">
+                <h3 id="modal-title" class="text-2xl font-bold">เลือกรายการ</h3><button onclick="closeCatalog()" class="text-3xl">✕</button>
+            </div>
+            <div class="p-4 bg-white/5"><input type="text" id="catalog-search" class="input-box" placeholder="ค้นหา..." oninput="filterCatalog()"></div>
+            <div id="catalog-items" class="flex-1 overflow-y-auto p-4 space-y-3 bg-black/20"></div>
+            <div class="p-5 bg-teal-500/10 border-t border-teal-500/20"><div id="modal-session-list" class="flex flex-wrap gap-3"></div></div>
+            <div class="p-6 border-t border-white/10 bg-slate-900/50"><button onclick="closeCatalog()" class="btn-base btn-blue w-full">เสร็จสิ้น</button></div>
         </div>
     </div>
 
@@ -226,8 +210,6 @@
                 document.getElementById('head-hn').innerText = `HN: ${owner.hn}`;
                 document.getElementById('head-pet-name').innerText = pet.pet_name;
                 document.getElementById('v-pet-name').innerText = pet.pet_name;
-                document.getElementById('v-pet-breed').innerText = `${pet.pet_type} (${pet.breed || '-'})`;
-                document.getElementById('v-pet-gender').innerText = pet.gender || '-';
                 document.getElementById('v-pet-weight').innerText = pet.weight || '0';
                 document.getElementById('f_weight').value = pet.weight || 0;
                 document.getElementById('v-pet-congenital').innerText = pet.congenital_disease || 'ไม่มี';
@@ -244,24 +226,19 @@
             document.getElementById('record-count').innerText = records.length;
             list.innerHTML = records.map(rec => {
                 const dateStr = new Date(rec.created_at).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' });
-                return `<div class="history-item"><div class="flex items-center gap-4 cursor-pointer" onclick="toggleCollapse('${rec.id}')"><div class="w-24 text-teal-400 font-black text-xl">${dateStr}</div><div class="flex-1 border-l border-white/10 pl-4"><div class="truncate text-base"><b>CC:</b> ${rec.cc || '-'} | <b>Dx:</b> ${rec.dx || '-'}</div></div><div class="flex items-center gap-3"><button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-base btn-blue !py-2 !px-4 text-sm">✏️</button><button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-base btn-red !py-2 !px-4 text-sm">🗑️</button><div id="arrow-${rec.id}" class="text-teal-400 text-xl">🔽</div></div></div><div id="detail-${rec.id}" class="hidden mt-6 pt-6 border-t border-white/5"><div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-base"><div><b class="label-clinical text-sm">🔬 Lab:</b> ${drawBullets(rec.lab?.split(', ') || [])}</div><div><b class="label-clinical text-sm">💉 Tx:</b> ${drawBullets(rec.tx?.split(', ') || [])}</div><div><b class="label-clinical text-sm">💊 Rx:</b> ${drawBullets(rec.rx?.split(', ') || [], 'rx_history', dateStr)}</div></div><div class="flex justify-between items-center border-t border-white/5 pt-4"><div class="text-sm text-slate-500">Plan: ${rec.plan || '-'}</div><div class="text-2xl font-black text-yellow-400">฿ ${rec.cost?.toLocaleString()}</div></div></div></div>`;
+                return `<div class="history-item"><div class="flex items-center gap-4 cursor-pointer" onclick="toggleCollapse('${rec.id}')"><div class="w-24 text-teal-400 font-black text-xl">${dateStr}</div><div class="flex-1 border-l border-white/10 pl-4"><div class="truncate text-base"><b>CC:</b> ${rec.cc || '-'} | <b>Dx:</b> ${rec.dx || '-'}</div></div><div class="flex items-center gap-3"><button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-base btn-blue !py-2 !px-4 text-sm">✏️</button><button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-base btn-red !py-2 !px-4 text-sm">🗑️</button><div id="arrow-${rec.id}" class="text-teal-400 text-xl">🔽</div></div></div><div id="detail-${rec.id}" class="hidden mt-6 pt-6 border-t border-white/5"><div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-base"><div><b class="label-clinical text-sm">🔬 Lab:</b> ${drawBullets(rec.lab?.split(', ') || [])}</div><div><b class="label-clinical text-sm">💉 Tx:</b> ${drawBullets(rec.tx?.split(', ') || [])}</div><div><b class="label-clinical text-sm">💊 Rx:</b> ${drawBullets(rec.rx?.split(', ') || [], 'rx_history', dateStr)}</div></div><div class="flex justify-between items-center border-t border-white/5 pt-4"><div>Plan: ${rec.plan || '-'}</div><div class="text-2xl font-black text-yellow-400">฿ ${rec.cost?.toLocaleString()}</div></div></div></div>`;
             }).join('');
         }
 
-        // --- Rx Calculation Logic ---
+        // --- Rx System ---
         function openRxCalc(item) {
             pendingItem = item;
             document.getElementById('rx-calc-name').innerText = item.name;
             document.getElementById('rx-conc-val').value = item.data.concentration_mg_unit || 1;
-            const ds = document.getElementById('rx-dose-select'); ds.innerHTML = '<option value="">-- เลือกโดสแนะนำ --</option>';
+            const ds = document.getElementById('rx-dose-select'); ds.innerHTML = '<option value="">-- โดสแนะนำ --</option>';
             const p = petType === 'แมว' ? 'cat' : 'dog';
             for(let i=1; i<=5; i++) if(item.data[`${p}_dose_${i}`] > 0) ds.innerHTML += `<option value="${item.data[`${p}_dose_${i}`]}">${item.data[`${p}_dose_${i}`]} mg/kg (${item.data[`${p}_for_${i}`] || ''})</option>`;
             document.getElementById('rx-calc-modal').style.display = 'flex';
-        }
-
-        function applyDoseSelect(val) {
-            if(!val) return;
-            document.getElementById('rx-dose-val').value = val;
             calculateRxTablets();
         }
 
@@ -282,21 +259,20 @@
         function calculateRxTotal() {
             const t = parseFloat(document.getElementById('rx-tabs-val').value) || 0, f = parseFloat(document.getElementById('rx-freq').value) || 1, d = parseInt(document.getElementById('rx-days').value) || 1;
             const totalQty = t * f * d;
-            const priceUnit = pendingItem.price || 0;
-            const priceTotal = Math.ceil((totalQty * priceUnit) / 10) * 10;
-            document.getElementById('rx-info-text').innerText = `ราคาต่อเม็ด: ฿${priceUnit} | ทั้งหมด ${totalQty} ${pendingItem.data.unit || 'เม็ด'}`;
-            document.getElementById('rx-total-price').innerText = `฿ ${priceTotal}`;
+            const price = Math.ceil((totalQty * (pendingItem.price || 0)) / 10) * 10;
+            document.getElementById('rx-info-text').innerText = `ราคาต่อหน่วย: ฿${pendingItem.price} | ทั้งหมด ${totalQty} ${pendingItem.data.unit || 'เม็ด'}`;
+            document.getElementById('rx-total-price-display').innerText = `฿ ${price}`;
+            document.getElementById('rx-final-price-val').value = price;
         }
 
         function confirmRxCalc() {
-            const disp = document.getElementById('rx-tabs-display').innerText;
-            const freqText = document.getElementById('rx-freq').options[document.getElementById('rx-freq').selectedIndex].text.split(' ')[0];
-            const thaiFreq = { "SID":"วันละครั้ง", "BID":"วันละสองครั้ง", "TID":"วันละสามครั้ง", "QID":"วันละสี่ครั้ง", "EOD":"วันเว้นวัน" }[freqText] || freqText;
+            const tabs = document.getElementById('rx-tabs-display').innerText;
+            const freqTxt = document.getElementById('rx-freq').options[document.getElementById('rx-freq').selectedIndex].text.split(' (')[1].replace(')', '');
             const days = document.getElementById('rx-days').value;
             const timing = document.getElementById('rx-timing').value;
-            const price = parseInt(document.getElementById('rx-total-price').innerText.replace('฿ ', ''));
-            const finalName = `${pendingItem.name} (ป้อนครั้งละ ${disp} ${thaiFreq} ${timing} x ${days} วัน)`;
-            addItemToList(finalName, price);
+            const finalPrice = parseFloat(document.getElementById('rx-final-price-val').value) || 0;
+            const finalName = `${pendingItem.name} (ป้อนครั้งละ ${tabs} ${freqTxt} ${timing} x ${days} วัน)`;
+            addItemToList(finalName, finalPrice);
             document.getElementById('rx-calc-modal').style.display = 'none';
         }
 
@@ -320,19 +296,16 @@
             window.print();
         }
 
-        // --- Core Functions ---
+        // --- Core ---
         async function saveMedicalRecord() {
             const data = {
                 animal_id: animalId, owner_hn: ownerHN,
                 weight: parseFloat(document.getElementById('f_weight').value) || 0,
-                cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, lab: document.getElementById('f_lab').value, tx: document.getElementById('f_tx').value, rx: document.getElementById('f_rx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, note: document.getElementById('f_note').value, cost: parseFloat(document.getElementById('f_cost').value) || 0, updated_at: new Date()
+                cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, lab: document.getElementById('f_lab').value, tx: document.getElementById('f_tx').value, rx: document.getElementById('f_rx').value, plan: document.getElementById('f_plan').value,
+                appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, cost: parseFloat(document.getElementById('f_cost').value) || 0
             };
-            try {
-                if (editingId) await db.from('medical_records').update(data).eq('id', editingId);
-                else await db.from('medical_records').insert([data]);
-                await db.from('animals').update({ weight: data.weight }).eq('id', animalId);
-                alert("บันทึกสำเร็จ!"); location.reload();
-            } catch (e) { alert("Error: " + e.message); }
+            const { error } = editingId ? await db.from('medical_records').update(data).eq('id', editingId) : await db.from('medical_records').insert([data]);
+            if (error) alert(error.message); else { await db.from('animals').update({ weight: data.weight }).eq('id', animalId); alert("บันทึกสำเร็จ!"); location.reload(); }
         }
 
         function drawBullets(arr, type = null, date = null) {
@@ -343,20 +316,17 @@
                 return `<li ${del}><span>${n}</span> ${reprint}</li>`;
             }).join('')}</ul>`;
         }
-
         function addItemToList(name, price) {
             const list = currentCatalogType === 'lab' ? selectedLabs : (currentCatalogType === 'tx' ? selectedTxs : selectedRxs);
             list.push({ name, price });
             document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) + price).toFixed(2);
             updateFormDisplays(); updateModalUI();
         }
-
         function removeItem(type, idx) {
             const list = type === 'lab' ? selectedLabs : (type === 'tx' ? selectedTxs : selectedRxs);
             document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) - list[idx].price).toFixed(2);
             list.splice(idx, 1); updateFormDisplays(); updateModalUI();
         }
-
         function updateFormDisplays() {
             document.getElementById('list_lab_display').innerHTML = drawBullets(selectedLabs.map(i=>i.name), 'lab');
             document.getElementById('list_tx_display').innerHTML = drawBullets(selectedTxs.map(i=>i.name), 'tx');
@@ -365,7 +335,6 @@
             document.getElementById('f_tx').value = selectedTxs.map(i=>i.name).join(', ');
             document.getElementById('f_rx').value = selectedRxs.map(i=>i.name).join(', ');
         }
-
         async function openCatalog(type) {
             currentCatalogType = type; document.getElementById('catalog-modal').style.display = 'flex';
             let items = [];
@@ -377,21 +346,25 @@
             } else if (type === 'rx') items = (await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา'])).data.map(i=>({name:i.item_name, price:i.price_per_unit, type:(i.category==='General'?'product':'medication'), data:i}));
             fullCatalog = items; renderItems(items);
         }
-
         function renderItems(data) { document.getElementById('catalog-items').innerHTML = data.map(i=>`<div class="p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-teal-500 cursor-pointer flex justify-between items-center group" onclick='handleItemSelection(${JSON.stringify(i)})'><div><div class="font-bold text-white text-lg">${i.name}</div><div class="text-sm text-slate-500">฿${i.price||0}</div></div><div class="text-teal-500 text-2xl">+</div></div>`).join(''); }
-
         function handleItemSelection(i) {
             if (i.type === 'injection') { pendingItem = i; document.getElementById('inj-name').innerText = i.name; document.getElementById('inj-modal').style.display='flex'; }
             else if (i.type === 'medication') openRxCalc(i);
             else addItemToList(i.name, parseFloat(i.price)||0);
         }
-
         function confirmInj() { const ml = document.getElementById('inj-ml').value, routes = Array.from(document.querySelectorAll('input[name="route"]:checked')).map(c=>c.value).join('/'); addItemToList(`${pendingItem.name} (${ml}ml) ${routes}`, pendingItem.price||0); document.getElementById('inj-modal').style.display='none'; }
         function filterCatalog() { const t = document.getElementById('catalog-search').value.toLowerCase(); renderItems(fullCatalog.filter(i=>i.name.toLowerCase().includes(t))); }
-        function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
+        function editRecord(id) { 
+            const r = records.find(i=>i.id===id); editingId = id;
+            document.getElementById('f_cc').value = r.cc; document.getElementById('f_hx').value = r.hx; document.getElementById('f_pe').value = r.pe; document.getElementById('f_dx').value = r.dx; document.getElementById('f_plan').value = r.plan; document.getElementById('f_cost').value = r.cost; document.getElementById('f_weight').value = r.weight;
+            selectedLabs = r.lab?r.lab.split(', ').map(n=>({name:n, price:0})):[]; selectedTxs = r.tx?r.tx.split(', ').map(n=>({name:n, price:0})):[]; selectedRxs = r.rx?r.rx.split(', ').map(n=>({name:n, price:0})):[];
+            updateFormDisplays(); showFormView(); document.getElementById('edit-mode-badge').classList.remove('hidden');
+        }
+        function deleteRecord(id) { if(confirm("ลบประวัติ?")) db.from('medical_records').delete().eq('id', id).then(()=>location.reload()); }
         function toggleCollapse(id) { document.getElementById(`detail-${id}`).classList.toggle('hidden'); }
         function showFormView() { document.getElementById('history-view-container').classList.add('view-hidden'); document.getElementById('form-view-container').classList.remove('view-hidden'); }
         function showHistoryView() { location.reload(); }
+        function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
         function goBack() { location.href = 'animals.html'; }
     </script>
 </body>
