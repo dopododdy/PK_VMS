@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>ตั้งค่าเครื่องพิมพ์และกระดาษ | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+
+    <style>
+        :root {
+            --navy: #0b1929; --navy-mid: #112240; --teal: #0ea5a0; --teal-light: #14c4bc;
+            --surface: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.1);
+            --text: #e2e8f0; --text-dim: #94a3b8; --teal-glow: rgba(14,165,160,0.3);
+        }
+        * { box-sizing: border-box; font-family: "Sarabun", sans-serif; }
+        body { background: var(--navy); color: var(--text); overflow-x: hidden; }
+
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%);
+        }
+
+        header {
+            padding: 15px 24px; display: flex; align-items: center; justify-content: space-between;
+            background: rgba(11,25,41,0.85); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 1000;
+        }
+
+        .btn-action { 
+            padding: 10px 20px; border-radius: 12px; font-weight: 700; transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 8px;
+        }
+        .btn-print { background: var(--surface); border: 1px solid var(--border); color: white; }
+        .btn-print:hover { background: rgba(255,255,255,0.1); border-color: var(--teal); }
+        .btn-save { background: linear-gradient(135deg, var(--teal), var(--teal-light)); border: none; color: #fff; box-shadow: 0 4px 15px var(--teal-glow); }
+        .btn-save:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--teal-glow); }
+
+        .input-box {
+            width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            border-radius: 10px; color: white; outline: none; transition: 0.2s; font-size: 14px;
+        }
+        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        
+        .label { font-size: 12px; color: var(--teal-light); margin-bottom: 6px; display: block; font-weight: 700; text-transform: uppercase; }
+
+        /* Preview Area */
+        .preview-section {
+            background: rgba(11,25,41,0.5); display: flex; justify-content: center; align-items: center;
+            border-bottom: 2px solid var(--teal); position: sticky; top: 73px; z-index: 900;
+            padding: 20px; overflow: hidden; min-height: 250px;
+        }
+        .sticker-wrapper { transition: 0.3s; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .sticker-canvas {
+            background: #fff; position: relative; color: #000; overflow: hidden;
+            background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
+            background-size: 10mm 10mm; /* แสดง Grid ทุกๆ 1 ซม. */
+        }
+        .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; cursor: default; }
+        .canvas-line:hover { outline: 1px dashed var(--teal); background: rgba(14,165,160,0.1); }
+
+        /* Editor Area */
+        .editor-section { padding: 24px; max-width: 800px; margin: 0 auto; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: 0.2s; }
+        .card:hover { border-color: rgba(255,255,255,0.2); }
+        
+        .var-box { background: rgba(14,165,160,0.05); border: 1px solid var(--teal-glow); border-radius: 12px; padding: 16px; margin-bottom: 20px; font-size: 13px; line-height: 1.8; }
+        code { color: var(--teal-light); background: rgba(0,0,0,0.4); padding: 3px 8px; border-radius: 6px; margin-right: 4px; display: inline-block; font-family: "Outfit", sans-serif; font-size: 12px; }
+
+        .btn-add { width: 100%; padding: 16px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-bottom: 30px; }
+        .btn-add:hover { border-color: var(--teal); color: var(--teal-light); background: rgba(14,165,160,0.05); }
+
+        @media (min-width: 1024px) {
+            body { display: flex; flex-direction: row; height: 100vh; overflow: hidden; }
+            header { position: absolute; width: 50%; right: 0; z-index: 1001; background: transparent; border: none; backdrop-filter: none; }
+            .preview-section { width: 50%; height: 100vh; position: relative; top: 0; border-bottom: none; border-right: 1px solid var(--border); background: var(--navy-mid); }
+            .editor-section { width: 50%; height: 100vh; overflow-y: auto; padding-top: 80px; padding-bottom: 100px; }
+            .mobile-header-bg { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mesh-bg"></div>
+
+    <header>
+        <div class="flex items-center gap-4">
+            <a href="settings.html" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-white border border-white/10">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </a>
+            <h1 class="text-xl font-bold text-white tracking-wide">Printer Settings</h1>
+        </div>
+        <div class="flex gap-3">
+            <button class="btn-action btn-print" onclick="window.printTest()">🖨️ <span class="hidden sm:inline">ทดสอบพิมพ์</span></button>
+            <button class="btn-action btn-save" onclick="saveTemplate()">💾 <span class="hidden sm:inline">บันทึกรูปแบบ</span></button>
+        </div>
+    </header>
+
+    <section class="preview-section">
+        <div class="sticker-wrapper" id="preview-zoom">
+            <div class="sticker-canvas shadow-2xl" id="sticker"></div>
+        </div>
+    </section>
+
+    <div class="editor-section">
+        <div class="card grid grid-cols-1 sm:grid-cols-3 gap-4 border-t-4 border-t-teal-500">
+            <div class="sm:col-span-3">
+                <label class="label">รูปแบบเอกสาร (Template)</label>
+                <select id="templateType" class="input-box" onchange="loadTemplate()">
+                    <option value="drug_sticker">💊 ฉลากยา (Drug Sticker)</option>
+                    <option value="queue">🏷 สติ๊กเกอร์คิว (Queue)</option>
+                    <option value="cage">🔒 สติ๊กเกอร์ติดกรง (Cage)</option>
+                    <option value="appointment">📅 ใบนัดหมายขนาดเล็ก (Appt. Slip)</option>
+                </select>
+            </div>
+            <div>
+                <label class="label">ความกว้าง (Width mm)</label>
+                <input type="number" id="paper_w" class="input-box" value="80" onchange="updatePaperSize()">
+            </div>
+            <div>
+                <label class="label">ความสูง (Height mm)</label>
+                <input type="number" id="paper_h" class="input-box" value="50" onchange="updatePaperSize()">
+            </div>
+            <div>
+                <label class="label">Zoom (%)</label>
+                <input type="number" id="zoom_level" class="input-box" value="100" oninput="updateZoom(this.value)">
+            </div>
+        </div>
+
+        <div class="var-box">
+            <strong class="text-teal-400 mb-2 block">📌 ตัวแปรที่ใช้ได้ (คัดลอกไปวางในช่องข้อความ):</strong>
+            <div>
+                <code>{{clinic_name}}</code> ชื่อคลินิก<br>
+                <code>{{hn}}</code> รหัสสัตว์ป่วย | <code>{{pet_name}}</code> ชื่อสัตว์ | <code>{{owner_name}}</code> ชื่อเจ้าของ<br>
+                <code>{{drug_name}}</code> ชื่อยา | <code>{{qty}}</code> จำนวน | <code>{{instruction}}</code> วิธีใช้ยา<br>
+                <code>{{warning}}</code> คำเตือน (Side effects)<br>
+                <code>{{date}}</code> วันที่ | <code>{{time}}</code> เวลา | <code>{{queue}}</code> หมายเลขคิว
+            </div>
+        </div>
+
+        <div id="lineEditor" class="space-y-4"></div>
+        
+        <button class="btn-add mt-6" onclick="addLine()">+ เพิ่มบรรทัดข้อความใหม่</button>
+    </div>
+
+    <script>
+        // Data Structure
+        let currentConfig = {
+            width: 80,
+            height: 50,
+            lines: []
+        };
+
+        // Date Formatter Mockup
+        const getMockupData = () => {
+            const now = new Date();
+            return {
+                clinic_name: "PK-VMS Animal Clinic",
+                hn: "HN-69001",
+                pet_name: "น้องนำโชค (Beagle)",
+                owner_name: "คุณสมชาย ใจดี",
+                drug_name: "Amoxicillin 500mg",
+                qty: "14 เม็ด",
+                instruction: "กินครั้งละ 1 เม็ด เช้า-เย็น หลังอาหาร",
+                warning: "* ยานี้อาจทำให้ปัสสาวะเปลี่ยนสี",
+                date: now.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }),
+                time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                queue: "A014"
+            };
+        };
+
+        function updatePaperSize() {
+            currentConfig.width = parseInt(document.getElementById('paper_w').value) || 80;
+            currentConfig.height = parseInt(document.getElementById('paper_h').value) || 50;
+            renderPreview();
+        }
+
+        function updateZoom(val) {
+            const scale = (parseInt(val) || 100) / 100;
+            document.getElementById('preview-zoom').style.transform = `scale(${scale})`;
+        }
+
+        function renderPreview() {
+            const box = document.getElementById("sticker");
+            const mock = getMockupData();
+            
+            // Set Canvas Size
+            box.style.width = currentConfig.width + "mm";
+            box.style.height = currentConfig.height + "mm";
+            box.innerHTML = "";
+            
+            currentConfig.lines.forEach(l => {
+                const div = document.createElement("div");
+                div.className = "canvas-line";
+                div.style.left = l.x + "px"; 
+                div.style.top = l.y + "px";
+                div.style.fontSize = l.size + "px"; 
+                div.style.textAlign = l.align || "left";
+                div.style.fontFamily = l.font || "Sarabun";
+                div.style.fontWeight = l.bold ? "700" : "400";
+                div.style.width = l.align === 'center' ? "100%" : `calc(100% - ${l.x}px)`;
+                if(l.align === 'center') div.style.left = "0px";
+
+                // Replace Variables
+                let txt = l.text || "";
+                Object.keys(mock).forEach(key => {
+                    const regex = new RegExp(`{{${key}}}`, 'g');
+                    txt = txt.replace(regex, mock[key]);
+                });
+                
+                div.innerHTML = txt;
+                box.appendChild(div);
+            });
+        }
+
+        function renderEditor() {
+            const area = document.getElementById("lineEditor");
+            area.innerHTML = "";
+            
+            document.getElementById('paper_w').value = currentConfig.width;
+            document.getElementById('paper_h').value = currentConfig.height;
+
+            currentConfig.lines.forEach((l, i) => {
+                const block = document.createElement("div");
+                block.className = "card";
+                block.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-black text-teal-400 bg-teal-500/10 px-3 py-1 rounded-full">LINE ${i+1}</span>
+                        <button class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-xs font-bold hover:bg-red-500/20" onclick="removeLine(${i})">ลบ</button>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="label">ข้อความ / ตัวแปร</label>
+                        <input class="input-box" value="${l.text}" oninput="updateLine(${i},'text',this.value)" placeholder="เช่น ชื่อยา: {{drug_name}}">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="label">Font</label>
+                            <select class="input-box !py-2" onchange="updateLine(${i},'font',this.value)">
+                                <option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option>
+                                <option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option>
+                                <option value="Outfit" ${l.font==='Outfit'?'selected':''}>Outfit (EN)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label">การจัดวาง</label>
+                            <select class="input-box !py-2" onchange="updateLine(${i},'align',this.value)">
+                                <option value="left" ${l.align==='left'?'selected':''}>ชิดซ้าย</option>
+                                <option value="center" ${l.align==='center'?'selected':''}>กึ่งกลาง</option>
+                                <option value="right" ${l.align==='right'?'selected':''}>ชิดขวา</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div><label class="label">Size (px)</label><input type="number" class="input-box !py-2 text-center" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
+                        <div><label class="label">แกน X (แนวนอน)</label><input type="number" class="input-box !py-2 text-center" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                        <div><label class="label">แกน Y (แนวตั้ง)</label><input type="number" class="input-box !py-2 text-center" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                    </div>
+                    
+                    <div class="mt-4 flex items-center gap-2">
+                        <input type="checkbox" class="w-4 h-4 accent-teal-500" ${l.bold?'checked':''} onchange="updateLine(${i},'bold',this.checked)">
+                        <span class="text-sm text-gray-300">ตัวหนา (Bold)</span>
+                    </div>
+                `;
+                area.appendChild(block);
+            });
+        }
+
+        window.updateLine = (i, k, v) => { 
+            if(['size','x','y'].includes(k)) v = parseInt(v) || 0; 
+            currentConfig.lines[i][k] = v; 
+            renderPreview(); 
+        };
+
+        window.removeLine = (i) => { 
+            currentConfig.lines.splice(i, 1); 
+            renderEditor(); 
+            renderPreview(); 
+        };
+
+        window.addLine = () => { 
+            currentConfig.lines.push({ text: "ข้อความใหม่", size: 14, x: 10, y: parseInt(currentConfig.height * 3.7) / 2 || 20, align: "left", font: "Sarabun", bold: false }); 
+            renderEditor(); 
+            renderPreview(); 
+        };
+
+        // Database Integration
+        window.loadTemplate = async () => {
+            const type = document.getElementById("templateType").value;
+            // ดึงข้อมูลจาก Table 'print_templates' (สมมติว่าสร้างไว้แล้ว)
+            // ถ้าคุณใช้ตัวแปร db จาก supabase-config.js ให้ใช้แบบนี้
+            if (typeof db !== 'undefined') {
+                try {
+                    const { data, error } = await db.from("print_templates").select("*").eq("template_type", type).maybeSingle();
+                    if (data && data.config) {
+                        currentConfig = data.config;
+                    } else {
+                        // Default Template ถ้าไม่มีข้อมูล
+                        currentConfig = { width: 80, height: 50, lines: [] };
+                    }
+                } catch (e) {
+                    console.log("Supabase not fully connected yet, loading blank.");
+                    currentConfig = { width: 80, height: 50, lines: [] };
+                }
+            } else {
+                currentConfig = { width: 80, height: 50, lines: [] };
+            }
+            renderEditor(); 
+            renderPreview();
+        };
+
+        window.saveTemplate = async () => {
+            const type = document.getElementById("templateType").value;
+            if (typeof db !== 'undefined') {
+                const { error } = await db.from("print_templates").upsert({ 
+                    template_type: type, 
+                    config: currentConfig 
+                }, { onConflict: "template_type" });
+                
+                if (error) {
+                    alert("ล้มเหลว: " + error.message);
+                } else {
+                    alert("💾 บันทึกรูปแบบสติกเกอร์สำเร็จ!");
+                }
+            } else {
+                alert("กรุณาเชื่อมต่อ Supabase (db) ก่อนบันทึก");
+            }
+        };
+
+        window.printTest = () => {
+            const contents = document.getElementById("sticker").innerHTML;
+            const pw = window.open("", "_blank", "width=800,height=600");
+            pw.document.write(`
+                <html>
+                <head>
+                    <title>Print Test</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+                    <style>
+                        body { margin: 0; font-family: 'Sarabun', sans-serif; }
+                        .sticker { position: relative; width: ${currentConfig.width}mm; height: ${currentConfig.height}mm; background: #fff; overflow: hidden; }
+                        .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
+                        @page { size: ${currentConfig.width}mm ${currentConfig.height}mm; margin: 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="sticker">${contents}</div>
+                    <script>
+                        window.onload = function() {
+                            setTimeout(function() { window.print(); window.close(); }, 500);
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            pw.document.close();
+        };
+
+        // Initialize on load
+        window.onload = () => {
+            if (window.innerWidth < 1024) updateZoom(80); // Auto zoom out for mobile
+            loadTemplate();
+        };
+    </script>
+</body>
+</html>
