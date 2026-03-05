@@ -528,7 +528,7 @@
         }
 
         async function reprintFromHistory(textStr, dateStr) {
-            // textStr จะมาในรูปแบบ "Amoxicillin 500mg (ป้อนครั้งละ 1/2 เม็ด วันละ 2 ครั้ง หลังอาหารทันที เช้า-เย็น x 7 วัน)"
+            // จำลองการตัดคำแบบง่ายๆ เพื่อพิมพ์ซ้ำจากประวัติ String เก่า
             const parts = textStr.split(' (');
             const drugName = parts[0].trim();
             const instruction = parts[1] ? parts[1].replace(')', '') : '';
@@ -557,7 +557,7 @@
                 durationStr = insParts[1].trim() + (insParts[1].includes('วัน') ? '' : ' วัน');
             }
 
-            // หั่นความถี่ และเวลา (จาก frontPart เช่น "ป้อนครั้งละ 1/2 เม็ด วันละ 2 ครั้ง หลังอาหารทันที เช้า-เย็น")
+            // หั่นความถี่ และเวลา
             if (frontPart.includes(' วันละ ')) {
                 const fParts = frontPart.split(' วันละ ');
                 doseStr = fParts[0].trim(); 
@@ -590,6 +590,53 @@
                 }
             }
 
+            // 3. เครื่องคิดเลขคำนวณจำนวนเม็ดรวมจากข้อความประวัติ
+            let calculatedQtyStr = "-";
+            let calculatedTotalQtyNum = "-";
+            try {
+                let doseVal = 0;
+                let doseTokens = doseStr.split(' ');
+                for(let t of doseTokens) {
+                    if(t.includes('/')) {
+                        let sp = t.split('/');
+                        if(!isNaN(parseFloat(sp[0])) && !isNaN(parseFloat(sp[1]))) {
+                            doseVal += parseFloat(sp[0])/parseFloat(sp[1]);
+                        }
+                    } else if (!isNaN(parseFloat(t))) {
+                        doseVal += parseFloat(t);
+                    }
+                }
+
+                let freqNum = 1;
+                if (freqStr.includes('เว้นวัน')) {
+                    freqNum = 0.5;
+                } else {
+                    let fMatch = freqStr.match(/\d+(\.\d+)?/);
+                    if (fMatch) freqNum = parseFloat(fMatch[0]);
+                }
+
+                let durNum = 1;
+                let dMatch = durationStr.match(/\d+/);
+                if (dMatch) durNum = parseInt(dMatch[0]);
+
+                // ถ้าดึงเลขสำเร็จ เอามาคูณกัน
+                if (doseVal > 0 && freqNum > 0 && durNum > 0) {
+                    let total = Math.ceil(doseVal * freqNum * durNum);
+                    
+                    // สแกนหาหน่วยของยา
+                    let unit = "เม็ด"; // ค่าพื้นฐาน
+                    if (doseStr.match(/แคปซูล/i)) unit = "แคปซูล";
+                    else if (doseStr.match(/ml/i)) unit = "ml";
+                    else if (doseStr.match(/cc/i)) unit = "cc";
+                    else if (doseStr.match(/หยด/i)) unit = "หยด";
+
+                    calculatedTotalQtyNum = total;
+                    calculatedQtyStr = `${total} ${unit}`;
+                }
+            } catch (e) {
+                console.log("ไม่สามารถคำนวณยอดรวมอัตโนมัติได้", e);
+            }
+
             const printData = {
                 clinic_name: "PK-VMS Clinic",
                 phone: document.getElementById('info-owner-phone').innerText,
@@ -607,8 +654,8 @@
                 meal_timing: mealTiming, 
                 day_timing: dayTiming, 
                 duration: durationStr,
-                qty: "-", // ประวัติเก่าไม่มีจำนวนรวมเซฟไว้ เป็น - แทน
-                total_qty: "-",
+                qty: calculatedQtyStr,             // ใส่จำนวนที่คำนวณได้
+                total_qty: calculatedTotalQtyNum,  // ใส่จำนวนเพียวๆ
                 instruction: instruction,
                 warning: warningText,
                 date: dateStr,
