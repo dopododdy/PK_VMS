@@ -49,9 +49,9 @@
         .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
         
         @media print {
-            body * { visibility: hidden; }
-            #sticker-container, #sticker-container * { visibility: visible; }
-            #sticker-container { display: block !important; position: fixed; left: 0; top: 0; }
+            body { margin: 0; padding: 0; }
+            #main-ui { display: none !important; }
+            #sticker-container { display: block !important; position: absolute; left: 0; top: 0; margin: 0; padding: 0; }
         }
     </style>
 </head>
@@ -59,7 +59,7 @@
 
     <div id="sticker-container"></div>
 
-    <div class="max-w-6xl mx-auto">
+    <div id="main-ui" class="max-w-6xl mx-auto">
         <header class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-6">
                 <button onclick="goBack()" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-2xl shadow-lg">⬅️</button>
@@ -184,8 +184,8 @@
         const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let editingId = null, records = [], fullCatalog = [], pendingItem = null;
         let selectedLabs = [], selectedTxs = [], selectedRxs = [], petType = 'สุนัข';
+        let petData = { sex: "ผู้", dob: "" }; // เก็บข้อมูลสัตว์เพิ่มเติมสำหรับปริ้นท์
         
-        // Cache สำหรับเก็บ Template การพิมพ์
         let printConfigCache = null;
 
         window.onload = async () => {
@@ -199,6 +199,9 @@
             const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
             if (owner && pet) {
                 petType = pet.pet_type;
+                petData.sex = pet.sex || "ไม่ระบุ";
+                petData.dob = pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('th-TH') : "-";
+                
                 document.getElementById('info-owner-name').innerText = owner.owner_name;
                 document.getElementById('info-owner-phone').innerText = (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN)).data?.[0]?.phone_number || '-';
                 document.getElementById('info-owner-address').innerText = owner.address || '-';
@@ -225,7 +228,6 @@
             }).join('');
         }
 
-        // --- Core ---
         async function saveMedicalRecord() {
             const data = {
                 animal_id: animalId, owner_hn: ownerHN,
@@ -237,7 +239,6 @@
             if (error) alert(error.message); else { await db.from('animals').update({ weight: data.weight }).eq('id', animalId); alert("บันทึกสำเร็จ!"); location.reload(); }
         }
 
-        // --- Selection Logic ---
         async function openCatalog(type) {
             currentCatalogType = type; document.getElementById('catalog-modal').style.display = 'flex';
             updateModalUI();
@@ -264,7 +265,6 @@
             }
         }
 
-        // --- Rx Calculation ---
         function openRxCalc(item) {
             pendingItem = item;
             document.getElementById('rx-calc-name').innerText = item.name;
@@ -300,17 +300,25 @@
         }
 
         function confirmRxCalc() {
-            const disp = document.getElementById('rx-tabs-display').innerText;
-            const fIdx = document.getElementById('rx-freq').selectedIndex;
-            const fText = document.getElementById('rx-freq').options[fIdx].text.split(' (')[0];
-            const thaiFreq = { "SID":"วันละหนึ่งครั้ง", "BID":"วันละสองครั้ง เช้า-เย็น", "TID":"วันละสามครั้ง เช้า-กลางวัน-เย็น", "QID":"วันละสี่ครั้ง", "EOD":"วันเว้นวัน" }[fText] || fText;
+            const disp = document.getElementById('rx-tabs-display').innerText.split(' ')[0] || "0";
+            const fVal = document.getElementById('rx-freq').value;
+            let freqText = "วันละ 1 ครั้ง", timingSuffix = "เช้า";
+            
+            if(fVal == "2") { freqText = "วันละ 2 ครั้ง"; timingSuffix = "เช้า-เย็น"; }
+            else if(fVal == "3") { freqText = "วันละ 3 ครั้ง"; timingSuffix = "เช้า-กลางวัน-เย็น"; }
+            else if(fVal == "4") { freqText = "วันละ 4 ครั้ง"; timingSuffix = "เช้า-กลางวัน-เย็น-ก่อนนอน"; }
+            else if(fVal == "0.5") { freqText = "วันเว้นวัน"; timingSuffix = "เช้า"; }
+
             const days = document.getElementById('rx-days').value, timing = document.getElementById('rx-timing').value;
             const finalP = parseFloat(document.getElementById('rx-final-price-val').value) || 0;
-            addItemToList(`${pendingItem.name} (ป้อนครั้งละ ${disp} ${thaiFreq} ${timing} x ${days} วัน)`, finalP);
+            const unit = pendingItem.data.unit || 'เม็ด';
+            
+            // สร้าง String ให้ไปโชว์ใน list ปกติ
+            const historyStr = `${pendingItem.name} (ป้อนครั้งละ ${disp} ${unit} ${freqText} ${timing} ${timingSuffix} x ${days} วัน)`;
+            addItemToList(historyStr, finalP);
             document.getElementById('rx-calc-modal').style.display = 'none';
         }
 
-        // --- Helpers ---
         function addItemToList(name, price) {
             const list = currentCatalogType === 'lab' ? selectedLabs : (currentCatalogType === 'tx' ? selectedTxs : selectedRxs);
             list.push({ name, price });
@@ -343,7 +351,6 @@
             }).join('')}</ul>`;
         }
 
-        // --- Standard UI ---
         function toggleCollapse(id) { document.getElementById(`detail-${id}`).classList.toggle('hidden'); }
         function showFormView() { document.getElementById('history-view-container').classList.add('view-hidden'); document.getElementById('form-view-container').classList.remove('view-hidden'); }
         function showHistoryView() { location.reload(); }
@@ -363,11 +370,9 @@
             try {
                 const { data } = await db.from('print_templates').select('config').eq('template_type', type).single();
                 if (!printConfigCache) printConfigCache = {};
-                // ถ้าไม่มีข้อมูลในตาราง ให้ใช้ขนาดมาตรฐาน 80x50mm
                 printConfigCache[type] = data ? data.config : { width: 80, height: 50, lines: [] };
                 return printConfigCache[type];
             } catch(e) {
-                console.error("Print template fetch error:", e);
                 return { width: 80, height: 50, lines: [] };
             }
         }
@@ -376,12 +381,10 @@
             const config = await getPrintConfig(templateType);
             const container = document.getElementById('sticker-container');
             
-            // ตั้งค่าขนาดกระดาษและล้างข้อมูลเดิม
             container.style.width = config.width + 'mm';
             container.style.height = config.height + 'mm';
             container.innerHTML = '';
 
-            // สร้างแท็ก <style> สำหรับ @page size เผื่อให้เครื่องพิมพ์รู้ขนาดอัตโนมัติ
             let style = document.getElementById('dynamic-print-style');
             if(!style) {
                 style = document.createElement('style');
@@ -390,7 +393,6 @@
             }
             style.innerHTML = `@media print { @page { size: ${config.width}mm ${config.height}mm; margin: 0; } }`;
 
-            // วาดบรรทัดต่างๆ ตาม Template
             (config.lines || []).forEach(l => {
                 const div = document.createElement("div");
                 div.className = "canvas-line";
@@ -404,7 +406,6 @@
                 if(l.align === 'center') div.style.left = "0px";
 
                 let txt = l.text || "";
-                // แทนที่ตัวแปรในข้อความ (เช่น {{pet_name}})
                 Object.keys(mockData).forEach(key => {
                     const regex = new RegExp(`{{${key}}}`, 'g');
                     txt = txt.replace(regex, mockData[key] || "");
@@ -414,7 +415,6 @@
                 container.appendChild(div);
             });
 
-            // หน่วงเวลาเล็กน้อยเพื่อให้เบราว์เซอร์ Render DOM ทัน ก่อนสั่ง Print
             setTimeout(() => { window.print(); }, 200);
         }
 
@@ -422,23 +422,45 @@
             const petName = document.getElementById('head-pet-name').innerText;
             const dateStr = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
             
-            const fIdx = document.getElementById('rx-freq').selectedIndex;
-            const fText = document.getElementById('rx-freq').options[fIdx].text.split(' (')[0];
-            const thaiFreq = { "SID":"วันละ 1 ครั้ง", "BID":"วันละ 2 ครั้ง", "TID":"วันละ 3 ครั้ง", "QID":"วันละ 4 ครั้ง", "EOD":"วันเว้นวัน" }[fText] || fText;
+            // เตรียมตัวแปรที่แยกกันตามที่คุณหมอต้องการ
+            const fVal = document.getElementById('rx-freq').value;
+            let freqText = "วันละ 1 ครั้ง", timingSuffix = "เช้า";
             
-            const disp = document.getElementById('rx-tabs-display').innerText;
-            const timing = document.getElementById('rx-timing').value;
-            const instruction = `กินครั้งละ ${disp} ${thaiFreq} ${timing}`;
-            const totalQty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value)) || 0;
+            if(fVal == "2") { freqText = "วันละ 2 ครั้ง"; timingSuffix = "เช้า-เย็น"; }
+            else if(fVal == "3") { freqText = "วันละ 3 ครั้ง"; timingSuffix = "เช้า-กลางวัน-เย็น"; }
+            else if(fVal == "4") { freqText = "วันละ 4 ครั้ง"; timingSuffix = "เช้า-กลางวัน-เย็น-ก่อนนอน"; }
+            else if(fVal == "0.5") { freqText = "วันเว้นวัน"; timingSuffix = "เช้า"; }
+
+            const timingVal = document.getElementById('rx-timing').value;
+            const disp = document.getElementById('rx-tabs-display').innerText.split(' ')[0] || "0";
+            const unit = pendingItem.data.unit || 'เม็ด';
+            const daysVal = document.getElementById('rx-days').value;
+            
+            const doseStr = `ป้อนครั้งละ ${disp} ${unit}`;
+            const timingStr = `${timingVal} ${timingSuffix}`.trim();
+            const durationStr = `${daysVal} วัน`;
+            const instructionStr = `${doseStr} ${freqText} ${timingStr}`;
+
+            const totalQty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(daysVal)) || 0;
             
             const printData = {
                 clinic_name: "PK-VMS Clinic",
+                phone: document.getElementById('info-owner-phone').innerText,
                 hn: ownerHN,
                 pet_name: petName,
                 owner_name: document.getElementById('info-owner-name').innerText,
+                species: petType,
+                sex: petData.sex,
+                dob: petData.dob,
                 drug_name: pendingItem.data.item_name,
-                qty: `${totalQty} ${pendingItem.data.unit || 'เม็ด'}`,
-                instruction: instruction,
+                drug_name_th: pendingItem.data.drug_name_th || pendingItem.data.item_name, // ถ้ามีใน DB จะดึงมา, ถ้าไม่มีใช้อังกฤษแทน
+                dose: doseStr,
+                frequency: freqText,
+                timing: timingStr,
+                duration: durationStr,
+                qty: `${totalQty} ${unit}`,
+                total_qty: totalQty,
+                instruction: instructionStr,
                 warning: pendingItem.data.side_effects || "",
                 date: dateStr,
                 time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
@@ -449,23 +471,22 @@
         }
 
         async function reprintFromHistory(textStr, dateStr) {
-            // textStr จะมาในรูปแบบ: "Amoxicillin (ป้อนครั้งละ 1 เม็ด วันละ 2 ครั้ง ... x 7 วัน)"
+            // textStr มาในรูปแบบ "Amoxicillin (ป้อนครั้งละ 1/2 เม็ด วันละ 2 ครั้ง หลังอาหารทันที เช้า-เย็น x 7 วัน)"
+            // อันนี้เป็นการจำลองการตัดคำแบบง่ายๆ เพื่อให้พิมพ์จากประวัติเก่าได้ครับ
             const parts = textStr.split(' (');
             const drugName = parts[0];
             const instruction = parts[1] ? parts[1].replace(')', '') : '';
             
             const printData = {
-                clinic_name: "PK-VMS Clinic",
-                hn: ownerHN,
+                clinic_name: "PK-VMS Clinic", phone: "", hn: ownerHN,
                 pet_name: document.getElementById('v-pet-name').innerText,
                 owner_name: document.getElementById('info-owner-name').innerText,
-                drug_name: drugName,
-                qty: "", // ใน History แบบ String ล้วนจะไม่มี QTY รวม
+                species: petType, sex: petData.sex, dob: petData.dob,
+                drug_name: drugName, drug_name_th: "",
+                dose: "", frequency: "", timing: "", duration: "",
+                qty: "", total_qty: "",
                 instruction: instruction,
-                warning: "", 
-                date: dateStr,
-                time: "",
-                queue: ""
+                warning: "", date: dateStr, time: "", queue: ""
             };
             
             await executeDynamicPrint(printData, 'drug_sticker');
