@@ -528,21 +528,92 @@
         }
 
         async function reprintFromHistory(textStr, dateStr) {
-            // จำลองการตัดคำแบบง่ายๆ เพื่อพิมพ์ซ้ำจากประวัติ String เก่า
+            // textStr จะมาในรูปแบบ "Amoxicillin 500mg (ป้อนครั้งละ 1/2 เม็ด วันละ 2 ครั้ง หลังอาหารทันที เช้า-เย็น x 7 วัน)"
             const parts = textStr.split(' (');
-            const drugName = parts[0];
+            const drugName = parts[0].trim();
             const instruction = parts[1] ? parts[1].replace(')', '') : '';
             
+            // 1. วิ่งไปดึงชื่อยาภาษาไทย และ คำเตือน จากฐานข้อมูล Pharmacy
+            let drugNameTh = drugName;
+            let warningText = "";
+            try {
+                const { data } = await db.from('pharmacy').select('name_th, side_effects').eq('item_name', drugName).maybeSingle();
+                if (data) {
+                    drugNameTh = data.name_th || drugName;
+                    warningText = data.side_effects || "";
+                }
+            } catch(e) {
+                console.log("ไม่พบข้อมูลยาในระบบ");
+            }
+
+            // 2. พยายามหั่นข้อความวิธีใช้ กลับมาเป็นตัวแปรย่อยๆ
+            let doseStr = "", freqStr = "", timingStr = "", durationStr = "", mealTiming = "", dayTiming = "";
+            let frontPart = instruction;
+            
+            // หั่นจำนวนวัน (x 7 วัน)
+            if (instruction.includes(' x ')) {
+                const insParts = instruction.split(' x ');
+                frontPart = insParts[0].trim();
+                durationStr = insParts[1].trim() + (insParts[1].includes('วัน') ? '' : ' วัน');
+            }
+
+            // หั่นความถี่ และเวลา (จาก frontPart เช่น "ป้อนครั้งละ 1/2 เม็ด วันละ 2 ครั้ง หลังอาหารทันที เช้า-เย็น")
+            if (frontPart.includes(' วันละ ')) {
+                const fParts = frontPart.split(' วันละ ');
+                doseStr = fParts[0].trim(); 
+                
+                const kIdx = fParts[1].indexOf('ครั้ง');
+                if (kIdx !== -1) {
+                    freqStr = "วันละ " + fParts[1].substring(0, kIdx + 5).trim();
+                    timingStr = fParts[1].substring(kIdx + 5).trim(); 
+                } else {
+                    freqStr = "วันละ " + fParts[1].trim();
+                }
+            } else if (frontPart.includes(' วันเว้นวัน ')) {
+                const fParts = frontPart.split(' วันเว้นวัน ');
+                doseStr = fParts[0].trim();
+                freqStr = "วันเว้นวัน";
+                timingStr = fParts[1] ? fParts[1].trim() : "";
+            } else {
+                doseStr = frontPart;
+            }
+
+            // พยายามแยกมื้ออาหาร (meal_timing) ออกจาก ช่วงเวลา (day_timing)
+            const knownMeals = ["หลังอาหารทันที", "หลังอาหาร", "ก่อนอาหาร 30 นาที", "ก่อนอาหาร 1 ชั่วโมง", "ก่อนอาหาร", "พร้อมอาหาร"];
+            mealTiming = timingStr; 
+            dayTiming = "";
+            for (let m of knownMeals) {
+                if (timingStr.startsWith(m)) {
+                    mealTiming = m;
+                    dayTiming = timingStr.replace(m, "").trim();
+                    break;
+                }
+            }
+
             const printData = {
-                clinic_name: "PK-VMS Clinic", phone: "", hn: ownerHN,
+                clinic_name: "PK-VMS Clinic",
+                phone: document.getElementById('info-owner-phone').innerText,
+                hn: ownerHN,
                 pet_name: document.getElementById('v-pet-name').innerText,
                 owner_name: document.getElementById('info-owner-name').innerText,
-                species: petType, sex: petData.sex, dob: petData.dob,
-                drug_name: drugName, drug_name_th: "",
-                dose: "", frequency: "", timing: "", meal_timing: "", day_timing: "", duration: "",
-                qty: "", total_qty: "",
+                species: petType,
+                sex: petData.sex,
+                dob: petData.dob,
+                drug_name: drugName,
+                drug_name_th: drugNameTh,
+                dose: doseStr,
+                frequency: freqStr,
+                timing: timingStr,
+                meal_timing: mealTiming, 
+                day_timing: dayTiming, 
+                duration: durationStr,
+                qty: "-", // ประวัติเก่าไม่มีจำนวนรวมเซฟไว้ เป็น - แทน
+                total_qty: "-",
                 instruction: instruction,
-                warning: "", date: dateStr, time: "", queue: ""
+                warning: warningText,
+                date: dateStr,
+                time: "", 
+                queue: ""
             };
             
             await executeDynamicPrint(printData, 'drug_sticker');
