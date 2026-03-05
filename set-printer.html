@@ -47,11 +47,11 @@
 
         /* Preview Area */
         .preview-section {
-            background: rgba(11,25,41,0.5); display: flex; flex-direction: column; justify-content: center; align-items: center;
-            border-bottom: 2px solid var(--teal); position: sticky; top: 73px; z-index: 900;
-            padding: 20px; overflow-y: auto; overflow-x: hidden; min-height: 250px;
+            background: rgba(11,25,41,0.5); display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+            border-bottom: 2px solid var(--teal); position: sticky; top: 0; z-index: 900;
+            padding: 40px 20px 20px 20px; overflow-y: auto; overflow-x: hidden; min-height: 250px;
         }
-        .sticker-wrapper { transition: 0.3s; box-shadow: 0 0 30px rgba(0,0,0,0.5); flex-shrink: 0; }
+        .sticker-wrapper { transition: 0.3s transform; box-shadow: 0 0 30px rgba(0,0,0,0.5); flex-shrink: 0; transform-origin: top center; }
         .sticker-canvas {
             background: #fff; position: relative; color: #000; overflow: hidden;
             background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
@@ -61,7 +61,9 @@
         .canvas-line:hover { outline: 1px dashed var(--teal); background: rgba(14,165,160,0.1); }
 
         /* Editor Area */
-        .editor-section { padding: 24px; max-width: 900px; margin: 0 auto; }
+        .editor-section { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .editor-content { padding: 24px; max-width: 900px; margin: 0 auto; overflow-y: auto; flex: 1; width: 100%; }
+        
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: 0.2s; }
         .card:hover { border-color: rgba(255,255,255,0.2); }
         
@@ -77,43 +79,32 @@
 
         @media (min-width: 1024px) {
             body { display: flex; flex-direction: row; height: 100vh; overflow: hidden; }
-            header { position: absolute; width: 66.66%; right: 0; z-index: 1001; background: transparent; border: none; backdrop-filter: none; }
-            .preview-section { width: 33.33%; height: 100vh; position: relative; top: 0; border-bottom: none; border-right: 1px solid var(--border); background: var(--navy-mid); padding-top: 60px; justify-content: flex-start; }
-            .editor-section { width: 66.66%; height: 100vh; overflow-y: auto; padding-top: 80px; padding-bottom: 100px; }
-            .mobile-header-bg { display: none; }
+            .preview-section { width: 35%; height: 100vh; position: relative; border-bottom: none; border-right: 1px solid var(--border); background: var(--navy-mid); }
+            .editor-section { width: 65%; height: 100vh; }
         }
     </style>
 </head>
 <body>
     <div class="mesh-bg"></div>
 
-    <header>
-        <div class="flex items-center gap-4">
-            <a href="settings.html" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-white border border-white/10">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
-            </a>
-            <h1 class="text-xl font-bold text-white tracking-wide">Printer Settings</h1>
-        </div>
-        <div class="flex gap-3">
-            <button class="btn-action btn-print" onclick="window.printTest()">🖨️ <span class="hidden sm:inline">ทดสอบพิมพ์</span></button>
-            <button class="btn-action btn-save" onclick="saveTemplate()">💾 <span class="hidden sm:inline">บันทึกรูปแบบ</span></button>
-        </div>
-    </header>
-
     <section class="preview-section">
         <div class="sticker-wrapper" id="preview-zoom">
             <div class="sticker-canvas shadow-2xl" id="sticker"></div>
         </div>
         
-        <div class="var-box">
+        <div class="var-box" id="var-box-container">
             <strong class="text-teal-400 mb-2 block text-sm">📌 ตัวแปรที่ใช้ได้ (คลิกลากคลุมเพื่อคัดลอก):</strong>
             <div class="grid grid-cols-1 gap-1">
                 <p><code>{{clinic_name}}</code> ชื่อคลินิก | <code>{{phone}}</code> เบอร์โทร</p>
                 <p><code>{{hn}}</code> รหัสสัตว์ | <code>{{pet_name}}</code> ชื่อสัตว์ | <code>{{owner_name}}</code> เจ้าของ</p>
                 <p><code>{{species}}</code> ชนิด | <code>{{sex}}</code> เพศ | <code>{{dob}}</code> วดป.เกิด</p>
                 <p><code>{{drug_name}}</code> ชื่อยา (EN) | <code>{{drug_name_th}}</code> ชื่อยา (TH)</p>
-                <p><code>{{dose}}</code> ป้อน/ครั้ง | <code>{{frequency}}</code> ความถี่ | <code>{{total_qty}}</code> จำนวนรวม</p>
-                <p><code>{{qty}}</code> จำนวนบรรจุ | <code>{{instruction}}</code> วิธีใช้</p>
+                <p><code>{{dose}}</code> ป้อน/ครั้ง (เช่น ป้อนครั้งละ 3/4 เม็ด)</p>
+                <p><code>{{frequency}}</code> ความถี่ (เช่น วันละ 2 ครั้ง)</p>
+                <p><code>{{timing}}</code> เวลา (เช่น หลังอาหารทันที เช้า-เย็น)</p>
+                <p><code>{{duration}}</code> จำนวนวัน (เช่น 7 วัน)</p>
+                <p><code>{{qty}}</code> จำนวนบรรจุ | <code>{{total_qty}}</code> จำนวนรวม</p>
+                <p><code>{{instruction}}</code> วิธีใช้รวมแบบยาว</p>
                 <p><code>{{warning}}</code> คำเตือน (Side effects)</p>
                 <p><code>{{date}}</code> วันที่ | <code>{{time}}</code> เวลา | <code>{{queue}}</code> คิว</p>
             </div>
@@ -121,62 +112,65 @@
     </section>
 
     <div class="editor-section">
-        <div class="card grid grid-cols-1 sm:grid-cols-3 gap-4 border-t-4 border-t-teal-500">
-            <div class="sm:col-span-3">
-                <label class="label">รูปแบบเอกสาร (Template)</label>
-                <select id="templateType" class="input-box" onchange="loadTemplate()">
-                    <option value="drug_sticker">💊 ฉลากยา (Drug Sticker)</option>
-                    <option value="queue">🏷 สติ๊กเกอร์คิว (Queue)</option>
-                    <option value="cage">🔒 สติ๊กเกอร์ติดกรง (Cage)</option>
-                    <option value="appointment">📅 ใบนัดหมายขนาดเล็ก (Appt. Slip)</option>
-                </select>
+        <header>
+            <div class="flex items-center gap-4">
+                <a href="settings.html" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-white border border-white/10">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                </a>
+                <h1 class="text-xl font-bold text-white tracking-wide">ตั้งค่าเครื่องพิมพ์</h1>
             </div>
-            <div>
-                <label class="label">ความกว้าง (Width mm)</label>
-                <input type="number" id="paper_w" class="input-box" value="80" onchange="updatePaperSize()">
+            <div class="flex gap-3">
+                <button class="btn-action btn-print" onclick="window.printTest()">🖨️ <span class="hidden sm:inline">ทดสอบพิมพ์</span></button>
+                <button class="btn-action btn-save" onclick="saveTemplate()">💾 <span class="hidden sm:inline">บันทึกรูปแบบ</span></button>
             </div>
-            <div>
-                <label class="label">ความสูง (Height mm)</label>
-                <input type="number" id="paper_h" class="input-box" value="50" onchange="updatePaperSize()">
-            </div>
-            <div>
-                <label class="label">Zoom (%)</label>
-                <input type="number" id="zoom_level" class="input-box" value="100" oninput="updateZoom(this.value)">
-            </div>
-        </div>
+        </header>
 
-        <div id="lineEditor" class="space-y-4"></div>
-        
-        <button class="btn-add mt-6" onclick="addLine()">+ เพิ่มบรรทัดข้อความใหม่</button>
+        <div class="editor-content">
+            <div class="card grid grid-cols-1 sm:grid-cols-3 gap-4 border-t-4 border-t-teal-500">
+                <div class="sm:col-span-3">
+                    <label class="label">รูปแบบเอกสาร (Template)</label>
+                    <select id="templateType" class="input-box" onchange="loadTemplate()">
+                        <option value="drug_sticker">💊 ฉลากยา (Drug Sticker)</option>
+                        <option value="queue">🏷 สติ๊กเกอร์คิว (Queue)</option>
+                        <option value="cage">🔒 สติ๊กเกอร์ติดกรง (Cage)</option>
+                        <option value="appointment">📅 ใบนัดหมายขนาดเล็ก (Appt. Slip)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label">ความกว้าง (Width mm)</label>
+                    <input type="number" id="paper_w" class="input-box" value="80" onchange="updatePaperSize()">
+                </div>
+                <div>
+                    <label class="label">ความสูง (Height mm)</label>
+                    <input type="number" id="paper_h" class="input-box" value="50" onchange="updatePaperSize()">
+                </div>
+                <div>
+                    <label class="label">Zoom (%)</label>
+                    <input type="number" id="zoom_level" class="input-box" value="100" oninput="updateZoom(this.value)">
+                </div>
+            </div>
+
+            <div id="lineEditor" class="space-y-4"></div>
+            
+            <button class="btn-add mt-6" onclick="addLine()">+ เพิ่มบรรทัดข้อความใหม่</button>
+        </div>
     </div>
 
     <script>
         // Data Structure
-        let currentConfig = {
-            width: 80,
-            height: 50,
-            lines: []
-        };
+        let currentConfig = { width: 80, height: 50, lines: [] };
 
-        // Date Formatter Mockup พร้อมตัวแปรใหม่
+        // Date Formatter Mockup
         const getMockupData = () => {
             const now = new Date();
             return {
-                clinic_name: "PK-VMS Animal Clinic",
-                phone: "081-234-5678",
-                hn: "HN-69001",
-                pet_name: "น้องนำโชค (Beagle)",
-                owner_name: "คุณสมชาย ใจดี",
-                species: "สุนัข",
-                sex: "ผู้",
-                dob: "01/05/2021",
-                drug_name: "Amoxicillin 500mg",
-                drug_name_th: "อะม็อกซีซิลลิน 500 มก.",
-                dose: "1 เม็ด",
-                frequency: "เช้า-เย็น",
-                total_qty: "14",
-                qty: "14 เม็ด",
-                instruction: "กินครั้งละ 1 เม็ด เช้า-เย็น หลังอาหาร",
+                clinic_name: "PK-VMS Animal Clinic", phone: "081-234-5678",
+                hn: "HN-69001", pet_name: "น้องนำโชค (Beagle)", owner_name: "คุณสมชาย ใจดี",
+                species: "สุนัข", sex: "ผู้", dob: "01/05/2021",
+                drug_name: "Amoxicillin 500mg", drug_name_th: "อะม็อกซีซิลลิน 500 มก.",
+                dose: "ป้อนครั้งละ 3/4 เม็ด", frequency: "วันละ 2 ครั้ง", timing: "หลังอาหารทันที เช้า-เย็น", duration: "7 วัน",
+                total_qty: "14", qty: "14 เม็ด",
+                instruction: "ป้อนครั้งละ 3/4 เม็ด วันละ 2 ครั้ง หลังอาหารทันที เช้า-เย็น",
                 warning: "* ยานี้อาจทำให้ปัสสาวะเปลี่ยนสี",
                 date: now.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }),
                 time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
@@ -188,18 +182,27 @@
             currentConfig.width = parseInt(document.getElementById('paper_w').value) || 80;
             currentConfig.height = parseInt(document.getElementById('paper_h').value) || 50;
             renderPreview();
+            updateZoom(document.getElementById('zoom_level').value);
         }
 
         function updateZoom(val) {
             const scale = (parseInt(val) || 100) / 100;
-            document.getElementById('preview-zoom').style.transform = `scale(${scale})`;
+            const zoomDiv = document.getElementById('preview-zoom');
+            zoomDiv.style.transform = `scale(${scale})`;
+            
+            // Adjust margin to push var-box down proportionally
+            const pxHeight = currentConfig.height * 3.7795275591; // Convert mm to px roughly
+            if (scale > 1) {
+                zoomDiv.style.marginBottom = ((pxHeight * scale) - pxHeight) + 20 + 'px';
+            } else {
+                zoomDiv.style.marginBottom = '20px';
+            }
         }
 
         function renderPreview() {
             const box = document.getElementById("sticker");
             const mock = getMockupData();
             
-            // Set Canvas Size
             box.style.width = currentConfig.width + "mm";
             box.style.height = currentConfig.height + "mm";
             box.innerHTML = "";
@@ -216,7 +219,6 @@
                 div.style.width = l.align === 'center' ? "100%" : `calc(100% - ${l.x}px)`;
                 if(l.align === 'center') div.style.left = "0px";
 
-                // Replace Variables
                 let txt = l.text || "";
                 Object.keys(mock).forEach(key => {
                     const regex = new RegExp(`{{${key}}}`, 'g');
@@ -229,46 +231,20 @@
         }
 
         let dragStartIndex = null;
-
-        window.handleDragStart = (e, index) => {
-            dragStartIndex = index;
-            e.dataTransfer.effectAllowed = 'move';
-            setTimeout(() => e.target.classList.add('dragging'), 0);
-        };
-
-        window.handleDragOver = (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        };
-
-        window.handleDrop = (e, targetIndex) => {
-            e.preventDefault();
-            if(dragStartIndex !== null && dragStartIndex !== targetIndex) {
-                // ย้ายข้อมูลใน Array
-                const item = currentConfig.lines.splice(dragStartIndex, 1)[0];
-                currentConfig.lines.splice(targetIndex, 0, item);
-                renderEditor();
-                renderPreview();
-            }
-        };
-
-        window.handleDragEnd = (e) => {
-            e.target.classList.remove('dragging');
-            dragStartIndex = null;
-        };
+        window.handleDragStart = (e, index) => { dragStartIndex = index; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => e.target.classList.add('dragging'), 0); };
+        window.handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+        window.handleDrop = (e, targetIndex) => { e.preventDefault(); if(dragStartIndex !== null && dragStartIndex !== targetIndex) { const item = currentConfig.lines.splice(dragStartIndex, 1)[0]; currentConfig.lines.splice(targetIndex, 0, item); renderEditor(); renderPreview(); } };
+        window.handleDragEnd = (e) => { e.target.classList.remove('dragging'); dragStartIndex = null; };
 
         function renderEditor() {
             const area = document.getElementById("lineEditor");
             area.innerHTML = "";
-            
             document.getElementById('paper_w').value = currentConfig.width;
             document.getElementById('paper_h').value = currentConfig.height;
 
             currentConfig.lines.forEach((l, i) => {
                 const block = document.createElement("div");
                 block.className = "card";
-                
-                // ตั้งค่า Drag & Drop
                 block.draggable = true;
                 block.setAttribute('ondragstart', `handleDragStart(event, ${i})`);
                 block.setAttribute('ondragover', `handleDragOver(event)`);
@@ -283,12 +259,10 @@
                         </div>
                         <button class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-xs font-bold hover:bg-red-500/20 transition" onclick="removeLine(${i})">ลบ</button>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="label">ข้อความ / ตัวแปร</label>
                         <input class="input-box" value="${l.text}" oninput="updateLine(${i},'text',this.value)" placeholder="เช่น ชื่อยา: {{drug_name}}">
                     </div>
-                    
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div>
                             <label class="label">Font</label>
@@ -307,13 +281,11 @@
                             </select>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-3 gap-3">
                         <div><label class="label">Size (px)</label><input type="number" class="input-box !py-2 text-center" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         <div><label class="label">แกน X (แนวนอน)</label><input type="number" class="input-box !py-2 text-center" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
                         <div><label class="label">แกน Y (แนวตั้ง)</label><input type="number" class="input-box !py-2 text-center" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
                     </div>
-                    
                     <div class="mt-4 flex items-center gap-2">
                         <input type="checkbox" class="w-4 h-4 accent-teal-500" ${l.bold?'checked':''} onchange="updateLine(${i},'bold',this.checked)">
                         <span class="text-sm text-gray-300 cursor-pointer" onclick="this.previousElementSibling.click()">ตัวหนา (Bold)</span>
@@ -323,59 +295,30 @@
             });
         }
 
-        window.updateLine = (i, k, v) => { 
-            if(['size','x','y'].includes(k)) v = parseInt(v) || 0; 
-            currentConfig.lines[i][k] = v; 
-            renderPreview(); 
-        };
+        window.updateLine = (i, k, v) => { if(['size','x','y'].includes(k)) v = parseInt(v) || 0; currentConfig.lines[i][k] = v; renderPreview(); };
+        window.removeLine = (i) => { currentConfig.lines.splice(i, 1); renderEditor(); renderPreview(); };
+        window.addLine = () => { currentConfig.lines.push({ text: "ข้อความใหม่", size: 14, x: 10, y: parseInt(currentConfig.height * 3.7) / 2 || 20, align: "left", font: "Sarabun", bold: false }); renderEditor(); renderPreview(); };
 
-        window.removeLine = (i) => { 
-            currentConfig.lines.splice(i, 1); 
-            renderEditor(); 
-            renderPreview(); 
-        };
-
-        window.addLine = () => { 
-            currentConfig.lines.push({ text: "ข้อความใหม่", size: 14, x: 10, y: parseInt(currentConfig.height * 3.7) / 2 || 20, align: "left", font: "Sarabun", bold: false }); 
-            renderEditor(); 
-            renderPreview(); 
-        };
-
-        // Database Integration
         window.loadTemplate = async () => {
             const type = document.getElementById("templateType").value;
             if (typeof db !== 'undefined') {
                 try {
                     const { data, error } = await db.from("print_templates").select("*").eq("template_type", type).maybeSingle();
-                    if (data && data.config) {
-                        currentConfig = data.config;
-                    } else {
-                        currentConfig = { width: 80, height: 50, lines: [] };
-                    }
+                    currentConfig = (data && data.config) ? data.config : { width: 80, height: 50, lines: [] };
                 } catch (e) {
-                    console.log("Supabase not fully connected yet, loading blank.");
                     currentConfig = { width: 80, height: 50, lines: [] };
                 }
             } else {
                 currentConfig = { width: 80, height: 50, lines: [] };
             }
-            renderEditor(); 
-            renderPreview();
+            renderEditor(); renderPreview();
         };
 
         window.saveTemplate = async () => {
             const type = document.getElementById("templateType").value;
             if (typeof db !== 'undefined') {
-                const { error } = await db.from("print_templates").upsert({ 
-                    template_type: type, 
-                    config: currentConfig 
-                }, { onConflict: "template_type" });
-                
-                if (error) {
-                    alert("ล้มเหลว: " + error.message);
-                } else {
-                    alert("💾 บันทึกรูปแบบสติกเกอร์สำเร็จ!");
-                }
+                const { error } = await db.from("print_templates").upsert({ template_type: type, config: currentConfig }, { onConflict: "template_type" });
+                if (error) alert("ล้มเหลว: " + error.message); else alert("💾 บันทึกรูปแบบสติกเกอร์สำเร็จ!");
             } else {
                 alert("กรุณาเชื่อมต่อ Supabase (db) ก่อนบันทึก");
             }
@@ -390,8 +333,8 @@
                     <title>Print Test</title>
                     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
                     <style>
-                        body { margin: 0; font-family: 'Sarabun', sans-serif; }
-                        .sticker { position: relative; width: ${currentConfig.width}mm; height: ${currentConfig.height}mm; background: #fff; overflow: hidden; }
+                        body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; }
+                        .sticker { position: relative; width: ${currentConfig.width}mm; height: ${currentConfig.height}mm; background: #fff; overflow: hidden; margin: 0; }
                         .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
                         @page { size: ${currentConfig.width}mm ${currentConfig.height}mm; margin: 0; }
                     </style>
@@ -409,9 +352,8 @@
             pw.document.close();
         };
 
-        // Initialize on load
         window.onload = () => {
-            if (window.innerWidth < 1024) updateZoom(80); // Auto zoom out for mobile
+            if (window.innerWidth < 1024) document.getElementById('zoom_level').value = 80;
             loadTemplate();
         };
     </script>
