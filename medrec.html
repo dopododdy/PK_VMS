@@ -44,29 +44,20 @@
         .bullet-list li { position: relative; padding-left: 20px; font-size: 1.1rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
         .bullet-list li::before { content: "•"; position: absolute; left: 0; color: var(--teal); font-weight: bold; }
 
-        #sticker-container { display: none; width: 80mm; height: 50mm; background: white; color: black; padding: 4mm; box-sizing: border-box; font-family: "Sarabun", sans-serif; }
+        /* ปรับปรุง CSS สำหรับการพิมพ์ที่ดึงข้อมูลจาก Database */
+        #sticker-container { display: none; background: white; color: black; box-sizing: border-box; position: relative; overflow: hidden; font-family: "Sarabun", sans-serif; }
+        .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
+        
         @media print {
             body * { visibility: hidden; }
             #sticker-container, #sticker-container * { visibility: visible; }
             #sticker-container { display: block !important; position: fixed; left: 0; top: 0; }
-            @page { size: 80mm 50mm; margin: 0; }
         }
     </style>
 </head>
 <body class="p-4 md:p-10">
 
-    <div id="sticker-container">
-        <div style="font-size: 8pt; font-weight: 800; border-bottom: 1px solid black; padding-bottom: 1px;">PK-VMS Professional Vet Clinic</div>
-        <div style="display: flex; justify-content: space-between; font-size: 7pt; margin-top: 1px;">
-            <span id="st-pet-name">Pet: -</span><span id="st-date">Date: -</span>
-        </div>
-        <div style="margin-top: 4px;">
-            <div id="st-med-en" style="font-size: 10pt; font-weight: 900; line-height: 1;">Generic Name</div>
-            <div id="st-med-th" style="font-size: 8pt; font-weight: 700;">ชื่อยาไทย</div>
-        </div>
-        <div style="margin-top: 6px; font-size: 10pt; font-weight: 800; line-height: 1.3;" id="st-instruction">...</div>
-        <div id="st-warning" style="margin-top: 4px; font-size: 7pt; border-top: 0.5px dashed #666; padding-top: 2px;">⚠️ ข้อควรระวัง: -</div>
-    </div>
+    <div id="sticker-container"></div>
 
     <div class="max-w-6xl mx-auto">
         <header class="flex justify-between items-center mb-8">
@@ -193,6 +184,9 @@
         const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let editingId = null, records = [], fullCatalog = [], pendingItem = null;
         let selectedLabs = [], selectedTxs = [], selectedRxs = [], petType = 'สุนัข';
+        
+        // Cache สำหรับเก็บ Template การพิมพ์
+        let printConfigCache = null;
 
         window.onload = async () => {
             if (!animalId) return goBack();
@@ -357,10 +351,125 @@
         function goBack() { location.href = 'animals.html'; }
         function confirmInj() { addItemToList(`${pendingItem.name} (${document.getElementById('inj-ml').value}ml) ${Array.from(document.querySelectorAll('input[name="route"]:checked')).map(c=>c.value).join('/')}`, pendingItem.price||0); document.getElementById('inj-modal').style.display='none'; }
         function filterCatalog() { const t = document.getElementById('catalog-search').value.toLowerCase(); renderItems(fullCatalog.filter(i=>i.name.toLowerCase().includes(t))); }
-        function printRxSticker() { document.getElementById('st-pet-name').innerText = `Pet: ${document.getElementById('head-pet-name').innerText}`; document.getElementById('st-date').innerText = `Date: ${new Date().toLocaleDateString('th-TH')}`; document.getElementById('st-med-en').innerText = pendingItem.data.item_name; document.getElementById('st-instruction').innerText = `ป้อนครั้งละ ${document.getElementById('rx-tabs-display').innerText} ${document.getElementById('rx-freq').options[document.getElementById('rx-freq').selectedIndex].text} ${document.getElementById('rx-timing').value}`; window.print(); }
-        function reprintFromHistory(t, d) { const p = t.split(' ('); document.getElementById('st-pet-name').innerText = `Pet: ${document.getElementById('v-pet-name').innerText}`; document.getElementById('st-date').innerText = `Date: ${d}`; document.getElementById('st-med-en').innerText = p[0]; document.getElementById('st-instruction').innerText = p[1]?.replace(')', '') || ""; window.print(); }
-        function editRecord(id) { const r = records.find(i=>i.id===id); editingId = id; document.getElementById('f_cc').value = r.cc; document.getElementById('f_hx').value = r.hx; document.getElementById('f_pe').value = r.pe; document.getElementById('f_dx').value = r.dx; document.getElementById('f_plan').value = r.plan; document.getElementById('f_cost').value = r.cost; document.getElementById('f_weight').value = r.weight; document.getElementById('f_note').value = r.note; selectedLabs = r.lab?r.lab.split(', ').map(n=>({name:n, price:0})):[]; selectedTxs = r.tx?r.tx.split(', ').map(n=>({name:n, price:0})):[]; selectedRxs = r.rx?r.rx.split(', ').map(n=>({name:n, price:0})):[]; updateFormDisplays(); showFormView(); document.getElementById('edit-mode-badge').classList.remove('hidden'); }
+        function editRecord(id) { const r = records.find(i=>i.id===id); editingId = id; document.getElementById('f_cc').value = r.cc; document.getElementById('f_hx').value = r.hx; document.getElementById('f_pe').value = r.pe; document.getElementById('f_dx').value = r.dx; document.getElementById('f_plan').value = r.plan; document.getElementById('f_cost').value = r.cost; document.getElementById('f_weight').value = r.weight; document.getElementById('f_note').value = r.note; selectedLabs = r.lab?r.lab.split(', ').map(n=>({name:n, price:0})):[]; selectedTxs = r.tx?r.tx.split(', ').map(n=>({name:n, price:0})):[]; selectedRxs = r.rx?r.rx.split(', ').map(n=>({name:n, price:0})):[]; updateFormDisplays(); showFormView(); document.getElementById('edit-mode-badge')?.classList.remove('hidden'); }
         async function deleteRecord(id) { if(confirm("ลบประวัติ?")) db.from('medical_records').delete().eq('id', id).then(()=>location.reload()); }
+
+        // ==========================================
+        // ระบบพิมพ์สติ๊กเกอร์ (ดึงข้อมูลจาก Database)
+        // ==========================================
+        
+        async function getPrintConfig(type) {
+            if (printConfigCache && printConfigCache[type]) return printConfigCache[type];
+            try {
+                const { data } = await db.from('print_templates').select('config').eq('template_type', type).single();
+                if (!printConfigCache) printConfigCache = {};
+                // ถ้าไม่มีข้อมูลในตาราง ให้ใช้ขนาดมาตรฐาน 80x50mm
+                printConfigCache[type] = data ? data.config : { width: 80, height: 50, lines: [] };
+                return printConfigCache[type];
+            } catch(e) {
+                console.error("Print template fetch error:", e);
+                return { width: 80, height: 50, lines: [] };
+            }
+        }
+
+        async function executeDynamicPrint(mockData, templateType) {
+            const config = await getPrintConfig(templateType);
+            const container = document.getElementById('sticker-container');
+            
+            // ตั้งค่าขนาดกระดาษและล้างข้อมูลเดิม
+            container.style.width = config.width + 'mm';
+            container.style.height = config.height + 'mm';
+            container.innerHTML = '';
+
+            // สร้างแท็ก <style> สำหรับ @page size เผื่อให้เครื่องพิมพ์รู้ขนาดอัตโนมัติ
+            let style = document.getElementById('dynamic-print-style');
+            if(!style) {
+                style = document.createElement('style');
+                style.id = 'dynamic-print-style';
+                document.head.appendChild(style);
+            }
+            style.innerHTML = `@media print { @page { size: ${config.width}mm ${config.height}mm; margin: 0; } }`;
+
+            // วาดบรรทัดต่างๆ ตาม Template
+            (config.lines || []).forEach(l => {
+                const div = document.createElement("div");
+                div.className = "canvas-line";
+                div.style.left = l.x + "px";
+                div.style.top = l.y + "px";
+                div.style.fontSize = l.size + "px";
+                div.style.textAlign = l.align || "left";
+                div.style.fontFamily = l.font || "Sarabun";
+                div.style.fontWeight = l.bold ? "700" : "400";
+                div.style.width = l.align === 'center' ? "100%" : `calc(100% - ${l.x}px)`;
+                if(l.align === 'center') div.style.left = "0px";
+
+                let txt = l.text || "";
+                // แทนที่ตัวแปรในข้อความ (เช่น {{pet_name}})
+                Object.keys(mockData).forEach(key => {
+                    const regex = new RegExp(`{{${key}}}`, 'g');
+                    txt = txt.replace(regex, mockData[key] || "");
+                });
+                
+                div.innerHTML = txt;
+                container.appendChild(div);
+            });
+
+            // หน่วงเวลาเล็กน้อยเพื่อให้เบราว์เซอร์ Render DOM ทัน ก่อนสั่ง Print
+            setTimeout(() => { window.print(); }, 200);
+        }
+
+        async function printRxSticker() {
+            const petName = document.getElementById('head-pet-name').innerText;
+            const dateStr = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+            
+            const fIdx = document.getElementById('rx-freq').selectedIndex;
+            const fText = document.getElementById('rx-freq').options[fIdx].text.split(' (')[0];
+            const thaiFreq = { "SID":"วันละ 1 ครั้ง", "BID":"วันละ 2 ครั้ง", "TID":"วันละ 3 ครั้ง", "QID":"วันละ 4 ครั้ง", "EOD":"วันเว้นวัน" }[fText] || fText;
+            
+            const disp = document.getElementById('rx-tabs-display').innerText;
+            const timing = document.getElementById('rx-timing').value;
+            const instruction = `กินครั้งละ ${disp} ${thaiFreq} ${timing}`;
+            const totalQty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value)) || 0;
+            
+            const printData = {
+                clinic_name: "PK-VMS Clinic",
+                hn: ownerHN,
+                pet_name: petName,
+                owner_name: document.getElementById('info-owner-name').innerText,
+                drug_name: pendingItem.data.item_name,
+                qty: `${totalQty} ${pendingItem.data.unit || 'เม็ด'}`,
+                instruction: instruction,
+                warning: pendingItem.data.side_effects || "",
+                date: dateStr,
+                time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                queue: ""
+            };
+
+            await executeDynamicPrint(printData, 'drug_sticker');
+        }
+
+        async function reprintFromHistory(textStr, dateStr) {
+            // textStr จะมาในรูปแบบ: "Amoxicillin (ป้อนครั้งละ 1 เม็ด วันละ 2 ครั้ง ... x 7 วัน)"
+            const parts = textStr.split(' (');
+            const drugName = parts[0];
+            const instruction = parts[1] ? parts[1].replace(')', '') : '';
+            
+            const printData = {
+                clinic_name: "PK-VMS Clinic",
+                hn: ownerHN,
+                pet_name: document.getElementById('v-pet-name').innerText,
+                owner_name: document.getElementById('info-owner-name').innerText,
+                drug_name: drugName,
+                qty: "", // ใน History แบบ String ล้วนจะไม่มี QTY รวม
+                instruction: instruction,
+                warning: "", 
+                date: dateStr,
+                time: "",
+                queue: ""
+            };
+            
+            await executeDynamicPrint(printData, 'drug_sticker');
+        }
     </script>
 </body>
 </html>
