@@ -17,14 +17,13 @@
     <style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
-        body { background: var(--navy); color: #e2e8f0; font-size: 1rem; }
+        body { background: var(--navy); color: #e2e8f0; font-size: 1rem; margin: 0; padding: 0; }
         
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1.1rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
         .label-text { color: #94a3b8; font-size: 1rem; margin-bottom: 4px; display: block; font-weight: 600; }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; display: block; }
-        .pet-info-val { font-size: 1.2rem; font-weight: 800; line-height: 1.5; }
 
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
         .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 25px; border: 1px solid var(--border); transition: 0.3s; margin-bottom: 15px; }
@@ -44,14 +43,14 @@
         .bullet-list li { position: relative; padding-left: 20px; font-size: 1.1rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
         .bullet-list li::before { content: "•"; position: absolute; left: 0; color: var(--teal); font-weight: bold; }
 
-        /* ปรับปรุง CSS สำหรับการพิมพ์ที่ดึงข้อมูลจาก Database */
-        #sticker-container { display: none; background: white; color: black; box-sizing: border-box; position: relative; overflow: hidden; font-family: "Sarabun", sans-serif; }
+        /* ปรับปรุง CSS สำหรับการพิมพ์ */
+        #sticker-container { display: none; background: white; color: black; box-sizing: border-box; position: relative; overflow: hidden; font-family: "Sarabun", sans-serif; margin: 0; }
         .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
         
         @media print {
-            body { margin: 0; padding: 0; }
-            #main-ui { display: none !important; }
-            #sticker-container { display: block !important; position: absolute; left: 0; top: 0; margin: 0; padding: 0; }
+            body { background: white; }
+            #main-ui, #rx-calc-modal, #catalog-modal, #inj-modal, .modal-overlay { display: none !important; }
+            #sticker-container { display: block !important; position: absolute; left: 0; top: 0; }
         }
     </style>
 </head>
@@ -136,7 +135,9 @@
 
     <div id="rx-calc-modal" class="modal-overlay" style="z-index: 120;">
         <div class="modal-content !max-w-2xl">
-            <div class="p-6 border-b border-white/10 bg-blue-900/30"><h4 id="rx-calc-name" class="text-2xl font-black text-blue-400">💊 กำหนดการให้ยา</h4></div>
+            <div class="p-6 border-b border-white/10 bg-blue-900/30">
+                <h4 id="rx-calc-name" class="text-2xl font-black text-blue-400">💊 กำหนดการให้ยา</h4>
+            </div>
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
                 <div class="space-y-4">
                     <div>
@@ -147,22 +148,50 @@
                         <div><label class="label-clinical">โดสใช้จริง</label><input type="number" id="rx-dose-val" class="input-box" step="0.1" oninput="calculateRxTablets()"></div>
                         <div><label class="label-clinical">ความเข้มข้น</label><input type="number" id="rx-conc-val" class="input-box bg-white/5" readonly></div>
                     </div>
-                    <div class="p-4 bg-teal-500/10 rounded-2xl border border-teal-500/20"><label class="label-clinical text-teal-400">ป้อนครั้งละ</label><div id="rx-tabs-display" class="text-3xl font-black text-white">0</div><input type="hidden" id="rx-tabs-val"></div>
+                    <div class="p-4 bg-teal-500/10 rounded-2xl border border-teal-500/20">
+                        <label class="label-clinical text-teal-400">ป้อนครั้งละ</label>
+                        <div id="rx-tabs-display" class="text-3xl font-black text-white">0</div>
+                        <input type="hidden" id="rx-tabs-val">
+                    </div>
                 </div>
                 <div class="space-y-4 border-l border-white/5 pl-6">
                     <div class="grid grid-cols-2 gap-2">
-                        <div><label class="label-clinical">ความถี่</label>
-                            <select id="rx-freq" class="input-box" onchange="calculateRxTotal()">
-                                <option value="1">SID (วันละครั้ง)</option><option value="2" selected>BID (วันละ 2 ครั้ง)</option><option value="3">TID (วันละ 3 ครั้ง)</option><option value="4">QID (วันละ 4 ครั้ง)</option><option value="0.5">EOD (วันเว้นวัน)</option>
+                        <div>
+                            <label class="label-clinical">ความถี่/วัน</label>
+                            <select id="rx-freq" class="input-box" onchange="calculateRxTotal(); updateTimeOfDay();">
+                                <option value="1">1 ครั้ง</option>
+                                <option value="2" selected>2 ครั้ง</option>
+                                <option value="3">3 ครั้ง</option>
+                                <option value="4">4 ครั้ง</option>
+                                <option value="0.5">วันเว้นวัน</option>
                             </select>
                         </div>
                         <div><label class="label-clinical">จำนวนวัน</label><input type="number" id="rx-days" class="input-box" value="7" oninput="calculateRxTotal()"></div>
                     </div>
-                    <div><label class="label-clinical">เวลากิน</label>
-                        <select id="rx-timing" class="input-box">
-                            <option value="หลังอาหารทันที">หลังอาหารทันที</option><option value="หลังอาหาร">หลังอาหาร</option><option value="พร้อมอาหาร">พร้อมอาหาร</option><option value="ก่อนอาหาร 30 นาที">ก่อนอาหาร 30 นาที</option><option value="ก่อนอาหาร 1 ชั่วโมง">ก่อนอาหาร 1 ชั่วโมง</option>
-                        </select>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="label-clinical">มื้ออาหาร</label>
+                            <select id="rx-meal-timing" class="input-box">
+                                <option value="หลังอาหาร">หลังอาหาร</option>
+                                <option value="หลังอาหารทันที">หลังอาหารทันที</option>
+                                <option value="ก่อนอาหาร">ก่อนอาหาร</option>
+                                <option value="พร้อมอาหาร">พร้อมอาหาร</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label-clinical">ช่วงเวลา</label>
+                            <select id="rx-day-timing" class="input-box">
+                                <option value="เช้า">เช้า</option>
+                                <option value="เย็น">เย็น</option>
+                                <option value="เช้า-เย็น" selected>เช้า-เย็น</option>
+                                <option value="เช้า-กลางวัน-เย็น">เช้า-กลางวัน-เย็น</option>
+                                <option value="เช้า-กลางวัน-เย็น-ก่อนนอน">เช้า-กลางวัน-เย็น-ก่อนนอน</option>
+                                <option value="ก่อนนอน">ก่อนนอน</option>
+                            </select>
+                        </div>
                     </div>
+
                     <div class="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 text-sm">
                         <div id="rx-info-text" class="text-slate-300 font-bold mb-1">ราคาต่อหน่วย: ฿0 | ทั้งหมด 0 เม็ด</div>
                         <div id="rx-total-price-display" class="text-2xl font-black text-white text-right">฿ 0</div>
@@ -177,14 +206,31 @@
         </div>
     </div>
 
-    <div id="inj-modal" class="modal-overlay" style="z-index: 110;"><div class="modal-content !max-w-sm"><div class="p-6 border-b border-white/10 bg-teal-900/30"><h4 id="inj-name" class="font-bold text-teal-400">-</h4></div><div class="p-6 space-y-5"><div><label class="label-clinical">ปริมาณ (ml)</label><input type="number" id="inj-ml" class="input-box text-2xl font-bold" step="0.1" value="0.1"></div><div><label class="label-clinical">Route</label><div class="flex flex-wrap gap-3"><label class="route-opt"><input type="checkbox" name="route" value="SC"><span>SC</span></label><label class="route-opt"><input type="checkbox" name="route" value="IM"><span>IM</span></label><label class="route-opt"><input type="checkbox" name="route" value="IV"><span>IV</span></label></div></div></div><div class="p-6 border-t border-white/10 flex gap-3"><button onclick="confirmInj()" class="btn-base btn-teal flex-1">ยืนยัน</button></div></div></div>
+    <div id="inj-modal" class="modal-overlay" style="z-index: 110;">
+        <div class="modal-content !max-w-sm">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30"><h4 id="inj-name" class="font-bold text-teal-400">-</h4></div>
+            <div class="p-6 space-y-5">
+                <div><label class="label-clinical">ปริมาณ (ml)</label><input type="number" id="inj-ml" class="input-box text-2xl font-bold" step="0.1" value="0.1"></div>
+                <div><label class="label-clinical">Route</label>
+                    <div class="flex flex-wrap gap-3">
+                        <label class="route-opt"><input type="checkbox" name="route" value="SC"><span>SC</span></label>
+                        <label class="route-opt"><input type="checkbox" name="route" value="IM"><span>IM</span></label>
+                        <label class="route-opt"><input type="checkbox" name="route" value="IV"><span>IV</span></label>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="confirmInj()" class="btn-base btn-teal flex-1">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let editingId = null, records = [], fullCatalog = [], pendingItem = null;
         let selectedLabs = [], selectedTxs = [], selectedRxs = [], petType = 'สุนัข';
-        let petData = { sex: "ผู้", dob: "" }; // เก็บข้อมูลสัตว์เพิ่มเติมสำหรับปริ้นท์
+        let petData = { sex: "ผู้", dob: "" };
         
         let printConfigCache = null;
 
@@ -199,7 +245,7 @@
             const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
             if (owner && pet) {
                 petType = pet.pet_type;
-                petData.sex = pet.sex || "ไม่ระบุ";
+                petData.sex = pet.gender || "ไม่ระบุ"; // สอดคล้องกับ SQL Schema
                 petData.dob = pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('th-TH') : "-";
                 
                 document.getElementById('info-owner-name').innerText = owner.owner_name;
@@ -265,6 +311,8 @@
             }
         }
 
+        // --- ระบบคำนวณและสั่งยาใหม่ ---
+
         function openRxCalc(item) {
             pendingItem = item;
             document.getElementById('rx-calc-name').innerText = item.name;
@@ -273,6 +321,8 @@
             const p = petType === 'แมว' ? 'cat' : 'dog';
             for(let i=1; i<=5; i++) if(item.data[`${p}_dose_${i}`] > 0) ds.innerHTML += `<option value="${item.data[`${p}_dose_${i}`]}">${item.data[`${p}_dose_${i}`]} mg/kg (${item.data[`${p}_for_${i}`] || ''})</option>`;
             document.getElementById('rx-calc-modal').style.display = 'flex';
+            
+            updateTimeOfDay(); // เซ็ตค่าเริ่มต้นของช่วงเวลาตามความถี่
             calculateRxTablets();
         }
 
@@ -290,31 +340,40 @@
             calculateRxTotal();
         }
 
+        function updateTimeOfDay() {
+            // ปรับช่วงเวลาให้สอดคล้องกับความถี่อัตโนมัติ
+            const f = document.getElementById('rx-freq').value;
+            const dt = document.getElementById('rx-day-timing');
+            
+            if(f == "1" || f == "0.5") dt.value = "เช้า";
+            else if(f == "2") dt.value = "เช้า-เย็น";
+            else if(f == "3") dt.value = "เช้า-กลางวัน-เย็น";
+            else if(f == "4") dt.value = "เช้า-กลางวัน-เย็น-ก่อนนอน";
+        }
+
         function calculateRxTotal() {
             const t = parseFloat(document.getElementById('rx-tabs-val').value) || 0, f = parseFloat(document.getElementById('rx-freq').value) || 1, d = parseInt(document.getElementById('rx-days').value) || 1;
             const q = t * f * d, pr = pendingItem.price || 0;
             const total = Math.ceil((q * pr) / 10) * 10;
-            document.getElementById('rx-info-text').innerText = `ราคาต่อเม็ด: ฿${pr} | ทั้งหมด ${q} ${pendingItem.data.unit || 'เม็ด'}`;
+            document.getElementById('rx-info-text').innerText = `ราคาต่อหน่วย: ฿${pr} | ทั้งหมด ${q} ${pendingItem.data.unit || 'เม็ด'}`;
             document.getElementById('rx-total-price-display').innerText = `฿ ${total}`;
             document.getElementById('rx-final-price-val').value = total;
         }
 
         function confirmRxCalc() {
             const disp = document.getElementById('rx-tabs-display').innerText.split(' ')[0] || "0";
-            const fVal = document.getElementById('rx-freq').value;
-            let freqText = "วันละ 1 ครั้ง", timingSuffix = "เช้า";
-            
-            if(fVal == "2") { freqText = "วันละ 2 ครั้ง"; timingSuffix = "เช้า-เย็น"; }
-            else if(fVal == "3") { freqText = "วันละ 3 ครั้ง"; timingSuffix = "เช้า-กลางวัน-เย็น"; }
-            else if(fVal == "4") { freqText = "วันละ 4 ครั้ง"; timingSuffix = "เช้า-กลางวัน-เย็น-ก่อนนอน"; }
-            else if(fVal == "0.5") { freqText = "วันเว้นวัน"; timingSuffix = "เช้า"; }
-
-            const days = document.getElementById('rx-days').value, timing = document.getElementById('rx-timing').value;
-            const finalP = parseFloat(document.getElementById('rx-final-price-val').value) || 0;
             const unit = pendingItem.data.unit || 'เม็ด';
             
+            const fVal = document.getElementById('rx-freq').value;
+            const freqText = fVal === "0.5" ? "วันเว้นวัน" : `วันละ ${fVal} ครั้ง`;
+            
+            const mealTiming = document.getElementById('rx-meal-timing').value;
+            const dayTiming = document.getElementById('rx-day-timing').value;
+            const days = document.getElementById('rx-days').value;
+            const finalP = parseFloat(document.getElementById('rx-final-price-val').value) || 0;
+            
             // สร้าง String ให้ไปโชว์ใน list ปกติ
-            const historyStr = `${pendingItem.name} (ป้อนครั้งละ ${disp} ${unit} ${freqText} ${timing} ${timingSuffix} x ${days} วัน)`;
+            const historyStr = `${pendingItem.name} (ป้อนครั้งละ ${disp} ${unit} ${freqText} ${mealTiming} ${dayTiming} x ${days} วัน)`;
             addItemToList(historyStr, finalP);
             document.getElementById('rx-calc-modal').style.display = 'none';
         }
@@ -422,26 +481,22 @@
             const petName = document.getElementById('head-pet-name').innerText;
             const dateStr = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
             
-            // เตรียมตัวแปรที่แยกกันตามที่คุณหมอต้องการ
-            const fVal = document.getElementById('rx-freq').value;
-            let freqText = "วันละ 1 ครั้ง", timingSuffix = "เช้า";
-            
-            if(fVal == "2") { freqText = "วันละ 2 ครั้ง"; timingSuffix = "เช้า-เย็น"; }
-            else if(fVal == "3") { freqText = "วันละ 3 ครั้ง"; timingSuffix = "เช้า-กลางวัน-เย็น"; }
-            else if(fVal == "4") { freqText = "วันละ 4 ครั้ง"; timingSuffix = "เช้า-กลางวัน-เย็น-ก่อนนอน"; }
-            else if(fVal == "0.5") { freqText = "วันเว้นวัน"; timingSuffix = "เช้า"; }
-
-            const timingVal = document.getElementById('rx-timing').value;
             const disp = document.getElementById('rx-tabs-display').innerText.split(' ')[0] || "0";
             const unit = pendingItem.data.unit || 'เม็ด';
+            
+            const fVal = document.getElementById('rx-freq').value;
+            const freqText = fVal === "0.5" ? "วันเว้นวัน" : `วันละ ${fVal} ครั้ง`;
+            
+            const mealTiming = document.getElementById('rx-meal-timing').value;
+            const dayTiming = document.getElementById('rx-day-timing').value;
             const daysVal = document.getElementById('rx-days').value;
             
             const doseStr = `ป้อนครั้งละ ${disp} ${unit}`;
-            const timingStr = `${timingVal} ${timingSuffix}`.trim();
+            const timingCombinedStr = `${mealTiming} ${dayTiming}`.trim(); // แบบรวม
             const durationStr = `${daysVal} วัน`;
-            const instructionStr = `${doseStr} ${freqText} ${timingStr}`;
+            const instructionStr = `${doseStr} ${freqText} ${timingCombinedStr}`;
 
-            const totalQty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(daysVal)) || 0;
+            const totalQty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(fVal) * parseInt(daysVal)) || 0;
             
             const printData = {
                 clinic_name: "PK-VMS Clinic",
@@ -453,10 +508,12 @@
                 sex: petData.sex,
                 dob: petData.dob,
                 drug_name: pendingItem.data.item_name,
-                drug_name_th: pendingItem.data.drug_name_th || pendingItem.data.item_name, // ถ้ามีใน DB จะดึงมา, ถ้าไม่มีใช้อังกฤษแทน
+                drug_name_th: pendingItem.data.name_th || pendingItem.data.item_name,
                 dose: doseStr,
                 frequency: freqText,
-                timing: timingStr,
+                timing: timingCombinedStr, // ตัวแปรรวม (กรณีหมอใช้บรรทัดเดียว)
+                meal_timing: mealTiming,   // ตัวแปรแยก (เช่น หลังอาหาร)
+                day_timing: dayTiming,     // ตัวแปรแยก (เช่น เช้า-เย็น)
                 duration: durationStr,
                 qty: `${totalQty} ${unit}`,
                 total_qty: totalQty,
@@ -471,8 +528,7 @@
         }
 
         async function reprintFromHistory(textStr, dateStr) {
-            // textStr มาในรูปแบบ "Amoxicillin (ป้อนครั้งละ 1/2 เม็ด วันละ 2 ครั้ง หลังอาหารทันที เช้า-เย็น x 7 วัน)"
-            // อันนี้เป็นการจำลองการตัดคำแบบง่ายๆ เพื่อให้พิมพ์จากประวัติเก่าได้ครับ
+            // จำลองการตัดคำแบบง่ายๆ เพื่อพิมพ์ซ้ำจากประวัติ String เก่า
             const parts = textStr.split(' (');
             const drugName = parts[0];
             const instruction = parts[1] ? parts[1].replace(')', '') : '';
@@ -483,7 +539,7 @@
                 owner_name: document.getElementById('info-owner-name').innerText,
                 species: petType, sex: petData.sex, dob: petData.dob,
                 drug_name: drugName, drug_name_th: "",
-                dose: "", frequency: "", timing: "", duration: "",
+                dose: "", frequency: "", timing: "", meal_timing: "", day_timing: "", duration: "",
                 qty: "", total_qty: "",
                 instruction: instruction,
                 warning: "", date: dateStr, time: "", queue: ""
