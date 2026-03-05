@@ -150,6 +150,22 @@
                 </div>
             </div>
 
+            <div class="card border-t-4 border-t-purple-500 mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-sm font-black text-purple-400 uppercase flex items-center gap-2">📸 โลโก้ / รูปภาพ</span>
+                    <button onclick="clearImage()" class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-xs font-bold hover:bg-red-500/20">ลบรูปภาพ</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div class="sm:col-span-4">
+                        <input type="file" id="imgUpload" accept="image/*" class="input-box !py-2" onchange="handleImageUpload(event)">
+                    </div>
+                    <div><label class="label">กว้าง (px)</label><input type="number" class="input-box !py-2 text-center" id="img_w" oninput="updateImage('w', this.value)"></div>
+                    <div><label class="label">สูง (px)</label><input type="number" class="input-box !py-2 text-center" id="img_h" oninput="updateImage('h', this.value)"></div>
+                    <div><label class="label">แกน X (แนวนอน)</label><input type="number" class="input-box !py-2 text-center" id="img_x" oninput="updateImage('x', this.value)"></div>
+                    <div><label class="label">แกน Y (แนวตั้ง)</label><input type="number" class="input-box !py-2 text-center" id="img_y" oninput="updateImage('y', this.value)"></div>
+                </div>
+            </div>
+
             <div id="lineEditor" class="space-y-4"></div>
             
             <button class="btn-add mt-6" onclick="addLine()">+ เพิ่มบรรทัดข้อความใหม่</button>
@@ -157,8 +173,13 @@
     </div>
 
     <script>
-        // Data Structure
-        let currentConfig = { width: 80, height: 50, lines: [] };
+        // Data Structure เพิ่มโหมดรูปภาพ (image) และ rotation
+        let currentConfig = { 
+            width: 80, 
+            height: 50, 
+            image: { url: '', x: 10, y: 10, w: 40, h: 40 },
+            lines: [] 
+        };
 
         // Date Formatter Mockup
         const getMockupData = () => {
@@ -190,12 +211,47 @@
             const zoomDiv = document.getElementById('preview-zoom');
             zoomDiv.style.transform = `scale(${scale})`;
             
-            // Adjust margin to push var-box down proportionally
-            const pxHeight = currentConfig.height * 3.7795275591; // Convert mm to px roughly
+            const pxHeight = currentConfig.height * 3.7795275591;
             if (scale > 1) {
                 zoomDiv.style.marginBottom = ((pxHeight * scale) - pxHeight) + 20 + 'px';
             } else {
                 zoomDiv.style.marginBottom = '20px';
+            }
+        }
+
+        // ระบบ Upload และจัดการรูปภาพ
+        window.handleImageUpload = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                if (!currentConfig.image) currentConfig.image = { x: 10, y: 10, w: 40, h: 40 };
+                currentConfig.image.url = event.target.result;
+                populateImageInputs();
+                renderPreview();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.updateImage = (k, v) => {
+            if(!currentConfig.image) return;
+            currentConfig.image[k] = parseInt(v) || 0;
+            renderPreview();
+        };
+
+        window.clearImage = () => {
+            currentConfig.image = { url: '', x: 10, y: 10, w: 40, h: 40 };
+            document.getElementById('imgUpload').value = '';
+            populateImageInputs();
+            renderPreview();
+        };
+
+        function populateImageInputs() {
+            if(currentConfig.image) {
+                document.getElementById('img_x').value = currentConfig.image.x || 0;
+                document.getElementById('img_y').value = currentConfig.image.y || 0;
+                document.getElementById('img_w').value = currentConfig.image.w || 40;
+                document.getElementById('img_h').value = currentConfig.image.h || 40;
             }
         }
 
@@ -206,7 +262,21 @@
             box.style.width = currentConfig.width + "mm";
             box.style.height = currentConfig.height + "mm";
             box.innerHTML = "";
+
+            // Render Image
+            if (currentConfig.image && currentConfig.image.url) {
+                const img = document.createElement("img");
+                img.src = currentConfig.image.url;
+                img.style.position = "absolute";
+                img.style.left = (currentConfig.image.x || 0) + "px";
+                img.style.top = (currentConfig.image.y || 0) + "px";
+                img.style.width = (currentConfig.image.w || 40) + "px";
+                img.style.height = (currentConfig.image.h || 40) + "px";
+                img.style.objectFit = "contain";
+                box.appendChild(img);
+            }
             
+            // Render Text Lines
             currentConfig.lines.forEach(l => {
                 const div = document.createElement("div");
                 div.className = "canvas-line";
@@ -216,8 +286,17 @@
                 div.style.textAlign = l.align || "left";
                 div.style.fontFamily = l.font || "Sarabun";
                 div.style.fontWeight = l.bold ? "700" : "400";
-                div.style.width = l.align === 'center' ? "100%" : `calc(100% - ${l.x}px)`;
-                if(l.align === 'center') div.style.left = "0px";
+                
+                // ตรวจสอบสถานะข้อความหมุนองศา (0, 90, 270)
+                let rot = l.rotation || (l.vertical ? 270 : 0); // รองรับของเก่า
+                if (rot != 0) {
+                    div.style.transform = `rotate(${rot}deg)`;
+                    div.style.transformOrigin = "top left";
+                    div.style.whiteSpace = "nowrap"; // ป้องกันการตัดคำมั่วตอนหมุน
+                } else {
+                    div.style.width = l.align === 'center' ? "100%" : `calc(100% - ${l.x}px)`;
+                    if(l.align === 'center') div.style.left = "0px";
+                }
 
                 let txt = l.text || "";
                 Object.keys(mock).forEach(key => {
@@ -286,18 +365,33 @@
                         <div><label class="label">แกน X (แนวนอน)</label><input type="number" class="input-box !py-2 text-center" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
                         <div><label class="label">แกน Y (แนวตั้ง)</label><input type="number" class="input-box !py-2 text-center" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
                     </div>
-                    <div class="mt-4 flex items-center gap-2">
-                        <input type="checkbox" class="w-4 h-4 accent-teal-500" ${l.bold?'checked':''} onchange="updateLine(${i},'bold',this.checked)">
-                        <span class="text-sm text-gray-300 cursor-pointer" onclick="this.previousElementSibling.click()">ตัวหนา (Bold)</span>
+                    <div class="mt-4 flex items-center gap-6">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="w-4 h-4 accent-teal-500" ${l.bold?'checked':''} onchange="updateLine(${i},'bold',this.checked)">
+                            <span class="text-sm text-gray-300">ตัวหนา (Bold)</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-purple-300 font-bold">องศาการหมุน:</span>
+                            <select class="input-box !py-1 !px-2 !w-auto text-sm" onchange="updateLine(${i},'rotation',this.value)">
+                                <option value="0" ${(!l.rotation && !l.vertical) || l.rotation == 0 ? 'selected' : ''}>ปกติ (0°)</option>
+                                <option value="90" ${l.rotation == 90 ? 'selected' : ''}>บนลงล่าง (90°)</option>
+                                <option value="270" ${l.rotation == 270 || l.vertical ? 'selected' : ''}>ล่างขึ้นบน (270°)</option>
+                            </select>
+                        </div>
                     </div>
                 `;
                 area.appendChild(block);
             });
         }
 
-        window.updateLine = (i, k, v) => { if(['size','x','y'].includes(k)) v = parseInt(v) || 0; currentConfig.lines[i][k] = v; renderPreview(); };
+        window.updateLine = (i, k, v) => { 
+            if(['size','x','y','rotation'].includes(k)) v = parseInt(v) || 0; 
+            currentConfig.lines[i][k] = v; 
+            renderPreview(); 
+        };
+        
         window.removeLine = (i) => { currentConfig.lines.splice(i, 1); renderEditor(); renderPreview(); };
-        window.addLine = () => { currentConfig.lines.push({ text: "ข้อความใหม่", size: 14, x: 10, y: parseInt(currentConfig.height * 3.7) / 2 || 20, align: "left", font: "Sarabun", bold: false }); renderEditor(); renderPreview(); };
+        window.addLine = () => { currentConfig.lines.push({ text: "ข้อความใหม่", size: 14, x: 10, y: parseInt(currentConfig.height * 3.7) / 2 || 20, align: "left", font: "Sarabun", bold: false, rotation: 0 }); renderEditor(); renderPreview(); };
 
         window.loadTemplate = async () => {
             const type = document.getElementById("templateType").value;
@@ -305,12 +399,14 @@
                 try {
                     const { data, error } = await db.from("print_templates").select("*").eq("template_type", type).maybeSingle();
                     currentConfig = (data && data.config) ? data.config : { width: 80, height: 50, lines: [] };
+                    if(!currentConfig.image) currentConfig.image = { url: '', x: 10, y: 10, w: 40, h: 40 };
                 } catch (e) {
-                    currentConfig = { width: 80, height: 50, lines: [] };
+                    currentConfig = { width: 80, height: 50, lines: [], image: { url: '', x: 10, y: 10, w: 40, h: 40 } };
                 }
             } else {
-                currentConfig = { width: 80, height: 50, lines: [] };
+                currentConfig = { width: 80, height: 50, lines: [], image: { url: '', x: 10, y: 10, w: 40, h: 40 } };
             }
+            populateImageInputs();
             renderEditor(); renderPreview();
         };
 
