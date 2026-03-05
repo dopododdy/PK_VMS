@@ -47,11 +47,11 @@
 
         /* Preview Area */
         .preview-section {
-            background: rgba(11,25,41,0.5); display: flex; justify-content: center; align-items: center;
+            background: rgba(11,25,41,0.5); display: flex; flex-direction: column; justify-content: center; align-items: center;
             border-bottom: 2px solid var(--teal); position: sticky; top: 73px; z-index: 900;
-            padding: 20px; overflow: hidden; min-height: 250px;
+            padding: 20px; overflow-y: auto; overflow-x: hidden; min-height: 250px;
         }
-        .sticker-wrapper { transition: 0.3s; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .sticker-wrapper { transition: 0.3s; box-shadow: 0 0 30px rgba(0,0,0,0.5); flex-shrink: 0; }
         .sticker-canvas {
             background: #fff; position: relative; color: #000; overflow: hidden;
             background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
@@ -61,21 +61,25 @@
         .canvas-line:hover { outline: 1px dashed var(--teal); background: rgba(14,165,160,0.1); }
 
         /* Editor Area */
-        .editor-section { padding: 24px; max-width: 800px; margin: 0 auto; }
+        .editor-section { padding: 24px; max-width: 900px; margin: 0 auto; }
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: 0.2s; }
         .card:hover { border-color: rgba(255,255,255,0.2); }
         
-        .var-box { background: rgba(14,165,160,0.05); border: 1px solid var(--teal-glow); border-radius: 12px; padding: 16px; margin-bottom: 20px; font-size: 13px; line-height: 1.8; }
-        code { color: var(--teal-light); background: rgba(0,0,0,0.4); padding: 3px 8px; border-radius: 6px; margin-right: 4px; display: inline-block; font-family: "Outfit", sans-serif; font-size: 12px; }
+        .var-box { background: rgba(14,165,160,0.05); border: 1px solid var(--teal-glow); border-radius: 12px; padding: 16px; margin-top: 24px; font-size: 12px; line-height: 1.8; width: 100%; max-width: 400px; }
+        code { color: var(--teal-light); background: rgba(0,0,0,0.4); padding: 3px 6px; border-radius: 6px; margin-right: 2px; display: inline-block; font-family: "Outfit", sans-serif; font-size: 11px; }
 
         .btn-add { width: 100%; padding: 16px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-bottom: 30px; }
         .btn-add:hover { border-color: var(--teal); color: var(--teal-light); background: rgba(14,165,160,0.05); }
 
+        .drag-handle { cursor: grab; padding: 4px; border-radius: 4px; }
+        .drag-handle:active { cursor: grabbing; }
+        .card.dragging { opacity: 0.4; border-color: var(--teal); border-style: dashed; }
+
         @media (min-width: 1024px) {
             body { display: flex; flex-direction: row; height: 100vh; overflow: hidden; }
-            header { position: absolute; width: 50%; right: 0; z-index: 1001; background: transparent; border: none; backdrop-filter: none; }
-            .preview-section { width: 50%; height: 100vh; position: relative; top: 0; border-bottom: none; border-right: 1px solid var(--border); background: var(--navy-mid); }
-            .editor-section { width: 50%; height: 100vh; overflow-y: auto; padding-top: 80px; padding-bottom: 100px; }
+            header { position: absolute; width: 66.66%; right: 0; z-index: 1001; background: transparent; border: none; backdrop-filter: none; }
+            .preview-section { width: 33.33%; height: 100vh; position: relative; top: 0; border-bottom: none; border-right: 1px solid var(--border); background: var(--navy-mid); padding-top: 60px; justify-content: flex-start; }
+            .editor-section { width: 66.66%; height: 100vh; overflow-y: auto; padding-top: 80px; padding-bottom: 100px; }
             .mobile-header-bg { display: none; }
         }
     </style>
@@ -99,6 +103,20 @@
     <section class="preview-section">
         <div class="sticker-wrapper" id="preview-zoom">
             <div class="sticker-canvas shadow-2xl" id="sticker"></div>
+        </div>
+        
+        <div class="var-box">
+            <strong class="text-teal-400 mb-2 block text-sm">📌 ตัวแปรที่ใช้ได้ (คลิกลากคลุมเพื่อคัดลอก):</strong>
+            <div class="grid grid-cols-1 gap-1">
+                <p><code>{{clinic_name}}</code> ชื่อคลินิก | <code>{{phone}}</code> เบอร์โทร</p>
+                <p><code>{{hn}}</code> รหัสสัตว์ | <code>{{pet_name}}</code> ชื่อสัตว์ | <code>{{owner_name}}</code> เจ้าของ</p>
+                <p><code>{{species}}</code> ชนิด | <code>{{sex}}</code> เพศ | <code>{{dob}}</code> วดป.เกิด</p>
+                <p><code>{{drug_name}}</code> ชื่อยา (EN) | <code>{{drug_name_th}}</code> ชื่อยา (TH)</p>
+                <p><code>{{dose}}</code> ป้อน/ครั้ง | <code>{{frequency}}</code> ความถี่ | <code>{{total_qty}}</code> จำนวนรวม</p>
+                <p><code>{{qty}}</code> จำนวนบรรจุ | <code>{{instruction}}</code> วิธีใช้</p>
+                <p><code>{{warning}}</code> คำเตือน (Side effects)</p>
+                <p><code>{{date}}</code> วันที่ | <code>{{time}}</code> เวลา | <code>{{queue}}</code> คิว</p>
+            </div>
         </div>
     </section>
 
@@ -127,17 +145,6 @@
             </div>
         </div>
 
-        <div class="var-box">
-            <strong class="text-teal-400 mb-2 block">📌 ตัวแปรที่ใช้ได้ (คัดลอกไปวางในช่องข้อความ):</strong>
-            <div>
-                <code>{{clinic_name}}</code> ชื่อคลินิก<br>
-                <code>{{hn}}</code> รหัสสัตว์ป่วย | <code>{{pet_name}}</code> ชื่อสัตว์ | <code>{{owner_name}}</code> ชื่อเจ้าของ<br>
-                <code>{{drug_name}}</code> ชื่อยา | <code>{{qty}}</code> จำนวน | <code>{{instruction}}</code> วิธีใช้ยา<br>
-                <code>{{warning}}</code> คำเตือน (Side effects)<br>
-                <code>{{date}}</code> วันที่ | <code>{{time}}</code> เวลา | <code>{{queue}}</code> หมายเลขคิว
-            </div>
-        </div>
-
         <div id="lineEditor" class="space-y-4"></div>
         
         <button class="btn-add mt-6" onclick="addLine()">+ เพิ่มบรรทัดข้อความใหม่</button>
@@ -151,15 +158,23 @@
             lines: []
         };
 
-        // Date Formatter Mockup
+        // Date Formatter Mockup พร้อมตัวแปรใหม่
         const getMockupData = () => {
             const now = new Date();
             return {
                 clinic_name: "PK-VMS Animal Clinic",
+                phone: "081-234-5678",
                 hn: "HN-69001",
                 pet_name: "น้องนำโชค (Beagle)",
                 owner_name: "คุณสมชาย ใจดี",
+                species: "สุนัข",
+                sex: "ผู้",
+                dob: "01/05/2021",
                 drug_name: "Amoxicillin 500mg",
+                drug_name_th: "อะม็อกซีซิลลิน 500 มก.",
+                dose: "1 เม็ด",
+                frequency: "เช้า-เย็น",
+                total_qty: "14",
                 qty: "14 เม็ด",
                 instruction: "กินครั้งละ 1 เม็ด เช้า-เย็น หลังอาหาร",
                 warning: "* ยานี้อาจทำให้ปัสสาวะเปลี่ยนสี",
@@ -213,6 +228,35 @@
             });
         }
 
+        let dragStartIndex = null;
+
+        window.handleDragStart = (e, index) => {
+            dragStartIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => e.target.classList.add('dragging'), 0);
+        };
+
+        window.handleDragOver = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        };
+
+        window.handleDrop = (e, targetIndex) => {
+            e.preventDefault();
+            if(dragStartIndex !== null && dragStartIndex !== targetIndex) {
+                // ย้ายข้อมูลใน Array
+                const item = currentConfig.lines.splice(dragStartIndex, 1)[0];
+                currentConfig.lines.splice(targetIndex, 0, item);
+                renderEditor();
+                renderPreview();
+            }
+        };
+
+        window.handleDragEnd = (e) => {
+            e.target.classList.remove('dragging');
+            dragStartIndex = null;
+        };
+
         function renderEditor() {
             const area = document.getElementById("lineEditor");
             area.innerHTML = "";
@@ -223,10 +267,21 @@
             currentConfig.lines.forEach((l, i) => {
                 const block = document.createElement("div");
                 block.className = "card";
+                
+                // ตั้งค่า Drag & Drop
+                block.draggable = true;
+                block.setAttribute('ondragstart', `handleDragStart(event, ${i})`);
+                block.setAttribute('ondragover', `handleDragOver(event)`);
+                block.setAttribute('ondrop', `handleDrop(event, ${i})`);
+                block.setAttribute('ondragend', `handleDragEnd(event)`);
+
                 block.innerHTML = `
                     <div class="flex justify-between items-center mb-3">
-                        <span class="text-xs font-black text-teal-400 bg-teal-500/10 px-3 py-1 rounded-full">LINE ${i+1}</span>
-                        <button class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-xs font-bold hover:bg-red-500/20" onclick="removeLine(${i})">ลบ</button>
+                        <div class="flex items-center gap-2 drag-handle text-gray-400 hover:text-white" title="คลิกค้างเพื่อลากสลับตำแหน่ง">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                            <span class="text-xs font-black text-teal-400 bg-teal-500/10 px-3 py-1 rounded-full">LINE ${i+1}</span>
+                        </div>
+                        <button class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-xs font-bold hover:bg-red-500/20 transition" onclick="removeLine(${i})">ลบ</button>
                     </div>
                     
                     <div class="mb-3">
@@ -261,7 +316,7 @@
                     
                     <div class="mt-4 flex items-center gap-2">
                         <input type="checkbox" class="w-4 h-4 accent-teal-500" ${l.bold?'checked':''} onchange="updateLine(${i},'bold',this.checked)">
-                        <span class="text-sm text-gray-300">ตัวหนา (Bold)</span>
+                        <span class="text-sm text-gray-300 cursor-pointer" onclick="this.previousElementSibling.click()">ตัวหนา (Bold)</span>
                     </div>
                 `;
                 area.appendChild(block);
@@ -289,15 +344,12 @@
         // Database Integration
         window.loadTemplate = async () => {
             const type = document.getElementById("templateType").value;
-            // ดึงข้อมูลจาก Table 'print_templates' (สมมติว่าสร้างไว้แล้ว)
-            // ถ้าคุณใช้ตัวแปร db จาก supabase-config.js ให้ใช้แบบนี้
             if (typeof db !== 'undefined') {
                 try {
                     const { data, error } = await db.from("print_templates").select("*").eq("template_type", type).maybeSingle();
                     if (data && data.config) {
                         currentConfig = data.config;
                     } else {
-                        // Default Template ถ้าไม่มีข้อมูล
                         currentConfig = { width: 80, height: 50, lines: [] };
                     }
                 } catch (e) {
