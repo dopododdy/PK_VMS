@@ -131,7 +131,8 @@
                 </div>
                 <div class="space-y-4 border-l border-white/5 pl-6">
                     <div class="grid grid-cols-2 gap-2">
-                        <div><label class="label-clinical">ความถี่/วัน</label><select id="rx-freq" class="input-box" onchange="calculateRxTotal(); updateTimeOfDay();"><option value="1">1 ครั้ง</option><option value="2" selected>2 ครั้ง</option><option value="3">3 ครั้ง</option><option value="4">4 ครั้ง</option><option value="0.5">วันเว้นวัน</option></select></div>
+                        <div><label class="label-clinical">ความถี่/วัน</label><select id="rx-freq" class="input-box" onchange="calculateRxTotal(); updateTimeOfDay();"><option value="1">1 ครั้ง</option><option value="2" selected>2 ครั้ง</option>
+                                <option value="3">3 ครั้ง</option><option value="4">4 ครั้ง</option><option value="0.5">วันเว้นวัน</option></select></div>
                         <div><label class="label-clinical">จำนวนวัน</label><input type="number" id="rx-days" class="input-box" value="7" oninput="calculateRxTotal()"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -228,6 +229,20 @@
             document.getElementById('rx-final-price-val').value = total.toFixed(2);
         }
 
+        async function printCurrentRx() {
+            const qty = parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value);
+            const unit = pendingItem.data.unit || 'เม็ด';
+            const data = { clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN, drug_name: pendingItem.name, drug_name_th: pendingItem.data.name_th || "", warning: pendingItem.data.side_effects || "", dose_per_time: document.getElementById('rx-tabs-display').innerText.split(' ')[0], unit: unit, frequency: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`, meal_timing: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value, duration_days: document.getElementById('rx-days').value, total_qty: `${qty} ${unit}`, date: new Date().toLocaleDateString('th-TH') };
+            await executeDynamicPrint([data], 'drug_sticker');
+        }
+
+        async function printAllRx() {
+            const rxItems = selectedItems.filter(i => i.type === 'Rx');
+            if (rxItems.length === 0) return alert("ยังไม่มีรายการยา");
+            const printBatch = rxItems.map(i => ({ clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN, drug_name: i.name, drug_name_th: i.drug_name_th || "", warning: i.warning || "", dose_per_time: i.dose, unit: i.unit, frequency: i.freq, meal_timing: i.meal, day_timing: i.day_timing, duration_days: i.days, total_qty: `${i.qty} ${i.unit}`, date: new Date().toLocaleDateString('th-TH') }));
+            await executeDynamicPrint(printBatch, 'drug_sticker');
+        }
+
         async function openCatalog(type) {
             currentCatalogType = type; document.getElementById('catalog-modal').style.display = 'flex';
             document.getElementById('modal-title').innerText = type === 'rx' ? '💊 เลือกยา/สินค้า' : type === 'tx' ? '💉 เลือกหัตถการ/ยาฉีด' : '🔬 เลือก Lab';
@@ -246,13 +261,13 @@
 
         function renderCatalog(data) {
             document.getElementById('catalog-items').innerHTML = data.map((i, idx) => `
-                <div class="p-4 bg-white/5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/10" onclick="handleItemClick(${idx})">
+                <div class="p-4 bg-white/5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/10" onclick="handleFinalSelection(${idx})">
                     <div><b>${i.name}</b><br><small>฿${i.price}</small></div>
                     <div class="text-teal-500 text-2xl font-bold">+</div>
                 </div>`).join('');
         }
 
-        function handleItemClick(idx) {
+        function handleFinalSelection(idx) {
             const i = displayedItems[idx];
             if (i.type === 'Rx' && i.is_med) {
                 openRxCalc(i);
@@ -307,20 +322,6 @@
             const filterType = currentCatalogType === 'rx' ? 'Rx' : currentCatalogType === 'tx' ? 'Tx' : 'Lab';
             const current = selectedItems.filter(i => i.type === filterType);
             document.getElementById('modal-session-list').innerHTML = current.map((i, idx) => `<span class="bg-teal-500 text-black px-3 py-1 rounded-lg text-sm font-bold cursor-pointer" onclick="removeItem(${idx})">✕ ${i.name}</span>`).join('');
-        }
-
-        async function printCurrentRx() {
-            const qty = parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value);
-            const unit = pendingItem.data.unit || 'เม็ด';
-            const data = { clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN, drug_name: pendingItem.name, drug_name_th: pendingItem.data.name_th || "", warning: pendingItem.data.side_effects || "", dose_per_time: document.getElementById('rx-tabs-display').innerText.split(' ')[0], unit: unit, frequency: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`, meal_timing: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value, duration_days: document.getElementById('rx-days').value, total_qty: `${qty} ${unit}`, date: new Date().toLocaleDateString('th-TH') };
-            await executeDynamicPrint([data], 'drug_sticker');
-        }
-
-        async function printAllRx() {
-            const rxItems = selectedItems.filter(i => i.type === 'Rx');
-            if (rxItems.length === 0) return alert("ยังไม่มีรายการยา");
-            const printBatch = rxItems.map(i => ({ clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN, drug_name: i.name, drug_name_th: i.drug_name_th || "", warning: i.warning || "", dose_per_time: i.dose, unit: i.unit, frequency: i.freq, meal_timing: i.meal, day_timing: i.day_timing, duration_days: i.days, total_qty: `${i.qty} ${i.unit}`, date: new Date().toLocaleDateString('th-TH') }));
-            await executeDynamicPrint(printBatch, 'drug_sticker');
         }
 
         async function executeDynamicPrint(dataList, templateType) {
