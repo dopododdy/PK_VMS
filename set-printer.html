@@ -127,13 +127,39 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
+        // ข้อมูล Mock Data สำหรับแสดงผล Live Preview ให้เห็นภาพจริง
         const mockData = {
-            clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร จ.พิษณุโลก", phone: "081-999-8888", tax_id: "0123456789012",
-            owner_name: "คุณสมชาย ใจดี", pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-26-001", weight: "12.5", breed: "Golden Retriever", owner_address: "456 ถ.มิตรภาพ จ.ขอนแก่น",
-            drug_name: "Amoxicillin 500", drug_name_th: "ยาฆ่าเชื้อ", dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง", meal_timing: "หลังอาหาร", day_timing: "เช้า-เย็น", duration_days: "7", total_qty: "14", warning: "กินติดต่อกันจนหมด",
-            items_list: "1. ตรวจรักษาทั่วไป.........300.00\n2. ยาฆ่าเชื้อ Amoxy.........500.00\n3. รายการพิเศษ............200.50", 
-            total_price: "1,000.50", discount_val: "0.00", net_total: "1,000.50", date: "06/03/26", time: "19:00",
-            receipt_no: "2569030669000101", received_amount: "1,100.00", change_amount: "99.50"
+            clinic_name: "PK-VMS Animal Clinic",
+            clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
+            phone: "081-999-8888",
+            tax_id: "0123456789012",
+            owner_name: "คุณสมชาย ใจดี",
+            pet_name: "โคล่า",
+            species: "สุนัข",
+            sex: "ผู้ตอน",
+            hn: "690001",
+            weight: "12.5",
+            breed: "ชิวาวา",
+            owner_address: "456 ถ.มิตรภาพ ต.หมากแข้ง อ.เมือง จ.อุดรธานี 41000",
+            drug_name: "Amoxicillin 500mg",
+            drug_name_th: "ยาฆ่าเชื้อ (อะม็อกซี่)",
+            dose_per_time: "1",
+            unit: "เม็ด",
+            frequency: "วันละ 2 ครั้ง",
+            meal_timing: "หลังอาหาร",
+            day_timing: "เช้า - เย็น",
+            duration_days: "7",
+            total_qty: "14 เม็ด",
+            warning: "กินติดต่อกันจนหมดตามสัตวแพทย์สั่ง",
+            receipt_no: "2569030769000101",
+            items_list: "1. Amoxicillin 500mg (14).......210.00\n2. ค่าบริการตรวจรักษา.............300.00\n3. Lab - CBC...................450.00", 
+            total_price: "960.00",
+            discount_val: "60.00",
+            net_total: "900.00",
+            received_amount: "1,000.00",
+            change_amount: "100.00",
+            date: "07/03/2569",
+            time: "10:30"
         };
 
         const varGroups = {
@@ -152,7 +178,11 @@
         };
 
         function replaceVars(text) {
-            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
+            // ค้นหาตัวแปร {{...}} และแทนที่ด้วยค่าจาก mockData
+            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
+                const cleanKey = key.trim();
+                return mockData[cleanKey] !== undefined ? mockData[cleanKey] : match;
+            });
         }
 
         async function fetchAvailableTemplates() {
@@ -337,7 +367,6 @@
                 </style></head>
                 <body><div class="page">
                     ${dynamicLines.map(l => {
-                        // พิมพ์จริงใช้หน่วย mm และ pt เพื่อความเป๊ะ
                         let style = `top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                         
                         if (l.type === 'text') {
