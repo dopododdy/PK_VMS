@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <title>ตั้งค่าเครื่องพิมพ์และกระดาษ | PK-VMS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -176,6 +176,38 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
+        // --- Mock Data ข้อมูลจำลองสำหรับแสดงใน Preview ให้เห็นภาพจริง ---
+        const mockData = {
+            pet_name: "โคล่า",
+            species: "สุนัข",
+            sex: "ผู้",
+            breed: "ชิวาวา",
+            weight: "4.5",
+            owner_name: "นายสมชาย ใจดี",
+            hn: "690001",
+            drug_name: "Amoxicillin 250mg",
+            drug_name_th: "ยาฆ่าเชื้อ (แก้อักเสบ)",
+            dose: "1 เม็ด",
+            frequency: "เช้า-เย็น",
+            timing: "หลังอาหารทันที",
+            duration: "5 วัน",
+            qty: "10 เม็ด",
+            warning: "ห้ามหยุดยาเอง กินติดต่อกันจนหมด",
+            queue: "A01",
+            date: "06/03/2026",
+            time: "10:30 น.",
+            vaccine_name: "วัคซีนพิษสุนัขบ้า",
+            next_appt: "06/03/2027"
+        };
+
+        // ฟังก์ชันแทนที่ตัวแปร
+        function replaceVars(text) {
+            if (!text) return "";
+            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
+                return mockData[key.trim()] || match;
+            });
+        }
+
         // 1. Load Templates Dropdown
         async function loadTemplateDropdown() {
             try {
@@ -208,7 +240,6 @@
                     document.getElementById('paper_w').value = currentConfig.width || 80;
                     document.getElementById('paper_h').value = currentConfig.height || 50;
                     
-                    // Normalize old format
                     currentConfig.lines = (currentConfig.lines || []).map(line => ({
                         ...line,
                         type: line.type || 'text',
@@ -295,7 +326,7 @@
             if (['x', 'y', 'size', 'w', 'h'].includes(key)) value = parseFloat(value) || 0;
             currentConfig.lines[index][key] = value;
             
-            if(key === 'text') renderCanvas(); // Update canvas instantly while typing
+            if(key === 'text') renderCanvas(); 
             else { renderLinesList(); renderCanvas(); }
         }
 
@@ -310,12 +341,11 @@
                 const el = document.createElement('div');
                 el.className = `rounded-xl border transition-all overflow-hidden ${isActive ? 'bg-navy-mid border-teal-500 shadow-lg shadow-teal-500/10' : 'bg-black/30 border-white/10'}`;
                 
-                // Header Row
                 const headerHtml = `
                     <div class="flex justify-between items-center p-3 cursor-pointer ${isActive ? 'bg-teal-500/10' : ''}" onclick="setActiveLine(${i})">
                         <div class="flex items-center gap-3">
                             <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-gray-400 font-mono">${i+1}</span>
-                            <span class="font-bold text-sm ${isActive ? 'text-white' : 'text-gray-400'}">
+                            <span class="font-bold text-sm ${isActive ? 'text-white' : 'text-gray-400'} truncate" style="max-width: 300px;">
                                 ${isImage ? '🖼️ รูปภาพ / Logo' : '📝 ' + (line.text || '(ว่าง)')}
                             </span>
                         </div>
@@ -323,7 +353,6 @@
                     </div>
                 `;
 
-                // Body (Config)
                 let bodyHtml = '';
                 if (isActive) {
                     if (isImage) {
@@ -388,7 +417,7 @@
             renderCanvas();
         }
 
-        // Render Canvas
+        // Render Canvas - มีการจำลองข้อมูลตัวแปร (Mock)
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
             const mmToPx = 3.78; 
@@ -409,7 +438,9 @@
                     el.style.height = (line.h * mmToPx) + 'px';
                     el.style.objectFit = 'contain';
                 } else {
-                    el.innerText = line.text;
+                    // *** เรียกใช้ฟังก์ชันแปลงตัวแปรให้เป็นข้อความจำลอง ***
+                    el.innerText = replaceVars(line.text);
+                    
                     if (line.align === 'center') {
                         el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
                         el.style.textAlign = 'center'; el.style.width = '100%';
@@ -430,7 +461,7 @@
             });
         }
 
-        // 4. Print Test
+        // 4. Print Test - เพิ่มคำสั่งบังคับโหลด Font ก่อนพิมพ์
         function printTest() {
             const contents = document.getElementById('canvas_wrapper').innerHTML;
             const pw = window.open('', '_blank', 'width=800,height=600');
@@ -438,9 +469,9 @@
                 <html>
                 <head>
                     <title>Print Test</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Sarabun:wght@400;600;700;italic&family=Prompt:wght@400;600;italic&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Prompt:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
                     <style>
-                        body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; }
+                        body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; -webkit-print-color-adjust: exact; }
                         .sticker { position: relative; width: ${currentConfig.width}mm; height: ${currentConfig.height}mm; background: #fff; overflow: hidden; margin: 0; }
                         .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
                         @page { size: ${currentConfig.width}mm ${currentConfig.height}mm; margin: 0; }
@@ -451,7 +482,14 @@
                     <div class="sticker">${contents}</div>
                     <script>
                         window.onload = function() {
-                            setTimeout(function() { window.print(); window.close(); }, 800);
+                            // รอให้ Browser โหลดฟอนต์ให้เสร็จก่อน จึงค่อยสั่งพิมพ์
+                            if (document.fonts && document.fonts.ready) {
+                                document.fonts.ready.then(function () {
+                                    setTimeout(function() { window.print(); window.close(); }, 300);
+                                });
+                            } else {
+                                setTimeout(function() { window.print(); window.close(); }, 1000);
+                            }
                         };
                     <\/script>
                 </body>
