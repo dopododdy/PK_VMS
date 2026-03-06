@@ -26,7 +26,6 @@
         .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; }
         .canvas-element.active { outline: 2px solid var(--teal); background: rgba(20, 184, 17, 0.1); z-index: 50; }
         
-        .var-category-title { font-size: 0.9rem; font-weight: 800; color: #64748b; margin-top: 15px; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
         .var-badge { background: rgba(20, 184, 17, 0.1); border: 1px solid rgba(20, 184, 17, 0.2); color: #4ade80; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; display: inline-block; margin: 3px; transition: 0.2s; font-family: monospace; }
         .var-badge:hover { background: var(--teal); color: white; transform: translateY(-1px); }
 
@@ -110,13 +109,21 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
+        // ฟังก์ชันช่วยจัดรูปแบบข้อความให้ราคาชิดขวา (Fixed Width 40 chars)
+        function formatItemListRow(no, name, price) {
+            const totalWidth = 35; 
+            let row = no + ". " + name;
+            const priceStr = parseFloat(price).toFixed(2);
+            const spacesNeeded = totalWidth - row.length - priceStr.length;
+            return row + " ".repeat(Math.max(1, spacesNeeded)) + priceStr;
+        }
+
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร จ.พิษณุโลก", phone: "081-999-8888", tax_id: "0123456789012",
             owner_name: "คุณสมชาย ใจดี", pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-26-001", weight: "12.5", breed: "Golden Retriever",
             drug_name: "Amoxicillin 500", drug_name_th: "ยาฆ่าเชื้อ", dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง", meal_timing: "หลังอาหาร", total_qty: "14", warning: "กินติดต่อกันจนหมด",
-            // แก้ไข items_list: ใช้จำนวนช่องว่างคงที่เพื่อให้ราคาชิดขวาเสมอกัน (จำลองแบบ Monospace)
-            items_list: "1. ตรวจรักษาทั่วไป           300.00\n2. ยาฆ่าเชื้อ Amoxy           500.00\n3. รายการพิเศษ               200.00", 
-            total_price: "1,000.00", discount_val: "0.00", net_total: "1,000.00", date: "06/03/26", time: "19:00"
+            items_list: formatItemListRow(1, "ตรวจรักษาทั่วไป", 300) + "\n" + formatItemListRow(2, "ยาฆ่าเชื้อ Amoxy", 500) + "\n" + formatItemListRow(3, "รายการพิเศษ", 200.5), 
+            total_price: "1,000.50", discount_val: "0.00", net_total: "1,000.50", date: "06/03/26", time: "19:00"
         };
 
         const varGroups = {
@@ -192,10 +199,24 @@
                 </div>
             `;
 
+            const fontControl = `
+                <div class="col-span-2">
+                    <label class="text-xs text-gray-400 mb-1 block">ชนิด Font</label>
+                    <select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)">
+                        <option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun (มาตรฐาน)</option>
+                        <option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option>
+                        <option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option>
+                        <option value="Courier New" ${l.font==='Courier New'?'selected':''}>Courier New (แนะนำสำหรับรายการสินค้า)</option>
+                        <option value="Arial" ${l.font==='Arial'?'selected':''}>Arial</option>
+                    </select>
+                </div>
+            `;
+
             if (l.type === 'text') {
                 return `
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
                         <div class="col-span-4"><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
+                        ${fontControl}
                         ${alignControl}
                         <div><label class="text-xs text-gray-400 mb-1 block">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         <div class="flex gap-2 items-end">
@@ -256,20 +277,16 @@
             const px = 3.78; 
             const pw = document.getElementById('paper_w').value;
             const ph = document.getElementById('paper_h').value;
+            
+            // แก้ไขปัญหาความสูงกระดาษไม่ขยายตามค่าที่กรอก
             wrapper.style.width = (pw * px) + 'px';
             wrapper.style.height = (ph * px) + 'px';
 
             const dynamicLines = calculateDynamicElements();
             
             wrapper.innerHTML = dynamicLines.map((l, idx) => {
-                // เพิ่มการบังคับใช้ monospace font เฉพาะเมื่อมีตัวแปร items_list เพื่อให้ราคาเรียงตรงกันเป๊ะ
-                const isItemList = l.text && l.text.includes('{{items_list}}');
-                let style = `top:${l.renderedY * px}px; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+                let style = `top:${l.renderedY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                 
-                if (isItemList) {
-                    style += `font-family: 'monospace' !important; letter-spacing: -0.5px;`;
-                }
-
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
@@ -300,26 +317,20 @@
             win.document.write(`
                 <html><head><title>Print Test</title>
                 <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+                    @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:ital,wght@0,400;0,700;1,400;1,700&display=swap');
                     body { margin: 0; padding: 0; background: white; }
-                    .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; font-family: 'Sarabun', sans-serif; }
+                    .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; }
                     .canvas-element { position: absolute; white-space: pre-wrap; color: black; line-height: 1.4; word-break: break-all; }
-                    .monospace-list { font-family: 'monospace' !important; }
                     @media print { @page { size: ${pw_val}mm auto; margin: 0; } body { margin: 0; } }
                 </style></head>
                 <body><div class="page">
                     ${dynamicLines.map(l => {
-                        const isItemList = l.text && l.text.includes('{{items_list}}');
-                        let style = `top:${l.renderedY}mm; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
-                        
-                        let className = "canvas-element";
-                        if (isItemList) className += " monospace-list";
-
+                        let style = `top:${l.renderedY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                         if (l.type === 'text') {
                             if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                             else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
                             else style += `left:${l.x}mm; text-align:left;`;
-                            return `<div class="${className}" style="${style}">${l.renderedText}</div>`;
+                            return `<div class="canvas-element" style="${style}">${l.renderedText}</div>`;
                         } else {
                             const bs = l.borderStyle || 'solid';
                             const bg = l.fill ? 'black' : 'transparent';
