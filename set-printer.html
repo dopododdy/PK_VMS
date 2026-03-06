@@ -36,6 +36,9 @@
         .btn-tool { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 8px 15px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; transition: 0.2s; }
         .btn-tool:hover { background: rgba(255,255,255,0.1); color: var(--teal); }
 
+        .btn-align { width: 44px; h-44px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .btn-align.active { background: var(--teal); color: white; border-color: var(--teal); }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
@@ -61,15 +64,15 @@
                 <div class="section-card p-6 mb-8">
                     <div class="grid grid-cols-12 gap-6 items-end">
                         <div class="col-span-6">
-                            <label class="label-title">เลือก Template เอกสาร</label>
+                            <label class="label-title">Template เอกสาร</label>
                             <select id="template_type" class="input-control font-bold text-teal-400" onchange="loadTemplate()"></select>
                         </div>
                         <div class="col-span-3">
-                            <label class="label-title text-gray-400 text-xs">ความกว้าง (มม.)</label>
+                            <label class="label-title text-gray-400 text-xs">กว้าง (มม.)</label>
                             <input type="number" id="paper_w" class="input-control text-center font-bold" value="80" onchange="renderCanvas()">
                         </div>
                         <div class="col-span-3">
-                            <label class="label-title text-gray-400 text-xs">ความสูง (มม.)</label>
+                            <label class="label-title text-gray-400 text-xs">สูง (มม.)</label>
                             <input type="number" id="paper_h" class="input-control text-center font-bold" value="50" onchange="renderCanvas()">
                         </div>
                     </div>
@@ -84,8 +87,7 @@
                     </div>
                 </div>
 
-                <div id="lines_container" class="space-y-4 pb-20">
-                    </div>
+                <div id="lines_container" class="space-y-4 pb-20"></div>
             </div>
 
             <div class="w-5/12 flex flex-col bg-[#050b14] border-l border-white/5">
@@ -93,7 +95,6 @@
                     <div class="flex justify-between w-full max-w-md mb-4 items-center">
                         <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Live Preview</span>
                         <div class="flex items-center gap-3">
-                            <span class="text-[10px] text-gray-400">ZOOM</span>
                             <input type="range" id="zoom_level" min="50" max="250" value="130" class="accent-teal-500 w-32" oninput="applyZoom()">
                         </div>
                     </div>
@@ -105,8 +106,7 @@
                         <span class="text-xl">💡</span>
                         <h3 class="text-lg font-black text-teal-400">ตัวแปรที่รองรับ</h3>
                     </div>
-                    <div id="var_sidebar_container">
-                        </div>
+                    <div id="var_sidebar_container"></div>
                 </div>
             </div>
         </div>
@@ -116,7 +116,6 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
-        // --- Mock Data ให้ครอบคลุมทุกตัวแปรตาม SQL ใหม่ ---
         const mockData = {
             clinic_name: "PK-VMS Animal Hospital", phone: "081-999-8888",
             pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-2026-001", weight: "12.5", breed: "Golden Retriever",
@@ -201,15 +200,16 @@
             if (l.type === 'text') {
                 return `
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
-                        <div class="col-span-4"><label class="text-xs text-gray-500 mb-1 block">ข้อความ (ใส่ {{ตัวแปร}} ได้)</label>
+                        <div class="col-span-4"><label class="text-xs text-gray-500 mb-1 block">ข้อความ</label>
                             <input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)">
                         </div>
-                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">แบบตัวอักษร</label>
-                            <select class="input-control" onchange="updateLine(${i},'font',this.value)">
-                                <option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option>
-                                <option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option>
-                                <option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option>
-                            </select>
+                        <div class="col-span-2">
+                            <label class="text-xs text-gray-500 mb-1 block">การจัดวาง</label>
+                            <div class="flex gap-2">
+                                <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">左</button>
+                                <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">中</button>
+                                <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">右</button>
+                            </div>
                         </div>
                         <div><label class="text-xs text-gray-500 mb-1 block">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         <div class="flex items-end gap-1">
@@ -242,17 +242,25 @@
 
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
-            const px = 3.78; // mm to px
+            const px = 3.78;
             wrapper.style.width = (document.getElementById('paper_w').value * px) + 'px';
             wrapper.style.height = (document.getElementById('paper_h').value * px) + 'px';
             wrapper.innerHTML = currentConfig.lines.map((l, i) => {
-                const common = `left:${l.x*px}px; top:${l.y*px}px;`;
+                let style = `top:${l.y*px}px; font-family:${l.font}; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; font-style:${l.italic?'italic':'normal'};`;
+                
                 if (l.type === 'text') {
-                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${common} font-family:${l.font}; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; font-style:${l.italic?'italic':'normal'};" onclick="activeLineIndex=${i}; renderLinesList();">${replaceVars(l.text)}</div>`;
+                    if (l.align === 'center') {
+                        style += `left:0; width:100%; text-align:center;`;
+                    } else if (l.align === 'right') {
+                        style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
+                    } else {
+                        style += `left:${l.x*px}px; text-align:left;`;
+                    }
+                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${style}" onclick="activeLineIndex=${i}; renderLinesList();">${replaceVars(l.text)}</div>`;
                 } else if (l.type === 'rect') {
-                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${common} width:${l.w*px}px; height:${l.h*px}px; border-radius:${l.radius}px; background:${l.color || '#000'};" onclick="activeLineIndex=${i}; renderLinesList();"></div>`;
+                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="left:${l.x*px}px; top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border-radius:${l.radius}px; background:${l.color || '#000'};" onclick="activeLineIndex=${i}; renderLinesList();"></div>`;
                 } else if (l.type === 'image') {
-                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${common} width:${l.w*px}px; height:${l.h*px}px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center; font-size:10px; color:#999;" onclick="activeLineIndex=${i}; renderLinesList();">IMAGE</div>`;
+                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="left:${l.x*px}px; top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center; font-size:10px; color:#999;" onclick="activeLineIndex=${i}; renderLinesList();">IMAGE</div>`;
                 }
             }).join('');
         }
@@ -268,12 +276,12 @@
             pw.document.write(`
                 <html>
                 <head>
-                    <title>PK-VMS Print Engine</title>
+                    <title>Print Preview</title>
                     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Prompt:wght@400;600&family=Sarabun:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
                     <style>
                         body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; }
                         .sticker { position: relative; width: ${document.getElementById('paper_w').value}mm; height: ${document.getElementById('paper_h').value}mm; overflow: hidden; }
-                        .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; outline:none !important; background:transparent !important; }
+                        .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; outline:none !important; }
                         @page { size: ${document.getElementById('paper_w').value}mm ${document.getElementById('paper_h').value}mm; margin: 0; }
                     </style>
                 </head>
@@ -292,7 +300,6 @@
 
         window.onload = () => {
             loadTemplateDropdown();
-            // Render Variable Sidebar
             const sideContainer = document.getElementById('var_sidebar_container');
             sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
                 <div class="var-category-title">${group}</div>
