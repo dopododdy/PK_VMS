@@ -71,7 +71,6 @@
     </div>
 
     <script>
-        // รายชื่อเทมเพลตมาตรฐานที่ห้ามลบ/ห้ามเปลี่ยนชื่อรหัส
         const permanentTemplates = [
             'sticker_drug', 'sticker_pet_id', 'sticker_appt', 'sticker_shipping',
             'thermal_receipt', 'thermal_cage', 'thermal_queue',
@@ -105,7 +104,7 @@
 
         window.onload = async () => {
             await loadRelationData();
-            switchTab('units');
+            await switchTab('units');
         };
 
         async function loadRelationData() {
@@ -116,7 +115,10 @@
         async function switchTab(tabId) {
             currentTab = tabId;
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.currentTarget?.classList.add('active');
+            // หาปุ่มที่ถูกคลิก
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.onclick.toString().includes(`'${tabId}'`));
+            if(activeBtn) activeBtn.classList.add('active');
+
             document.getElementById('list-title').innerText = config[tabId].title;
             resetForm(); buildForm(); await loadData();
         }
@@ -163,7 +165,7 @@
                     const height = currentTab === 'templates' ? 'h-80 text-xs font-mono' : 'h-32';
                     inputHtml = `<textarea id="f_${field.name}" class="input-box ${height}"></textarea>`;
                 } else if (field.type === 'select') {
-                    const opts = (relationData[field.relation] || []).map(o => `<option value="${o.id}" class="bg-navy">${o.name}</option>`).join('');
+                    const opts = (relationData[field.relation] || []).map(o => `<option value="${o.id}" class="bg-navy text-white">${o.name}</option>`).join('');
                     inputHtml = `<select id="f_${field.name}" class="input-box"><option value="">-- เลือก --</option>${opts}</select>`;
                 }
                 container.innerHTML += `<div class="mb-4"><label class="block text-sm text-gray-400 mb-1">${field.label}</label>${inputHtml}</div>`;
@@ -172,33 +174,26 @@
 
         function loadPreset(val) {
             if (!val) return;
-            const typeInput = document.getElementById('f_template_type');
-            const configInput = document.getElementById('f_config');
-            typeInput.value = val;
-            
+            document.getElementById('f_template_type').value = val;
             let w = 80, h = 50;
             if (val.startsWith('thermal')) h = 150;
             if (val.includes('a5')) { w = 210; h = 148; }
             if (val.includes('a4')) { w = 210; h = 297; }
-
-            const preset = { 
-                width: w, height: h, 
-                lines: [
-                    { x: 5, y: 10, font: "Sarabun", size: 14, text: "หัวข้อ: " + val, align: "left", bold: true },
-                    { x: 5, y: 25, font: "Sarabun", size: 12, text: "ชื่อสัตว์: {{pet_name}}", align: "left", bold: false }
-                ] 
-            };
-            configInput.value = JSON.stringify(preset, null, 4);
+            const preset = { width: w, height: h, lines: [] };
+            document.getElementById('f_config').value = JSON.stringify(preset, null, 4);
         }
 
         async function loadData() {
             const listContainer = document.getElementById('data-list');
             try {
                 const orderCol = currentTab === 'templates' ? 'template_type' : 'id';
-                const { data } = await db.from(config[currentTab].table).select('*').order(orderCol);
+                const { data, error } = await db.from(config[currentTab].table).select('*').order(orderCol);
+                if (error) throw error;
                 currentData = data || [];
                 renderList(currentData);
-            } catch (err) { listContainer.innerHTML = '<div class="p-8 text-red-400">Error loading data</div>'; }
+            } catch (err) { 
+                listContainer.innerHTML = `<div class="p-8 text-red-400">Error: ${err.message}</div>`; 
+            }
         }
 
         function renderList(items) {
@@ -217,7 +212,7 @@
 
         function selectItem(item, id) {
             selectedId = id;
-            buildForm(); // Re-build to apply read-only logic
+            buildForm();
             document.getElementById('form-title').innerText = 'แก้ไขรายการ';
             document.getElementById('form-title').className = 'font-bold text-lg text-yellow-400';
             
@@ -226,7 +221,11 @@
             
             config[currentTab].fields.forEach(field => {
                 const el = document.getElementById(`f_${field.name}`);
-                if (el) el.value = (typeof item[field.name] === 'object') ? JSON.stringify(item[field.name], null, 4) : item[field.name] || '';
+                if (el) {
+                    let val = item[field.name];
+                    if (typeof val === 'object') val = JSON.stringify(val, null, 4);
+                    el.value = val || '';
+                }
             });
             renderList(currentData);
         }
@@ -244,10 +243,11 @@
             const payload = {};
             let hasError = false;
             config[currentTab].fields.forEach(f => {
-                const val = document.getElementById(`f_${f.name}`).value.trim();
+                const el = document.getElementById(`f_${f.name}`);
+                const val = el.value.trim();
                 if (!val) hasError = true;
                 if (f.name === 'config') {
-                    try { payload[f.name] = JSON.parse(val); } catch(e) { alert('JSON Invalid'); hasError = true; }
+                    try { payload[f.name] = JSON.parse(val); } catch(e) { alert('JSON รูปแบบไม่ถูกต้อง'); hasError = true; }
                 } else payload[f.name] = val;
             });
             if (hasError) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
@@ -257,7 +257,7 @@
                 const { error } = selectedId ? await db.from(config[currentTab].table).update(payload).eq(pk, selectedId) : await db.from(config[currentTab].table).insert([payload]);
                 if (error) throw error;
                 alert('บันทึกสำเร็จ!'); resetForm(); loadData();
-            } catch (err) { alert(err.message); }
+            } catch (err) { alert('บันทึกไม่สำเร็จ: ' + err.message); }
         }
 
         async function deleteData() {
