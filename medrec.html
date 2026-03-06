@@ -108,9 +108,10 @@
             <div class="p-6 border-b border-white/10 flex justify-between bg-slate-900/50">
                 <h3 id="modal-title" class="text-2xl font-bold">เลือกรายการ</h3><button onclick="closeCatalog()" class="text-3xl">✕</button>
             </div>
-            <div class="p-4 bg-white/5"><input type="text" id="catalog-search" class="input-box" placeholder="ค้นหา..." oninput="filterCatalog()"></div>
+            <div class="p-4 bg-white/5"><input type="text" id="catalog-search" class="input-box" placeholder="ค้นหาชื่อรายการ..." oninput="filterCatalog()"></div>
             <div id="catalog-items" class="flex-1 overflow-y-auto p-4 space-y-3 bg-black/20"></div>
             <div class="p-5 bg-teal-500/10 border-t border-teal-500/20">
+                <label class="text-xs font-bold text-teal-400 uppercase mb-2 block">รายการที่เลือกแล้ว:</label>
                 <div id="modal-session-list" class="flex flex-wrap gap-3"></div>
             </div>
             <div class="p-6 border-t border-white/10 bg-slate-900/50"><button onclick="closeCatalog()" class="btn-base btn-blue w-full text-xl py-4">เสร็จสิ้น</button></div>
@@ -198,6 +199,7 @@
 
         async function saveMedicalRecord() {
             try {
+                console.log("Saving records...");
                 const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, note: "", cost: parseFloat(document.getElementById('f_cost').value) || 0 };
                 const { data: record, error: hErr } = await db.from('medical_records').insert([headerData]).select().single();
                 if (hErr) throw hErr;
@@ -205,7 +207,73 @@
                 const { error: iErr } = await db.from('medical_record_items').insert(itemInserts);
                 if (iErr) throw iErr;
                 alert("บันทึกข้อมูลเรียบร้อยแล้ว"); location.reload();
-            } catch (err) { alert(err.message); }
+            } catch (err) { console.error(err); alert("บันทึกไม่สำเร็จ: " + err.message); }
+        }
+
+        async function openCatalog(type) {
+            currentCatalogType = type; 
+            document.getElementById('catalog-modal').style.display = 'flex';
+            document.getElementById('modal-title').innerText = type === 'rx' ? '💊 เลือกยา/สินค้า' : type === 'tx' ? '💉 เลือกหัตถการ/ยาฉีด' : '🔬 เลือก Lab';
+            
+            let items = [];
+            if (type === 'lab') {
+                const { data } = await db.from('services').select('*').eq('category', 'Lab');
+                items = (data || []).map(i => ({ name: i.service_name, price: i.price, type: 'Lab', data: i }));
+            } else if (type === 'tx') {
+                const r1 = await db.from('pharmacy').select('*').eq('category', 'Injection');
+                const r2 = await db.from('services').select('*').eq('category', 'หัตถการ');
+                items = [
+                    ...(r1.data||[]).map(i=>({name:i.item_name, price:i.price_per_unit, type:'Tx', subtype:'inj', data:i})),
+                    ...(r2.data||[]).map(i=>({name:i.service_name, price:i.price, type:'Tx', subtype:'proc', data: i}))
+                ];
+            } else if (type === 'rx') {
+                const { data } = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']);
+                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Rx', is_med: i.category !== 'General', data: i }));
+            }
+            
+            fullCatalog = items; displayedItems = [...items]; 
+            renderCatalog(); updateModalUI();
+        }
+
+        // ฟังก์ชันวาดรายการ
+        function renderCatalog() {
+            const container = document.getElementById('catalog-items');
+            container.innerHTML = displayedItems.map((i, idx) => `
+                <div class="p-4 bg-white/5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/10 border border-transparent hover:border-teal-500/50" 
+                     onclick="handleItemClick(${idx})">
+                    <div><b>${i.name}</b><br><small class="text-teal-400">฿${parseFloat(i.price).toFixed(2)}</small></div>
+                    <div class="text-teal-500 text-2xl font-bold">+</div>
+                </div>`).join('');
+        }
+
+        // ฟังก์ชันดักการคลิก (Global window)
+        window.handleItemClick = function(idx) {
+            console.log("Clicked item index:", idx);
+            const item = displayedItems[idx];
+            if (!item) return;
+
+            if (item.type === 'Rx' && item.is_med) {
+                openRxCalc(item);
+            } else if (item.type === 'Tx' && item.subtype === 'inj') {
+                pendingItem = item;
+                document.getElementById('inj-name').innerText = item.name;
+                document.getElementById('inj-modal').style.display = 'flex';
+            } else {
+                addItem(item.type, item.name, item.price);
+            }
+        };
+
+        function filterCatalog() { 
+            const t = document.getElementById('catalog-search').value.toLowerCase(); 
+            displayedItems = fullCatalog.filter(i=>i.name.toLowerCase().includes(t));
+            renderCatalog(); 
+        }
+
+        function addItem(type, name, price, meta = {}) {
+            selectedItems.push({ type, name, price: parseFloat(price), ...meta });
+            let currentTotal = parseFloat(document.getElementById('f_cost').value) || 0;
+            document.getElementById('f_cost').value = (currentTotal + parseFloat(price)).toFixed(2);
+            updateFormUI(); updateModalUI();
         }
 
         function calculateRxTablets() {
@@ -228,60 +296,6 @@
             document.getElementById('rx-final-price-val').value = total.toFixed(2);
         }
 
-        async function openCatalog(type) {
-            currentCatalogType = type; document.getElementById('catalog-modal').style.display = 'flex';
-            document.getElementById('modal-title').innerText = type === 'rx' ? '💊 เลือกยา/สินค้า' : type === 'tx' ? '💉 เลือกหัตถการ/ยาฉีด' : '🔬 เลือก Lab';
-            let items = [];
-            if (type === 'lab') items = (await db.from('services').select('*').eq('category', 'Lab')).data.map(i=>({name:i.service_name, price:i.price, type:'Lab', data: i}));
-            else if (type === 'tx') {
-                const r1 = await db.from('pharmacy').select('*').eq('category', 'Injection');
-                const r2 = await db.from('services').select('*').eq('category', 'หัตถการ');
-                items = [...(r1.data||[]).map(i=>({name:i.item_name, price:i.price_per_unit, type:'Tx', subtype:'inj', data:i})), ...(r2.data||[]).map(i=>({name:i.service_name, price:i.price, type:'Tx', subtype:'proc', data: i}))];
-            } else if (type === 'rx') {
-                const { data } = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']);
-                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Rx', is_med: i.category !== 'General', data: i }));
-            }
-            fullCatalog = items; displayedItems = [...items]; 
-            renderCatalog(); updateModalUI();
-        }
-
-        // แก้ไขฟังก์ชันเรนเดอร์ให้ใช้ Index จาก Global Variable โดยตรง
-        function renderCatalog() {
-            document.getElementById('catalog-items').innerHTML = displayedItems.map((i, idx) => `
-                <div class="p-4 bg-white/5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/10" onclick="handleFinalItemClick(${idx})">
-                    <div><b>${i.name}</b><br><small>฿${i.price}</small></div>
-                    <div class="text-teal-500 text-2xl font-bold">+</div>
-                </div>`).join('');
-        }
-
-        // ฟังก์ชันใหม่ที่คุมการคลิกแน่นอน
-        window.handleFinalItemClick = function(idx) {
-            const i = displayedItems[idx];
-            if (!i) return;
-            if (i.type === 'Rx' && i.is_med) {
-                openRxCalc(i);
-            } else if (i.type === 'Tx' && i.subtype === 'inj') {
-                pendingItem = i; 
-                document.getElementById('inj-name').innerText = i.name; 
-                document.getElementById('inj-modal').style.display='flex';
-            } else {
-                addItem(i.type, i.name, i.price);
-            }
-        };
-
-        function filterCatalog() { 
-            const t = document.getElementById('catalog-search').value.toLowerCase(); 
-            displayedItems = fullCatalog.filter(i=>i.name.toLowerCase().includes(t));
-            renderCatalog(); 
-        }
-
-        function addItem(type, name, price, meta = {}) {
-            selectedItems.push({ type, name, price: parseFloat(price), ...meta });
-            let currentTotal = parseFloat(document.getElementById('f_cost').value) || 0;
-            document.getElementById('f_cost').value = (currentTotal + parseFloat(price)).toFixed(2);
-            updateFormUI(); updateModalUI();
-        }
-
         function confirmRxCalc() {
             const dose = document.getElementById('rx-tabs-display').innerText.split(' ')[0];
             const unit = pendingItem.data.unit || 'เม็ด';
@@ -290,6 +304,18 @@
             const qty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value));
             addItem('Rx', pendingItem.name, total_p, { dose, unit, freq, meal: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value, days: parseInt(document.getElementById('rx-days').value), qty, drug_name_th: pendingItem.data.name_th, warning: pendingItem.data.side_effects });
             document.getElementById('rx-calc-modal').style.display = 'none';
+        }
+
+        function openRxCalc(item) {
+            pendingItem = item;
+            document.getElementById('rx-calc-name').innerText = item.name;
+            document.getElementById('rx-conc-val').value = item.data.concentration_mg_unit || 1;
+            const ds = document.getElementById('rx-dose-select'); 
+            ds.innerHTML = '<option value="">-- โดสแนะนำ --</option>';
+            const p = petType === 'แมว' ? 'cat' : 'dog';
+            for(let i=1; i<=5; i++) if(item.data[`${p}_dose_${i}`] > 0) ds.innerHTML += `<option value="${item.data[`${p}_dose_${i}`]}">${item.data[`${p}_dose_${i}`]} mg/kg</option>`;
+            document.getElementById('rx-calc-modal').style.display = 'flex';
+            calculateRxTablets();
         }
 
         function removeItem(idx) {
