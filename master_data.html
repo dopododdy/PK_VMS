@@ -64,7 +64,7 @@
 <body class="flex flex-col h-screen">
     <div class="mesh-bg"></div>
 
-<header class="p-5 border-b border-white/5 bg-navy/80 backdrop-blur-md shrink-0 flex items-center justify-between">
+    <header class="p-5 border-b border-white/5 bg-navy/80 backdrop-blur-md shrink-0 flex items-center justify-between">
         <div class="flex items-center gap-4">
             <a href="settings.html" class="text-gray-400 hover:text-white transition text-sm">← กลับหน้าตั้งค่า</a>
             <h1 class="text-xl font-bold border-l pl-4 border-white/20">📑 ข้อมูลพื้นฐานระบบ (Master Data)</h1>
@@ -77,8 +77,7 @@
             <div class="tab-btn active" onclick="switchTab('units')"><span>📏</span> หน่วยนับสินค้า/ยา</div>
             <div class="tab-btn" onclick="switchTab('species')"><span>🐾</span> ชนิดสัตว์</div>
             <div class="tab-btn" onclick="switchTab('breeds')"><span>🐕</span> สายพันธุ์สัตว์</div>
-            <div class="tab-btn" onclick="switchTab('main_cat')"><span>🗂️</span> หมวดหมู่หลัก (สินค้า)</div>
-            <div class="tab-btn" onclick="switchTab('sub_cat')"><span>📂</span> หมวดหมู่ย่อย (สินค้า)</div>
+            <div class="tab-btn" onclick="switchTab('sub_cat')"><span>📂</span> หมวดหมู่สินค้า</div>
             <div class="tab-btn" onclick="switchTab('templates')"><span>🏷️</span> เทมเพลตสติ๊กเกอร์</div>
         </aside>
 
@@ -109,7 +108,7 @@
     </div>
 
     <script>
-        // โครงสร้างการตั้งค่าแต่ละ Tab
+        // โครงสร้างการตั้งค่าแต่ละ Tab (ลบ main_cat ออก และปรับ sub_cat ใหม่)
         const config = {
             units: { table: 'mas_units', title: 'หน่วยนับสินค้า/ยา', fields: [{ name: 'name', label: 'ชื่อหน่วยนับ (เช่น เม็ด, ขวด)', type: 'text' }] },
             species: { table: 'mas_species', title: 'ชนิดสัตว์', fields: [{ name: 'name', label: 'ชื่อชนิดสัตว์ (เช่น สุนัข, แมว)', type: 'text' }] },
@@ -120,12 +119,10 @@
                     { name: 'species_id', label: 'ชนิดสัตว์', type: 'select', relation: 'mas_species' }
                 ] 
             },
-            main_cat: { table: 'mas_main_cat', title: 'หมวดหมู่หลัก (สินค้า/บริการ)', fields: [{ name: 'name', label: 'ชื่อหมวดหมู่หลัก (เช่น ยา, หัตถการ)', type: 'text' }] },
             sub_cat: { 
-                table: 'mas_sub_cat', title: 'หมวดหมู่ย่อย (สินค้า/บริการ)', 
+                table: 'mas_sub_cat', title: 'หมวดหมู่สินค้า', 
                 fields: [
-                    { name: 'name', label: 'ชื่อหมวดหมู่ย่อย (เช่น Antibiotics)', type: 'text' },
-                    { name: 'main_cat_id', label: 'หมวดหมู่หลัก', type: 'select', relation: 'mas_main_cat' }
+                    { name: 'name', label: 'ชื่อหมวดหมู่ (เช่น Antibiotics, ยาฉีด)', type: 'text' }
                 ] 
             },
             templates: { 
@@ -150,10 +147,9 @@
 
         async function loadRelationData() {
             try {
+                // โหลดแค่ตารางชนิดสัตว์เท่านั้น เพราะตารางหมวดหมู่หลักถูกลบไปแล้ว
                 const { data: species } = await db.from('mas_species').select('id, name').order('name');
-                const { data: mainCat } = await db.from('mas_main_cat').select('id, name').order('name');
                 if(species) relationData['mas_species'] = species;
-                if(mainCat) relationData['mas_main_cat'] = mainCat;
             } catch (err) {
                 console.log('Relation load skipped (tables might not exist yet).');
             }
@@ -194,7 +190,6 @@
                 if (field.type === 'text') {
                     inputHtml = `<input type="text" id="f_${field.name}" class="input-box" placeholder="ระบุ${field.label}">`;
                 } else if (field.type === 'textarea') {
-                    // ปรับขนาดความสูงถ้าเป็น template
                     const heightClass = currentTab === 'templates' ? 'h-96 text-xs font-mono' : 'h-32';
                     inputHtml = `<textarea id="f_${field.name}" class="input-box ${heightClass}" placeholder='{"width": 80, "height": 50, ...}'></textarea>`;
                 } else if (field.type === 'select') {
@@ -273,10 +268,7 @@
                 };
             }
 
-            // นำ Object มาแปลงเป็น String แบบมีย่อหน้าสวยงามให้ดูง่าย
             configInput.value = JSON.stringify(presetConfig, null, 4);
-            
-            // รีเซ็ต Dropdown เพื่อให้เลือกซ้ำได้
             document.getElementById('preset-selector').value = "";
         }
 
@@ -285,7 +277,6 @@
             listContainer.innerHTML = '<div class="p-8 text-center text-gray-500">กำลังโหลด...</div>';
             
             try {
-                // ถ้าเป็น template ใช้ template_type แทน id เพราะเป็น PK
                 const orderCol = currentTab === 'templates' ? 'template_type' : 'id';
                 const { data, error } = await db.from(config[currentTab].table).select('*').order(orderCol, { ascending: true });
                 if (error) throw error;
@@ -308,7 +299,6 @@
 
             items.forEach(item => {
                 const displayName = item.name || item.template_type || 'ไม่มีชื่อ';
-                // แยก PK ของตาราง templates (ใช้ string) กับตารางอื่น (ใช้ uuid)
                 const isTemplate = currentTab === 'templates';
                 const itemId = isTemplate ? item.template_type : item.id;
                 
@@ -316,7 +306,7 @@
                 div.className = `list-item ${selectedId === itemId ? 'selected' : ''}`;
                 
                 let subInfo = '';
-                if(item.species_id || item.main_cat_id) subInfo = '<div class="text-xs text-teal-400 mt-1">มีการอ้างอิงข้อมูล</div>';
+                if(item.species_id) subInfo = '<div class="text-xs text-teal-400 mt-1">อ้างอิงข้อมูลชนิดสัตว์</div>';
                 else if(isTemplate) subInfo = '<div class="text-xs text-gray-400 mt-1">ตั้งค่าการพิมพ์</div>';
 
                 div.innerHTML = `
@@ -342,7 +332,6 @@
             config[currentTab].fields.forEach(field => {
                 const el = document.getElementById(`f_${field.name}`);
                 if (el) {
-                    // ถ้าเป็นฟิลด์ config (JSON) ให้จัดฟอร์แมตให้อ่านง่าย
                     if(field.name === 'config' && typeof item[field.name] === 'object') {
                         el.value = JSON.stringify(item[field.name], null, 4);
                     } else {
@@ -377,10 +366,9 @@
                 if (!val) {
                     hasError = true;
                 } else {
-                    // ** ระบบป้องกัน JSON พัง **
                     if (field.name === 'config' && currentTab === 'templates') {
                         try {
-                            payload[field.name] = JSON.parse(val); // แปลง String กลับเป็น JSON Object
+                            payload[field.name] = JSON.parse(val);
                         } catch (e) {
                             alert('⚠️ รูปแบบ JSON ไม่ถูกต้อง! กรุณาตรวจสอบปีกกาหรือลูกน้ำให้ครบ');
                             hasError = true;
