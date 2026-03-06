@@ -127,7 +127,6 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
-        // ข้อมูล Mock Data สำหรับแสดงผล Live Preview ให้เห็นภาพจริง
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic",
             clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
@@ -152,8 +151,6 @@
             total_qty: "14 เม็ด",
             warning: "กินติดต่อกันจนหมดตามสัตวแพทย์สั่ง",
             receipt_no: "2569030769000101",
-            // การจัดรูปแบบรายการสินค้าโดยใช้ HTML Table เพื่อให้ราคาชิดขวาใน Sarabun
-            // ปรับลดความกว้างลง 10px ตามคำขอ (width: calc(100% - 10px))
             items_list: `
                 <table style="width: calc(100% - 10px); border-collapse:collapse; font-family:'Sarabun'; font-size: 11px; color:black;">
                     <tr><td style="padding-bottom:2px;">1. Amoxicillin 500mg</td><td style="text-align:right; white-space:nowrap;">210.00</td></tr>
@@ -244,9 +241,20 @@
                              <button class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white w-8 h-8 rounded-full text-xs transition flex items-center justify-center" onclick="currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();">✕</button>
                         </div>
                     </div>
-                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="text-white font-bold opacity-60 truncate">${l.type==='image' ? l.url : (l.type==='rect' ? 'สี่เหลี่ยมโค้งมน' : l.text)}</div>`}
+                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="text-white font-bold opacity-60 truncate">${l.type==='image' ? 'Image Component' : (l.type==='rect' ? 'สี่เหลี่ยมโค้งมน' : l.text)}</div>`}
                 </div>
             `).join('');
+        }
+
+        function handleImageUpload(event, index) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                updateLine(index, 'url', e.target.result);
+                renderLinesList();
+            };
+            reader.readAsDataURL(file);
         }
 
         function renderEditor(l, i) {
@@ -267,7 +275,7 @@
                         <div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option><option value="Courier New" ${l.font==='Courier New'?'selected':''}>Mono</option></select></div>
-                            <div class="editor-group"><label class="label-title">ขนาดตัวอักษร</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
+                            <div class="editor-group"><label class="label-title">ขนาด (pt)</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             ${alignControl}
@@ -299,7 +307,11 @@
             } else if (l.type === 'image') {
                 return `
                     <div class="space-y-4 mt-4">
-                        <div class="editor-group"><label class="label-title">URL รูปภาพ</label><input type="text" class="input-control text-xs" value="${l.url}" oninput="updateLine(${i},'url',this.value)"></div>
+                        <div class="editor-group">
+                            <label class="label-title">อัปโหลดรูปภาพ</label>
+                            <input type="file" class="input-control text-xs" accept="image/*" onchange="handleImageUpload(event, ${i})">
+                            <div class="mt-2 text-[10px] text-gray-500">แนะนำ: ใช้รูปพื้นหลังโปร่งใส (.png) ขนาดไม่เกิน 500KB</div>
+                        </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="editor-group"><label class="label-title">กว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
                             <div class="editor-group"><label class="label-title">สูง (mm)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>
@@ -321,7 +333,7 @@
 
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
-            const px = 3.78; // 1mm = 3.78px (มาตรฐานหน้าจอ 96dpi)
+            const px = 3.78; 
             const pw = document.getElementById('paper_w').value;
             const ph = document.getElementById('paper_h').value;
             
@@ -331,7 +343,6 @@
             wrapper.innerHTML = currentConfig.lines.map((l) => {
                 let style = `top:${l.y * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                 
-                // สำหรับ Items List และ Text อื่นๆ ให้รองรับความกว้างตามการจัดแนว
                 const boxWidth = l.w ? (l.w * px) : (pw * px - (l.x * 2 * px));
                 style += `width:${boxWidth}px;`;
 
@@ -345,6 +356,8 @@
                     return `<div class="canvas-element" style="${rStyle}"></div>`;
                 } else if (l.type === 'image') {
                     let iStyle = `top:${l.y * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
+                    if (l.align === 'center') iStyle = `top:${l.y * px}px; left:50%; transform:translateX(-50%); width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
+                    else if (l.align === 'right') iStyle = `top:${l.y * px}px; right:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
                     return `<img src="${l.url}" class="canvas-element" style="${iStyle}">`;
                 }
             }).join('');
@@ -371,9 +384,7 @@
                 </style></head>
                 <body><div class="page">
                     ${dynamicLines.map(l => {
-                        // พิมพ์จริงใช้หน่วย mm และ pt เพื่อความเป๊ะ
                         let style = `top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
-                        
                         const boxWidthMm = l.w ? l.w : (pw_val - (l.x * 2));
                         style += `width:${boxWidthMm}mm;`;
 
@@ -386,7 +397,10 @@
                             let rStyle = `top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; background:transparent; border-radius:${l.radius || 0}mm;`;
                             return `<div class="elem" style="${rStyle}"></div>`;
                         } else if (l.type === 'image') {
-                            let iStyle = `top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                            let iStyle = `top:${l.y}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                            if (l.align === 'center') iStyle = `top:${l.y}mm; left:50%; transform:translateX(-50%); width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                            else if (l.align === 'right') iStyle = `top:${l.y}mm; right:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                            else iStyle += `left:${l.x}mm;`;
                             return `<img src="${l.url}" class="elem" style="${iStyle}">`;
                         }
                     }).join('')}
