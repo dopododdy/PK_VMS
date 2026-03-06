@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ข้อมูลพื้นฐานระบบ | PK-VMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script> <style>
+        :root {
+            --navy: #0b1929;
+            --navy-mid: #112240;
+            --teal: #0ea5a0;
+            --border: rgba(255,255,255,0.1);
+        }
+        body { 
+            font-family: "Sarabun", sans-serif; 
+            background: var(--navy); 
+            color: #e2e8f0; 
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%);
+        }
+        .input-box { 
+            background: rgba(0,0,0,0.3); 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            padding: 10px 14px; 
+            color: white; 
+            width: 100%; 
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-box:focus { border-color: var(--teal); }
+        .tab-btn {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 1rem; border-radius: 12px;
+            color: #94a3b8; transition: all 0.2s;
+            cursor: pointer;
+        }
+        .tab-btn:hover { background: rgba(255,255,255,0.05); color: white; }
+        .tab-btn.active { background: rgba(14,165,160,0.15); color: var(--teal); border: 1px solid rgba(14,165,160,0.3); }
+        
+        .list-item {
+            padding: 1rem; border-bottom: 1px solid var(--border);
+            cursor: pointer; transition: background 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .list-item:hover { background: rgba(255,255,255,0.02); }
+        .list-item.selected { background: rgba(14,165,160,0.1); border-left: 3px solid var(--teal); }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+    <div class="mesh-bg"></div>
+
+    <header class="p-5 border-b border-white/5 bg-navy/80 backdrop-blur-md shrink-0 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="settings.html" class="text-gray-400 hover:text-white transition text-sm">← กลับหน้าตั้งค่า</a>
+            <h1 class="text-xl font-bold border-l pl-4 border-white/20">📑 ข้อมูลพื้นฐานระบบ (Master Data)</h1>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <aside class="w-64 border-r border-white/5 p-4 space-y-2 overflow-y-auto shrink-0 bg-navy-mid/30">
+            <div class="text-xs font-bold text-gray-500 mb-4 tracking-wider uppercase px-2">หมวดหมู่ข้อมูล</div>
+            <div class="tab-btn active" onclick="switchTab('units')"><span>📏</span> หน่วยนับสินค้า/ยา</div>
+            <div class="tab-btn" onclick="switchTab('species')"><span>🐾</span> ชนิดสัตว์</div>
+            <div class="tab-btn" onclick="switchTab('breeds')"><span>🐕</span> สายพันธุ์สัตว์</div>
+            <div class="tab-btn" onclick="switchTab('main_cat')"><span>🗂️</span> หมวดหมู่หลัก (สินค้า)</div>
+            <div class="tab-btn" onclick="switchTab('sub_cat')"><span>📂</span> หมวดหมู่ย่อย (สินค้า)</div>
+            <div class="tab-btn" onclick="switchTab('templates')"><span>🏷️</span> เทมเพลตสติ๊กเกอร์</div>
+        </aside>
+
+        <main class="flex-1 flex gap-4 p-4 overflow-hidden">
+            <div class="flex-1 bg-white/5 border border-white/10 rounded-xl flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
+                    <h2 class="font-bold text-lg" id="list-title">รายการข้อมูล</h2>
+                    <input type="text" id="search-input" placeholder="ค้นหา..." class="input-box !w-64 !py-1.5 !text-sm" onkeyup="filterList()">
+                </div>
+                <div class="flex-1 overflow-y-auto" id="data-list">
+                    <div class="p-8 text-center text-gray-500 text-sm">กำลังโหลดข้อมูล...</div>
+                </div>
+            </div>
+
+            <div class="w-[400px] bg-white/5 border border-white/10 rounded-xl flex flex-col shrink-0 overflow-hidden">
+                <div class="p-4 border-b border-white/10 bg-black/20">
+                    <h2 class="font-bold text-lg text-teal-400" id="form-title">เพิ่มรายการใหม่</h2>
+                </div>
+                <div class="p-5 flex-1 overflow-y-auto space-y-4" id="form-fields">
+                    </div>
+                <div class="p-4 border-t border-white/10 flex gap-3 bg-black/20">
+                    <button onclick="saveData()" class="flex-1 bg-teal-600 hover:bg-teal-500 text-white py-2.5 rounded-lg font-medium transition shadow-lg shadow-teal-500/20">💾 บันทึก</button>
+                    <button onclick="resetForm()" class="px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition">ยกเลิก</button>
+                    <button id="btn-delete" onclick="deleteData()" class="px-4 bg-red-600 hover:bg-red-500 text-white rounded-lg transition hidden">🗑️</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // โครงสร้างการตั้งค่าแต่ละ Tab
+        const config = {
+            units: { table: 'mas_units', title: 'หน่วยนับสินค้า/ยา', fields: [{ name: 'name', label: 'ชื่อหน่วยนับ (เช่น เม็ด, ขวด)', type: 'text' }] },
+            species: { table: 'mas_species', title: 'ชนิดสัตว์', fields: [{ name: 'name', label: 'ชื่อชนิดสัตว์ (เช่น สุนัข, แมว)', type: 'text' }] },
+            breeds: { 
+                table: 'mas_breeds', title: 'สายพันธุ์สัตว์', 
+                fields: [
+                    { name: 'name', label: 'ชื่อสายพันธุ์', type: 'text' },
+                    { name: 'species_id', label: 'ชนิดสัตว์', type: 'select', relation: 'mas_species' }
+                ] 
+            },
+            main_cat: { table: 'mas_main_cat', title: 'หมวดหมู่หลัก (สินค้า/บริการ)', fields: [{ name: 'name', label: 'ชื่อหมวดหมู่หลัก (เช่น ยา, หัตถการ)', type: 'text' }] },
+            sub_cat: { 
+                table: 'mas_sub_cat', title: 'หมวดหมู่ย่อย (สินค้า/บริการ)', 
+                fields: [
+                    { name: 'name', label: 'ชื่อหมวดหมู่ย่อย (เช่น Antibiotics)', type: 'text' },
+                    { name: 'main_cat_id', label: 'หมวดหมู่หลัก', type: 'select', relation: 'mas_main_cat' }
+                ] 
+            },
+            templates: { 
+                table: 'print_templates', title: 'เทมเพลตสติ๊กเกอร์', 
+                fields: [
+                    { name: 'template_type', label: 'รหัสเทมเพลต (เช่น drug_sticker)', type: 'text' },
+                    { name: 'config', label: 'การตั้งค่า (JSON รูปแบบการพิมพ์)', type: 'textarea' }
+                ] 
+            }
+        };
+
+        let currentTab = 'units';
+        let currentData = [];
+        let relationData = {}; // เก็บข้อมูล dropdown อ้างอิง
+        let selectedId = null;
+
+        // Initialize
+        window.onload = async () => {
+            // โหลดข้อมูลอ้างอิงล่วงหน้า
+            await loadRelationData();
+            switchTab('units');
+        };
+
+        async function loadRelationData() {
+            try {
+                // จำลองการโหลด (แทนที่ด้วย Supabase เมื่อสร้างตารางแล้ว)
+                const { data: species } = await db.from('mas_species').select('id, name').order('name');
+                const { data: mainCat } = await db.from('mas_main_cat').select('id, name').order('name');
+                if(species) relationData['mas_species'] = species;
+                if(mainCat) relationData['mas_main_cat'] = mainCat;
+            } catch (err) {
+                console.log('Relation load skipped (tables might not exist yet).');
+            }
+        }
+
+        async function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget?.classList.add('active');
+            
+            document.getElementById('list-title').innerText = config[tabId].title;
+            resetForm();
+            buildForm();
+            await loadData();
+        }
+
+        function buildForm() {
+            const formContainer = document.getElementById('form-fields');
+            formContainer.innerHTML = '';
+            
+            config[currentTab].fields.forEach(field => {
+                let inputHtml = '';
+                if (field.type === 'text') {
+                    inputHtml = `<input type="text" id="f_${field.name}" class="input-box" placeholder="ระบุ${field.label}">`;
+                } else if (field.type === 'textarea') {
+                    inputHtml = `<textarea id="f_${field.name}" class="input-box h-32" placeholder='{"width": 80, "height": 50, ...}'></textarea>`;
+                } else if (field.type === 'select') {
+                    const options = (relationData[field.relation] || [])
+                        .map(opt => `<option value="${opt.id}" class="bg-navy">${opt.name}</option>`).join('');
+                    inputHtml = `<select id="f_${field.name}" class="input-box"><option value="">-- เลือก --</option>${options}</select>`;
+                }
+
+                formContainer.innerHTML += `
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">${field.label}</label>
+                        ${inputHtml}
+                    </div>
+                `;
+            });
+        }
+
+        async function loadData() {
+            const listContainer = document.getElementById('data-list');
+            listContainer.innerHTML = '<div class="p-8 text-center text-gray-500">กำลังโหลด...</div>';
+            
+            try {
+                const { data, error } = await db.from(config[currentTab].table).select('*').order('id', { ascending: false });
+                if (error) throw error;
+                currentData = data || [];
+                renderList(currentData);
+            } catch (err) {
+                console.error(err);
+                listContainer.innerHTML = `<div class="p-8 text-center text-red-400 text-sm">ยังไม่มีตารางฐานข้อมูล หรือเกิดข้อผิดพลาด<br>(${err.message})</div>`;
+            }
+        }
+
+        function renderList(items) {
+            const listContainer = document.getElementById('data-list');
+            listContainer.innerHTML = '';
+            
+            if (items.length === 0) {
+                listContainer.innerHTML = '<div class="p-8 text-center text-gray-500 text-sm">ไม่พบข้อมูล</div>';
+                return;
+            }
+
+            items.forEach(item => {
+                const displayName = item.name || item.template_type || 'ไม่มีชื่อ';
+                const div = document.createElement('div');
+                div.className = `list-item ${selectedId === item.id ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div>
+                        <div class="font-medium text-white">${displayName}</div>
+                        ${item.species_id || item.main_cat_id ? '<div class="text-xs text-teal-400 mt-1">มีการอ้างอิงหมวดหมู่หลัก</div>' : ''}
+                    </div>
+                    <div class="text-gray-500 text-sm">ID: ${item.id.toString().slice(0,4)}..</div>
+                `;
+                div.onclick = () => selectItem(item);
+                listContainer.appendChild(div);
+            });
+        }
+
+        function selectItem(item) {
+            selectedId = item.id;
+            document.getElementById('form-title').innerText = 'แก้ไขรายการ';
+            document.getElementById('form-title').classList.replace('text-teal-400', 'text-yellow-400');
+            document.getElementById('btn-delete').classList.remove('hidden');
+            
+            config[currentTab].fields.forEach(field => {
+                const el = document.getElementById(`f_${field.name}`);
+                if (el) el.value = item[field.name] || '';
+            });
+            renderList(currentData); // Re-render to show selected state
+        }
+
+        function resetForm() {
+            selectedId = null;
+            document.getElementById('form-title').innerText = 'เพิ่มรายการใหม่';
+            document.getElementById('form-title').classList.replace('text-yellow-400', 'text-teal-400');
+            document.getElementById('btn-delete').classList.add('hidden');
+            
+            config[currentTab].fields.forEach(field => {
+                const el = document.getElementById(`f_${field.name}`);
+                if (el) el.value = '';
+            });
+            renderList(currentData);
+        }
+
+        async function saveData() {
+            const payload = {};
+            let hasError = false;
+
+            config[currentTab].fields.forEach(field => {
+                const el = document.getElementById(`f_${field.name}`);
+                if (!el.value.trim() && field.name !== 'config') hasError = true;
+                payload[field.name] = el.value.trim();
+            });
+
+            if (hasError) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+
+            try {
+                if (selectedId) {
+                    const { error } = await db.from(config[currentTab].table).update(payload).eq('id', selectedId);
+                    if (error) throw error;
+                } else {
+                    const { error } = await db.from(config[currentTab].table).insert([payload]);
+                    if (error) throw error;
+                }
+                resetForm();
+                loadData();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function deleteData() {
+            if (!selectedId || !confirm('ยืนยันการลบรายการนี้?')) return;
+            try {
+                const { error } = await db.from(config[currentTab].table).delete().eq('id', selectedId);
+                if (error) throw error;
+                resetForm();
+                loadData();
+            } catch (err) {
+                alert('ไม่สามารถลบได้ อาจมีข้อมูลอื่นอ้างอิงอยู่ (' + err.message + ')');
+            }
+        }
+
+        function filterList() {
+            const term = document.getElementById('search-input').value.toLowerCase();
+            const filtered = currentData.filter(item => {
+                const name = (item.name || item.template_type || '').toLowerCase();
+                return name.includes(term);
+            });
+            renderList(filtered);
+        }
+    </script>
+</body>
+</html>
