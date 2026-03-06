@@ -33,7 +33,6 @@
         .owner-subtext { color: #94a3b8; font-size: 0.85rem; }
         .phone-badge { color: var(--teal); font-weight: 700; font-size: 0.85rem; }
 
-        /* การตั้งค่าปุ่มแบบ Standard CSS เพื่อให้มีพื้นหลังแน่นอน */
         .btn-base {
             padding: 10px 20px;
             border-radius: 12px;
@@ -49,13 +48,13 @@
         }
         .btn-base:active { transform: scale(0.95); }
 
-        .btn-teal { background-color: #0d9488 !important; } /* Solid Teal */
+        .btn-teal { background-color: #0d9488 !important; } 
         .btn-teal:hover { background-color: #0f766e !important; }
 
-        .btn-blue { background-color: #2563eb !important; } /* Solid Blue */
+        .btn-blue { background-color: #2563eb !important; } 
         .btn-blue:hover { background-color: #1d4ed8 !important; }
 
-        .btn-red { background-color: #dc2626 !important; } /* Solid Red */
+        .btn-red { background-color: #dc2626 !important; } 
         .btn-red:hover { background-color: #b91c1c !important; }
 
         /* Form Controls */
@@ -94,17 +93,30 @@
     </div>
 
     <script>
-        let allAnimals = []; let allOwners = []; let allPhones = [];
+        let allAnimals = []; 
+        let allOwners = []; 
+        let allPhones = [];
+        
+        // ตัวแปรเก็บข้อมูล Master Data
+        let masterSpecies = [];
+        let masterBreeds = [];
 
         async function loadData() {
-            const [resO, resA, resP] = await Promise.all([
+            // โหลดข้อมูลหลักและข้อมูล Master Data มาพร้อมกัน
+            const [resO, resA, resP, resSpecies, resBreeds] = await Promise.all([
                 db.from('owners').select('*'),
                 db.from('animals').select('*'),
-                db.from('owner_phones').select('*')
+                db.from('owner_phones').select('*'),
+                db.from('mas_species').select('*').order('name'),
+                db.from('mas_breeds').select('*').order('name')
             ]);
+            
             allOwners = resO.data || [];
             allAnimals = resA.data || [];
             allPhones = resP.data || [];
+            masterSpecies = resSpecies.data || [];
+            masterBreeds = resBreeds.data || [];
+            
             renderSidebar();
         }
 
@@ -173,13 +185,20 @@
                     <button onclick="saveAllData()" class="w-full btn-base btn-teal py-6 text-3xl mt-10 shadow-2xl">💾 บันทึกข้อมูลทั้งหมด</button>
                 </div>`;
             initAllPickers();
-            updateBreedOptions();
+            
+            // เรียกอัปเดตสายพันธุ์สำหรับทุกฟอร์มย่อย (Pet Row) ทันที
+            document.querySelectorAll('.zone-pet').forEach(el => updateBreedOptions(el.querySelector('.p_type')));
         }
 
         function petRowHtml(pet) {
             const ageInfo = getAgeDetail(pet.birth_date);
             const headIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
             
+            // สร้าง Option ชนิดสัตว์จาก Master Data
+            const speciesOptions = masterSpecies.map(s => 
+                `<option value="${s.name}" data-id="${s.id}" ${pet.pet_type === s.name ? 'selected' : ''}>${s.name}</option>`
+            ).join('');
+
             return `
                 <div class="zone-pet border-l-[12px] border-teal-500 shadow-2xl" data-pet-id="${pet.id || ''}">
                     <div class="flex justify-between items-center mb-8">
@@ -193,9 +212,8 @@
                         <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-black text-xl" value="${pet.pet_name || ''}"></div>
                         <div class="col-span-2"><label class="label-text">ชนิด</label>
                             <select class="p_type input-box" onchange="updateBreedOptions(this)">
-                                <option value="สุนัข" ${pet.pet_type==='สุนัข'?'selected':''}>🐶 สุนัข</option>
-                                <option value="แมว" ${pet.pet_type==='แมว'?'selected':''}>🐱 แมว</option>
-                                <option value="อื่นๆ" ${pet.pet_type==='อื่นๆ'?'selected':''}>🐾 อื่นๆ</option>
+                                <option value="">-- เลือกชนิด --</option>
+                                ${speciesOptions}
                             </select>
                         </div>
                         <div class="col-span-3"><label class="label-text">สายพันธุ์</label><select class="p_breed input-box" data-val="${pet.breed || ''}"></select></div>
@@ -217,7 +235,6 @@
                 </div>`;
         }
 
-        // --- ระบบ Datepicker และฟังก์ชันช่วย (คงเดิม) ---
         function initAllPickers() {
             flatpickr(".datepicker-thai", {
                 locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y",
@@ -258,20 +275,25 @@
             return { y: years, m: months };
         }
 
-        const BREEDS = {
-            "สุนัข": ["ไทย", "ไทยหลังอาน", "บางแก้ว", "โกลเด้น รีทรีฟเวอร์", "ชิสุ", "พุดเดิ้ล", "ปอมเมอเรเนียน", "ไซบีเรียน ฮัสกี้", "เฟรนช์ บูลด็อก", "บีเกิ้ล", "ชิวาวา", "ร็อตไวเลอร์", "ดัชชุน", "ลาบราดอร์", "ผสม"],
-            "แมว": ["ไทย", "เปอร์เซีย", "บริติช ชอร์ตแฮร์", "สก๊อตติช โฟลด์", "เบงกอล", "เมนคูน", "สฟิงซ์", "อเมริกัน ชอร์ตแฮร์", "แมวส้ม", "ผสม"],
-            "อื่นๆ": ["นก", "กระต่าย", "หนูแฮมสเตอร์", "เต่า", "ชูการ์ไกลเดอร์", "อื่น ๆ"]
-        };
+        // ฟังก์ชันดึงสายพันธุ์จาก Master Data อัตโนมัติ
+        function updateBreedOptions(typeSelectEl) {
+            if (!typeSelectEl) return;
+            const row = typeSelectEl.closest('.zone-pet');
+            const breedSelect = row.querySelector('.p_breed');
+            const savedVal = breedSelect.getAttribute('data-val');
+            
+            // หา ID ชนิดสัตว์จาก Option ที่ถูกเลือก
+            const selectedOption = typeSelectEl.options[typeSelectEl.selectedIndex];
+            const speciesId = selectedOption ? selectedOption.getAttribute('data-id') : null;
 
-        function updateBreedOptions(el) {
-            const rows = el ? [el.closest('.zone-pet')] : document.querySelectorAll('.zone-pet');
-            rows.forEach(row => {
-                const type = row.querySelector('.p_type').value;
-                const breedSelect = row.querySelector('.p_breed');
-                const savedVal = breedSelect.getAttribute('data-val');
-                breedSelect.innerHTML = (BREEDS[type] || BREEDS["อื่นๆ"]).map(b => `<option value="${b}" ${b===savedVal?'selected':''}>${b}</option>`).join('');
-            });
+            let filteredBreeds = [];
+            if (speciesId) {
+                // กรองเฉพาะสายพันธุ์ที่ตรงกับ species_id
+                filteredBreeds = masterBreeds.filter(b => b.species_id === speciesId);
+            }
+
+            breedSelect.innerHTML = '<option value="">-- เลือกสายพันธุ์ --</option>' + 
+                filteredBreeds.map(b => `<option value="${b.name}" ${b.name === savedVal ? 'selected' : ''}>${b.name}</option>`).join('');
         }
 
         function createNewForm() { renderForm({ hn: 'AUTO', owner_name: '', address: '' }, [], []); }
@@ -288,7 +310,8 @@
             div.innerHTML = petRowHtml({});
             document.getElementById('pets-container').insertBefore(div.firstElementChild, document.querySelector('button[onclick="addNewPetRow()"]'));
             initAllPickers();
-            updateBreedOptions();
+            // อัปเดต Dropdown สายพันธุ์ของแถวใหม่
+            updateBreedOptions(div.querySelector('.p_type'));
         }
 
         async function readSmartCard() {
@@ -325,12 +348,15 @@
                     if (!petName) continue;
                     await db.from('animals').upsert({
                         id: node.getAttribute('data-pet-id') || undefined,
-                        owner_hn: hn, pet_name: petName, pet_type: node.querySelector('.p_type').value,
-                        breed: node.querySelector('.p_breed').value, gender: node.querySelector('.p_gender').value,
+                        owner_hn: hn, pet_name: petName, 
+                        pet_type: node.querySelector('.p_type').value || 'อื่นๆ',
+                        breed: node.querySelector('.p_breed').value, 
+                        gender: node.querySelector('.p_gender').value,
                         weight: parseFloat(node.querySelector('.p_weight').value) || 0,
                         birth_date: node.querySelector('.datepicker-thai').value || null,
                         microchip_number: node.querySelector('.p_microchip').value,
-                        congenital_disease: node.querySelector('.p_congenital').value, updated_at: new Date()
+                        congenital_disease: node.querySelector('.p_congenital').value, 
+                        updated_at: new Date()
                     });
                 }
                 alert("✅ บันทึกสำเร็จ");
