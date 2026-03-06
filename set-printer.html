@@ -44,7 +44,7 @@
                 <a href="master_data.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
                 <div>
                     <h1 class="text-2xl font-black text-white">🖨️ ออกแบบฟอร์มการพิมพ์</h1>
-                    <p class="text-gray-400 text-sm">กำหนดรูปแบบ drug_sticker และ receipt</p>
+                    <p class="text-gray-400 text-sm">จัดการรูปแบบ drug_sticker และ receipt</p>
                 </div>
             </div>
             <div class="flex gap-4">
@@ -113,17 +113,16 @@
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร จ.พิษณุโลก", phone: "081-999-8888", tax_id: "0123456789012",
             owner_name: "คุณสมชาย ใจดี", pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-26-001", weight: "12.5", breed: "Golden Retriever",
-            drug_name: "Amoxicillin 500", drug_name_th: "ยาฆ่าเชื้อ", dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง",
-            meal_timing: "หลังอาหาร", total_qty: "14", warning: "กินติดต่อกันจนหมด",
+            drug_name: "Amoxicillin 500", drug_name_th: "ยาฆ่าเชื้อ", dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง", meal_timing: "หลังอาหาร", total_qty: "14", warning: "กินติดต่อกันจนหมด",
             receipt_no: "REC-260306-001", items_list: "1. ตรวจรักษาทั่วไป..............300.00\n2. ยาฆ่าเชื้อ Amoxy..............500.00\n3. รายการพิเศษ..................200.00", 
-            total_price: "1,000.00", net_total: "1,000.00", date: "06/03/26", time: "19:00"
+            total_price: "1,000.00", discount_val: "0.00", net_total: "1,000.00", date: "06/03/26", time: "19:00"
         };
 
         const varGroups = {
             "🏥 คลินิก": ["clinic_name", "clinic_address", "phone", "tax_id"],
             "🐾 สัตว์/เจ้าของ": ["owner_name", "pet_name", "species", "sex", "hn", "weight", "breed"],
             "💊 ข้อมูลยา": ["drug_name", "drug_name_th", "dose_per_time", "unit", "frequency", "meal_timing", "total_qty", "warning"],
-            "💰 การเงิน": ["receipt_no", "items_list", "total_price", "net_total", "date", "time"]
+            "💰 การเงิน": ["receipt_no", "items_list", "total_price", "discount_val", "net_total", "date", "time"]
         };
 
         function replaceVars(text) {
@@ -164,7 +163,7 @@
         function renderLinesList() {
             const container = document.getElementById('lines_container');
             container.innerHTML = currentConfig.lines.map((l, i) => `
-                <div class="p-5 rounded-2xl border ${i === activeLineIndex ? 'bg-navy-light border-teal-500' : 'bg-white/5 border-white/5'}">
+                <div class="p-5 rounded-2xl border ${i === activeLineIndex ? 'bg-navy-light border-teal-500 shadow-lg' : 'bg-white/5 border-white/5'}">
                     <div class="flex justify-between items-center cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
                         <span class="font-bold text-lg">${l.type === 'rect' ? '🟧 สี่เหลี่ยม/เส้น' : l.text}</span>
                         <button class="text-red-400 font-bold px-3 py-1" onclick="currentConfig.lines.splice(${i},1); renderLinesList(); renderCanvas();">ลบ</button>
@@ -209,10 +208,11 @@
             } else {
                 return `
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
-                        <div class="col-span-2"><label class="text-xs text-gray-400">กว้าง</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400">สูง/หนา</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-400 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-400 block">สูง/หนา (มม.)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div>
                         ${alignControl}
-                        <div><label class="text-xs text-gray-400">ชนิดเส้น</label>
+                        <div>
+                            <label class="text-xs text-gray-400 block">ชนิดเส้น</label>
                             <select class="input-control text-sm" onchange="updateLine(${i},'borderStyle',this.value)">
                                 <option value="solid" ${l.borderStyle==='solid'?'selected':''}>เส้นทึบ</option>
                                 <option value="dashed" ${l.borderStyle==='dashed'?'selected':''}>เส้นประ</option>
@@ -234,6 +234,23 @@
 
         function updateLine(i, k, v) { currentConfig.lines[i][k] = v; renderCanvas(); }
 
+        // ฟังก์ชันแยกสำหรับคำนวณตำแหน่ง Dynamic Y
+        function calculateDynamicElements() {
+            const sortedLines = [...currentConfig.lines].sort((a, b) => a.y - b.y);
+            let pushOffset = 0;
+            const lineHeightMm = 5.2;
+
+            return sortedLines.map(l => {
+                const currentY = parseFloat(l.y) + pushOffset;
+                const text = replaceVars(l.text || '');
+                if (l.text && l.text.includes('{{items_list}}')) {
+                    const linesCount = text.split('\n').length;
+                    if (linesCount > 1) pushOffset += (linesCount - 1) * lineHeightMm;
+                }
+                return { ...l, renderedY: currentY, renderedText: text };
+            });
+        }
+
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
             const px = 3.78; 
@@ -242,28 +259,20 @@
             wrapper.style.width = (pw * px) + 'px';
             wrapper.style.height = (ph * px) + 'px';
 
-            const sortedLines = [...currentConfig.lines].sort((a, b) => a.y - b.y);
-            let pushOffset = 0;
-
-            wrapper.innerHTML = sortedLines.map((l) => {
-                const currentY = parseFloat(l.y) + pushOffset;
-                const text = replaceVars(l.text || '');
-                if (l.text && l.text.includes('{{items_list}}')) {
-                    const linesCount = text.split('\n').length;
-                    if (linesCount > 1) pushOffset += (linesCount - 1) * 5.2;
-                }
-
-                let style = `top:${currentY * px}px; font-size:${l.size * 1.33}px; font-weight:${l.bold?'bold':'normal'}; font-style:${l.italic?'italic':'normal'};`;
+            const dynamicLines = calculateDynamicElements();
+            
+            wrapper.innerHTML = dynamicLines.map((l, idx) => {
+                let style = `top:${l.renderedY * px}px; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                 
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
                     else style += `left:${l.x*px}px; text-align:left;`;
-                    return `<div class="canvas-element" style="${style}">${text}</div>`;
+                    return `<div class="canvas-element" style="${style}">${l.renderedText}</div>`;
                 } else {
                     const bs = l.borderStyle || 'solid';
                     const bg = l.fill ? '#000' : 'transparent';
-                    let rStyle = `top:${currentY * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px ${bs} #000; background:${bg}; border-radius:${l.radius}px;`;
+                    let rStyle = `top:${l.renderedY * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px ${bs} #000; background:${bg}; border-radius:${l.radius}px;`;
                     if (l.align === 'center') rStyle += `left:50%; transform:translateX(-50%);`;
                     else if (l.align === 'right') rStyle += `right:${l.x*px}px;`;
                     else rStyle += `left:${l.x*px}px;`;
@@ -275,9 +284,44 @@
         function applyZoom() { document.getElementById('canvas_wrapper').style.transform = `scale(${document.getElementById('zoom_level').value/100})`; }
         
         function printTest() {
-            const wrapper = document.getElementById('canvas_wrapper');
+            const dynamicLines = calculateDynamicElements();
+            const pw_val = document.getElementById('paper_w').value;
+            const ph_val = document.getElementById('paper_h').value;
+            
             const win = window.open('', '_blank', 'width=800,height=600');
-            win.document.write(`<html><head><style>body{margin:0;padding:0;background:white;} .page{position:relative;width:${document.getElementById('paper_w').value}mm;min-height:${document.getElementById('paper_h').value}mm;} .canvas-element{position:absolute;white-space:pre-wrap;color:black;line-height:1.4;}</style></head><body><div class="page">${wrapper.innerHTML}</div><script>window.print();window.close();<\/script></body></html>`);
+            if(!win) return alert("กรุณาอนุญาตให้เปิด Popup เพื่อทดสอบพิมพ์");
+
+            win.document.write(`
+                <html><head><title>Print Test</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+                    body { margin: 0; padding: 0; background: white; }
+                    .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; font-family: 'Sarabun', sans-serif; }
+                    .canvas-element { position: absolute; white-space: pre-wrap; color: black; line-height: 1.4; word-break: break-all; }
+                    @media print { @page { size: ${pw_val}mm auto; margin: 0; } body { margin: 0; } }
+                </style></head>
+                <body><div class="page">
+                    ${dynamicLines.map(l => {
+                        let style = `top:${l.renderedY}mm; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+                        if (l.type === 'text') {
+                            if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
+                            else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
+                            else style += `left:${l.x}mm; text-align:left;`;
+                            return `<div class="canvas-element" style="${style}">${l.renderedText}</div>`;
+                        } else {
+                            const bs = l.borderStyle || 'solid';
+                            const bg = l.fill ? 'black' : 'transparent';
+                            let rStyle = `top:${l.renderedY}mm; width:${l.w}mm; height:${l.h}mm; border:1px ${bs} black; background:${bg}; border-radius:${l.radius}px;`;
+                            if (l.align === 'center') rStyle += `left:50%; transform:translateX(-50%);`;
+                            else if (l.align === 'right') rStyle += `right:${l.x}mm;`;
+                            else rStyle += `left:${l.x}mm;`;
+                            return `<div class="canvas-element" style="${rStyle}"></div>`;
+                        }
+                    }).join('')}
+                </div>
+                <script>window.onload = function() { setTimeout(() => { window.print(); window.close(); }, 500); };<\/script>
+                </body></html>
+            `);
             win.document.close();
         }
 
