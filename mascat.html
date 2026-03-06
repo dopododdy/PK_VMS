@@ -54,8 +54,8 @@
             <div class="section-card flex-1">
                 <label class="label-clinical mb-4">หมวดหมู่หลัก</label>
                 <button onclick="setCategory('TakeHome')" id="btn-takehome" class="sidebar-btn active"><span>💊</span> ยาจ่ายกลับบ้าน</button>
-                <button onclick="setCategory('ProcInj')" id="btn-procinj" class="sidebar-btn"><span>💉</span> หัตถการ/ยาฉีด</button>
-                <button onclick="setCategory('Lab')" id="btn-lab" class="sidebar-btn"><span>🏥</span> Lab</button>
+                <button onclick="setCategory('Injection')" id="btn-injection" class="sidebar-btn"><span>💉</span> ยาฉีด</button>
+                <button onclick="setCategory('Lab')" id="btn-lab" class="sidebar-btn"><span>🏥</span> Lab/หัตถการ</button>
                 <button onclick="setCategory('General')" id="btn-general" class="sidebar-btn"><span>📦</span> สินค้าทั่วไป</button>
             </div>
         </aside>
@@ -203,14 +203,15 @@
             document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`btn-${cat.toLowerCase()}`).classList.add('active');
             
-            const labels = { 'TakeHome': 'ยาจ่ายกลับบ้าน', 'ProcInj': 'หัตถการ/ยาฉีด', 'Lab': 'Lab', 'General': 'สินค้าทั่วไป' };
+            const labels = { 'TakeHome': 'ยาจ่ายกลับบ้าน', 'Injection': 'ยาฉีด', 'Lab': 'Lab/หัตถการ', 'General': 'สินค้าทั่วไป' };
             document.getElementById('current-mode-label').innerText = `หมวด: ${labels[cat]}`;
             
-            const isProcInj = (cat === 'ProcInj');
-            document.getElementById('tiered-price-section').classList.toggle('hidden', !isProcInj);
-            document.getElementById('fixed-price-section').classList.toggle('hidden', isProcInj);
+            // ปรับการแสดงผลส่วน tiered price (ให้แสดงเฉพาะ ยาฉีด และ Lab/หัตถการ ที่มีระบบช่วงราคา)
+            const isTiered = (cat === 'Injection' || cat === 'Lab');
+            document.getElementById('tiered-price-section').classList.toggle('hidden', !isTiered);
+            document.getElementById('fixed-price-section').classList.toggle('hidden', isTiered);
 
-            const isMed = (cat === 'TakeHome' || cat === 'ProcInj');
+            const isMed = (cat === 'TakeHome' || cat === 'Injection');
             document.getElementById('med-config-section').style.display = isMed ? 'block' : 'none';
 
             await fetchData();
@@ -222,15 +223,12 @@
             if (currentCat === 'TakeHome') {
                 const res = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'Oral', 'ยา']);
                 data = (res.data || []).map(i => ({ ...i, source: 'pharmacy' }));
-            } else if (currentCat === 'ProcInj') {
-                const resInj = await db.from('pharmacy').select('*').eq('category', 'Injection');
-                const resProc = await db.from('services').select('*').eq('category', 'หัตถการ');
-                data = [
-                    ...(resInj.data || []).map(i => ({ ...i, source: 'pharmacy' })),
-                    ...(resProc.data || []).map(i => ({ ...i, source: 'services', item_name: i.service_name, price_per_unit: i.price }))
-                ];
+            } else if (currentCat === 'Injection') {
+                const res = await db.from('pharmacy').select('*').eq('category', 'Injection');
+                data = (res.data || []).map(i => ({ ...i, source: 'pharmacy' }));
             } else if (currentCat === 'Lab') {
-                const res = await db.from('services').select('*').eq('category', 'Lab');
+                // ดึงทั้ง Lab และ หัตถการ มาอยู่ในกลุ่มเดียวกัน
+                const res = await db.from('services').select('*').in('category', ['Lab', 'หัตถการ']);
                 data = (res.data || []).map(i => ({ ...i, source: 'services', item_name: i.service_name, price_per_unit: i.price }));
             } else {
                 const res = await db.from('pharmacy').select('*').eq('category', 'General');
@@ -257,7 +255,6 @@
             document.getElementById('f_unit').value = selectedItem.unit || '';
             document.getElementById('f_price').value = selectedItem.price_per_unit || selectedItem.price || 0;
             
-            // โหลดราคาตามน้ำหนัก
             if (selectedItem.price_config && Array.isArray(selectedItem.price_config)) {
                 selectedItem.price_config.forEach((tier, idx) => {
                     if (idx < 5) {
@@ -272,7 +269,6 @@
                 }
             }
 
-            // โหลด Dosage และ Config
             document.getElementById('f_conc').value = selectedItem.concentration_mg_unit || 1;
             document.getElementById('f_sub_cat').value = selectedItem.sub_category || '';
             document.getElementById('f_side_effects').value = selectedItem.side_effects || '';
@@ -299,17 +295,16 @@
                 if (!isNaN(max) && !isNaN(price)) tierData.push({ max, price });
             }
 
+            // ตัดสินใจว่าจะลงตารางไหน
             let table = (currentCat === 'Lab') ? 'services' : 'pharmacy';
-            if (currentCat === 'ProcInj') {
-                table = (document.getElementById('f_dog_dose_1').value > 0) ? 'pharmacy' : 'services';
-            }
 
             let payload = {};
             if (table === 'services') {
                 payload = {
                     service_name: nameEN,
-                    name_th: nameTH, // เพิ่มการบันทึกชื่อภาษาไทย
-                    category: (currentCat === 'Lab' ? 'Lab' : 'หัตถการ'),
+                    name_th: nameTH,
+                    // ตรวจสอบว่าถ้ามี Dose อาจจะเป็นยาฉีดที่หลงมา ให้เลือก category ให้ถูก (แต่ระบบใหม่แยกชัดเจนแล้ว)
+                    category: (selectedItem?.category === 'หัตถการ' || currentCat === 'Lab' ? (selectedItem?.category || 'Lab') : 'Lab'),
                     price: parseFloat(document.getElementById('f_price').value) || 0,
                     price_config: tierData.length > 0 ? tierData : null,
                     unit: document.getElementById('f_unit').value
@@ -317,9 +312,9 @@
             } else {
                 payload = {
                     item_name: nameEN,
-                    name_th: nameTH, // เพิ่มการบันทึกชื่อภาษาไทย
-                    category: (currentCat === 'TakeHome' ? 'TakeHome' : (currentCat === 'ProcInj' ? 'Injection' : 'General')),
-                    sub_category: document.getElementById('f_sub_cat').value, // เพิ่มหมวดหมู่ย่อย
+                    name_th: nameTH,
+                    category: (currentCat === 'TakeHome' ? 'TakeHome' : (currentCat === 'Injection' ? 'Injection' : 'General')),
+                    sub_category: document.getElementById('f_sub_cat').value,
                     unit: document.getElementById('f_unit').value,
                     price_per_unit: parseFloat(document.getElementById('f_price').value) || 0,
                     price_config: tierData.length > 0 ? tierData : null,
@@ -327,7 +322,6 @@
                     side_effects: document.getElementById('f_side_effects').value,
                     is_medication: true
                 };
-                // เพิ่มลูปบันทึก Dosage 1-5
                 for(let i=1; i<=5; i++) {
                     payload[`dog_dose_${i}`] = parseFloat(document.getElementById(`f_dog_dose_${i}`).value) || 0;
                     payload[`dog_for_${i}`] = document.getElementById(`f_dog_for_${i}`).value;
@@ -336,7 +330,7 @@
                 }
             }
 
-            const { error } = selectedItem 
+            const { error } = selectedItem 
                 ? await db.from(table).update(payload).eq('id', selectedItem.id)
                 : await db.from(table).insert([payload]);
 
