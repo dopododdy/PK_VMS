@@ -13,455 +13,341 @@
         :root {
             --navy: #0b1929; --navy-mid: #112240; --teal: #0ea5a0; --teal-light: #14c4bc;
             --surface: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.1);
-            --text: #e2e8f0; --text-dim: #94a3b8; --teal-glow: rgba(14,165,160,0.3);
+            --text: #e2e8f0; --text-dim: #94a3b8;
         }
-        * { box-sizing: border-box; font-family: "Sarabun", sans-serif; }
-        body { background: var(--navy); color: var(--text); overflow-x: hidden; }
-
-        .mesh-bg {
-            position: fixed; inset: 0; z-index: -1;
-            background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%);
-        }
-
-        header {
-            padding: 15px 24px; display: flex; align-items: center; justify-content: space-between;
-            background: rgba(11,25,41,0.85); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border);
-            position: sticky; top: 0; z-index: 1000;
-        }
-
-        .btn-action { 
-            padding: 10px 20px; border-radius: 12px; font-weight: 700; transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 8px;
-        }
-        .btn-print { background: var(--surface); border: 1px solid var(--border); color: white; }
-        .btn-print:hover { background: rgba(255,255,255,0.1); border-color: var(--teal); }
-        .btn-save { background: linear-gradient(135deg, var(--teal), var(--teal-light)); border: none; color: #fff; box-shadow: 0 4px 15px var(--teal-glow); }
-        .btn-save:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--teal-glow); }
-
-        .input-box {
-            width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
-            border-radius: 10px; color: white; outline: none; transition: 0.2s; font-size: 14px;
-        }
-        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; overflow-x: hidden; }
         
-        .label { font-size: 12px; color: var(--teal-light); margin-bottom: 6px; display: block; font-weight: 700; text-transform: uppercase; }
-
-        /* Preview Area */
-        .preview-section {
-            background: rgba(11,25,41,0.5); display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
-            border-bottom: 2px solid var(--teal); position: sticky; top: 0; z-index: 900;
-            padding: 40px 20px 20px 20px; overflow-y: auto; overflow-x: hidden; min-height: 250px;
-        }
-        .sticker-wrapper { transition: 0.3s transform; box-shadow: 0 0 30px rgba(0,0,0,0.5); flex-shrink: 0; transform-origin: top center; }
-        .sticker-canvas {
-            background: #fff; position: relative; color: #000; overflow: hidden;
-            background-image: linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
-            background-size: 10mm 10mm; /* แสดง Grid ทุกๆ 1 ซม. */
-        }
-        .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; cursor: default; }
-        .canvas-line:hover { outline: 1px dashed var(--teal); background: rgba(14,165,160,0.1); }
-
-        /* Editor Area */
-        .editor-section { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        .editor-content { padding: 24px; max-width: 900px; margin: 0 auto; overflow-y: auto; flex: 1; width: 100%; }
+        /* Layout Structure */
+        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        .editor-workspace { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 380px; background: var(--navy-mid); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .preview-area { flex: 1; background: #07101a; position: relative; display: flex; justify-content: center; align-items: center; overflow: auto; padding: 2rem; }
         
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: 0.2s; }
-        .card:hover { border-color: rgba(255,255,255,0.2); }
-        
-        .var-box { background: rgba(14,165,160,0.05); border: 1px solid var(--teal-glow); border-radius: 12px; padding: 16px; margin-top: 24px; font-size: 12px; line-height: 1.8; width: 100%; max-width: 400px; }
-        code { color: var(--teal-light); background: rgba(0,0,0,0.4); padding: 3px 6px; border-radius: 6px; margin-right: 2px; display: inline-block; font-family: "Outfit", sans-serif; font-size: 11px; }
+        /* Custom Inputs */
+        .input-group { margin-bottom: 1rem; }
+        .input-group label { display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.4rem; font-weight: 600; }
+        .input-control { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: #fff; padding: 0.6rem 0.8rem; border-radius: 8px; outline: none; transition: border-color 0.2s; font-family: inherit; font-size: 0.9rem; }
+        .input-control:focus { border-color: var(--teal); }
+        select.input-control option { background: var(--navy-mid); }
 
-        .btn-add { width: 100%; padding: 16px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-bottom: 30px; }
-        .btn-add:hover { border-color: var(--teal); color: var(--teal-light); background: rgba(14,165,160,0.05); }
-
-        .drag-handle { cursor: grab; padding: 4px; border-radius: 4px; }
-        .drag-handle:active { cursor: grabbing; }
-        .card.dragging { opacity: 0.4; border-color: var(--teal); border-style: dashed; }
-
-        @media (min-width: 1024px) {
-            body { display: flex; flex-direction: row; height: 100vh; overflow: hidden; }
-            .preview-section { width: 35%; height: 100vh; position: relative; border-bottom: none; border-right: 1px solid var(--border); background: var(--navy-mid); }
-            .editor-section { width: 65%; height: 100vh; }
+        /* Canvas (Sticker) Preview */
+        .canvas-wrapper {
+            background: #ffffff;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+            position: relative;
+            transform-origin: center center;
+            transition: transform 0.2s ease;
+            overflow: hidden;
         }
+        .canvas-line {
+            position: absolute;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.2;
+            color: #000;
+            cursor: pointer;
+            user-select: none;
+            border: 1px dashed transparent;
+        }
+        .canvas-line:hover { border-color: rgba(14, 165, 160, 0.5); background: rgba(14, 165, 160, 0.05); }
+        .canvas-line.active { border-color: var(--teal); background: rgba(14, 165, 160, 0.1); z-index: 10; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
-    <div class="mesh-bg"></div>
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+    </script>
 
-    <section class="preview-section">
-        <div class="sticker-wrapper" id="preview-zoom">
-            <div class="sticker-canvas shadow-2xl" id="sticker"></div>
-        </div>
-        
-        <div class="var-box" id="var-box-container">
-            <strong class="text-teal-400 mb-2 block text-sm">📌 ตัวแปรที่ใช้ได้ (คลิกลากคลุมเพื่อคัดลอก):</strong>
-            <div class="grid grid-cols-1 gap-1">
-                <p><code>{{clinic_name}}</code> ชื่อคลินิก | <code>{{phone}}</code> เบอร์โทร</p>
-                <p><code>{{hn}}</code> รหัสสัตว์ | <code>{{pet_name}}</code> ชื่อสัตว์ | <code>{{owner_name}}</code> เจ้าของ</p>
-                <p><code>{{species}}</code> ชนิด | <code>{{sex}}</code> เพศ | <code>{{dob}}</code> วดป.เกิด</p>
-                <p><code>{{drug_name}}</code> ชื่อยา (EN) | <code>{{drug_name_th}}</code> ชื่อยา (TH)</p>
-                <p><code>{{dose}}</code> ป้อน/ครั้ง (เช่น ป้อนครั้งละ 3/4 เม็ด)</p>
-                <p><code>{{frequency}}</code> ความถี่ (เช่น วันละ 2 ครั้ง)</p>
-                <p><code>{{timing}}</code> เวลา (เช่น หลังอาหารทันที เช้า-เย็น)</p>
-                <p><code>{{duration}}</code> จำนวนวัน (เช่น 7 วัน)</p>
-                <p><code>{{qty}}</code> จำนวนบรรจุ | <code>{{total_qty}}</code> จำนวนรวม</p>
-                <p><code>{{instruction}}</code> วิธีใช้รวมแบบยาว</p>
-                <p><code>{{warning}}</code> คำเตือน (Side effects)</p>
-                <p><code>{{date}}</code> วันที่ | <code>{{time}}</code> เวลา | <code>{{queue}}</code> คิว</p>
-            </div>
-        </div>
-    </section>
-
-    <div class="editor-section">
-       <header>
+    <div class="app-container">
+        <header class="p-5 border-b border-white/5 bg-navy/80 backdrop-blur-md shrink-0 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <a href="settings.html" class="text-gray-400 hover:text-white transition text-sm">← กลับหน้าตั้งค่า</a>
                 <h1 class="text-xl font-bold border-l pl-4 border-white/20">🖨️ ตั้งค่าเครื่องพิมพ์และกระดาษ</h1>
             </div>
             <div class="flex gap-3">
-                <button class="btn-action btn-print" onclick="window.printTest()">🖨️ <span class="hidden sm:inline">ทดสอบพิมพ์</span></button>
-                <button class="btn-action btn-save" onclick="saveTemplate()">💾 <span class="hidden sm:inline">บันทึกรูปแบบ</span></button>
+                <button class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm transition font-bold" onclick="printTest()">🖨️ ทดสอบพิมพ์</button>
+                <button class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-xl text-sm transition font-bold shadow-lg shadow-teal-500/20" onclick="saveTemplate()">💾 บันทึกรูปแบบ</button>
             </div>
         </header>
 
-        <div class="editor-content">
-            <div class="card grid grid-cols-1 sm:grid-cols-3 gap-4 border-t-4 border-t-teal-500">
-                <div class="sm:col-span-3">
-                    <label class="label">รูปแบบเอกสาร (Template)</label>
-                    <select id="templateType" class="input-box" onchange="loadTemplate()">
-                        <option value="drug_sticker">💊 ฉลากยา (Drug Sticker)</option>
-                        <option value="queue">🏷 สติ๊กเกอร์คิว (Queue)</option>
-                        <option value="cage">🔒 สติ๊กเกอร์ติดกรง (Cage)</option>
-                        <option value="appointment">📅 ใบนัดหมายขนาดเล็ก (Appt. Slip)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="label">ความกว้าง (Width mm)</label>
-                    <input type="number" id="paper_w" class="input-box" value="80" onchange="updatePaperSize()">
-                </div>
-                <div>
-                    <label class="label">ความสูง (Height mm)</label>
-                    <input type="number" id="paper_h" class="input-box" value="50" onchange="updatePaperSize()">
-                </div>
-                <div>
-                    <label class="label">Zoom (%)</label>
-                    <input type="number" id="zoom_level" class="input-box" value="100" oninput="updateZoom(this.value)">
-                </div>
-            </div>
-
-            <div class="card border-t-4 border-t-purple-500 mb-6">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm font-black text-purple-400 uppercase flex items-center gap-2">📸 โลโก้ / รูปภาพ 1</span>
-                    <button onclick="clearImage(0)" class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-xs font-bold hover:bg-red-500/20">ลบรูปภาพ 1</button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div class="sm:col-span-4">
-                        <input type="file" id="imgUpload1" accept="image/*" class="input-box !py-2" onchange="handleImageUpload(event, 0)">
+        <div class="editor-workspace">
+            <div class="sidebar">
+                <div class="p-5 border-b border-white/10 bg-black/20">
+                    <div class="input-group mb-0">
+                        <label>รูปแบบเอกสาร (TEMPLATE) <span class="text-xs text-teal-400 ml-2 font-normal">ดึงจาก Master Data</span></label>
+                        <select id="template_type" class="input-control font-bold text-teal-400" onchange="loadTemplate()">
+                            <option value="" disabled selected>กำลังโหลดข้อมูล...</option>
+                        </select>
                     </div>
-                    <div><label class="label">กว้าง (px)</label><input type="number" id="img_w1" class="input-box !py-2 text-center" oninput="updateImage(0, 'w', this.value)"></div>
-                    <div><label class="label">สูง (px)</label><input type="number" id="img_h1" class="input-box !py-2 text-center" oninput="updateImage(0, 'h', this.value)"></div>
-                    <div><label class="label">แกน X (แนวนอน)</label><input type="number" id="img_x1" class="input-box !py-2 text-center" oninput="updateImage(0, 'x', this.value)"></div>
-                    <div><label class="label">แกน Y (แนวตั้ง)</label><input type="number" id="img_y1" class="input-box !py-2 text-center" oninput="updateImage(0, 'y', this.value)"></div>
                 </div>
-            </div>
 
-            <div class="card border-t-4 border-t-purple-500 mb-6">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm font-black text-purple-400 uppercase flex items-center gap-2">📸 โลโก้ / รูปภาพ 2</span>
-                    <button onclick="clearImage(1)" class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-xs font-bold hover:bg-red-500/20">ลบรูปภาพ 2</button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div class="sm:col-span-4">
-                        <input type="file" id="imgUpload2" accept="image/*" class="input-box !py-2" onchange="handleImageUpload(event, 1)">
+                <div class="p-5 overflow-y-auto flex-1">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">การตั้งค่าหน้ากระดาษ (มม.)</h3>
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div class="input-group mb-0">
+                            <label>ความกว้าง (Width)</label>
+                            <input type="number" id="paper_w" class="input-control" value="80" onchange="updatePaperSize()">
+                        </div>
+                        <div class="input-group mb-0">
+                            <label>ความสูง (Height)</label>
+                            <input type="number" id="paper_h" class="input-control" value="50" onchange="updatePaperSize()">
+                        </div>
                     </div>
-                    <div><label class="label">กว้าง (px)</label><input type="number" id="img_w2" class="input-box !py-2 text-center" oninput="updateImage(1, 'w', this.value)"></div>
-                    <div><label class="label">สูง (px)</label><input type="number" id="img_h2" class="input-box !py-2 text-center" oninput="updateImage(1, 'h', this.value)"></div>
-                    <div><label class="label">แกน X (แนวนอน)</label><input type="number" id="img_x2" class="input-box !py-2 text-center" oninput="updateImage(1, 'x', this.value)"></div>
-                    <div><label class="label">แกน Y (แนวตั้ง)</label><input type="number" id="img_y2" class="input-box !py-2 text-center" oninput="updateImage(1, 'y', this.value)"></div>
+
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">ส่วนประกอบข้อความ (Lines)</h3>
+                        <span class="text-xs text-teal-400 cursor-pointer hover:underline" onclick="addLine()">+ เพิ่มบรรทัด</span>
+                    </div>
+                    
+                    <div id="lines_container" class="space-y-3">
+                        </div>
                 </div>
             </div>
 
-            <div id="lineEditor" class="space-y-4"></div>
-            
-            <button class="btn-add mt-6" onclick="addLine()">+ เพิ่มบรรทัดข้อความใหม่</button>
+            <div class="preview-area">
+                <div class="absolute top-4 right-4 bg-navy-mid border border-white/10 p-2 rounded-lg flex items-center gap-2 shadow-2xl z-20">
+                    <span class="text-xs text-gray-400 font-bold px-2">ZOOM</span>
+                    <input type="range" id="zoom_level" min="50" max="250" value="100" class="w-32 accent-teal-500" oninput="applyZoom()">
+                    <span id="zoom_val" class="text-xs font-mono text-teal-400 w-8 text-right">100%</span>
+                </div>
+
+                <div id="canvas_wrapper" class="canvas-wrapper">
+                    </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Data Structure เพิ่มรายการรูปภาพ (image) และองศาหมุน (rotation)
-        let currentConfig = { 
-            width: 80, 
-            height: 50, 
-            image: [
-                { url: '', x: 10, y: 10, w: 40, h: 40 }, // รูปที่ 1
-                { url: '', x: 50, y: 10, w: 20, h: 20 }  // รูปที่ 2
-            ],
-            lines: [] 
-        };
+        let currentConfig = { width: 80, height: 50, lines: [] };
+        let activeLineIndex = -1;
 
-        // Date Formatter Mockup
-        const getMockupData = () => {
-            const now = new Date();
-            return {
-                clinic_name: "PK-VMS Animal Clinic", phone: "081-234-5678",
-                hn: "HN-69001", pet_name: "น้องนำโชค (Beagle)", owner_name: "คุณสมชาย ใจดี",
-                species: "สุนัข", sex: "ผู้", dob: "01/05/2021",
-                drug_name: "Amoxicillin 500mg", drug_name_th: "อะม็อกซีซิลลิน 500 มก.",
-                dose: "ป้อนครั้งละ 3/4 เม็ด", frequency: "วันละ 2 ครั้ง", timing: "หลังอาหารทันที เช้า-เย็น", duration: "7 วัน",
-                total_qty: "14", qty: "14 เม็ด",
-                instruction: "ป้อนครั้งละ 3/4 เม็ด วันละ 2 ครั้ง หลังอาหารทันที เช้า-เย็น",
-                warning: "* ยานี้อาจทำให้ปัสสาวะเปลี่ยนสี",
-                date: now.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }),
-                time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-                queue: "A014"
-            };
-        };
+        // 1. โหลดรายชื่อ Template จากตาราง print_templates
+        async function loadTemplateDropdown() {
+            try {
+                const { data: templates, error } = await db.from('print_templates').select('template_type').order('template_type');
+                if (error) throw error;
 
-        function updatePaperSize() {
-            currentConfig.width = parseInt(document.getElementById('paper_w').value) || 80;
-            currentConfig.height = parseInt(document.getElementById('paper_h').value) || 50;
-            renderPreview();
-            updateZoom(document.getElementById('zoom_level').value);
-        }
-
-        function updateZoom(val) {
-            const scale = (parseInt(val) || 100) / 100;
-            const zoomDiv = document.getElementById('preview-zoom');
-            zoomDiv.style.transform = `scale(${scale})`;
-            
-            const pxHeight = currentConfig.height * 3.7795275591;
-            if (scale > 1) {
-                zoomDiv.style.marginBottom = ((pxHeight * scale) - pxHeight) + 20 + 'px';
-            } else {
-                zoomDiv.style.marginBottom = '20px';
-            }
-        }
-
-        // ระบบ Upload และจัดการรูปภาพพร้อมกัน 2 รูป
-        window.handleImageUpload = (e, index) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                if (!currentConfig.image) currentConfig.image = [{}, {}];
-                if (!currentConfig.image[index]) currentConfig.image[index] = { x: 10, y: 10, w: 40, h: 40 };
-
-                currentConfig.image[index].url = event.target.result;
-                populateImageInputs(index); 
-                renderPreview(); 
-            };
-            reader.readAsDataURL(file);
-        };
-
-        window.updateImage = (index, k, v) => {
-            if(!currentConfig.image || !currentConfig.image[index]) return;
-            currentConfig.image[index][k] = parseInt(v) || 0;
-            renderPreview();
-        };
-
-        window.clearImage = (index) => {
-            if (currentConfig.image && currentConfig.image[index]) {
-                currentConfig.image[index].url = '';
-                document.getElementById('imgUpload' + (index + 1)).value = ''; 
-                populateImageInputs(index); 
-                renderPreview(); 
-            }
-        };
-
-        function populateImageInputs(index) {
-            if(currentConfig.image && currentConfig.image[index]) {
-                document.getElementById('img_x' + (index + 1)).value = currentConfig.image[index].x || 0;
-                document.getElementById('img_y' + (index + 1)).value = currentConfig.image[index].y || 0;
-                document.getElementById('img_w' + (index + 1)).value = currentConfig.image[index].w || (index === 0 ? 40 : 20); 
-                document.getElementById('img_h' + (index + 1)).value = currentConfig.image[index].h || (index === 0 ? 40 : 20);
-            }
-        }
-
-        function renderPreview() {
-            const box = document.getElementById("sticker");
-            const mock = getMockupData();
-            
-            box.style.width = currentConfig.width + "mm";
-            box.style.height = currentConfig.height + "mm";
-            box.innerHTML = "";
-
-            // Render Images วนลูปวาดรูปทั้งหมด
-            if (currentConfig.image && currentConfig.image.length > 0) {
-                currentConfig.image.forEach(imgData => {
-                    if (imgData && imgData.url) {
-                        const img = document.createElement("img");
-                        img.src = imgData.url;
-                        img.style.position = "absolute";
-                        img.style.left = (imgData.x || 0) + "px";
-                        img.style.top = (imgData.y || 0) + "px";
-                        img.style.width = (imgData.w || 40) + "px";
-                        img.style.height = (imgData.h || 40) + "px";
-                        img.style.objectFit = "contain";
-                        box.appendChild(img);
-                    }
-                });
-            }
-            
-            // Render Text Lines
-            currentConfig.lines.forEach(l => {
-                const div = document.createElement("div");
-                div.className = "canvas-line";
-                div.style.left = l.x + "px"; 
-                div.style.top = l.y + "px";
-                div.style.fontSize = l.size + "px"; 
-                div.style.textAlign = l.align || "left";
-                div.style.fontFamily = l.font || "Sarabun";
-                div.style.fontWeight = l.bold ? "700" : "400";
-                
-                let rot = l.rotation || (l.vertical ? 270 : 0); 
-                if (rot != 0) {
-                    div.style.transform = `rotate(${rot}deg)`;
-                    div.style.transformOrigin = "top left";
-                    div.style.whiteSpace = "nowrap"; 
+                const selectEl = document.getElementById('template_type');
+                if (templates && templates.length > 0) {
+                    selectEl.innerHTML = '<option value="" disabled>-- เลือกรูปแบบเอกสาร --</option>' + 
+                        templates.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join('');
+                    
+                    // เลือกตัวแรกเป็นค่าเริ่มต้น
+                    selectEl.value = templates[0].template_type;
+                    await loadTemplate();
                 } else {
-                    div.style.width = l.align === 'center' ? "100%" : `calc(100% - ${l.x}px)`;
-                    if(l.align === 'center') div.style.left = "0px";
+                    selectEl.innerHTML = '<option value="" disabled>ไม่พบข้อมูลใน Master Data</option>';
                 }
+            } catch (err) {
+                console.error("Error loading templates:", err);
+            }
+        }
 
-                let txt = l.text || "";
-                Object.keys(mock).forEach(key => {
-                    const regex = new RegExp(`{{${key}}}`, 'g');
-                    txt = txt.replace(regex, mock[key]);
-                });
+        // 2. โหลด Config ของ Template ที่เลือก
+        async function loadTemplate() {
+            const type = document.getElementById('template_type').value;
+            if (!type) return;
+
+            try {
+                const { data, error } = await db.from('print_templates').select('config').eq('template_type', type).single();
+                if (error) throw error;
                 
-                div.innerHTML = txt;
-                box.appendChild(div);
-            });
-        }
+                if (data && data.config) {
+                    currentConfig = typeof data.config === 'string' ? JSON.parse(data.config) : data.config;
+                    document.getElementById('paper_w').value = currentConfig.width || 80;
+                    document.getElementById('paper_h').value = currentConfig.height || 50;
+                    
+                    // แปลง format เก่าให้รองรับ align หากไม่มี
+                    currentConfig.lines = (currentConfig.lines || []).map(line => ({
+                        ...line,
+                        align: line.align || 'left'
+                    }));
 
-        let dragStartIndex = null;
-        window.handleDragStart = (e, index) => { dragStartIndex = index; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => e.target.classList.add('dragging'), 0); };
-        window.handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
-        window.handleDrop = (e, targetIndex) => { e.preventDefault(); if(dragStartIndex !== null && dragStartIndex !== targetIndex) { const item = currentConfig.lines.splice(dragStartIndex, 1)[0]; currentConfig.lines.splice(targetIndex, 0, item); renderEditor(); renderPreview(); } };
-        window.handleDragEnd = (e) => { e.target.classList.remove('dragging'); dragStartIndex = null; };
-
-        function renderEditor() {
-            const area = document.getElementById("lineEditor");
-            area.innerHTML = "";
-            document.getElementById('paper_w').value = currentConfig.width;
-            document.getElementById('paper_h').value = currentConfig.height;
-
-            currentConfig.lines.forEach((l, i) => {
-                const block = document.createElement("div");
-                block.className = "card";
-                block.draggable = true;
-                block.setAttribute('ondragstart', `handleDragStart(event, ${i})`);
-                block.setAttribute('ondragover', `handleDragOver(event)`);
-                block.setAttribute('ondrop', `handleDrop(event, ${i})`);
-                block.setAttribute('ondragend', `handleDragEnd(event)`);
-
-                block.innerHTML = `
-                    <div class="flex justify-between items-center mb-3">
-                        <div class="flex items-center gap-2 drag-handle text-gray-400 hover:text-white" title="คลิกค้างเพื่อลากสลับตำแหน่ง">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                            <span class="text-xs font-black text-teal-400 bg-teal-500/10 px-3 py-1 rounded-full">LINE ${i+1}</span>
-                        </div>
-                        <button class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/30 rounded text-xs font-bold hover:bg-red-500/20 transition" onclick="removeLine(${i})">ลบ</button>
-                    </div>
-                    <div class="mb-3">
-                        <label class="label">ข้อความ / ตัวแปร</label>
-                        <input class="input-box" value="${l.text}" oninput="updateLine(${i},'text',this.value)" placeholder="เช่น ชื่อยา: {{drug_name}}">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                            <label class="label">Font</label>
-                            <select class="input-box !py-2" onchange="updateLine(${i},'font',this.value)">
-                                <option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option>
-                                <option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option>
-                                <option value="Outfit" ${l.font==='Outfit'?'selected':''}>Outfit (EN)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="label">การจัดวาง</label>
-                            <select class="input-box !py-2" onchange="updateLine(${i},'align',this.value)">
-                                <option value="left" ${l.align==='left'?'selected':''}>ชิดซ้าย</option>
-                                <option value="center" ${l.align==='center'?'selected':''}>กึ่งกลาง</option>
-                                <option value="right" ${l.align==='right'?'selected':''}>ชิดขวา</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div><label class="label">Size (px)</label><input type="number" class="input-box !py-2 text-center" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
-                        <div><label class="label">แกน X (แนวนอน)</label><input type="number" class="input-box !py-2 text-center" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
-                        <div><label class="label">แกน Y (แนวตั้ง)</label><input type="number" class="input-box !py-2 text-center" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
-                    </div>
-                    <div class="mt-4 flex items-center gap-6">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" class="w-4 h-4 accent-teal-500" ${l.bold?'checked':''} onchange="updateLine(${i},'bold',this.checked)">
-                            <span class="text-sm text-gray-300">ตัวหนา (Bold)</span>
-                        </label>
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-purple-300 font-bold">องศาการหมุน:</span>
-                            <select class="input-box !py-1 !px-2 !w-auto text-sm" onchange="updateLine(${i},'rotation',this.value)">
-                                <option value="0" ${(!l.rotation && !l.vertical) || l.rotation == 0 ? 'selected' : ''}>ปกติ (0°)</option>
-                                <option value="90" ${l.rotation == 90 ? 'selected' : ''}>บนลงล่าง (90°)</option>
-                                <option value="270" ${l.rotation == 270 || l.vertical ? 'selected' : ''}>ล่างขึ้นบน (270°)</option>
-                            </select>
-                        </div>
-                    </div>
-                `;
-                area.appendChild(block);
-            });
-        }
-
-        window.updateLine = (i, k, v) => { 
-            if(['size','x','y','rotation'].includes(k)) v = parseInt(v) || 0; 
-            currentConfig.lines[i][k] = v; 
-            renderPreview(); 
-        };
-        
-        window.removeLine = (i) => { currentConfig.lines.splice(i, 1); renderEditor(); renderPreview(); };
-        window.addLine = () => { currentConfig.lines.push({ text: "ข้อความใหม่", size: 14, x: 10, y: parseInt(currentConfig.height * 3.7) / 2 || 20, align: "left", font: "Sarabun", bold: false, rotation: 0 }); renderEditor(); renderPreview(); };
-
-        window.loadTemplate = async () => {
-            const type = document.getElementById("templateType").value;
-            if (typeof db !== 'undefined') {
-                try {
-                    const { data, error } = await db.from("print_templates").select("*").eq("template_type", type).maybeSingle();
-                    currentConfig = (data && data.config) ? data.config : { width: 80, height: 50, lines: [] };
-                    // เริ่มต้นข้อมูลบล็อกรูปภาพถ้าไม่มีมา
-                    if(!currentConfig.image) currentConfig.image = [{}, {}];
-                    if(!currentConfig.image[0]) currentConfig.image[0] = { url: '', x: 10, y: 10, w: 40, h: 40 };
-                    if(!currentConfig.image[1]) currentConfig.image[1] = { url: '', x: 50, y: 10, w: 20, h: 20 };
-                } catch (e) {
-                    currentConfig = { width: 80, height: 50, lines: [], image: [{}, {}] };
+                    activeLineIndex = -1;
+                    renderLinesList();
+                    renderCanvas();
+                    applyZoom();
                 }
-            } else {
-                currentConfig = { width: 80, height: 50, lines: [], image: [{}, {}] };
+            } catch (err) {
+                console.error("Error loading config:", err);
             }
-            // อัปเดตช่องกรอกของบล็อกรูปภาพทั้งสอง
-            populateImageInputs(0);
-            populateImageInputs(1);
-            renderEditor(); renderPreview();
-        };
+        }
 
-        window.saveTemplate = async () => {
-            const type = document.getElementById("templateType").value;
-            if (typeof db !== 'undefined') {
-                const { error } = await db.from("print_templates").upsert({ template_type: type, config: currentConfig }, { onConflict: "template_type" });
-                if (error) alert("ล้มเหลว: " + error.message); else alert("💾 บันทึกรูปแบบสติกเกอร์สำเร็จ!");
-            } else {
-                alert("กรุณาเชื่อมต่อ Supabase (db) ก่อนบันทึก");
+        // 3. บันทึกกลับลงฐานข้อมูล
+        async function saveTemplate() {
+            const type = document.getElementById('template_type').value;
+            if (!type) return alert('กรุณาเลือกรูปแบบเอกสารก่อนบันทึก');
+
+            try {
+                // อัปเดตข้อมูลขนาดกระดาษล่าสุดก่อนเซฟ
+                currentConfig.width = parseFloat(document.getElementById('paper_w').value);
+                currentConfig.height = parseFloat(document.getElementById('paper_h').value);
+
+                const { error } = await db.from('print_templates').update({ config: currentConfig }).eq('template_type', type);
+                if (error) throw error;
+                alert('✅ บันทึกรูปแบบเอกสารเรียบร้อยแล้ว');
+            } catch (err) {
+                alert('❌ Error: ' + err.message);
             }
-        };
+        }
 
-        window.printTest = () => {
-            const contents = document.getElementById("sticker").innerHTML;
-            const pw = window.open("", "_blank", "width=800,height=600");
+        // --- ระบบ Editor พื้นฐาน ---
+        function updatePaperSize() {
+            currentConfig.width = parseFloat(document.getElementById('paper_w').value) || 80;
+            currentConfig.height = parseFloat(document.getElementById('paper_h').value) || 50;
+            renderCanvas();
+        }
+
+        function applyZoom() {
+            const zoom = document.getElementById('zoom_level').value;
+            document.getElementById('zoom_val').innerText = zoom + '%';
+            document.getElementById('canvas_wrapper').style.transform = `scale(${zoom / 100})`;
+        }
+
+        function renderLinesList() {
+            const container = document.getElementById('lines_container');
+            container.innerHTML = '';
+            
+            currentConfig.lines.forEach((line, i) => {
+                const isActive = (i === activeLineIndex);
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-lg border transition-all ${isActive ? 'bg-teal-900/20 border-teal-500' : 'bg-black/20 border-white/10'}`;
+                
+                el.innerHTML = `
+                    <div class="flex justify-between items-center mb-2 cursor-pointer" onclick="setActiveLine(${i})">
+                        <span class="font-bold text-sm ${isActive ? 'text-teal-400' : 'text-gray-300'} text-truncate" style="max-width:200px; white-space:nowrap; overflow:hidden;">
+                            ${i+1}. ${line.text || '(ว่าง)'}
+                        </span>
+                        <button class="text-red-400 hover:text-red-300 text-xs px-2" onclick="event.stopPropagation(); removeLine(${i})">ลบ</button>
+                    </div>
+                    ${isActive ? `
+                        <div class="grid grid-cols-2 gap-2 mt-3">
+                            <div><label class="text-[10px] text-gray-400">แกน X (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.x}" onchange="updateLine(${i}, 'x', this.value)"></div>
+                            <div><label class="text-[10px] text-gray-400">แกน Y (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.y}" onchange="updateLine(${i}, 'y', this.value)"></div>
+                            <div class="col-span-2"><label class="text-[10px] text-gray-400">ข้อความ / ตัวแปร {{var}}</label><input type="text" class="input-control text-sm py-1 font-mono" value="${line.text.replace(/"/g, '&quot;')}" oninput="updateLine(${i}, 'text', this.value)"></div>
+                            <div><label class="text-[10px] text-gray-400">ขนาด Font (pt)</label><input type="number" class="input-control text-sm py-1" value="${line.size}" onchange="updateLine(${i}, 'size', this.value)"></div>
+                            <div><label class="text-[10px] text-gray-400">ฟอนต์</label>
+                                <select class="input-control text-sm py-1" onchange="updateLine(${i}, 'font', this.value)">
+                                    <option value="Sarabun" ${line.font==='Sarabun'?'selected':''}>Sarabun</option>
+                                    <option value="Prompt" ${line.font==='Prompt'?'selected':''}>Prompt</option>
+                                </select>
+                            </div>
+                            <div><label class="text-[10px] text-gray-400">จัดแนว</label>
+                                <select class="input-control text-sm py-1" onchange="updateLine(${i}, 'align', this.value)">
+                                    <option value="left" ${line.align==='left'?'selected':''}>ซ้าย (Left)</option>
+                                    <option value="center" ${line.align==='center'?'selected':''}>กลาง (Center)</option>
+                                    <option value="right" ${line.align==='right'?'selected':''}>ขวา (Right)</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end pb-1">
+                                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                    <input type="checkbox" ${line.bold ? 'checked' : ''} onchange="updateLine(${i}, 'bold', this.checked)" class="accent-teal-500">
+                                    ตัวหนา (Bold)
+                                </label>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function setActiveLine(index) {
+            activeLineIndex = index;
+            renderLinesList();
+            renderCanvas();
+        }
+
+        function addLine() {
+            currentConfig.lines.push({
+                x: 10, y: 10, font: "Sarabun", size: 14, text: "ข้อความใหม่", align: "left", bold: false
+            });
+            activeLineIndex = currentConfig.lines.length - 1;
+            renderLinesList();
+            renderCanvas();
+        }
+
+        function removeLine(index) {
+            currentConfig.lines.splice(index, 1);
+            activeLineIndex = -1;
+            renderLinesList();
+            renderCanvas();
+        }
+
+        function updateLine(index, key, value) {
+            if (key === 'x' || key === 'y' || key === 'size') value = parseFloat(value) || 0;
+            currentConfig.lines[index][key] = value;
+            if(key === 'text') {
+                // อัปเดตเฉพาะ Canvas ทันทีเมื่อพิมพ์ข้อความ เพื่อไม่ให้ input เสียโฟกัส
+                renderCanvas();
+            } else {
+                renderLinesList();
+                renderCanvas();
+            }
+        }
+
+        function renderCanvas() {
+            const wrapper = document.getElementById('canvas_wrapper');
+            // แปลงมิลลิเมตร (mm) เป็นพิกเซลหน้าจอ (ใช้ประมาณ 1mm = 3.78px เพื่อการแสดงผล)
+            const mmToPx = 3.78; 
+            wrapper.style.width = (currentConfig.width * mmToPx) + 'px';
+            wrapper.style.height = (currentConfig.height * mmToPx) + 'px';
+            wrapper.innerHTML = '';
+
+            currentConfig.lines.forEach((line, i) => {
+                const el = document.createElement('div');
+                el.className = `canvas-line ${i === activeLineIndex ? 'active' : ''}`;
+                el.innerText = line.text;
+                
+                // แปลงหน่วย x, y เป็นเปอร์เซ็นต์ หรือจุดตายตัว (ในตัวอย่างใช้การคำนวณ mm -> px)
+                if (line.align === 'center') {
+                    el.style.left = '50%';
+                    el.style.transform = 'translateX(-50%)';
+                    el.style.textAlign = 'center';
+                    el.style.width = '100%';
+                } else if (line.align === 'right') {
+                    el.style.right = (line.x * mmToPx) + 'px';
+                    el.style.textAlign = 'right';
+                } else {
+                    el.style.left = (line.x * mmToPx) + 'px';
+                    el.style.textAlign = 'left';
+                }
+                
+                el.style.top = (line.y * mmToPx) + 'px';
+                el.style.fontFamily = `'${line.font}', sans-serif`;
+                // แปลง pt เป็น px (1pt = 1.33px)
+                el.style.fontSize = (line.size * 1.33) + 'px';
+                el.style.fontWeight = line.bold ? '700' : '400';
+                
+                el.onclick = () => setActiveLine(i);
+                wrapper.appendChild(el);
+            });
+        }
+
+        // 4. ฟังก์ชันทดสอบพิมพ์ (Print Test)
+        function printTest() {
+            const contents = document.getElementById('canvas_wrapper').innerHTML;
+            const pw = window.open('', '_blank', 'width=800,height=600');
             pw.document.write(`
                 <html>
                 <head>
                     <title>Print Test</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Sarabun:wght@400;600;700&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
                     <style>
                         body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; }
+                        /* ให้ขนาดตรงตามมิลลิเมตรที่ระบุไว้เวลาสั่งปริ้นจริง */
                         .sticker { position: relative; width: ${currentConfig.width}mm; height: ${currentConfig.height}mm; background: #fff; overflow: hidden; margin: 0; }
                         .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
                         @page { size: ${currentConfig.width}mm ${currentConfig.height}mm; margin: 0; }
+                        .active { border: none !important; background: transparent !important; }
                     </style>
                 </head>
                 <body>
@@ -475,11 +361,16 @@
                 </html>
             `);
             pw.document.close();
-        };
+        }
 
-        window.onload = () => {
+        // Initialize On Load
+        window.onload = async () => {
+            // ปรับ Zoom ตามหน้าจอ
             if (window.innerWidth < 1024) document.getElementById('zoom_level').value = 80;
-            loadTemplate();
+            else if (window.innerWidth >= 1600) document.getElementById('zoom_level').value = 150;
+            
+            // โหลด Dropdown
+            await loadTemplateDropdown();
         };
     </script>
 </body>
