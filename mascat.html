@@ -27,8 +27,6 @@
         .item-row-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer; transition: 0.2s; }
         .item-row-card:hover { border-color: var(--teal); background: rgba(20, 184, 177, 0.05); }
         
-        .price-tier-row { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 10px; align-items: center; margin-bottom: 8px; }
-
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
@@ -85,7 +83,13 @@
                     <div>
                         <label class="label-clinical">หน่วย (Unit)</label>
                         <select id="f_unit" class="input-box cursor-pointer">
-                            <option value="">-- กำลังโหลด --</option>
+                            <option value="">-- เลือกหน่วย --</option>
+                            <option value="ขวด">ขวด</option>
+                            <option value="แคปซูล">แคปซูล</option>
+                            <option value="ซีซี (cc)">ซีซี (cc)</option>
+                            <option value="มิลลิลิตร (mL)">มิลลิลิตร (mL)</option>
+                            <option value="เม็ด">เม็ด</option>
+                            <option value="อัน">อัน</option>
                         </select>
                     </div>
                     
@@ -116,7 +120,11 @@
                         <div>
                             <label class="label-clinical">หมวดหมู่ย่อย</label>
                             <select id="f_sub_cat" class="input-box cursor-pointer">
-                                <option value="">-- กำลังโหลด --</option>
+                                <option value="">-- เลือกหมวดหมู่ --</option>
+                                <option value="Antibiotics">Antibiotics</option>
+                                <option value="NSAIDs">NSAIDs</option>
+                                <option value="Vaccines">Vaccines</option>
+                                <option value="General">General</option>
                             </select>
                         </div>
                     </div>
@@ -128,8 +136,6 @@
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_1" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_1" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_2" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_2" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_3" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_3" class="col-span-8 input-box" placeholder="For..."></div>
-                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_4" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_4" class="col-span-8 input-box" placeholder="For..."></div>
-                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_5" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_5" class="col-span-8 input-box" placeholder="For..."></div>
                             </div>
                         </div>
                         <div class="bg-pink-500/5 p-5 rounded-2xl border border-pink-500/20">
@@ -138,8 +144,6 @@
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_1" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_1" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_2" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_2" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_3" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_3" class="col-span-8 input-box" placeholder="For..."></div>
-                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_4" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_4" class="col-span-8 input-box" placeholder="For..."></div>
-                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_5" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_5" class="col-span-8 input-box" placeholder="For..."></div>
                             </div>
                         </div>
                     </div>
@@ -166,34 +170,9 @@
         let items = [], selectedItem = null;
 
         window.onload = async () => { 
-            // 1. เรียกใช้งานฟังก์ชันโหลดข้อมูล Dropdown อัตโนมัติเมื่อเปิดหน้าเว็บ
-            await loadMasterDataDropdowns();
             renderTierInputs();
             await setCategory('TakeHome'); 
         };
-
-        // ฟังก์ชันใหม่: ดึงข้อมูลหน่วยนับและหมวดหมู่ย่อยจาก Master Data
-        async function loadMasterDataDropdowns() {
-            try {
-                // โหลดหน่วยนับ
-                const { data: units } = await db.from('mas_units').select('name').order('name');
-                const unitEl = document.getElementById('f_unit');
-                if (units && unitEl) {
-                    unitEl.innerHTML = '<option value="">-- เลือกหน่วย --</option>' + 
-                        units.map(u => `<option value="${u.name}" style="background: #0b1929">${u.name}</option>`).join('');
-                }
-
-                // โหลดหมวดหมู่สินค้า (Sub Category)
-                const { data: subcats } = await db.from('mas_sub_cat').select('name').order('name');
-                const subcatEl = document.getElementById('f_sub_cat');
-                if (subcats && subcatEl) {
-                    subcatEl.innerHTML = '<option value="">-- เลือกหมวดหมู่ --</option>' + 
-                        subcats.map(s => `<option value="${s.name}" style="background: #0b1929">${s.name}</option>`).join('');
-                }
-            } catch (err) {
-                console.error("โหลดข้อมูล Master Data ไม่สำเร็จ:", err);
-            }
-        }
 
         function renderTierInputs() {
             const container = document.getElementById('tiers-container');
@@ -223,9 +202,10 @@
             const labels = { 'TakeHome': 'ยาจ่ายกลับบ้าน', 'ProcInj': 'หัตถการ/ยาฉีด', 'Lab': 'Lab', 'General': 'สินค้าทั่วไป' };
             document.getElementById('current-mode-label').innerText = `หมวด: ${labels[cat]}`;
             
-            const isTiered = cat === 'ProcInj';
-            document.getElementById('tiered-price-section').classList.toggle('hidden', !isTiered);
-            document.getElementById('fixed-price-section').classList.toggle('hidden', isTiered);
+            // หมวดหัตถการ/ยาฉีด ให้โชว์ทั้ง Weight Tier และ Dosage Guide
+            const isProcInj = (cat === 'ProcInj');
+            document.getElementById('tiered-price-section').classList.toggle('hidden', !isProcInj);
+            document.getElementById('fixed-price-section').classList.toggle('hidden', isProcInj);
 
             const isMed = (cat === 'TakeHome' || cat === 'ProcInj');
             document.getElementById('med-config-section').style.display = isMed ? 'block' : 'none';
@@ -240,6 +220,7 @@
                 const res = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'Oral', 'ยา']);
                 data = (res.data || []).map(i => ({ ...i, source: 'pharmacy' }));
             } else if (currentCat === 'ProcInj') {
+                // ดึงทั้งยาฉีด (pharmacy) และหัตถการ (services)
                 const resInj = await db.from('pharmacy').select('*').eq('category', 'Injection');
                 const resProc = await db.from('services').select('*').eq('category', 'หัตถการ');
                 data = [
@@ -274,6 +255,7 @@
             document.getElementById('f_unit').value = selectedItem.unit || '';
             document.getElementById('f_price').value = selectedItem.price_per_unit || 0;
             
+            // โหลดช่วงราคา
             if (selectedItem.price_config && Array.isArray(selectedItem.price_config)) {
                 selectedItem.price_config.forEach((tier, idx) => {
                     if (idx < 5) {
@@ -292,14 +274,13 @@
                 document.getElementById('f_conc').value = selectedItem.concentration_mg_unit || 1;
                 document.getElementById('f_sub_cat').value = selectedItem.sub_category || '';
                 document.getElementById('f_side_effects').value = selectedItem.side_effects || '';
-                for(let i=1; i<=5; i++) {
+                for(let i=1; i<=3; i++) {
                     document.getElementById(`f_dog_dose_${i}`).value = selectedItem[`dog_dose_${i}`] || '';
                     document.getElementById(`f_dog_for_${i}`).value = selectedItem[`dog_for_${i}`] || '';
                     document.getElementById(`f_cat_dose_${i}`).value = selectedItem[`cat_dose_${i}`] || '';
                     document.getElementById(`f_cat_for_${i}`).value = selectedItem[`cat_for_${i}`] || '';
                 }
             }
-
             document.getElementById('btn-delete').classList.remove('hidden');
         }
 
@@ -311,14 +292,14 @@
             for(let i=1; i<=5; i++) {
                 const max = parseFloat(document.getElementById(`tier_max_${i}`).value);
                 const price = parseFloat(document.getElementById(`tier_price_${i}`).value);
-                if (!isNaN(max) && !isNaN(price)) {
-                    tierData.push({ max, price });
-                }
+                if (!isNaN(max) && !isNaN(price)) tierData.push({ max, price });
             }
 
-            let table = selectedItem ? selectedItem.source : (currentCat === 'Lab' ? 'services' : 'pharmacy');
-            if (!selectedItem && currentCat === 'ProcInj') {
-                table = document.getElementById('f_dog_dose_1').value > 0 ? 'pharmacy' : 'services';
+            // ตัดสินใจว่าจะลงตารางไหน
+            let table = (currentCat === 'Lab') ? 'services' : 'pharmacy';
+            if (currentCat === 'ProcInj') {
+                // ถ้าใส่ Dose Guide ให้เป็นยาฉีด (pharmacy), ถ้าไม่ใส่ให้เป็นหัตถการ (services)
+                table = (document.getElementById('f_dog_dose_1').value > 0) ? 'pharmacy' : 'services';
             }
 
             let payload = {};
@@ -327,23 +308,23 @@
                     service_name: nameEN,
                     category: (currentCat === 'Lab' ? 'Lab' : 'หัตถการ'),
                     price: parseFloat(document.getElementById('f_price').value) || 0,
-                    price_config: currentCat === 'ProcInj' ? tierData : null,
+                    price_config: tierData.length > 0 ? tierData : null,
                     unit: document.getElementById('f_unit').value
                 };
             } else {
                 payload = {
                     item_name: nameEN,
                     name_th: document.getElementById('f_name_th').value,
-                    category: (currentCat === 'TakeHome' ? 'TakeHome' : currentCat === 'ProcInj' ? 'Injection' : 'General'),
+                    category: (currentCat === 'TakeHome' ? 'TakeHome' : (currentCat === 'ProcInj' ? 'Injection' : 'General')),
                     sub_category: document.getElementById('f_sub_cat').value,
                     unit: document.getElementById('f_unit').value,
                     price_per_unit: parseFloat(document.getElementById('f_price').value) || 0,
-                    price_config: currentCat === 'ProcInj' ? tierData : null,
+                    price_config: tierData.length > 0 ? tierData : null,
                     concentration_mg_unit: parseFloat(document.getElementById('f_conc').value) || 1,
                     side_effects: document.getElementById('f_side_effects').value,
-                    is_medication: (currentCat !== 'General')
+                    is_medication: true
                 };
-                for(let i=1; i<=5; i++) {
+                for(let i=1; i<=3; i++) {
                     payload[`dog_dose_${i}`] = parseFloat(document.getElementById(`f_dog_dose_${i}`).value) || 0;
                     payload[`dog_for_${i}`] = document.getElementById(`f_dog_for_${i}`).value;
                     payload[`cat_dose_${i}`] = parseFloat(document.getElementById(`f_cat_dose_${i}`).value) || 0;
@@ -351,17 +332,16 @@
                 }
             }
 
-            const { error } = selectedItem 
+            const { error } = selectedItem 
                 ? await db.from(table).update(payload).eq('id', selectedItem.id)
                 : await db.from(table).insert([payload]);
 
             if (error) alert('Error: ' + error.message);
-            else { alert('บันทึกสำเร็จ!'); fetchData(); addNewItem(); }
+            else { alert('บันทึก Master สำเร็จ!'); fetchData(); addNewItem(); }
         }
 
         function addNewItem() {
             selectedItem = null;
-            // เพิ่มคำสั่งให้ล้างค่าใน select (Dropdown) ด้วย
             document.querySelectorAll('input, textarea, select').forEach(i => i.value = '');
             document.getElementById('f_conc').value = 1;
             document.getElementById('btn-delete').classList.add('hidden');
