@@ -16,7 +16,6 @@
         }
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; font-size: 1rem; }
         
-        /* UI Scaling */
         .input-control { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 12px; outline: none; transition: 0.2s; font-size: 1.1rem; }
         .input-control:focus { border-color: var(--teal); background: rgba(0,0,0,0.6); }
         
@@ -25,7 +24,7 @@
 
         /* Canvas Preview */
         .canvas-wrapper { background: #ffffff; position: relative; transform-origin: center top; transition: transform 0.2s; overflow: hidden; margin: 0 auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.2; box-sizing: border-box; }
+        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.3; box-sizing: border-box; white-space: pre-wrap; }
         .canvas-element.active { outline: 2px solid var(--teal); background: rgba(20, 184, 17, 0.1); z-index: 50; }
         
         /* Variables Category */
@@ -49,8 +48,8 @@
             <div class="flex items-center gap-6">
                 <a href="settings.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
                 <div>
-                    <h1 class="text-2xl font-black text-white">🖨️ ออกแบบฟอร์มสติ๊กเกอร์</h1>
-                    <p class="text-gray-400 text-sm">กำหนดขนาดกระดาษและตำแหน่งตัวแปรสำหรับการพิมพ์</p>
+                    <h1 class="text-2xl font-black text-white">🖨️ ออกแบบฟอร์มเครื่องพิมพ์</h1>
+                    <p class="text-gray-400 text-sm">กำหนดสติ๊กเกอร์ยา หรือ ใบเสร็จรับเงิน</p>
                 </div>
             </div>
             <div class="flex gap-4">
@@ -64,8 +63,11 @@
                 <div class="section-card p-6 mb-8">
                     <div class="grid grid-cols-12 gap-6 items-end">
                         <div class="col-span-6">
-                            <label class="label-title">Template เอกสาร</label>
-                            <select id="template_type" class="input-control font-bold text-teal-400" onchange="loadTemplate()"></select>
+                            <label class="label-title">เลือกประเภท Template</label>
+                            <select id="template_type" class="input-control font-bold text-teal-400" onchange="loadTemplate()">
+                                <option value="DrugSticker">💊 สติ๊กเกอร์ยา (80x50mm)</option>
+                                <option value="Receipt80mm">📄 ใบเสร็จรับเงิน (80mm)</option>
+                            </select>
                         </div>
                         <div class="col-span-3">
                             <label class="label-title text-gray-400 text-xs">กว้าง (มม.)</label>
@@ -82,8 +84,7 @@
                     <h2 class="text-xl font-black text-white">📝 รายการองค์ประกอบ</h2>
                     <div class="flex gap-2">
                         <button onclick="addLine('text')" class="btn-tool text-white">+ ข้อความ</button>
-                        <button onclick="addLine('rect')" class="btn-tool text-orange-400 border-orange-400/30">+ สี่เหลี่ยม</button>
-                        <button onclick="addLine('image')" class="btn-tool text-teal-400 border-teal-400/30">+ รูปภาพ</button>
+                        <button onclick="addLine('rect')" class="btn-tool text-orange-400 border-orange-400/30">+ เส้น/กรอบ</button>
                     </div>
                 </div>
 
@@ -104,7 +105,7 @@
                 <div class="h-96 border-t border-white/10 bg-navy-light p-6 overflow-y-auto shadow-2xl">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="text-xl">💡</span>
-                        <h3 class="text-lg font-black text-teal-400">ตัวแปรที่รองรับ</h3>
+                        <h3 class="text-lg font-black text-teal-400">ตัวแปรที่รองรับ (คลิกเพื่อ Copy)</h3>
                     </div>
                     <div id="var_sidebar_container"></div>
                 </div>
@@ -116,31 +117,59 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
+        // --- Mock Data สำหรับแสดงผล Preview ---
         const mockData = {
-            clinic_name: "PK-VMS Animal Hospital", phone: "081-999-8888",
-            pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-2026-001", weight: "12.5", breed: "Golden Retriever",
-            drug_name: "Amoxicillin 500", drug_name_th: "อะม็อกซี่ (ฆ่าเชื้อ)", 
-            dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง",
-            meal_timing: "หลังอาหารทันที", day_timing: "เช้า-เย็น", duration_days: "7",
-            total_qty: "14", warning: "ระวังอาการแพ้ยา และกินติดต่อกันจนหมด",
-            date: "06 มี.ค. 26", time: "14:30 น.", queue: "คิวที่ 08"
+            clinic_name: "PK-VMS Animal Hospital",
+            clinic_address: "123 ถ.นเรศวร อ.เมือง จ.พิษณุโลก",
+            phone: "081-999-8888",
+            tax_id: "0123456789012",
+            owner_name: "คุณสมชาย ใจดี",
+            pet_name: "โคล่า",
+            species: "สุนัข",
+            sex: "ผู้ตอน",
+            hn: "HN-2026-001",
+            weight: "12.5",
+            breed: "Golden Retriever",
+            receipt_no: "REC-20260306-001",
+            date: "06 มี.ค. 26",
+            time: "14:30 น.",
+            pay_method: "เงินโอน",
+            total_price: "1,250.00",
+            discount_val: "50.00",
+            net_total: "1,200.00",
+            received_cash: "1,200.00",
+            change_cash: "0.00",
+            items_list: "ตรวจทั่วไป...................300.00\nยาฆ่าเชื้อ.....................500.00\nอาหารป่วย...................450.00",
+            drug_name: "Amoxicillin 500",
+            drug_name_th: "อะม็อกซี่ (ฆ่าเชื้อ)",
+            dose_per_time: "1",
+            unit: "เม็ด",
+            frequency: "วันละ 2 ครั้ง",
+            meal_timing: "หลังอาหารทันที",
+            total_qty: "14",
+            warning: "ระวังอาการแพ้ยา และกินติดต่อกันจนหมด",
+            queue: "คิวที่ 08"
         };
 
         const varGroups = {
-            "🏥 คลินิก": ["clinic_name", "phone"],
-            "🐾 สัตว์และเจ้าของ": ["pet_name", "species", "sex", "hn", "weight", "breed"],
-            "💊 ข้อมูลยา (ละเอียด)": ["drug_name", "drug_name_th", "dose_per_time", "unit", "frequency", "meal_timing", "day_timing", "duration_days", "total_qty", "warning"],
-            "🕰️ เวลาและคิว": ["date", "time", "queue"]
+            "🏥 คลินิก": ["clinic_name", "clinic_address", "phone", "tax_id"],
+            "🐾 ลูกค้า/สัตว์": ["owner_name", "pet_name", "hn", "weight", "species"],
+            "💰 การเงิน": ["receipt_no", "total_price", "discount_val", "net_total", "pay_method", "items_list"],
+            "💊 ยา/เวลา": ["drug_name", "drug_name_th", "total_qty", "warning", "date", "time"]
         };
 
         function replaceVars(text) {
+            if (!text) return "";
             return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
         }
 
         async function loadTemplateDropdown() {
-            const { data } = await db.from('print_templates').select('template_type').order('template_type');
-            const selectEl = document.getElementById('template_type');
-            selectEl.innerHTML = data.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join('');
+            // โหลดรายการจาก Supabase ถ้ามี หรือใช้ค่าเริ่มต้น
+            const { data } = await db.from('print_templates').select('template_type');
+            if (data && data.length > 0) {
+                const selectEl = document.getElementById('template_type');
+                selectEl.innerHTML = data.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join('');
+            }
             loadTemplate();
         }
 
@@ -152,6 +181,9 @@
                 document.getElementById('paper_w').value = currentConfig.width || 80;
                 document.getElementById('paper_h').value = currentConfig.height || 50;
                 renderLinesList(); renderCanvas(); applyZoom();
+            } else {
+                currentConfig = { width: 80, height: 50, lines: [] };
+                renderLinesList(); renderCanvas();
             }
         }
 
@@ -159,18 +191,22 @@
             const type = document.getElementById('template_type').value;
             currentConfig.width = parseFloat(document.getElementById('paper_w').value);
             currentConfig.height = parseFloat(document.getElementById('paper_h').value);
-            await db.from('print_templates').update({ config: currentConfig }).eq('template_type', type);
-            alert('✅ บันทึกรูปแบบเรียบร้อยแล้ว');
+            
+            const { error } = await db.from('print_templates').upsert({ 
+                template_type: type, 
+                config: currentConfig 
+            }, { onConflict: 'template_type' });
+            
+            if (error) alert("Error: " + error.message);
+            else alert('✅ บันทึกรูปแบบเรียบร้อยแล้ว');
         }
 
         function addLine(type) {
             let newLine = { type, x: 5, y: 5 };
             if (type === 'text') {
-                newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 14, bold: false, italic: false, align: "left" };
+                newLine = { ...newLine, text: "ข้อความใหม่ {{pet_name}}", font: "Sarabun", size: 12, bold: false, align: "left" };
             } else if (type === 'rect') {
-                newLine = { ...newLine, w: 70, h: 8, radius: 4, borderWidth: 1, borderStyle: 'solid', fill: true, align: 'left' };
-            } else {
-                newLine = { ...newLine, w: 15, h: 15, url: "" };
+                newLine = { ...newLine, w: 70, h: 0.5, radius: 0, borderWidth: 0.5, borderStyle: 'solid', fill: true, align: 'left' };
             }
             currentConfig.lines.push(newLine);
             activeLineIndex = currentConfig.lines.length - 1;
@@ -186,9 +222,9 @@
                         <div class="flex justify-between items-center cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
                             <div class="flex items-center gap-3">
                                 <span class="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-xs text-gray-400 font-bold">${i+1}</span>
-                                <span class="font-bold text-lg">${l.type === 'rect' ? '🟧 สี่เหลี่ยม' : l.type === 'image' ? '🖼️ รูปภาพ' : l.text}</span>
+                                <span class="font-bold text-lg">${l.type === 'rect' ? '🟧 เส้น/กรอบ' : (l.text.substring(0,20) + '...')}</span>
                             </div>
-                            <button class="text-red-400 font-bold hover:bg-red-400/10 px-3 py-1 rounded-lg transition" onclick="currentConfig.lines.splice(${i},1); renderLinesList(); renderCanvas();">ลบออก</button>
+                            <button class="text-red-400 font-bold hover:bg-red-400/10 px-3 py-1 rounded-lg transition" onclick="currentConfig.lines.splice(${i},1); renderLinesList(); renderCanvas();">ลบ</button>
                         </div>
                         ${active ? renderEditor(l, i) : ''}
                     </div>
@@ -197,20 +233,13 @@
         }
 
         function renderEditor(l, i) {
-            // ส่วนควบคุมการจัดวาง (SVG Icons)
             const alignControl = `
                 <div class="col-span-2">
                     <label class="text-xs text-gray-500 mb-1 block">การจัดวาง</label>
                     <div class="flex gap-2">
-                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path></svg>
-                        </button>
-                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path></svg>
-                        </button>
-                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path></svg>
-                        </button>
+                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">L</button>
+                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">C</button>
+                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">R</button>
                     </div>
                 </div>
             `;
@@ -218,49 +247,29 @@
             if (l.type === 'text') {
                 return `
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
-                        <div class="col-span-4"><label class="text-xs text-gray-500 mb-1 block">ข้อความ</label>
-                            <input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)">
+                        <div class="col-span-4"><label class="text-xs text-gray-500 mb-1 block">ข้อความ (ใส่ {{ตัวแปร}} ได้)</label>
+                            <textarea class="input-control text-sm" rows="2" oninput="updateLine(${i},'text',this.value)">${l.text}</textarea>
                         </div>
                         ${alignControl}
                         <div><label class="text-xs text-gray-500 mb-1 block">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
-                        <div class="flex items-end gap-1">
-                            <button class="w-12 h-12 rounded-xl border border-white/10 ${l.bold?'bg-teal-600 text-white':'bg-white/5'}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();"><b>B</b></button>
-                            <button class="w-12 h-12 rounded-xl border border-white/10 ${l.italic?'bg-teal-600 text-white':'bg-white/5'}" onclick="updateLine(${i},'italic',${!l.italic}); renderLinesList();"><i>I</i></button>
+                        <div class="flex items-end">
+                            <button class="w-full h-12 rounded-xl border border-white/10 ${l.bold?'bg-teal-600 text-white':'bg-white/5'}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();"><b>B</b></button>
                         </div>
-                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง X (มม.)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง Y (มม.)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">X (มม.)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">Y (มม.)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
                     </div>
                 `;
-            } else if (l.type === 'rect') {
+            } else {
                 return `
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
                         <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">สูง (มม.)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>
-                        
+                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">สูง/หนา (มม.)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div>
                         ${alignControl}
-                        
-                        <div><label class="text-xs text-gray-500 mb-1 block">หนาเส้นขอบ</label><input type="number" class="input-control" value="${l.borderWidth || 1}" step="0.1" oninput="updateLine(${i},'borderWidth',this.value)"></div>
-                        <div><label class="text-xs text-gray-500 mb-1 block">ชนิดเส้น</label>
-                            <select class="input-control" onchange="updateLine(${i},'borderStyle',this.value)">
-                                <option value="solid" ${l.borderStyle==='solid'?'selected':''}>เส้นทึบ</option>
-                                <option value="dashed" ${l.borderStyle==='dashed'?'selected':''}>เส้นประ</option>
-                                <option value="dotted" ${l.borderStyle==='dotted'?'selected':''}>ไข่ปลา</option>
-                            </select>
-                        </div>
-                        
-                        <div><label class="text-xs text-gray-500 mb-1 block">โค้ง (Radius)</label><input type="number" class="input-control" value="${l.radius}" oninput="updateLine(${i},'radius',this.value)"></div>
-                        <div class="flex items-end pb-2">
-                             <label class="flex items-center gap-2 cursor-pointer bg-white/5 p-3 rounded-xl border border-white/10 w-full justify-center">
-                                <input type="checkbox" ${l.fill ? 'checked' : ''} onchange="updateLine(${i},'fill',this.checked)" class="w-5 h-5 accent-teal-500">
-                                <span class="text-xs font-bold">เติมพื้นดำ</span>
-                             </label>
-                        </div>
-                        <div><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง X</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
-                        <div><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง Y</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                        <div><label class="text-xs text-gray-500 mb-1 block">X (มม.)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                        <div><label class="text-xs text-gray-500 mb-1 block">Y (มม.)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
                     </div>
                 `;
             }
-            return '';
         }
 
         function updateLine(index, key, value) {
@@ -270,31 +279,31 @@
 
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
-            const px = 3.78;
-            wrapper.style.width = (document.getElementById('paper_w').value * px) + 'px';
-            wrapper.style.height = (document.getElementById('paper_h').value * px) + 'px';
+            const px = 3.78; // 1mm ≈ 3.78px
+            const pw = document.getElementById('paper_w').value;
+            const ph = document.getElementById('paper_h').value;
+
+            wrapper.style.width = (pw * px) + 'px';
+            wrapper.style.height = (ph * px) + 'px';
+            
             wrapper.innerHTML = currentConfig.lines.map((l, i) => {
-                let style = `top:${l.y*px}px; font-family:${l.font}; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; font-style:${l.italic?'italic':'normal'};`;
+                let style = `top:${l.y*px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'};`;
                 
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
                     else style += `left:${l.x*px}px; text-align:left;`;
+                    
                     return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${style}" onclick="activeLineIndex=${i}; renderLinesList();">${replaceVars(l.text)}</div>`;
                 } else if (l.type === 'rect') {
-                    const bw = (l.borderWidth || 1) * (px/2);
-                    const bStyle = l.borderStyle || 'solid';
                     const bgColor = l.fill ? '#000' : 'transparent';
-                    
-                    let rectStyle = `top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border-radius:${l.radius}px; border:${bw}px ${bStyle} #000; background:${bgColor};`;
+                    let rectStyle = `top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border:0.5px solid #000; background:${bgColor};`;
                     
                     if (l.align === 'center') rectStyle += `left:50%; transform:translateX(-50%);`;
                     else if (l.align === 'right') rectStyle += `right:${l.x*px}px;`;
                     else rectStyle += `left:${l.x*px}px;`;
 
                     return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${rectStyle}" onclick="activeLineIndex=${i}; renderLinesList();"></div>`;
-                } else if (l.type === 'image') {
-                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="left:${l.x*px}px; top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center; font-size:10px; color:#999;" onclick="activeLineIndex=${i}; renderLinesList();">IMAGE</div>`;
                 }
             }).join('');
         }
@@ -306,21 +315,29 @@
 
         function printTest() {
             const contents = document.getElementById('canvas_wrapper').innerHTML;
+            const pw_val = document.getElementById('paper_w').value;
+            const ph_val = document.getElementById('paper_h').value;
+            
             const pw = window.open('', '_blank', 'width=800,height=600');
             pw.document.write(`
-                <html><head><title>Print Preview</title><link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Prompt:wght@400;600&family=Sarabun:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-                    <style>body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; }
-                        .sticker { position: relative; width: ${document.getElementById('paper_w').value}mm; height: ${document.getElementById('paper_h').value}mm; overflow: hidden; }
-                        .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; outline:none !important; box-sizing: border-box; }
-                        @page { size: ${document.getElementById('paper_w').value}mm ${document.getElementById('paper_h').value}mm; margin: 0; }
-                    </style></head>
-                <body><div class="sticker">${contents}</div><script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); };<\/script></body></html>
+                <html><head><title>Print Test</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+                    body { margin: 0; padding: 0; }
+                    .sticker { position: relative; width: ${pw_val}mm; height: ${ph_val}mm; overflow: hidden; font-family: 'Sarabun'; }
+                    .canvas-element { position: absolute; white-space: pre-wrap; color: #000; line-height: 1.3; }
+                    @page { size: ${pw_val}mm ${ph_val}mm; margin: 0; }
+                </style></head>
+                <body><div class="sticker">${contents}</div>
+                <script>window.onload = function() { setTimeout(() => { window.print(); window.close(); }, 300); };<\/script>
+                </body></html>
             `);
             pw.document.close();
         }
 
         window.onload = () => {
             loadTemplateDropdown();
+            // Gen Sidebar Variables
             const sideContainer = document.getElementById('var_sidebar_container');
             sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
                 <div class="var-category-title">${group}</div>
