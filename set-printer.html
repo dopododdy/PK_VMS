@@ -127,7 +127,7 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
-        // Mock Data สำหรับ Live Preview
+        // ข้อมูล Mock Data สำหรับแสดงผล Live Preview ให้เห็นภาพจริง
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic",
             clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
@@ -153,8 +153,9 @@
             warning: "กินติดต่อกันจนหมดตามสัตวแพทย์สั่ง",
             receipt_no: "2569030769000101",
             // การจัดรูปแบบรายการสินค้าโดยใช้ HTML Table เพื่อให้ราคาชิดขวาใน Sarabun
+            // ปรับลดความกว้างลง 10px ตามคำขอ (width: calc(100% - 10px))
             items_list: `
-                <table style="width:100%; border-collapse:collapse; font-family:'Sarabun'; font-size: 11px; color:black;">
+                <table style="width: calc(100% - 10px); border-collapse:collapse; font-family:'Sarabun'; font-size: 11px; color:black;">
                     <tr><td style="padding-bottom:2px;">1. Amoxicillin 500mg</td><td style="text-align:right; white-space:nowrap;">210.00</td></tr>
                     <tr><td style="padding-bottom:2px;">2. ค่าบริการตรวจรักษา</td><td style="text-align:right; white-space:nowrap;">300.00</td></tr>
                     <tr><td style="padding-bottom:2px;">3. Lab - CBC Test</td><td style="text-align:right; white-space:nowrap;">450.00</td></tr>
@@ -265,8 +266,8 @@
                     <div class="space-y-4 mt-4">
                         <div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun">Sarabun</option><option value="Kanit">Kanit</option><option value="Prompt">Prompt</option></select></div>
-                            <div class="editor-group"><label class="label-title">ขนาด (pt)</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
+                            <div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option><option value="Courier New" ${l.font==='Courier New'?'selected':''}>Mono</option></select></div>
+                            <div class="editor-group"><label class="label-title">ขนาดตัวอักษร</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             ${alignControl}
@@ -320,7 +321,7 @@
 
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
-            const px = 3.78; 
+            const px = 3.78; // 1mm = 3.78px (มาตรฐานหน้าจอ 96dpi)
             const pw = document.getElementById('paper_w').value;
             const ph = document.getElementById('paper_h').value;
             
@@ -365,11 +366,12 @@
                     @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun&display=swap');
                     body { margin: 0; padding: 0; background: white; font-family: 'Sarabun'; }
                     .page { position: relative; width: ${pw_val}mm; height: ${ph_val}mm; overflow: hidden; }
-                    .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; }
+                    .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
                     @media print { @page { size: ${pw_val}mm ${ph_val}mm; margin: 0; } body { margin: 0; } }
                 </style></head>
                 <body><div class="page">
                     ${dynamicLines.map(l => {
+                        // พิมพ์จริงใช้หน่วย mm และ pt เพื่อความเป๊ะ
                         let style = `top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                         
                         const boxWidthMm = l.w ? l.w : (pw_val - (l.x * 2));
