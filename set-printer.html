@@ -16,91 +16,108 @@
         }
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; font-size: 1rem; }
         
-        .input-control { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 12px; outline: none; transition: 0.2s; font-size: 1.1rem; }
+        .input-control { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 10px; outline: none; transition: 0.2s; font-size: 1rem; }
         .input-control:focus { border-color: var(--teal); background: rgba(0,0,0,0.6); }
         
-        .label-title { color: var(--teal); font-weight: 800; font-size: 1rem; margin-bottom: 6px; display: block; text-transform: uppercase; }
-        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 20px; border: 1px solid var(--border); }
+        .label-title { color: var(--teal); font-weight: 800; font-size: 0.9rem; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; border: 1px solid var(--border); }
 
-        .canvas-wrapper { background: #ffffff; position: relative; transform-origin: center top; transition: transform 0.2s; overflow: hidden; margin: 0 auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; }
-        .canvas-element.active { outline: 2px solid var(--teal); background: rgba(20, 184, 17, 0.1); z-index: 50; }
+        /* ปรับปรุง Live Preview ให้แม่นยำ */
+        .preview-area { background: #050b14; border-radius: 20px; border: 2px dashed rgba(255,255,255,0.1); overflow: auto; display: flex; align-items: center; justify-content: center; position: relative; }
+        .canvas-wrapper { background: #ffffff; position: relative; transform-origin: center center; box-shadow: 0 0 40px rgba(0, 0, 0, 0.7); overflow: hidden; }
+        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; transition: outline 0.1s; }
+        .canvas-element.active { outline: 2px solid var(--teal); background: rgba(20, 184, 17, 0.05); z-index: 50; }
         
-        .var-badge { background: rgba(20, 184, 17, 0.1); border: 1px solid rgba(20, 184, 17, 0.2); color: #4ade80; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; display: inline-block; margin: 3px; transition: 0.2s; font-family: monospace; }
-        .var-badge:hover { background: var(--teal); color: white; transform: translateY(-1px); }
+        .var-badge { background: rgba(20, 184, 17, 0.08); border: 1px solid rgba(20, 184, 17, 0.15); color: #4ade80; padding: 5px 12px; border-radius: 10px; font-size: 0.8rem; cursor: pointer; display: inline-block; margin: 4px; transition: 0.2s; font-family: monospace; }
+        .var-badge:hover { background: var(--teal); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(20, 184, 17, 0.3); }
 
-        .btn-tool { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 8px 15px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; transition: 0.2s; }
-        .btn-tool:hover { background: rgba(255,255,255,0.1); color: var(--teal); }
+        .btn-tool { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 10px 18px; border-radius: 12px; font-size: 0.9rem; font-weight: 800; transition: 0.2s; }
+        .btn-tool:hover { background: rgba(255,255,255,0.1); color: var(--teal); border-color: var(--teal); }
 
-        .btn-align { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        .btn-align.active { background: var(--teal); color: white; border-color: var(--teal); }
-        .var-category-title { font-weight: bold; color: #64748b; font-size: 0.8rem; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .btn-align { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: 0.2s; color: #94a3b8; }
+        .btn-align:hover { background: rgba(255,255,255,0.08); color: white; }
+        .btn-align.active { background: var(--teal); color: white; border-color: var(--teal); box-shadow: 0 0 15px rgba(20, 184, 17, 0.4); }
+
+        .editor-group { background: rgba(0,0,0,0.2); border-radius: 15px; padding: 12px; border: 1px solid rgba(255,255,255,0.03); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
 </head>
 <body class="overflow-hidden">
     <div class="flex flex-col h-screen">
-        <header class="p-6 border-b border-white/5 bg-navy-light flex items-center justify-between shadow-xl z-20">
+        <header class="p-5 border-b border-white/5 bg-navy-light flex items-center justify-between shadow-2xl z-30">
             <div class="flex items-center gap-6">
                 <a href="master_data.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
                 <div>
-                    <h1 class="text-2xl font-black text-white">🖨️ ออกแบบฟอร์มการพิมพ์</h1>
-                    <p class="text-gray-400 text-sm">จัดการรูปแบบสติ๊กเกอร์และใบเสร็จรับเงิน</p>
+                    <h1 class="text-2xl font-black text-white tracking-tight">🖨️ PK-VMS Template Designer</h1>
+                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบสติ๊กเกอร์และใบเสร็จรับเงิน</p>
                 </div>
             </div>
             <div class="flex gap-4">
-                <button class="bg-slate-700 hover:bg-slate-600 text-white px-8 py-3 rounded-xl font-bold transition flex items-center gap-2" onclick="printTest()"><span>🖨️</span> ทดสอบพิมพ์</button>
-                <button class="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg shadow-teal-500/20" onclick="saveTemplate()">💾 บันทึกรูปแบบ</button>
+                <button class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl font-bold transition flex items-center gap-2" onclick="printTest()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    ทดสอบพิมพ์
+                </button>
+                <button class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-teal-500/30" onclick="saveTemplate()">💾 บันทึกรูปแบบ</button>
             </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <div class="w-7/12 flex flex-col border-r border-white/10 bg-[#020617] overflow-y-auto p-8">
-                <div class="section-card p-6 mb-8">
-                    <div class="grid grid-cols-12 gap-6 items-end">
+            <div class="w-7/12 flex flex-col border-r border-white/10 bg-[#020617] overflow-y-auto p-6">
+                <div class="section-card p-6 mb-8 bg-slate-900/60 backdrop-blur-sm">
+                    <div class="grid grid-cols-12 gap-5 items-end">
                         <div class="col-span-6">
-                            <label class="label-title">Template เอกสาร</label>
-                            <select id="template_type" class="input-control font-bold text-teal-400" onchange="loadTemplate()">
-                                <option value="">กำลังโหลดรายการ...</option>
+                            <label class="label-title">เลือก Template</label>
+                            <select id="template_type" class="input-control font-black text-teal-400" onchange="loadTemplate()">
+                                <option value="">🔄 กำลังโหลดรายการ...</option>
                             </select>
                         </div>
                         <div class="col-span-3">
-                            <label class="label-title text-gray-400 text-xs">กว้าง (มม.)</label>
+                            <label class="label-title">กว้าง (มม.)</label>
                             <input type="number" id="paper_w" class="input-control text-center font-bold" value="80" onchange="renderCanvas()">
                         </div>
                         <div class="col-span-3">
-                            <label class="label-title text-gray-400 text-xs">สูง (มม.)</label>
+                            <label class="label-title">สูง (มม.)</label>
                             <input type="number" id="paper_h" class="input-control text-center font-bold" value="50" onchange="renderCanvas()">
                         </div>
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-black text-white">📝 รายการองค์ประกอบ</h2>
+                <div class="flex justify-between items-center mb-6 px-2">
+                    <h2 class="text-xl font-black text-white flex items-center gap-3">
+                        <span class="w-2 h-8 bg-teal-500 rounded-full"></span>
+                        รายการองค์ประกอบ
+                    </h2>
                     <div class="flex gap-2">
-                        <button onclick="addLine('text')" class="btn-tool text-white">+ ข้อความ</button>
-                        <button onclick="addLine('rect')" class="btn-tool text-orange-400 border-orange-400/30">+ สี่เหลี่ยม/เส้น</button>
-                        <button onclick="addLine('image')" class="btn-tool text-blue-400 border-blue-400/30">+ รูปภาพ</button>
+                        <button onclick="addLine('text')" class="btn-tool bg-white/5 hover:bg-teal-500/10 border-white/5 text-white">+ ข้อความ</button>
+                        <button onclick="addLine('rect')" class="btn-tool bg-white/5 hover:bg-orange-500/10 border-white/5 text-orange-400">+ สี่เหลี่ยม</button>
+                        <button onclick="addLine('image')" class="btn-tool bg-white/5 hover:bg-blue-500/10 border-white/5 text-blue-400">+ รูปภาพ</button>
                     </div>
                 </div>
 
-                <div id="lines_container" class="space-y-4 pb-20"></div>
+                <div id="lines_container" class="space-y-5 pb-24"></div>
             </div>
 
-            <div class="w-5/12 flex flex-col bg-[#050b14] border-l border-white/5">
-                <div class="flex-1 overflow-auto p-10 flex flex-col items-center justify-start bg-black/40">
-                    <div class="flex justify-between w-full max-w-md mb-4 items-center">
-                        <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Live Preview</span>
-                        <input type="range" id="zoom_level" min="50" max="250" value="130" class="accent-teal-500 w-32" oninput="applyZoom()">
+            <div class="w-5/12 flex flex-col bg-[#050b14]">
+                <div class="flex-1 p-6 flex flex-col overflow-hidden">
+                    <div class="flex justify-between items-center mb-4 px-2">
+                        <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Live Preview (ไม้บรรทัด mm)</span>
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] text-gray-500 font-bold">ZOOM</span>
+                            <input type="range" id="zoom_level" min="30" max="200" value="100" class="accent-teal-500 w-32" oninput="applyZoom()">
+                        </div>
                     </div>
-                    <div id="canvas_wrapper" class="canvas-wrapper"></div>
+                    <div class="preview-area flex-1">
+                        <div id="canvas_wrapper" class="canvas-wrapper"></div>
+                    </div>
                 </div>
 
-                <div class="h-96 border-t border-white/10 bg-navy-light p-6 overflow-y-auto shadow-2xl">
+                <div class="h-80 border-t border-white/10 bg-navy-light p-6 overflow-y-auto">
                     <div class="flex items-center gap-2 mb-4">
-                        <span class="text-xl">💡</span>
-                        <h3 class="text-lg font-black text-teal-400">ตัวแปรที่รองรับ (คลิกเพื่อ Copy)</h3>
+                        <div class="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center text-teal-400 font-bold">?</div>
+                        <h3 class="text-lg font-black text-teal-400">ตัวแปรที่รองรับ (คลิกเพื่อเลียนแบบ)</h3>
                     </div>
-                    <div id="var_sidebar_container"></div>
+                    <div id="var_sidebar_container" class="space-y-4"></div>
                 </div>
             </div>
         </div>
@@ -126,6 +143,14 @@
             "💰 การเงิน": ["receipt_no", "items_list", "total_price", "discount_val", "net_total", "received_amount", "change_amount", "date", "time"]
         };
 
+        const icons = {
+            L: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path></svg>`,
+            C: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path></svg>`,
+            R: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path></svg>`,
+            B: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"></path></svg>`,
+            I: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m-4 0h8M6 20h8"></path></svg>`
+        };
+
         function replaceVars(text) {
             return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
         }
@@ -136,9 +161,7 @@
             if (data && data.length > 0) {
                 select.innerHTML = data.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join('');
                 loadTemplate();
-            } else {
-                select.innerHTML = '<option value="">ไม่พบรายการ Template</option>';
-            }
+            } else { select.innerHTML = '<option value="">ไม่พบ Template</option>'; }
         }
 
         async function loadTemplate() {
@@ -165,13 +188,9 @@
 
         function addLine(type) {
             let newLine = { type, x: 5, y: 5 };
-            if (type === 'text') {
-                newLine = { ...newLine, text: "ข้อความ", font: "Sarabun", size: 14, bold: false, italic: false, align: "left" };
-            } else if (type === 'rect') {
-                newLine = { ...newLine, w: 70, h: 1, radius: 0, borderWidth: 1, borderStyle: 'solid', fill: false, align: 'left' };
-            } else if (type === 'image') {
-                newLine = { ...newLine, w: 20, h: 20, url: 'https://via.placeholder.com/150', align: 'left' };
-            }
+            if (type === 'text') newLine = { ...newLine, text: "ข้อความตัวอย่าง", font: "Sarabun", size: 12, bold: false, italic: false, align: "left" };
+            else if (type === 'rect') newLine = { ...newLine, w: 70, h: 5, radius: 0, align: 'left' };
+            else if (type === 'image') newLine = { ...newLine, w: 20, h: 20, url: 'https://via.placeholder.com/150', align: 'left' };
             currentConfig.lines.push(newLine);
             activeLineIndex = currentConfig.lines.length - 1;
             renderLinesList(); renderCanvas();
@@ -180,87 +199,83 @@
         function renderLinesList() {
             const container = document.getElementById('lines_container');
             container.innerHTML = currentConfig.lines.map((l, i) => `
-                <div class="p-5 rounded-2xl border ${i === activeLineIndex ? 'bg-navy-light border-teal-500 shadow-lg' : 'bg-white/5 border-white/5'}">
-                    <div class="flex justify-between items-center cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
-                        <span class="font-bold text-lg">
-                            ${l.type === 'rect' ? '🟧 สี่เหลี่ยม/เส้น' : (l.type === 'image' ? '🖼️ รูปภาพ' : l.text.substring(0, 30))}
+                <div class="p-5 rounded-3xl border ${i === activeLineIndex ? 'bg-slate-800 border-teal-500 shadow-2xl' : 'bg-white/5 border-white/5'} transition-all">
+                    <div class="flex justify-between items-center cursor-pointer mb-2" onclick="activeLineIndex=${i}; renderLinesList();">
+                        <span class="font-black text-sm uppercase tracking-widest ${i === activeLineIndex ? 'text-teal-400' : 'text-gray-500'}">
+                            ${l.type === 'rect' ? '🟧 Rectangle' : (l.type === 'image' ? '🖼️ Image' : '📝 Text')}
                         </span>
-                        <button class="text-red-400 font-bold px-3 py-1" onclick="currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();">ลบ</button>
+                        <div class="flex gap-2">
+                             <button class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white w-8 h-8 rounded-full text-xs transition flex items-center justify-center" onclick="currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();">✕</button>
+                        </div>
                     </div>
-                    ${i === activeLineIndex ? renderEditor(l, i) : ''}
+                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="text-white font-bold opacity-60 truncate">${l.type==='image' ? l.url : (l.type==='rect' ? 'สี่เหลี่ยมโค้งมน' : l.text)}</div>`}
                 </div>
             `).join('');
         }
 
         function renderEditor(l, i) {
-            // Alignment Icons SVG
-            const iconL = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path></svg>`;
-            const iconC = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path></svg>`;
-            const iconR = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path></svg>`;
-            
-            // Bold/Italic Icons SVG
-            const iconB = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"></path></svg>`;
-            const iconI = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m-4 0h8M6 20h8"></path></svg>`;
-
             const alignControl = `
-                <div class="col-span-2">
-                    <label class="text-xs text-gray-400 mb-1 block">การจัดวาง</label>
+                <div class="editor-group space-y-2">
+                    <label class="label-title">การจัดแนว</label>
                     <div class="flex gap-2">
-                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">${iconL}</button>
-                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">${iconC}</button>
-                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">${iconR}</button>
+                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">${icons.L}</button>
+                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">${icons.C}</button>
+                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">${icons.R}</button>
                     </div>
-                </div>
-            `;
-
-            const fontControl = `
-                <div class="col-span-2">
-                    <label class="text-xs text-gray-400 mb-1 block">ชนิด Font</label>
-                    <select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)">
-                        <option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option>
-                        <option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option>
-                        <option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option>
-                        <option value="Courier New" ${l.font==='Courier New'?'selected':''}>Courier New</option>
-                    </select>
                 </div>
             `;
 
             if (l.type === 'text') {
                 return `
-                    <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
-                        <div class="col-span-4"><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
-                        ${fontControl}
-                        ${alignControl}
-                        <div><label class="text-xs text-gray-400 mb-1 block">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
-                        <div class="flex gap-2 items-end">
-                            <button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();">${iconB}</button>
-                            <button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic}); renderLinesList();">${iconI}</button>
+                    <div class="space-y-4 mt-4">
+                        <div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option><option value="Courier New" ${l.font==='Courier New'?'selected':''}>Mono</option></select></div>
+                            <div class="editor-group"><label class="label-title">ขนาดตัวอักษร</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         </div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400">X (มม.)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400">Y (มม.)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            ${alignControl}
+                            <div class="editor-group space-y-2"><label class="label-title">สไตล์</label><div class="flex gap-2"><button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();">${icons.B}</button><button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic}); renderLinesList();">${icons.I}</button></div></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
+                            <div class="editor-group"><label class="label-title">พิกัด X (mm)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                            <div class="editor-group"><label class="label-title">พิกัด Y (mm)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                        </div>
                     </div>
                 `;
             } else if (l.type === 'rect') {
                 return `
-                    <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
-                        <div class="col-span-2"><label class="text-xs text-gray-400 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400 block">สูง (มม.)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div>
-                        ${alignControl}
-                        <div class="col-span-2"><label class="text-xs text-gray-400 block">ความโค้งมน (มม.)</label><input type="number" class="input-control" value="${l.radius || 0}" oninput="updateLine(${i},'radius',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400">X</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400">Y</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                    <div class="space-y-4 mt-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="editor-group"><label class="label-title">ความกว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
+                            <div class="editor-group"><label class="label-title">ความสูง (mm)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            ${alignControl}
+                            <div class="editor-group"><label class="label-title">มุมโค้ง (mm)</label><input type="number" class="input-control" value="${l.radius || 0}" oninput="updateLine(${i},'radius',this.value)"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
+                            <div class="editor-group"><label class="label-title">พิกัด X (mm)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                            <div class="editor-group"><label class="label-title">พิกัด Y (mm)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                        </div>
                     </div>
                 `;
             } else if (l.type === 'image') {
                 return `
-                    <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
-                        <div class="col-span-4"><label class="text-xs text-gray-400 block">URL รูปภาพ</label><input type="text" class="input-control text-xs" value="${l.url}" oninput="updateLine(${i},'url',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400 block">สูง (มม.)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>
-                        ${alignControl}
-                        <div class="col-span-2"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400">X</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400">Y</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                    <div class="space-y-4 mt-4">
+                        <div class="editor-group"><label class="label-title">URL รูปภาพ</label><input type="text" class="input-control text-xs" value="${l.url}" oninput="updateLine(${i},'url',this.value)"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="editor-group"><label class="label-title">กว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
+                            <div class="editor-group"><label class="label-title">สูง (mm)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            ${alignControl}
+                            <div class="editor-group"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
+                            <div class="editor-group"><label class="label-title">พิกัด X (mm)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                            <div class="editor-group"><label class="label-title">พิกัด Y (mm)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                        </div>
                     </div>
                 `;
             }
@@ -270,9 +285,10 @@
 
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
-            const px = 3.78; 
+            const px = 3.78; // 1mm = 3.78px (มาตรฐานหน้าจอ 96dpi)
             const pw = document.getElementById('paper_w').value;
             const ph = document.getElementById('paper_h').value;
+            
             wrapper.style.width = (pw * px) + 'px';
             wrapper.style.height = (ph * px) + 'px';
 
@@ -300,7 +316,10 @@
             }).join('');
         }
 
-        function applyZoom() { document.getElementById('canvas_wrapper').style.transform = `scale(${document.getElementById('zoom_level').value/100})`; }
+        function applyZoom() { 
+            const zoom = document.getElementById('zoom_level').value / 100;
+            document.getElementById('canvas_wrapper').style.transform = `scale(${zoom})`; 
+        }
         
         function printTest() {
             const dynamicLines = currentConfig.lines;
@@ -312,13 +331,14 @@
                 <html><head><style>
                     @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun&display=swap');
                     body { margin: 0; padding: 0; background: white; }
-                    .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; }
-                    .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; }
-                    @media print { @page { size: ${pw_val}mm auto; margin: 0; } }
+                    .page { position: relative; width: ${pw_val}mm; height: ${ph_val}mm; overflow: hidden; }
+                    .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+                    @media print { @page { size: ${pw_val}mm ${ph_val}mm; margin: 0; } body { margin: 0; } }
                 </style></head>
                 <body><div class="page">
                     ${dynamicLines.map(l => {
-                        let style = `top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'};`;
+                        // พิมพ์จริงใช้หน่วย mm และ pt เพื่อความเป๊ะ
+                        let style = `top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                         
                         if (l.type === 'text') {
                             if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
@@ -332,7 +352,7 @@
                             else rStyle += `left:${l.x}mm;`;
                             return `<div class="elem" style="${rStyle}"></div>`;
                         } else if (l.type === 'image') {
-                            let iStyle = `top:${l.y}mm; width:${l.w}mm; height:${l.h}mm;`;
+                            let iStyle = `top:${l.y}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
                             if (l.align === 'center') iStyle += `left:50%; transform:translateX(-50%);`;
                             else if (l.align === 'right') iStyle += `right:${l.x}mm;`;
                             else iStyle += `left:${l.x}mm;`;
@@ -350,8 +370,12 @@
             await fetchAvailableTemplates();
             const sideContainer = document.getElementById('var_sidebar_container');
             sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
-                <div class="var-category-title">${group}</div>
-                <div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy {{${v}}}')">{{${v}}}</span>`).join('')}</div>
+                <div>
+                    <div class="var-category-title">${group}</div>
+                    <div class="flex flex-wrap bg-white/5 p-2 rounded-xl border border-white/5">
+                        ${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy: {{${v}}}')">{{${v}}}</span>`).join('')}
+                    </div>
+                </div>
             `).join('');
         };
     </script>
