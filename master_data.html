@@ -7,7 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script> <style>
+    <script src="supabase-config.js"></script> 
+    <style>
         :root {
             --navy: #0b1929;
             --navy-mid: #112240;
@@ -92,7 +93,7 @@
                 </div>
             </div>
 
-            <div class="w-[400px] bg-white/5 border border-white/10 rounded-xl flex flex-col shrink-0 overflow-hidden">
+            <div class="w-[450px] bg-white/5 border border-white/10 rounded-xl flex flex-col shrink-0 overflow-hidden">
                 <div class="p-4 border-b border-white/10 bg-black/20">
                     <h2 class="font-bold text-lg text-teal-400" id="form-title">เพิ่มรายการใหม่</h2>
                 </div>
@@ -138,19 +139,17 @@
 
         let currentTab = 'units';
         let currentData = [];
-        let relationData = {}; // เก็บข้อมูล dropdown อ้างอิง
+        let relationData = {}; 
         let selectedId = null;
 
         // Initialize
         window.onload = async () => {
-            // โหลดข้อมูลอ้างอิงล่วงหน้า
             await loadRelationData();
             switchTab('units');
         };
 
         async function loadRelationData() {
             try {
-                // จำลองการโหลด (แทนที่ด้วย Supabase เมื่อสร้างตารางแล้ว)
                 const { data: species } = await db.from('mas_species').select('id, name').order('name');
                 const { data: mainCat } = await db.from('mas_main_cat').select('id, name').order('name');
                 if(species) relationData['mas_species'] = species;
@@ -175,12 +174,29 @@
             const formContainer = document.getElementById('form-fields');
             formContainer.innerHTML = '';
             
+            // เพิ่ม Dropdown โหลดตัวช่วยอัตโนมัติสำหรับหมวด Template
+            if (currentTab === 'templates') {
+                formContainer.innerHTML += `
+                <div class="mb-4 p-4 bg-teal-900/30 border border-teal-500/30 rounded-lg">
+                    <label class="block text-sm font-bold text-teal-300 mb-2">💡 โหลดเทมเพลตมาตรฐาน (ไม่ต้องเขียน JSON เอง)</label>
+                    <select id="preset-selector" class="input-box border-teal-500/50 text-sm" onchange="loadPreset(this.value)">
+                        <option value="">-- เลือกรูปแบบกระดาษที่ต้องการ --</option>
+                        <option value="drug_80x50">1. สติ๊กเกอร์ยา ขนาด 80 x 50 mm (มาตรฐาน)</option>
+                        <option value="drug_50x30">2. สติ๊กเกอร์ยา ขนาด 50 x 30 mm (ขนาดเล็ก)</option>
+                        <option value="queue_80x50">3. บัตรคิว ขนาด 80 x 50 mm</option>
+                        <option value="vaccine_80x50">4. ใบนัดวัคซีน ขนาด 80 x 50 mm</option>
+                    </select>
+                </div>`;
+            }
+
             config[currentTab].fields.forEach(field => {
                 let inputHtml = '';
                 if (field.type === 'text') {
                     inputHtml = `<input type="text" id="f_${field.name}" class="input-box" placeholder="ระบุ${field.label}">`;
                 } else if (field.type === 'textarea') {
-                    inputHtml = `<textarea id="f_${field.name}" class="input-box h-32" placeholder='{"width": 80, "height": 50, ...}'></textarea>`;
+                    // ปรับขนาดความสูงถ้าเป็น template
+                    const heightClass = currentTab === 'templates' ? 'h-96 text-xs font-mono' : 'h-32';
+                    inputHtml = `<textarea id="f_${field.name}" class="input-box ${heightClass}" placeholder='{"width": 80, "height": 50, ...}'></textarea>`;
                 } else if (field.type === 'select') {
                     const options = (relationData[field.relation] || [])
                         .map(opt => `<option value="${opt.id}" class="bg-navy">${opt.name}</option>`).join('');
@@ -196,12 +212,82 @@
             });
         }
 
+        // ฟังก์ชันโหลดข้อมูล Preset JSON
+        function loadPreset(val) {
+            if (!val) return;
+            const typeInput = document.getElementById('f_template_type');
+            const configInput = document.getElementById('f_config');
+            
+            let presetConfig = {};
+            
+            if (val === 'drug_80x50') {
+                typeInput.value = 'drug_sticker';
+                presetConfig = {
+                    "width": 80, "height": 50,
+                    "lines": [
+                        {"x": 10, "y": 15, "font": "Sarabun", "size": 14, "text": "น้อง {{pet_name}} ({{species}} {{sex}})", "align": "left", "bold": true},
+                        {"x": 10, "y": 40, "font": "Sarabun", "size": 16, "text": "{{drug_name}}", "align": "left", "bold": true},
+                        {"x": 10, "y": 60, "font": "Sarabun", "size": 14, "text": "{{drug_name_th}}", "align": "left", "bold": false},
+                        {"x": 10, "y": 85, "font": "Sarabun", "size": 14, "text": "{{dose}} {{frequency}}", "align": "left", "bold": false},
+                        {"x": 10, "y": 105, "font": "Sarabun", "size": 14, "text": "{{timing}} (นาน {{duration}})", "align": "left", "bold": false},
+                        {"x": 10, "y": 130, "font": "Sarabun", "size": 12, "text": "คำเตือน: {{warning}}", "align": "left", "bold": false},
+                        {"x": 10, "y": 160, "font": "Sarabun", "size": 14, "text": "รวม: {{qty}}", "align": "left", "bold": true}
+                    ]
+                };
+            } 
+            else if (val === 'drug_50x30') {
+                typeInput.value = 'drug_sticker_small';
+                presetConfig = {
+                    "width": 50, "height": 30,
+                    "lines": [
+                        {"x": 5, "y": 10, "font": "Sarabun", "size": 10, "text": "น้อง {{pet_name}}", "align": "left", "bold": true},
+                        {"x": 5, "y": 22, "font": "Sarabun", "size": 12, "text": "{{drug_name}}", "align": "left", "bold": true},
+                        {"x": 5, "y": 35, "font": "Sarabun", "size": 10, "text": "{{dose}} {{frequency}}", "align": "left", "bold": false},
+                        {"x": 5, "y": 48, "font": "Sarabun", "size": 10, "text": "{{timing}}", "align": "left", "bold": false},
+                        {"x": 5, "y": 60, "font": "Sarabun", "size": 10, "text": "รวม: {{qty}}", "align": "left", "bold": true}
+                    ]
+                };
+            }
+            else if (val === 'queue_80x50') {
+                typeInput.value = 'queue';
+                presetConfig = {
+                    "width": 80, "height": 50,
+                    "lines": [
+                        {"x": 0, "y": 20, "font": "Sarabun", "size": 16, "text": "หมายเลขคิวของคุณ", "align": "center", "bold": false},
+                        {"x": 0, "y": 50, "font": "Prompt", "size": 48, "text": "{{queue}}", "align": "center", "bold": true},
+                        {"x": 0, "y": 130, "font": "Sarabun", "size": 14, "text": "{{pet_name}}", "align": "center", "bold": true},
+                        {"x": 0, "y": 160, "font": "Sarabun", "size": 12, "text": "{{date}} {{time}}", "align": "center", "bold": false}
+                    ]
+                };
+            }
+            else if (val === 'vaccine_80x50') {
+                typeInput.value = 'vaccine_book';
+                presetConfig = {
+                    "width": 80, "height": 50,
+                    "lines": [
+                        {"x": 10, "y": 20, "font": "Sarabun", "size": 14, "text": "วันที่: {{date}}", "align": "left", "bold": false},
+                        {"x": 10, "y": 45, "font": "Sarabun", "size": 16, "text": "วัคซีน: {{vaccine_name}}", "align": "left", "bold": true},
+                        {"x": 10, "y": 70, "font": "Sarabun", "size": 12, "text": "นัดครั้งต่อไป: {{next_appt}}", "align": "left", "bold": false},
+                        {"x": 10, "y": 95, "font": "Sarabun", "size": 12, "text": "ผู้ฉีด: สัตวแพทย์", "align": "left", "bold": false}
+                    ]
+                };
+            }
+
+            // นำ Object มาแปลงเป็น String แบบมีย่อหน้าสวยงามให้ดูง่าย
+            configInput.value = JSON.stringify(presetConfig, null, 4);
+            
+            // รีเซ็ต Dropdown เพื่อให้เลือกซ้ำได้
+            document.getElementById('preset-selector').value = "";
+        }
+
         async function loadData() {
             const listContainer = document.getElementById('data-list');
             listContainer.innerHTML = '<div class="p-8 text-center text-gray-500">กำลังโหลด...</div>';
             
             try {
-                const { data, error } = await db.from(config[currentTab].table).select('*').order('id', { ascending: false });
+                // ถ้าเป็น template ใช้ template_type แทน id เพราะเป็น PK
+                const orderCol = currentTab === 'templates' ? 'template_type' : 'id';
+                const { data, error } = await db.from(config[currentTab].table).select('*').order(orderCol, { ascending: true });
                 if (error) throw error;
                 currentData = data || [];
                 renderList(currentData);
@@ -222,31 +308,49 @@
 
             items.forEach(item => {
                 const displayName = item.name || item.template_type || 'ไม่มีชื่อ';
+                // แยก PK ของตาราง templates (ใช้ string) กับตารางอื่น (ใช้ uuid)
+                const isTemplate = currentTab === 'templates';
+                const itemId = isTemplate ? item.template_type : item.id;
+                
                 const div = document.createElement('div');
-                div.className = `list-item ${selectedId === item.id ? 'selected' : ''}`;
+                div.className = `list-item ${selectedId === itemId ? 'selected' : ''}`;
+                
+                let subInfo = '';
+                if(item.species_id || item.main_cat_id) subInfo = '<div class="text-xs text-teal-400 mt-1">มีการอ้างอิงข้อมูล</div>';
+                else if(isTemplate) subInfo = '<div class="text-xs text-gray-400 mt-1">ตั้งค่าการพิมพ์</div>';
+
                 div.innerHTML = `
                     <div>
                         <div class="font-medium text-white">${displayName}</div>
-                        ${item.species_id || item.main_cat_id ? '<div class="text-xs text-teal-400 mt-1">มีการอ้างอิงหมวดหมู่หลัก</div>' : ''}
+                        ${subInfo}
                     </div>
-                    <div class="text-gray-500 text-sm">ID: ${item.id.toString().slice(0,4)}..</div>
+                    <div class="text-gray-500 text-xs text-right">
+                        ID: ${isTemplate ? itemId : itemId.toString().slice(0,6)}
+                    </div>
                 `;
-                div.onclick = () => selectItem(item);
+                div.onclick = () => selectItem(item, itemId);
                 listContainer.appendChild(div);
             });
         }
 
-        function selectItem(item) {
-            selectedId = item.id;
+        function selectItem(item, itemId) {
+            selectedId = itemId;
             document.getElementById('form-title').innerText = 'แก้ไขรายการ';
             document.getElementById('form-title').classList.replace('text-teal-400', 'text-yellow-400');
             document.getElementById('btn-delete').classList.remove('hidden');
             
             config[currentTab].fields.forEach(field => {
                 const el = document.getElementById(`f_${field.name}`);
-                if (el) el.value = item[field.name] || '';
+                if (el) {
+                    // ถ้าเป็นฟิลด์ config (JSON) ให้จัดฟอร์แมตให้อ่านง่าย
+                    if(field.name === 'config' && typeof item[field.name] === 'object') {
+                        el.value = JSON.stringify(item[field.name], null, 4);
+                    } else {
+                        el.value = item[field.name] || '';
+                    }
+                }
             });
-            renderList(currentData); // Re-render to show selected state
+            renderList(currentData);
         }
 
         function resetForm() {
@@ -268,36 +372,54 @@
 
             config[currentTab].fields.forEach(field => {
                 const el = document.getElementById(`f_${field.name}`);
-                if (!el.value.trim() && field.name !== 'config') hasError = true;
-                payload[field.name] = el.value.trim();
+                const val = el.value.trim();
+                
+                if (!val) {
+                    hasError = true;
+                } else {
+                    // ** ระบบป้องกัน JSON พัง **
+                    if (field.name === 'config' && currentTab === 'templates') {
+                        try {
+                            payload[field.name] = JSON.parse(val); // แปลง String กลับเป็น JSON Object
+                        } catch (e) {
+                            alert('⚠️ รูปแบบ JSON ไม่ถูกต้อง! กรุณาตรวจสอบปีกกาหรือลูกน้ำให้ครบ');
+                            hasError = true;
+                        }
+                    } else {
+                        payload[field.name] = val;
+                    }
+                }
             });
 
-            if (hasError) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+            if (hasError) return;
 
             try {
                 if (selectedId) {
-                    const { error } = await db.from(config[currentTab].table).update(payload).eq('id', selectedId);
+                    const pkField = currentTab === 'templates' ? 'template_type' : 'id';
+                    const { error } = await db.from(config[currentTab].table).update(payload).eq(pkField, selectedId);
                     if (error) throw error;
                 } else {
                     const { error } = await db.from(config[currentTab].table).insert([payload]);
                     if (error) throw error;
                 }
+                alert('✅ บันทึกข้อมูลสำเร็จ!');
                 resetForm();
                 loadData();
             } catch (err) {
-                alert('Error: ' + err.message);
+                alert('❌ Error: ' + err.message);
             }
         }
 
         async function deleteData() {
-            if (!selectedId || !confirm('ยืนยันการลบรายการนี้?')) return;
+            if (!selectedId || !confirm('⚠️ ยืนยันการลบรายการนี้?')) return;
             try {
-                const { error } = await db.from(config[currentTab].table).delete().eq('id', selectedId);
+                const pkField = currentTab === 'templates' ? 'template_type' : 'id';
+                const { error } = await db.from(config[currentTab].table).delete().eq(pkField, selectedId);
                 if (error) throw error;
                 resetForm();
                 loadData();
             } catch (err) {
-                alert('ไม่สามารถลบได้ อาจมีข้อมูลอื่นอ้างอิงอยู่ (' + err.message + ')');
+                alert('❌ ไม่สามารถลบได้ อาจมีข้อมูลอื่นอ้างอิงอยู่ (' + err.message + ')');
             }
         }
 
