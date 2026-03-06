@@ -13,33 +13,26 @@
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; height: 100vh; overflow: hidden; font-size: 1.1rem; }
-        
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1.2rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
-        
         .bill-card { background: rgba(30, 41, 59, 0.4); border: 1px solid var(--border); border-radius: 20px; cursor: pointer; transition: 0.2s; margin-bottom: 12px; }
         .bill-card:hover { border-color: var(--teal); background: rgba(20, 184, 17, 0.1); }
         .bill-card.active { border-color: var(--teal); background: rgba(20, 184, 17, 0.2); box-shadow: 0 0 15px rgba(20, 184, 17, 0.3); }
         .bill-card.paid { border-left: 6px solid var(--teal); opacity: 0.9; }
-
         .text-hn { font-family: 'monospace'; color: #2dd4bf; font-weight: 800; font-size: 1.2rem; }
         .text-owner { font-weight: 700; font-size: 1.3rem; color: white; }
-
         .cart-table thead { background: rgba(255, 255, 255, 0.05); font-size: 1rem; }
         .cart-item { border-bottom: 1px solid var(--border); font-size: 1.2rem; }
-
         .btn-pay { background: var(--teal); color: white; width: 100%; padding: 22px; border-radius: 15px; font-size: 1.6rem; font-weight: 800; transition: 0.3s; }
         .btn-pay:hover { filter: brightness(1.1); transform: translateY(-2px); }
-
         .numpad button { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 12px; padding: 15px; font-weight: 700; font-size: 1.4rem; transition: 0.1s; }
         .numpad button:active { background: var(--teal); color: white; }
-
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 900px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* Receipt Preview */
-        .receipt-paper { background: white; color: black; padding: 40px; width: 80mm; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); font-size: 13px; line-height: 1.5; }
-        .receipt-paper * { font-family: 'Sarabun', sans-serif !important; color: black !important; }
+        /* ส่วนจัดรูปแบบ Preview ใบเสร็จให้เหมือนจริง */
+        .receipt-paper { background: white; color: black; padding: 0; width: 80mm; margin: 0 auto; min-height: 100mm; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .receipt-element { position: absolute; color: black !important; line-height: 1.3; white-space: pre-wrap; font-family: 'Sarabun', sans-serif !important; }
 
         @media print { #main-ui, .modal-overlay { display: none !important; } }
     </style>
@@ -52,11 +45,9 @@
                 <a href="index.html" class="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-2xl">🏠</a>
                 <h2 class="text-2xl font-black text-teal-400 tracking-tighter">POS PK-VMS</h2>
             </div>
-            
             <div class="flex-1 overflow-y-auto pr-2">
                 <label class="text-sm font-bold text-gray-500 mb-4 block uppercase tracking-widest">⏳ บิลรอชำระวันนี้</label>
                 <div id="pending-bills-list" class="mb-10"></div>
-
                 <label class="text-sm font-bold text-teal-500 mb-4 block uppercase tracking-widest">✅ ชำระเงินแล้ววันนี้</label>
                 <div id="paid-bills-list"></div>
             </div>
@@ -67,7 +58,6 @@
                 <h1 class="text-3xl font-black text-white">🛒 รายการชำระเงิน</h1>
                 <button onclick="openCatalog()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition text-lg">+ เพิ่มสินค้า</button>
             </div>
-
             <div class="flex-1 overflow-y-auto rounded-3xl border border-white/5 bg-navy-light/50 shadow-inner">
                 <table class="w-full text-left cart-table">
                     <thead class="text-gray-400 uppercase">
@@ -102,7 +92,6 @@
                         <span class="text-5xl font-black text-teal-400" id="net-total">0.00</span>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-2 gap-4 mb-8">
                     <button onclick="setPayMethod('cash')" id="m-cash" class="p-5 rounded-2xl border-2 border-teal-500 bg-teal-500/10 text-center transition">
                         <div class="text-4xl">💵</div><div class="font-bold mt-2 text-lg">เงินสด</div>
@@ -111,7 +100,6 @@
                         <div class="text-4xl">📱</div><div class="font-bold mt-2 text-lg">เงินโอน</div>
                     </button>
                 </div>
-
                 <div id="cash-panel" class="space-y-4">
                     <label class="text-sm text-gray-500 block uppercase font-bold">รับเงินสด</label>
                     <input type="number" id="received-amount" class="input-box text-4xl font-black text-yellow-400 text-center py-4" placeholder="0.00" oninput="calculateChange()">
@@ -136,12 +124,12 @@
                 <h3 class="text-xl font-bold">ตรวจสอบใบเสร็จ</h3>
                 <button onclick="closePreview()" class="text-2xl">✕</button>
             </div>
-            <div class="flex-1 overflow-y-auto p-8 bg-slate-900">
+            <div class="flex-1 overflow-y-auto p-8 bg-slate-900 flex justify-center">
                 <div id="receipt-preview-content" class="receipt-paper"></div>
             </div>
             <div class="p-5 grid grid-cols-2 gap-4">
                 <button onclick="closePreview()" class="bg-slate-700 py-4 rounded-xl font-bold text-lg">แก้ไข</button>
-                <button onclick="confirmPayment()" class="bg-teal-600 py-4 rounded-xl font-bold text-lg">บันทึก & พิมพ์</button>
+                <button id="confirm-btn-final" onclick="confirmPayment()" class="bg-teal-600 py-4 rounded-xl font-bold text-lg">บันทึก & พิมพ์</button>
             </div>
         </div>
     </div>
@@ -170,20 +158,11 @@
             await fetchProducts();
         };
 
+        // --- ส่วน Logic ของคุณเหมือนเดิม ---
         async function fetchTodayBills() {
             const today = new Date().toISOString().split('T')[0];
-            const { data: pending } = await db.from('medical_records')
-                .select('id, owner_hn, created_at, total_cost, owners(owner_name), animals(pet_name)')
-                .or('payment_status.is.null,payment_status.eq.pending')
-                .gte('created_at', today)
-                .order('created_at', { ascending: false });
-
-            const { data: paid } = await db.from('medical_records')
-                .select('id, owner_hn, created_at, owners(owner_name), animals(pet_name), net_amount')
-                .eq('payment_status', 'paid')
-                .gte('created_at', today)
-                .order('created_at', { ascending: false });
-
+            const { data: pending } = await db.from('medical_records').select('id, owner_hn, created_at, total_cost, owners(owner_name), animals(pet_name)').or('payment_status.is.null,payment_status.eq.pending').gte('created_at', today).order('created_at', { ascending: false });
+            const { data: paid } = await db.from('medical_records').select('id, owner_hn, created_at, owners(owner_name), animals(pet_name), net_amount').eq('payment_status', 'paid').gte('created_at', today).order('created_at', { ascending: false });
             renderSidebar(pending, 'pending-bills-list', false);
             renderSidebar(paid, 'paid-bills-list', true);
         }
@@ -191,205 +170,119 @@
         function renderSidebar(data, elementId, isPaid) {
             const container = document.getElementById(elementId);
             if (data && data.length > 0) {
-                container.innerHTML = data.map(rec => `
-                    <div class="bill-card p-5 ${isPaid ? 'paid' : ''}" onclick="${isPaid ? `reprintReceipt('${rec.id}')` : `loadBillToCart('${rec.id}', this)`}">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-hn">HN: ${rec.owner_hn}</span>
-                            <span class="text-xs text-gray-500">${new Date(rec.created_at).toLocaleTimeString('th-TH')}</span>
-                        </div>
-                        <div class="text-owner">${rec.owners.owner_name}</div>
-                        <div class="flex justify-between items-center mt-2">
-                            <span class="text-sm text-gray-400">สัตว์เลี้ยง: ${rec.animals.pet_name}</span>
-                            <span class="text-lg font-black text-teal-400">฿${(isPaid ? rec.net_amount : rec.total_cost).toLocaleString()}</span>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = `<p class="text-gray-700 text-center py-6 text-sm italic">ไม่มีรายการ</p>`;
-            }
+                container.innerHTML = data.map(rec => `<div class="bill-card p-5 ${isPaid ? 'paid' : ''}" onclick="${isPaid ? `reprintReceipt('${rec.id}')` : `loadBillToCart('${rec.id}', this)`}"><div class="flex justify-between items-center mb-2"><span class="text-hn">HN: ${rec.owner_hn}</span><span class="text-xs text-gray-500">${new Date(rec.created_at).toLocaleTimeString('th-TH')}</span></div><div class="text-owner">${rec.owners.owner_name}</div><div class="flex justify-between items-center mt-2"><span class="text-sm text-gray-400">สัตว์เลี้ยง: ${rec.animals.pet_name}</span><span class="text-lg font-black text-teal-400">฿${(isPaid ? rec.net_amount : rec.total_cost).toLocaleString()}</span></div></div>`).join('');
+            } else { container.innerHTML = `<p class="text-gray-700 text-center py-6 text-sm italic">ไม่มีรายการ</p>`; }
         }
 
         async function loadBillToCart(recordId, element) {
-            if(element) {
-                document.querySelectorAll('.bill-card').forEach(el => el.classList.remove('active'));
-                element.classList.add('active');
-            }
-
+            if(element) { document.querySelectorAll('.bill-card').forEach(el => el.classList.remove('active')); element.classList.add('active'); }
             const { data: header } = await db.from('medical_records').select('*, owners(*), animals(*)').eq('id', recordId).single();
             const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
-            
             activeRecord = header;
             cart = (items || []).map(i => {
-                const type = i.item_type;
-                let label = "รายการ"; // ค่าเริ่มต้น
-                let qty = parseFloat(i.quantity);
-                let price = parseFloat(i.unit_price);
-
-                // --- แก้ไขตรงนี้: ตัดเลข 1 ออกจากหน่วย ---
-                if(type === 'Rx') {
-                    label = "ซอง"; qty = 1; price = parseFloat(i.total_price);
-                } else if(type === 'Tx' && i.item_name.toLowerCase().includes('inj')) {
-                    label = "เข็ม"; qty = 1; price = parseFloat(i.total_price);
-                } else if(type === 'Lab' || type === 'Tx') {
-                    label = "รายการ";
-                }
-
+                const type = i.item_type; let label = "รายการ"; let qty = parseFloat(i.quantity); let price = parseFloat(i.unit_price);
+                if(type === 'Rx') { label = "ซอง"; qty = 1; price = parseFloat(i.total_price); }
+                else if(type === 'Tx' && i.item_name.toLowerCase().includes('inj')) { label = "เข็ม"; qty = 1; price = parseFloat(i.total_price); }
                 return { id: i.id, name: i.item_name, price: price, qty: qty, type: type, label: label };
             });
             renderCart();
         }
 
-        async function fetchProducts() {
-            const { data } = await db.from('pharmacy').select('*').order('item_name');
-            allProducts = data || [];
-        }
-
+        async function fetchProducts() { const { data } = await db.from('pharmacy').select('*').order('item_name'); allProducts = data || []; }
         function openCatalog() { document.getElementById('catalog-modal').style.display = 'flex'; renderCatalog(allProducts); }
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
-        
-        function filterCatalog() {
-            const q = document.getElementById('catalog-search').value.toLowerCase();
-            renderCatalog(allProducts.filter(p => p.item_name.toLowerCase().includes(q)));
-        }
-
-        function renderCatalog(items) {
-            const grid = document.getElementById('catalog-grid');
-            grid.innerHTML = items.map(p => `
-                <div class="p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-blue-500 cursor-pointer transition" onclick='addToCart(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
-                    <div class="font-bold text-white text-lg mb-1">${p.item_name}</div>
-                    <div class="text-teal-400 font-bold text-xl">฿${parseFloat(p.price_per_unit).toFixed(2)}</div>
-                    <div class="text-xs text-gray-500 mt-2 uppercase tracking-widest">${p.category}</div>
-                </div>
-            `).join('');
-        }
-
-        function addToCart(p) {
-            const isMed = p.category !== 'General';
-            const existing = cart.find(i => i.name === p.item_name);
-            if (existing && !isMed) {
-                existing.qty++;
-            } else {
-                cart.push({ 
-                    name: p.item_name, 
-                    price: parseFloat(p.price_per_unit), 
-                    qty: 1, 
-                    type: isMed ? 'Rx' : 'Product',
-                    label: isMed ? 'ซอง' : 'ชิ้น' // ตัดเลข 1 ออก
-                });
-            }
-            renderCart();
-        }
-
-        function renderCart() {
-            const body = document.getElementById('cart-items-body');
-            document.getElementById('cart-empty').classList.toggle('hidden', cart.length > 0);
-            
-            body.innerHTML = cart.map((item, idx) => {
-                // เช็คว่ารายการไหนห้ามแก้จำนวน (พวกยาฉีดหรือ Rx ที่ Fix มาจากบันทึกหมอ)
-                const isFixed = item.label === "ซอง" || item.label === "เข็ม";
-
-                return `
-                <tr class="cart-item">
-                    <td class="p-5">
-                        <div class="font-bold text-white text-lg">${item.name}</div>
-                        <div class="text-xs text-gray-500 uppercase">${item.type}</div>
-                    </td>
-                    <td class="p-5 text-center">
-                        ${isFixed ? 
-                            `<div>
-                                <span class="font-black text-teal-400 text-2xl">${item.qty}</span>
-                                <div class="text-[10px] text-gray-500 uppercase">${item.label}</div>
-                            </div>` : 
-                            `<div class="flex flex-col items-center">
-                                <div class="flex items-center justify-center gap-2">
-                                    <button onclick="updateQty(${idx}, -1)" class="w-7 h-7 rounded bg-white/10 hover:bg-red-500/20">-</button>
-                                    <span class="font-bold text-lg w-8">${item.qty}</span>
-                                    <button onclick="updateQty(${idx}, 1)" class="w-7 h-7 rounded bg-white/10 hover:bg-teal-500/20">+</button>
-                                </div>
-                                <div class="text-[10px] text-gray-500 uppercase mt-1">${item.label}</div>
-                            </div>`
-                        }
-                    </td>
-                    <td class="p-5 text-right font-bold text-gray-300">฿${item.price.toFixed(2)}</td>
-                    <td class="p-5 text-right font-black text-white text-xl">฿${(item.price * item.qty).toFixed(2)}</td>
-                    <td class="p-5 text-center"><button onclick="removeItem(${idx})" class="text-red-500 hover:text-red-400 text-xl">🗑️</button></td>
-                </tr>
-            `}).join('');
-            calculateTotal();
-        }
-
+        function filterCatalog() { const q = document.getElementById('catalog-search').value.toLowerCase(); renderCatalog(allProducts.filter(p => p.item_name.toLowerCase().includes(q))); }
+        function renderCatalog(items) { const grid = document.getElementById('catalog-grid'); grid.innerHTML = items.map(p => `<div class="p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-blue-500 cursor-pointer transition" onclick='addToCart(${JSON.stringify(p).replace(/'/g, "&apos;")})'><div class="font-bold text-white text-lg mb-1">${p.item_name}</div><div class="text-teal-400 font-bold text-xl">฿${parseFloat(p.price_per_unit).toFixed(2)}</div><div class="text-xs text-gray-500 mt-2 uppercase tracking-widest">${p.category}</div></div>`).join(''); }
+        function addToCart(p) { const isMed = p.category !== 'General'; const existing = cart.find(i => i.name === p.item_name); if (existing && !isMed) { existing.qty++; } else { cart.push({ name: p.item_name, price: parseFloat(p.price_per_unit), qty: 1, type: isMed ? 'Rx' : 'Product', label: isMed ? 'ซอง' : 'ชิ้น' }); } renderCart(); }
+        function renderCart() { const body = document.getElementById('cart-items-body'); document.getElementById('cart-empty').classList.toggle('hidden', cart.length > 0); body.innerHTML = cart.map((item, idx) => `<tr class="cart-item"><td class="p-5"><div class="font-bold text-white text-lg">${item.name}</div><div class="text-xs text-gray-500 uppercase">${item.type}</div></td><td class="p-5 text-center">${(item.label === "ซอง" || item.label === "เข็ม") ? `<span class="font-black text-teal-400 text-lg">${item.qty} ${item.label}</span>` : `<div class="flex items-center justify-center gap-3"><button onclick="updateQty(${idx}, -1)" class="w-8 h-8 rounded-lg bg-white/10">-</button><span class="font-bold text-lg">${item.qty}</span><button onclick="updateQty(${idx}, 1)" class="w-8 h-8 rounded-lg bg-white/10">+</button></div>`}</td><td class="p-5 text-right font-bold text-gray-300">฿${item.price.toFixed(2)}</td><td class="p-5 text-right font-black text-white text-xl">฿${(item.price * item.qty).toFixed(2)}</td><td class="p-5 text-center"><button onclick="removeItem(${idx})" class="text-red-500 hover:text-red-400 text-xl">🗑️</button></td></tr>`).join(''); calculateTotal(); }
         function updateQty(idx, delta) { cart[idx].qty += delta; if (cart[idx].qty <= 0) cart.splice(idx, 1); renderCart(); }
         function removeItem(idx) { cart.splice(idx, 1); renderCart(); }
+        function calculateTotal() { const sum = cart.reduce((acc, i) => acc + (i.price * i.qty), 0); const disc = parseFloat(document.getElementById('discount-val').value) || 0; const net = sum - disc; document.getElementById('sum-price').innerText = sum.toLocaleString('th-TH', {minimumFractionDigits: 2}); document.getElementById('net-total').innerText = net.toLocaleString('th-TH', {minimumFractionDigits: 2}); calculateChange(); }
+        function setPayMethod(m) { payMethod = m; document.getElementById('m-cash').className = m === 'cash' ? 'p-5 rounded-2xl border-2 border-teal-500 bg-teal-500/10 text-center transition' : 'p-5 rounded-2xl border-2 border-transparent bg-white/5 text-center transition'; document.getElementById('m-transfer').className = m === 'transfer' ? 'p-5 rounded-2xl border-2 border-teal-500 bg-teal-500/10 text-center transition' : 'p-5 rounded-2xl border-2 border-transparent bg-white/5 text-center transition'; document.getElementById('cash-panel').style.opacity = m === 'cash' ? '1' : '0.2'; document.getElementById('cash-panel').style.pointerEvents = m === 'cash' ? 'auto' : 'none'; }
+        function quickCash(amt) { const el = document.getElementById('received-amount'); el.value = (parseFloat(el.value) || 0) + amt; calculateChange(); }
+        function calculateChange() { const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')); const received = parseFloat(document.getElementById('received-amount').value) || 0; const change = received - net; document.getElementById('change-val').innerText = change > 0 ? change.toLocaleString('th-TH', {minimumFractionDigits: 2}) : "0.00"; }
+        
+        // --- ส่วนสำคัญ: ฟังก์ชันดึง Template และประมวลผลพิกัด ---
 
-        function calculateTotal() {
-            const sum = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-            const disc = parseFloat(document.getElementById('discount-val').value) || 0;
-            const net = sum - disc;
-            document.getElementById('sum-price').innerText = sum.toLocaleString('th-TH', {minimumFractionDigits: 2});
-            document.getElementById('net-total').innerText = net.toLocaleString('th-TH', {minimumFractionDigits: 2});
-            calculateChange();
-        }
+        async function generateCustomReceipt() {
+            // 1. ดึง Template ID: receipt จาก Supabase
+            const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'receipt').single();
+            if (!template) {
+                alert("ไม่พบ Template ชื่อ 'receipt' กรุณาไปตั้งค่าที่หน้า set-printer.html");
+                return null;
+            }
 
-        function setPayMethod(m) {
-            payMethod = m;
-            document.getElementById('m-cash').className = m === 'cash' ? 'p-5 rounded-2xl border-2 border-teal-500 bg-teal-500/10 text-center transition' : 'p-5 rounded-2xl border-2 border-transparent bg-white/5 text-center transition';
-            document.getElementById('m-transfer').className = m === 'transfer' ? 'p-5 rounded-2xl border-2 border-teal-500 bg-teal-500/10 text-center transition' : 'p-5 rounded-2xl border-2 border-transparent bg-white/5 text-center transition';
-            document.getElementById('cash-panel').style.opacity = m === 'cash' ? '1' : '0.2';
-            document.getElementById('cash-panel').style.pointerEvents = m === 'cash' ? 'auto' : 'none';
-        }
+            const config = template.config;
+            const px = 3.78; // 1mm = 3.78px
 
-        function quickCash(amt) {
-            const el = document.getElementById('received-amount');
-            el.value = (parseFloat(el.value) || 0) + amt;
-            calculateChange();
-        }
-
-        function calculateChange() {
-            const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, ''));
-            const received = parseFloat(document.getElementById('received-amount').value) || 0;
-            const change = received - net;
-            document.getElementById('change-val').innerText = change > 0 ? change.toLocaleString('th-TH', {minimumFractionDigits: 2}) : "0.00";
-        }
-
-        function showPreview() {
-            if (cart.length === 0) return alert("กรุณาเลือกรายการสินค้า");
-            const preview = document.getElementById('receipt-preview-content');
+            // 2. เตรียมข้อมูลสำหรับตัวแปร {{}}
             const now = new Date();
-            let html = `
-                <div style="text-align:center; margin-bottom:15px; border-bottom: 2px solid #000; padding-bottom: 10px;">
-                    <div style="font-size:18px; font-weight:900;">PK-VMS Animal Clinic</div>
-                    <div style="font-size:12px;">ใบเสร็จรับเงิน / Receipt</div>
-                    <div style="font-size:11px;">วันที่: ${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}</div>
-                </div>
-                <div style="margin-bottom:15px; font-size:12px;">
-                    <b>HN:</b> ${activeRecord?.owner_hn || '-'} <br>
-                    <b>ลูกค้า:</b> คุณ ${activeRecord?.owners?.owner_name || 'ลูกค้าทั่วไป'} <br>
-                    <b>สัตว์เลี้ยง:</b> ${activeRecord?.animals?.pet_name || '-'}
-                </div>
-                <table style="width:100%; font-size:12px; border-collapse: collapse;">
-                    <tr style="border-bottom: 1px solid #ddd;">
-                        <th style="text-align:left;">รายการ</th>
-                        <th style="text-align:right;">ราคา</th>
-                    </tr>
-                    ${cart.map(i => `
-                        <tr>
-                            <td style="padding: 4px 0;">${i.name} (${i.qty} ${i.label})</td>
-                            <td style="text-align:right;">${(i.price * i.qty).toLocaleString()}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-                <div style="border-top:2px solid #000; margin-top:15px; padding-top:10px;">
-                    <div style="display:flex; justify-content:space-between;"><span>ส่วนลด:</span> <span>-${parseFloat(document.getElementById('discount-val').value).toLocaleString()}</span></div>
-                    <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:900; margin-top:5px;">
-                        <span>ยอดสุทธิ:</span> <span>฿${document.getElementById('net-total').innerText}</span>
-                    </div>
-                </div>
-                <div style="text-align:center; margin-top:20px; font-size:10px; font-style: italic;">
-                    ขอบคุณที่ใช้บริการ / Thank you
-                </div>
-            `;
-            preview.innerHTML = html;
-            document.getElementById('preview-modal').style.display = 'flex';
+            const itemsText = cart.map((item, idx) => {
+                const name = item.name.substring(0, 20);
+                const dots = ".".repeat(Math.max(2, 25 - name.length));
+                return `${idx + 1}. ${name}${dots}${(item.price * item.qty).toLocaleString()}`;
+            }).join('\n');
+
+            const dataVars = {
+                clinic_name: "PK-VMS Animal Clinic",
+                owner_name: activeRecord?.owners?.owner_name || "ลูกค้าทั่วไป",
+                pet_name: activeRecord?.animals?.pet_name || "-",
+                hn: activeRecord?.owner_hn || "-",
+                receipt_no: activeRecord?.id ? `REC-${activeRecord.id.substring(0,8)}` : "-",
+                date: now.toLocaleDateString('th-TH'),
+                time: now.toLocaleTimeString('th-TH'),
+                items_list: itemsText,
+                total_price: document.getElementById('sum-price').innerText,
+                discount_val: document.getElementById('discount-val').value,
+                net_total: document.getElementById('net-total').innerText,
+                pay_method: payMethod === 'cash' ? "เงินสด" : "เงินโอน"
+            };
+
+            // 3. คำนวณการ "ดัน" พิกัด Y (Smart Push)
+            const sortedLines = [...config.lines].sort((a, b) => a.y - b.y);
+            let pushOffset = 0;
+            const lineHeightMm = 5.2; // ระยะห่างต่อ 1 บรรทัดสินค้า
+
+            return sortedLines.map(l => {
+                const currentY = parseFloat(l.y) + pushOffset;
+                let rawText = l.text || "";
+                
+                // แทนที่ตัวแปร
+                let renderedText = rawText.replace(/\{\{(.*?)\}\}/g, (match, key) => dataVars[key.trim()] || match);
+
+                // ถ้าเจอ items_list ให้บวกระยะดันสำหรับองค์ประกอบถัดไป
+                if (rawText.includes('{{items_list}}')) {
+                    const lineCount = renderedText.split('\n').length;
+                    if (lineCount > 1) pushOffset += (lineCount - 1) * lineHeightMm;
+                }
+
+                // สร้าง HTML Element ตาม Config
+                let style = `top:${currentY * px}px; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+                
+                if (l.type === 'text') {
+                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
+                    else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x * px}px;`;
+                    else style += `left:${l.x * px}px; text-align:left;`;
+                    return `<div class="receipt-element" style="${style}">${renderedText}</div>`;
+                } else {
+                    const bs = l.borderStyle || 'solid';
+                    const bg = l.fill ? 'black' : 'transparent';
+                    let rStyle = `top:${currentY * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px ${bs} black; background:${bg}; border-radius:${l.radius || 0}px;`;
+                    if (l.align === 'center') rStyle += `left:50%; transform:translateX(-50%);`;
+                    else if (l.align === 'right') rStyle += `right:${l.x * px}px;`;
+                    else rStyle += `left:${l.x * px}px;`;
+                    return `<div class="receipt-element" style="${rStyle}"></div>`;
+                }
+            }).join('');
+        }
+
+        async function showPreview() {
+            if (cart.length === 0) return alert("กรุณาเลือกรายการสินค้า");
+            const htmlElements = await generateCustomReceipt();
+            if (htmlElements) {
+                document.getElementById('receipt-preview-content').innerHTML = htmlElements;
+                document.getElementById('preview-modal').style.display = 'flex';
+            }
         }
 
         function closePreview() { document.getElementById('preview-modal').style.display = 'none'; }
@@ -401,19 +294,29 @@
 
                 if (activeRecord) {
                     const { error } = await db.from('medical_records').update({
-                        payment_status: 'paid',
-                        discount: discount,
-                        net_amount: net,
-                        payment_method: payMethod,
-                        paid_at: new Date().toISOString()
+                        payment_status: 'paid', discount: discount, net_amount: net,
+                        payment_method: payMethod, paid_at: new Date().toISOString()
                     }).eq('id', activeRecord.id);
                     if (error) throw error;
                 }
 
+                // พิมพ์ด้วย Template จริง
+                const htmlElements = await generateCustomReceipt();
                 const win = window.open('', '_blank', 'width=450,height=700');
-                win.document.write(`<html><head><title>Print Receipt</title><style>body{margin:0;padding:30px;font-family:sans-serif;}</style></head><body>${document.getElementById('receipt-preview-content').innerHTML}</body></html>`);
+                win.document.write(`
+                    <html><head><title>Print Receipt</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap');
+                        body { margin: 0; padding: 0; font-family: 'Sarabun'; }
+                        .page { position: relative; width: 80mm; min-height: 100mm; background: white; }
+                        .receipt-element { position: absolute; white-space: pre-wrap; color: black; line-height: 1.4; }
+                        @media print { @page { size: 80mm auto; margin: 0; } }
+                    </style></head>
+                    <body><div class="page">${htmlElements}</div>
+                    <script>window.onload = function() { setTimeout(() => { window.print(); window.close(); }, 500); };<\/script>
+                    </body></html>
+                `);
                 win.document.close();
-                setTimeout(() => { win.print(); win.close(); }, 500);
 
                 alert("บันทึกการชำระเงินสำเร็จ!");
                 location.reload();
