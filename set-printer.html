@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <title>ตั้งค่าเครื่องพิมพ์และกระดาษ | PK-VMS</title>
+    <title>ตั้งค่าเครื่องพิมพ์และกระดาษ | PK-VMS Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,7 +11,7 @@
 
     <style>
         :root {
-            --navy: #0b1929; --navy-mid: #112240; --teal: #0ea5a0; --teal-light: #14c4bc;
+            --navy: #0b1929; --navy-mid: #112240; --teal: #14b811; --teal-light: #14c4bc;
             --surface: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.1);
             --text: #e2e8f0; --text-dim: #94a3b8;
         }
@@ -20,13 +20,10 @@
         .app-container { display: flex; flex-direction: column; height: 100vh; }
         .editor-workspace { display: flex; flex: 1; overflow: hidden; }
         
-        /* Custom Inputs */
-        .input-group label { display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.3rem; font-weight: 600; }
         .input-control { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: #fff; padding: 0.5rem 0.8rem; border-radius: 8px; outline: none; transition: border-color 0.2s; font-family: inherit; font-size: 0.9rem; }
         .input-control:focus { border-color: var(--teal); }
         select.input-control option { background: var(--navy-mid); }
 
-        /* Canvas (Sticker) Preview */
         .canvas-wrapper {
             background: #ffffff;
             box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
@@ -46,26 +43,17 @@
             user-select: none;
             border: 1px dashed transparent;
         }
-        .canvas-element:hover { border-color: rgba(14, 165, 160, 0.5); background: rgba(14, 165, 160, 0.05); }
-        .canvas-element.active { border-color: var(--teal); background: rgba(14, 165, 160, 0.1); z-index: 10; }
+        .canvas-element:hover { border-color: rgba(20, 184, 17, 0.5); background: rgba(20, 184, 17, 0.05); }
+        .canvas-element.active { border-color: var(--teal); background: rgba(20, 184, 17, 0.1); z-index: 10; }
         
-        .var-badge { background: rgba(14, 165, 160, 0.15); border: 1px solid rgba(14, 165, 160, 0.3); color: var(--teal-light); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; display: inline-block; margin: 2px; cursor: pointer; transition: 0.2s; }
-        .var-badge:hover { background: var(--teal); color: #fff; }
+        .var-badge { background: rgba(20, 184, 17, 0.15); border: 1px solid rgba(20, 184, 17, 0.3); color: #4ade80; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; display: inline-block; margin: 2px; cursor: pointer; transition: 0.2s; }
+        .var-badge:hover { background: #14b811; color: #fff; }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
-    <script>
-        if (sessionStorage.getItem("isLoggedIn") !== "true") {
-            window.location.href = "index.html";
-        }
-    </script>
-
     <div class="app-container">
         <header class="p-5 border-b border-white/5 bg-navy/80 backdrop-blur-md shrink-0 flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -79,7 +67,6 @@
         </header>
 
         <div class="editor-workspace flex flex-col lg:flex-row">
-            
             <div class="w-full lg:w-2/3 flex flex-col border-r border-white/10 bg-[#0a1320]">
                 <div class="p-5 border-b border-white/5 bg-black/20 flex flex-wrap gap-6 items-end">
                     <div class="flex-1 min-w-[200px]">
@@ -89,14 +76,8 @@
                         </select>
                     </div>
                     <div class="flex gap-4">
-                        <div class="w-24">
-                            <label class="block text-xs text-gray-400 mb-1">กว้าง (มม.)</label>
-                            <input type="number" id="paper_w" class="input-control text-center" value="80" onchange="updatePaperSize()">
-                        </div>
-                        <div class="w-24">
-                            <label class="block text-xs text-gray-400 mb-1">สูง (มม.)</label>
-                            <input type="number" id="paper_h" class="input-control text-center" value="50" onchange="updatePaperSize()">
-                        </div>
+                        <div class="w-24"><label class="block text-xs text-gray-400 mb-1">กว้าง (มม.)</label><input type="number" id="paper_w" class="input-control text-center" value="80" onchange="updatePaperSize()"></div>
+                        <div class="w-24"><label class="block text-xs text-gray-400 mb-1">สูง (มม.)</label><input type="number" id="paper_h" class="input-control text-center" value="50" onchange="updatePaperSize()"></div>
                     </div>
                 </div>
 
@@ -104,70 +85,61 @@
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-lg font-bold text-white">📝 องค์ประกอบบนสติ๊กเกอร์ (Elements)</h3>
                         <div class="flex gap-2">
-                            <button onclick="addLine('text')" class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-bold text-white transition">+ เพิ่มข้อความ</button>
-                            <button onclick="addLine('image')" class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-bold text-teal-400 transition">+ แทรกรูปภาพ/QR (สูงสุด 2)</button>
+                            <button onclick="addLine('text')" class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-bold">+ เพิ่มข้อความ</button>
+                            <button onclick="addLine('image')" class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-bold text-teal-400">+ รูปภาพ/QR</button>
                         </div>
                     </div>
-                    
-                    <div id="lines_container" class="space-y-4 pb-20">
-                        </div>
+                    <div id="lines_container" class="space-y-4 pb-20"></div>
                 </div>
             </div>
 
             <div class="w-full lg:w-1/3 flex flex-col bg-[#050b14]">
-                
                 <div class="flex-1 relative flex flex-col">
                     <div class="p-3 bg-black/40 border-b border-white/5 flex justify-between items-center z-10">
-                        <span class="text-sm font-bold text-gray-400">👁️ ตัวอย่างการพิมพ์ (Preview)</span>
+                        <span class="text-sm font-bold text-gray-400">👁️ พรีวิว (Preview)</span>
                         <div class="flex items-center gap-2">
-                            <span class="text-xs text-gray-500">Zoom</span>
                             <input type="range" id="zoom_level" min="50" max="250" value="120" class="w-24 accent-teal-500" oninput="applyZoom()">
-                            <span id="zoom_val" class="text-xs font-mono text-teal-400 w-8 text-right">120%</span>
+                            <span id="zoom_val" class="text-xs font-mono text-teal-400 w-8">120%</span>
                         </div>
                     </div>
                     <div class="flex-1 overflow-auto p-6 flex justify-center items-start">
-                        <div id="canvas_wrapper" class="canvas-wrapper">
-                            </div>
+                        <div id="canvas_wrapper" class="canvas-wrapper"></div>
                     </div>
                 </div>
 
-                <div class="h-64 border-t border-white/10 bg-[#0a1320] flex flex-col shrink-0">
-                    <div class="p-3 bg-black/20 border-b border-white/5">
-                        <span class="text-sm font-bold text-teal-400">💡 ตัวแปรที่รองรับ (กดเพื่อคัดลอก)</span>
-                    </div>
+                <div class="h-80 border-t border-white/10 bg-[#0a1320] flex flex-col shrink-0">
+                    <div class="p-3 bg-black/20 border-b border-white/5"><span class="text-sm font-bold text-teal-400">💡 ตัวแปร (กดเพื่อคัดลอก)</span></div>
                     <div class="p-4 overflow-y-auto space-y-4">
                         <div>
-                            <div class="text-xs text-gray-500 mb-1">ข้อมูลสัตว์และเจ้าของ</div>
+                            <div class="text-xs text-gray-500 mb-1">🏥 ข้อมูลคลินิก</div>
+                            <span class="var-badge" onclick="copyVar(this)">{{clinic_name}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{phone}}</span>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">🐾 สัตว์และเจ้าของ</div>
                             <span class="var-badge" onclick="copyVar(this)">{{pet_name}}</span>
                             <span class="var-badge" onclick="copyVar(this)">{{species}}</span>
                             <span class="var-badge" onclick="copyVar(this)">{{sex}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{breed}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{weight}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{owner_name}}</span>
                             <span class="var-badge" onclick="copyVar(this)">{{hn}}</span>
                         </div>
                         <div>
-                            <div class="text-xs text-gray-500 mb-1">ข้อมูลยา (หน้าซองยา)</div>
+                            <div class="text-xs text-blue-400 mb-1">💊 ยา (ระบบใหม่ - แยกช่อง)</div>
                             <span class="var-badge" onclick="copyVar(this)">{{drug_name}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{drug_name_th}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{dose}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{dose_per_time}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{unit}}</span>
                             <span class="var-badge" onclick="copyVar(this)">{{frequency}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{timing}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{duration}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{qty}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{warning}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{meal_timing}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{day_timing}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{duration_days}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{total_qty}}</span>
                         </div>
                         <div>
-                            <div class="text-xs text-gray-500 mb-1">คิวและวัคซีน</div>
-                            <span class="var-badge" onclick="copyVar(this)">{{queue}}</span>
+                            <div class="text-xs text-gray-500 mb-1">🕰️ อื่นๆ</div>
                             <span class="var-badge" onclick="copyVar(this)">{{date}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{time}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{vaccine_name}}</span>
-                            <span class="var-badge" onclick="copyVar(this)">{{next_appt}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{queue}}</span>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -176,105 +148,65 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
-        // --- Mock Data ข้อมูลจำลองสำหรับแสดงใน Preview ให้เห็นภาพจริง ---
+        // --- Mock Data: อัปเดตตัวแปรใหม่ให้สอดคล้องกับ SQL Schema ---
         const mockData = {
+            clinic_name: "PK-VMS Clinic",
+            phone: "081-XXX-XXXX",
             pet_name: "โคล่า",
             species: "สุนัข",
             sex: "ผู้",
-            breed: "ชิวาวา",
-            weight: "4.5",
-            owner_name: "นายสมชาย ใจดี",
             hn: "690001",
-            drug_name: "Amoxicillin 250mg",
-            drug_name_th: "ยาฆ่าเชื้อ (แก้อักเสบ)",
-            dose: "1 เม็ด",
-            frequency: "เช้า-เย็น",
-            timing: "หลังอาหารทันที",
-            duration: "5 วัน",
-            qty: "10 เม็ด",
-            warning: "ห้ามหยุดยาเอง กินติดต่อกันจนหมด",
-            queue: "A01",
+            drug_name: "Amoxicillin 500mg",
+            drug_name_th: "อะม็อกซี่ 500",
+            // ตัวแปรใหม่จากตาราง medical_record_items
+            dose_per_time: "1", 
+            unit: "เม็ด",
+            frequency: "วันละ 2 ครั้ง",
+            meal_timing: "หลังอาหารทันที",
+            day_timing: "เช้า-เย็น",
+            duration_days: "7",
+            total_qty: "14",
+            warning: "ระวังอาการแพ้ยา/อาเจียน",
             date: "06/03/2026",
-            time: "10:30 น.",
-            vaccine_name: "วัคซีนพิษสุนัขบ้า",
-            next_appt: "06/03/2027"
+            queue: "A01"
         };
 
-        // ฟังก์ชันแทนที่ตัวแปร
         function replaceVars(text) {
             if (!text) return "";
-            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
-                return mockData[key.trim()] || match;
-            });
+            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
         }
 
-        // 1. Load Templates Dropdown
         async function loadTemplateDropdown() {
             try {
-                const { data: templates, error } = await db.from('print_templates').select('template_type').order('template_type');
-                if (error) throw error;
-
+                const { data } = await db.from('print_templates').select('template_type').order('template_type');
                 const selectEl = document.getElementById('template_type');
-                if (templates && templates.length > 0) {
-                    selectEl.innerHTML = '<option value="" disabled>-- เลือกรูปแบบเอกสาร --</option>' + 
-                        templates.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join('');
-                    selectEl.value = templates[0].template_type;
+                if (data) {
+                    selectEl.innerHTML = data.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join('');
                     await loadTemplate();
-                } else {
-                    selectEl.innerHTML = '<option value="" disabled>ไม่พบข้อมูลใน Master Data</option>';
                 }
-            } catch (err) { console.error("Error loading templates:", err); }
+            } catch (err) { console.error(err); }
         }
 
-        // 2. Load Selected Template Config
         async function loadTemplate() {
             const type = document.getElementById('template_type').value;
-            if (!type) return;
-
-            try {
-                const { data, error } = await db.from('print_templates').select('config').eq('template_type', type).single();
-                if (error) throw error;
-                
-                if (data && data.config) {
-                    currentConfig = typeof data.config === 'string' ? JSON.parse(data.config) : data.config;
-                    document.getElementById('paper_w').value = currentConfig.width || 80;
-                    document.getElementById('paper_h').value = currentConfig.height || 50;
-                    
-                    currentConfig.lines = (currentConfig.lines || []).map(line => ({
-                        ...line,
-                        type: line.type || 'text',
-                        align: line.align || 'left',
-                        italic: line.italic || false
-                    }));
-
-                    activeLineIndex = -1;
-                    renderLinesList();
-                    renderCanvas();
-                    applyZoom();
-                }
-            } catch (err) { console.error("Error loading config:", err); }
+            const { data } = await db.from('print_templates').select('config').eq('template_type', type).single();
+            if (data) {
+                currentConfig = data.config;
+                document.getElementById('paper_w').value = currentConfig.width || 80;
+                document.getElementById('paper_h').value = currentConfig.height || 50;
+                renderLinesList(); renderCanvas(); applyZoom();
+            }
         }
 
-        // 3. Save to DB
         async function saveTemplate() {
             const type = document.getElementById('template_type').value;
-            if (!type) return alert('กรุณาเลือกรูปแบบเอกสารก่อนบันทึก');
-            try {
-                currentConfig.width = parseFloat(document.getElementById('paper_w').value);
-                currentConfig.height = parseFloat(document.getElementById('paper_h').value);
-
-                const { error } = await db.from('print_templates').update({ config: currentConfig }).eq('template_type', type);
-                if (error) throw error;
-                alert('✅ บันทึกรูปแบบเอกสารเรียบร้อยแล้ว');
-            } catch (err) { alert('❌ Error: ' + err.message); }
+            currentConfig.width = parseFloat(document.getElementById('paper_w').value);
+            currentConfig.height = parseFloat(document.getElementById('paper_h').value);
+            const { error } = await db.from('print_templates').update({ config: currentConfig }).eq('template_type', type);
+            if (!error) alert('✅ บันทึกสำเร็จ');
         }
 
-        // --- Editor Functions ---
-        function updatePaperSize() {
-            currentConfig.width = parseFloat(document.getElementById('paper_w').value) || 80;
-            currentConfig.height = parseFloat(document.getElementById('paper_h').value) || 50;
-            renderCanvas();
-        }
+        function updatePaperSize() { renderCanvas(); }
 
         function applyZoom() {
             const zoom = document.getElementById('zoom_level').value;
@@ -284,225 +216,80 @@
 
         function copyVar(element) {
             navigator.clipboard.writeText(element.innerText);
-            const oldText = element.innerText;
-            element.innerText = "Copied!";
-            setTimeout(() => element.innerText = oldText, 1000);
-        }
-
-        // Image Handling
-        function handleImageUpload(index, input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                currentConfig.lines[index].url = e.target.result;
-                renderLinesList();
-                renderCanvas();
-            };
-            reader.readAsDataURL(file);
+            const originalText = element.innerText;
+            element.innerText = "คัดลอกแล้ว!";
+            setTimeout(() => element.innerText = originalText, 1000);
         }
 
         function addLine(type) {
-            if (type === 'image') {
-                const imgCount = currentConfig.lines.filter(l => l.type === 'image').length;
-                if (imgCount >= 2) return alert("สามารถใส่รูปภาพได้สูงสุด 2 รูปเท่านั้นครับ");
-                currentConfig.lines.push({ type: 'image', url: '', x: 5, y: 5, w: 20, h: 20 });
-            } else {
-                currentConfig.lines.push({ type: 'text', x: 5, y: 10, font: "Sarabun", size: 14, text: "ข้อความใหม่", align: "left", bold: false, italic: false });
-            }
+            if (type === 'image') currentConfig.lines.push({ type: 'image', url: '', x: 5, y: 5, w: 20, h: 20 });
+            else currentConfig.lines.push({ type: 'text', x: 5, y: 10, font: "Sarabun", size: 14, text: "ข้อความใหม่", align: "left", bold: false });
             activeLineIndex = currentConfig.lines.length - 1;
-            renderLinesList();
-            renderCanvas();
+            renderLinesList(); renderCanvas();
         }
 
         function removeLine(index) {
             currentConfig.lines.splice(index, 1);
             activeLineIndex = -1;
-            renderLinesList();
-            renderCanvas();
+            renderLinesList(); renderCanvas();
         }
 
         function updateLine(index, key, value) {
             if (['x', 'y', 'size', 'w', 'h'].includes(key)) value = parseFloat(value) || 0;
             currentConfig.lines[index][key] = value;
-            
-            if(key === 'text') renderCanvas(); 
-            else { renderLinesList(); renderCanvas(); }
-        }
-
-        // Render UI List
-        function renderLinesList() {
-            const container = document.getElementById('lines_container');
-            container.innerHTML = '';
-            
-            currentConfig.lines.forEach((line, i) => {
-                const isActive = (i === activeLineIndex);
-                const isImage = line.type === 'image';
-                const el = document.createElement('div');
-                el.className = `rounded-xl border transition-all overflow-hidden ${isActive ? 'bg-navy-mid border-teal-500 shadow-lg shadow-teal-500/10' : 'bg-black/30 border-white/10'}`;
-                
-                const headerHtml = `
-                    <div class="flex justify-between items-center p-3 cursor-pointer ${isActive ? 'bg-teal-500/10' : ''}" onclick="setActiveLine(${i})">
-                        <div class="flex items-center gap-3">
-                            <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-gray-400 font-mono">${i+1}</span>
-                            <span class="font-bold text-sm ${isActive ? 'text-white' : 'text-gray-400'} truncate" style="max-width: 300px;">
-                                ${isImage ? '🖼️ รูปภาพ / Logo' : '📝 ' + (line.text || '(ว่าง)')}
-                            </span>
-                        </div>
-                        <button class="text-red-400 hover:bg-red-500/20 px-3 py-1 rounded-md text-xs font-bold transition" onclick="event.stopPropagation(); removeLine(${i})">ลบ</button>
-                    </div>
-                `;
-
-                let bodyHtml = '';
-                if (isActive) {
-                    if (isImage) {
-                        bodyHtml = `
-                            <div class="p-4 border-t border-white/5 bg-black/20 grid grid-cols-4 gap-4">
-                                <div class="col-span-4">
-                                    <label class="block text-xs text-gray-400 mb-1">อัปโหลดไฟล์รูปภาพ (แนะนำ PNG/JPG)</label>
-                                    <input type="file" accept="image/*" class="input-control text-sm py-1" onchange="handleImageUpload(${i}, this)">
-                                    ${line.url ? `<img src="${line.url}" class="h-12 mt-2 object-contain bg-white/10 rounded">` : ''}
-                                </div>
-                                <div><label class="block text-[10px] text-gray-400 mb-1">แกน X (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.x}" onchange="updateLine(${i}, 'x', this.value)"></div>
-                                <div><label class="block text-[10px] text-gray-400 mb-1">แกน Y (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.y}" onchange="updateLine(${i}, 'y', this.value)"></div>
-                                <div><label class="block text-[10px] text-gray-400 mb-1">กว้าง (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.w}" onchange="updateLine(${i}, 'w', this.value)"></div>
-                                <div><label class="block text-[10px] text-gray-400 mb-1">สูง (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.h}" onchange="updateLine(${i}, 'h', this.value)"></div>
-                            </div>
-                        `;
-                    } else {
-                        bodyHtml = `
-                            <div class="p-4 border-t border-white/5 bg-black/20 grid grid-cols-6 gap-4">
-                                <div class="col-span-6"><label class="block text-[10px] text-teal-400 mb-1">ข้อความ / ตัวแปร {{var}}</label><input type="text" class="input-control font-mono" value="${line.text.replace(/"/g, '&quot;')}" oninput="updateLine(${i}, 'text', this.value)"></div>
-                                
-                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">ฟอนต์ (Font)</label>
-                                    <select class="input-control text-sm py-1" onchange="updateLine(${i}, 'font', this.value)">
-                                        <option value="Sarabun" ${line.font==='Sarabun'?'selected':''}>Sarabun</option>
-                                        <option value="Prompt" ${line.font==='Prompt'?'selected':''}>Prompt</option>
-                                    </select>
-                                </div>
-                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">ขนาด (pt)</label><input type="number" class="input-control text-sm py-1" value="${line.size}" onchange="updateLine(${i}, 'size', this.value)"></div>
-                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">การจัดตำแหน่ง</label>
-                                    <select class="input-control text-sm py-1" onchange="updateLine(${i}, 'align', this.value)">
-                                        <option value="left" ${line.align==='left'?'selected':''}>ซ้าย (Left)</option>
-                                        <option value="center" ${line.align==='center'?'selected':''}>กลาง (Center)</option>
-                                        <option value="right" ${line.align==='right'?'selected':''}>ขวา (Right)</option>
-                                    </select>
-                                </div>
-
-                                <div class="col-span-2 flex flex-col gap-2 justify-center mt-2">
-                                    <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white">
-                                        <input type="checkbox" ${line.bold ? 'checked' : ''} onchange="updateLine(${i}, 'bold', this.checked)" class="accent-teal-500 w-4 h-4">
-                                        <b>ตัวหนา (Bold)</b>
-                                    </label>
-                                    <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white">
-                                        <input type="checkbox" ${line.italic ? 'checked' : ''} onchange="updateLine(${i}, 'italic', this.checked)" class="accent-teal-500 w-4 h-4">
-                                        <i>ตัวเอียง (Italic)</i>
-                                    </label>
-                                </div>
-                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">แกน X (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.x}" onchange="updateLine(${i}, 'x', this.value)"></div>
-                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">แกน Y (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.y}" onchange="updateLine(${i}, 'y', this.value)"></div>
-                            </div>
-                        `;
-                    }
-                }
-
-                el.innerHTML = headerHtml + bodyHtml;
-                container.appendChild(el);
-            });
-        }
-
-        function setActiveLine(index) {
-            activeLineIndex = index;
-            renderLinesList();
             renderCanvas();
         }
 
-        // Render Canvas - มีการจำลองข้อมูลตัวแปร (Mock)
+        function renderLinesList() {
+            const container = document.getElementById('lines_container');
+            container.innerHTML = currentConfig.lines.map((line, i) => {
+                const isActive = (i === activeLineIndex);
+                return `
+                    <div class="p-3 rounded-xl border ${isActive ? 'bg-navy-mid border-teal-500' : 'bg-black/30 border-white/10'}">
+                        <div class="flex justify-between items-center mb-2 cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
+                            <span class="text-sm font-bold">${line.type === 'image' ? '🖼️ รูปภาพ' : '📝 ' + line.text}</span>
+                            <button class="text-red-400 text-xs" onclick="removeLine(${i})">ลบ</button>
+                        </div>
+                        ${isActive ? `
+                            <div class="grid grid-cols-2 gap-2 mt-3">
+                                <input type="text" class="input-control col-span-2" value="${line.text || ''}" oninput="updateLine(${i}, 'text', this.value)" placeholder="ข้อความ">
+                                <div class="flex gap-1"><span class="text-[10px] w-6">X</span><input type="number" class="input-control text-xs" value="${line.x}" oninput="updateLine(${i}, 'x', this.value)"></div>
+                                <div class="flex gap-1"><span class="text-[10px] w-6">Y</span><input type="number" class="input-control text-xs" value="${line.y}" oninput="updateLine(${i}, 'y', this.value)"></div>
+                                ${line.type === 'text' ? `
+                                    <div class="flex gap-1"><span class="text-[10px] w-6">Size</span><input type="number" class="input-control text-xs" value="${line.size}" oninput="updateLine(${i}, 'size', this.value)"></div>
+                                    <select class="input-control text-xs" onchange="updateLine(${i}, 'align', this.value)">
+                                        <option value="left" ${line.align==='left'?'selected':''}>ซ้าย</option>
+                                        <option value="center" ${line.align==='center'?'selected':''}>กลาง</option>
+                                    </select>
+                                ` : `
+                                    <div class="flex gap-1"><span class="text-[10px] w-6">W</span><input type="number" class="input-control text-xs" value="${line.w}" oninput="updateLine(${i}, 'w', this.value)"></div>
+                                    <div class="flex gap-1"><span class="text-[10px] w-6">H</span><input type="number" class="input-control text-xs" value="${line.h}" oninput="updateLine(${i}, 'h', this.value)"></div>
+                                `}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
             const mmToPx = 3.78; 
-            wrapper.style.width = (currentConfig.width * mmToPx) + 'px';
-            wrapper.style.height = (currentConfig.height * mmToPx) + 'px';
-            wrapper.innerHTML = '';
-
-            currentConfig.lines.forEach((line, i) => {
-                const el = document.createElement(line.type === 'image' ? 'img' : 'div');
-                el.className = `canvas-element ${i === activeLineIndex ? 'active' : ''}`;
-                
+            wrapper.style.width = (parseFloat(document.getElementById('paper_w').value) * mmToPx) + 'px';
+            wrapper.style.height = (parseFloat(document.getElementById('paper_h').value) * mmToPx) + 'px';
+            wrapper.innerHTML = currentConfig.lines.map((line, i) => {
                 if (line.type === 'image') {
-                    if (line.url) el.src = line.url;
-                    else { el.style.background = '#eee'; el.alt = 'No Image'; }
-                    el.style.left = (line.x * mmToPx) + 'px';
-                    el.style.top = (line.y * mmToPx) + 'px';
-                    el.style.width = (line.w * mmToPx) + 'px';
-                    el.style.height = (line.h * mmToPx) + 'px';
-                    el.style.objectFit = 'contain';
-                } else {
-                    // *** เรียกใช้ฟังก์ชันแปลงตัวแปรให้เป็นข้อความจำลอง ***
-                    el.innerText = replaceVars(line.text);
-                    
-                    if (line.align === 'center') {
-                        el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
-                        el.style.textAlign = 'center'; el.style.width = '100%';
-                    } else if (line.align === 'right') {
-                        el.style.right = (line.x * mmToPx) + 'px'; el.style.textAlign = 'right';
-                    } else {
-                        el.style.left = (line.x * mmToPx) + 'px'; el.style.textAlign = 'left';
-                    }
-                    el.style.top = (line.y * mmToPx) + 'px';
-                    el.style.fontFamily = `'${line.font}', sans-serif`;
-                    el.style.fontSize = (line.size * 1.33) + 'px';
-                    el.style.fontWeight = line.bold ? '700' : '400';
-                    el.style.fontStyle = line.italic ? 'italic' : 'normal';
+                    return `<div class="canvas-element" style="left:${line.x*mmToPx}px; top:${line.y*mmToPx}px; width:${line.w*mmToPx}px; height:${line.h*mmToPx}px; background:#eee; border:1px solid #ccc; display:flex; align-items:center; justify-content:center; font-size:10px;">IMG</div>`;
                 }
-                
-                el.onclick = () => setActiveLine(i);
-                wrapper.appendChild(el);
-            });
+                let style = `left:${line.x*mmToPx}px; top:${line.y*mmToPx}px; font-size:${line.size*1.33}px; font-family:'Sarabun';`;
+                if(line.align === 'center') style = `left:0; width:100%; text-align:center; top:${line.y*mmToPx}px; font-size:${line.size*1.33}px;`;
+                return `<div class="canvas-element ${i === activeLineIndex ? 'active' : ''}" style="${style}">${replaceVars(line.text)}</div>`;
+            }).join('');
         }
 
-        // 4. Print Test - เพิ่มคำสั่งบังคับโหลด Font ก่อนพิมพ์
-        function printTest() {
-            const contents = document.getElementById('canvas_wrapper').innerHTML;
-            const pw = window.open('', '_blank', 'width=800,height=600');
-            pw.document.write(`
-                <html>
-                <head>
-                    <title>Print Test</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Prompt:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
-                    <style>
-                        body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; -webkit-print-color-adjust: exact; }
-                        .sticker { position: relative; width: ${currentConfig.width}mm; height: ${currentConfig.height}mm; background: #fff; overflow: hidden; margin: 0; }
-                        .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
-                        @page { size: ${currentConfig.width}mm ${currentConfig.height}mm; margin: 0; }
-                        .active { border: none !important; background: transparent !important; }
-                    </style>
-                </head>
-                <body>
-                    <div class="sticker">${contents}</div>
-                    <script>
-                        window.onload = function() {
-                            // รอให้ Browser โหลดฟอนต์ให้เสร็จก่อน จึงค่อยสั่งพิมพ์
-                            if (document.fonts && document.fonts.ready) {
-                                document.fonts.ready.then(function () {
-                                    setTimeout(function() { window.print(); window.close(); }, 300);
-                                });
-                            } else {
-                                setTimeout(function() { window.print(); window.close(); }, 1000);
-                            }
-                        };
-                    <\/script>
-                </body>
-                </html>
-            `);
-            pw.document.close();
-        }
+        function printTest() { window.print(); }
 
-        window.onload = async () => {
-            if (window.innerWidth < 1024) document.getElementById('zoom_level').value = 90;
-            else if (window.innerWidth >= 1600) document.getElementById('zoom_level').value = 150;
-            await loadTemplateDropdown();
-        };
+        window.onload = async () => { await loadTemplateDropdown(); };
     </script>
 </body>
 </html>
