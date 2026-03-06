@@ -22,11 +22,11 @@
         .label-title { color: var(--teal); font-weight: 800; font-size: 1rem; margin-bottom: 6px; display: block; text-transform: uppercase; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 20px; border: 1px solid var(--border); }
 
-        /* Canvas Preview */
         .canvas-wrapper { background: #ffffff; position: relative; transform-origin: center top; transition: transform 0.2s; overflow: hidden; margin: 0 auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; word-break: break-all; }
+        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.2; box-sizing: border-box; white-space: pre-wrap; }
         .canvas-element.active { outline: 2px solid var(--teal); background: rgba(20, 184, 17, 0.1); z-index: 50; }
         
+        .var-category-title { font-size: 0.9rem; font-weight: 800; color: #64748b; margin-top: 15px; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
         .var-badge { background: rgba(20, 184, 17, 0.1); border: 1px solid rgba(20, 184, 17, 0.2); color: #4ade80; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; display: inline-block; margin: 3px; transition: 0.2s; font-family: monospace; }
         .var-badge:hover { background: var(--teal); color: white; transform: translateY(-1px); }
 
@@ -46,8 +46,8 @@
             <div class="flex items-center gap-6">
                 <a href="settings.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
                 <div>
-                    <h1 class="text-2xl font-black text-white">🖨️ ออกแบบฟอร์มการพิมพ์</h1>
-                    <p class="text-gray-400 text-sm">ออกแบบระบบ "ดันข้อความอัตโนมัติ" สำหรับรายการสินค้า</p>
+                    <h1 class="text-2xl font-black text-white">🖨️ ออกแบบฟอร์มสติ๊กเกอร์และใบเสร็จ</h1>
+                    <p class="text-gray-400 text-sm">กำหนดขนาดและตำแหน่งตัวแปรสำหรับการพิมพ์</p>
                 </div>
             </div>
             <div class="flex gap-4">
@@ -61,10 +61,10 @@
                 <div class="section-card p-6 mb-8">
                     <div class="grid grid-cols-12 gap-6 items-end">
                         <div class="col-span-6">
-                            <label class="label-title">ประเภทเอกสาร</label>
+                            <label class="label-title">Template เอกสาร</label>
                             <select id="template_type" class="input-control font-bold text-teal-400" onchange="loadTemplate()">
-                                <option value="DrugSticker">💊 สติ๊กเกอร์ยา</option>
-                                <option value="Receipt80mm">📄 ใบเสร็จรับเงิน (80mm)</option>
+                                <option value="drug_sticker">drug_sticker</option>
+                                <option value="receipt">receipt</option>
                             </select>
                         </div>
                         <div class="col-span-3">
@@ -79,10 +79,10 @@
                 </div>
 
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-black text-white">📝 องค์ประกอบ</h2>
+                    <h2 class="text-xl font-black text-white">📝 รายการองค์ประกอบ</h2>
                     <div class="flex gap-2">
                         <button onclick="addLine('text')" class="btn-tool text-white">+ ข้อความ</button>
-                        <button onclick="addLine('rect')" class="btn-tool text-orange-400 border-orange-400/30">+ เส้นคั่น</button>
+                        <button onclick="addLine('rect')" class="btn-tool text-orange-400 border-orange-400/30">+ สี่เหลี่ยม</button>
                     </div>
                 </div>
 
@@ -92,16 +92,16 @@
             <div class="w-5/12 flex flex-col bg-[#050b14] border-l border-white/5">
                 <div class="flex-1 overflow-auto p-10 flex flex-col items-center justify-start bg-black/40">
                     <div class="flex justify-between w-full max-w-md mb-4 items-center">
-                        <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Live Preview (พิกัดจริง)</span>
-                        <input type="range" id="zoom_level" min="30" max="200" value="100" class="accent-teal-500 w-32" oninput="applyZoom()">
+                        <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Live Preview</span>
+                        <input type="range" id="zoom_level" min="50" max="250" value="130" class="accent-teal-500 w-32" oninput="applyZoom()">
                     </div>
                     <div id="canvas_wrapper" class="canvas-wrapper"></div>
                 </div>
 
-                <div class="h-80 border-t border-white/10 bg-navy-light p-6 overflow-y-auto shadow-2xl">
+                <div class="h-96 border-t border-white/10 bg-navy-light p-6 overflow-y-auto shadow-2xl">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="text-xl">💡</span>
-                        <h3 class="text-lg font-black text-teal-400">ตัวแปร (คลิกเพื่อ Copy)</h3>
+                        <h3 class="text-lg font-black text-teal-400">ตัวแปรที่รองรับ</h3>
                     </div>
                     <div id="var_sidebar_container"></div>
                 </div>
@@ -110,35 +110,29 @@
     </div>
 
     <script>
-        let currentConfig = { width: 80, height: 150, lines: [] };
+        let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
         const mockData = {
-            clinic_name: "PK-VMS Animal Clinic",
-            clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
-            phone: "081-999-8888",
-            tax_id: "0123456789012",
-            owner_name: "คุณสมชาย ใจดี",
-            pet_name: "โคล่า",
-            hn: "HN-26-001",
-            receipt_no: "REC260306-01",
-            date: "06/03/2026",
-            time: "18:45",
-            items_list: "1. ตรวจรักษาทั่วไป..............300.00\n2. ยาฆ่าเชื้อ Amoxy..............500.00\n3. อาหารเม็ด Royal Canin.........450.00\n4. แชมพูแก้แพ้..................200.00",
-            total_price: "1,450.00",
-            discount_val: "50.00",
-            net_total: "1,400.00",
-            pay_method: "เงินโอน (K-Bank)"
+            clinic_name: "PK-VMS Animal Hospital", phone: "081-999-8888",
+            pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-2026-001", weight: "12.5",
+            drug_name: "Amoxicillin 500", drug_name_th: "อะม็อกซี่ (ฆ่าเชื้อ)", 
+            dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง",
+            meal_timing: "หลังอาหารทันที", duration_days: "7", total_qty: "14",
+            date: "06 มี.ค. 26", time: "14:30 น.",
+            receipt_no: "REC-001", items_list: "รายการสินค้า 1.....100\nรายการสินค้า 2.....200",
+            total_price: "300.00", discount_val: "0.00", net_total: "300.00"
         };
 
         const varGroups = {
-            "🏠 คลินิก": ["clinic_name", "clinic_address", "phone"],
-            "🐾 ลูกค้า": ["owner_name", "pet_name", "hn"],
-            "💰 การเงิน": ["receipt_no", "items_list", "total_price", "discount_val", "net_total", "pay_method"]
+            "🏥 คลินิก": ["clinic_name", "phone"],
+            "🐾 สัตว์": ["pet_name", "hn", "weight", "species"],
+            "💊 ยา": ["drug_name", "drug_name_th", "total_qty", "unit", "frequency"],
+            "💰 การเงิน": ["receipt_no", "items_list", "total_price", "net_total"],
+            "🕰️ เวลา": ["date", "time"]
         };
 
         function replaceVars(text) {
-            if (!text) return "";
             return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
         }
 
@@ -148,11 +142,9 @@
             if (data) {
                 currentConfig = data.config;
                 document.getElementById('paper_w').value = currentConfig.width || 80;
-                document.getElementById('paper_h').value = currentConfig.height || 150;
-            } else {
-                currentConfig = { width: 80, height: (type.includes('Receipt') ? 150 : 50), lines: [] };
+                document.getElementById('paper_h').value = currentConfig.height || 50;
+                renderLinesList(); renderCanvas(); applyZoom();
             }
-            renderLinesList(); renderCanvas();
         }
 
         async function saveTemplate() {
@@ -160,13 +152,13 @@
             currentConfig.width = parseFloat(document.getElementById('paper_w').value);
             currentConfig.height = parseFloat(document.getElementById('paper_h').value);
             await db.from('print_templates').upsert({ template_type: type, config: currentConfig });
-            alert('✅ บันทึกแล้ว');
+            alert('✅ บันทึกรูปแบบเรียบร้อยแล้ว');
         }
 
         function addLine(type) {
-            let newLine = { type, x: 5, y: 10 };
-            if (type === 'text') newLine = { ...newLine, text: "ข้อความ", size: 12, bold: false, align: "left" };
-            else newLine = { ...newLine, w: 70, h: 0.5, fill: true, align: 'center' };
+            let newLine = { type, x: 5, y: 5 };
+            if (type === 'text') newLine = { ...newLine, text: "ข้อความ", font: "Sarabun", size: 14, bold: false, align: "left" };
+            else newLine = { ...newLine, w: 70, h: 8, radius: 4, fill: true, align: 'left' };
             currentConfig.lines.push(newLine);
             activeLineIndex = currentConfig.lines.length - 1;
             renderLinesList(); renderCanvas();
@@ -174,118 +166,67 @@
 
         function renderLinesList() {
             const container = document.getElementById('lines_container');
-            container.innerHTML = currentConfig.lines.map((l, i) => `
-                <div class="p-4 rounded-xl border ${i === activeLineIndex ? 'bg-navy-light border-teal-500' : 'bg-white/5 border-white/5'}">
-                    <div class="flex justify-between items-center cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
-                        <span class="font-bold text-sm">${l.type === 'rect' ? '--- เส้นคั่น ---' : (l.text.substring(0,25)+'...')}</span>
-                        <button class="text-red-400 text-xs" onclick="currentConfig.lines.splice(${i},1); renderLinesList(); renderCanvas();">ลบ</button>
+            container.innerHTML = currentConfig.lines.map((l, i) => {
+                const active = i === activeLineIndex;
+                return `
+                    <div class="p-5 rounded-2xl border ${active ? 'bg-navy-light border-teal-500 shadow-lg' : 'bg-white/5 border-white/5'}">
+                        <div class="flex justify-between items-center cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
+                            <span class="font-bold">${l.type === 'rect' ? '🟧 สี่เหลี่ยม' : l.text}</span>
+                            <button class="text-red-400 text-xs" onclick="currentConfig.lines.splice(${i},1); renderLinesList(); renderCanvas();">ลบ</button>
+                        </div>
+                        ${active ? renderEditor(l, i) : ''}
                     </div>
-                    ${i === activeLineIndex ? renderEditor(l, i) : ''}
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function renderEditor(l, i) {
-            return `
-                <div class="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/5">
-                    <div class="col-span-4">
-                        <input type="text" class="input-control text-sm" value="${l.text || ''}" oninput="updateLine(${i},'text',this.value)" placeholder="ใส่ข้อความ หรือ {{ตัวแปร}}">
+            if (l.type === 'text') {
+                return `
+                    <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
+                        <div class="col-span-4"><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500">X (มม.)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500">Y (มม.)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                        <div><label class="text-xs text-gray-500">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
+                        <div class="flex items-end"><button class="w-full h-12 rounded-xl border ${l.bold?'bg-teal-600':''}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();">B</button></div>
                     </div>
-                    <div class="col-span-2">
-                        <label class="text-[10px] text-gray-500 block">ตำแหน่ง Y (มม.)</label>
-                        <input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)">
+                `;
+            } else {
+                return `
+                    <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
+                        <div class="col-span-2"><label class="text-xs text-gray-500">กว้าง</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500">สูง</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500">X</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500">Y</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
                     </div>
-                    <div>
-                        <label class="text-[10px] text-gray-500 block">ขนาด</label>
-                        <input type="number" class="input-control" value="${l.size || 12}" oninput="updateLine(${i},'size',this.value)">
-                    </div>
-                    <div class="flex items-end">
-                        <button class="w-full h-11 rounded-lg border border-white/10 ${l.bold?'bg-teal-600':''}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();">B</button>
-                    </div>
-                </div>
-            `;
+                `;
+            }
         }
 
-        function updateLine(i, k, v) { currentConfig.lines[i][k] = v; renderCanvas(); }
-
-        // --- หัวใจหลัก: ฟังก์ชันคำนวณตำแหน่ง Y แบบ Dynamic ---
-        function calculateDynamicElements() {
-            const px = 3.78;
-            const sortedLines = [...currentConfig.lines].sort((a, b) => a.y - b.y);
-            let pushOffset = 0;
-            const lineHeightMm = 5.2; // ความสูงเฉลี่ยต่อบรรทัด (มม.)
-
-            return sortedLines.map(l => {
-                const currentY = parseFloat(l.y) + pushOffset;
-                const replacedText = replaceVars(l.text);
-                
-                // ถ้าเจอ items_list ให้คำนวณว่ามีกี่บรรทัด และเพิ่ม Offset สำหรับตัวถัดไป
-                if (l.text && l.text.includes('{{items_list}}')) {
-                    const lineCount = replacedText.split('\n').length;
-                    if (lineCount > 1) {
-                        pushOffset += (lineCount - 1) * lineHeightMm;
-                    }
-                }
-
-                return { ...l, renderedY: currentY, renderedText: replacedText };
-            });
-        }
+        function updateLine(index, key, value) { currentConfig.lines[index][key] = value; renderCanvas(); }
 
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
             const px = 3.78;
             wrapper.style.width = (document.getElementById('paper_w').value * px) + 'px';
             wrapper.style.height = (document.getElementById('paper_h').value * px) + 'px';
-
-            const dynamicLines = calculateDynamicElements();
-            
-            wrapper.innerHTML = dynamicLines.map(l => {
-                let style = `top:${l.renderedY * px}px; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold?'bold':'normal'};`;
-                
-                if (l.type === 'text') {
-                    style += `left:${l.x || 5 * px}px; width:calc(100% - 10px);`;
-                    if (l.align === 'center') style += `text-align:center; left:0;`;
-                    return `<div class="canvas-element" style="${style}">${l.renderedText}</div>`;
-                } else {
-                    let rStyle = `top:${l.renderedY * px}px; width:${l.w * px}px; height:${l.h * px}px; background:#000; left:50%; transform:translateX(-50%);`;
-                    return `<div class="canvas-element" style="${rStyle}"></div>`;
-                }
+            wrapper.innerHTML = currentConfig.lines.map((l, i) => {
+                let style = `top:${l.y*px}px; left:${l.x*px}px; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'};`;
+                if (l.type === 'rect') style = `top:${l.y*px}px; left:${l.x*px}px; width:${l.w*px}px; height:${l.h*px}px; background:#000; border-radius:${l.radius}px;`;
+                return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${style}" onclick="activeLineIndex=${i}; renderLinesList();">${l.type==='text' ? replaceVars(l.text) : ''}</div>`;
             }).join('');
         }
 
-        function applyZoom() {
-            document.getElementById('canvas_wrapper').style.transform = `scale(${document.getElementById('zoom_level').value/100})`;
-        }
-
-        function printTest() {
-            const dynamicLines = calculateDynamicElements();
-            const pw_val = document.getElementById('paper_w').value;
-            const ph_val = document.getElementById('paper_h').value;
-            
-            const win = window.open('', '_blank');
-            win.document.write(`
-                <html><head><style>
-                    @import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap');
-                    body { margin: 0; padding: 0; font-family: 'Sarabun'; }
-                    .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; }
-                    .el { position: absolute; white-space: pre-wrap; color: black; line-height: 1.4; word-break: break-all; }
-                    @media print { @page { size: ${pw_val}mm auto; margin: 0; } }
-                </style></head><body><div class="page">
-                    ${dynamicLines.map(l => {
-                        if(l.type === 'text') return `<div class="el" style="top:${l.renderedY}mm; left:5mm; width:${pw_val-10}mm; font-size:${l.size}pt; font-weight:${l.bold?'bold':'normal'};">${l.renderedText}</div>`;
-                        else return `<div class="el" style="top:${l.renderedY}mm; left:50%; transform:translateX(-50%); width:${l.w}mm; height:${l.h}mm; background:black;"></div>`;
-                    }).join('')}
-                </div><script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script></body></html>
-            `);
-            win.document.close();
-        }
+        function applyZoom() { document.getElementById('canvas_wrapper').style.transform = `scale(${document.getElementById('zoom_level').value/100})`; }
+        
+        function printTest() { alert("กำลังทดสอบพิมพ์..."); }
 
         window.onload = () => {
             loadTemplate();
             const sideContainer = document.getElementById('var_sidebar_container');
             sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
-                <div class="text-[10px] font-bold text-gray-500 mt-3 mb-1 uppercase">${group}</div>
-                <div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy {{${v}}}')">{{${v}}}</span>`).join('')}</div>
+                <div class="var-category-title">${group}</div>
+                <div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('คัดลอก {{${v}}} แล้ว')">{{${v}}}</span>`).join('')}</div>
             `).join('');
         };
     </script>
