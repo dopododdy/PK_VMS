@@ -10,144 +10,144 @@
     <script src="supabase-config.js"></script>
 
     <style>
-        :root { --navy: #020617; --navy-light: #0f172a; --teal: #10b981; --border: rgba(255, 255, 255, 0.06); }
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #10b981; --border: rgba(255, 255, 255, 0.08); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #f1f5f9; height: 100vh; overflow: hidden; }
         
-        /* Layout Zones */
-        .zone-sidebar { width: 20%; background: #020617; border-right: 1px solid var(--border); }
-        .zone-cart { width: 55%; background: rgba(0,0,0,0.2); }
+        /* สัดส่วน 3 โซนที่สมดุล */
+        .zone-sidebar { width: 22%; background: #020617; border-right: 1px solid var(--border); }
+        .zone-cart { width: 53%; background: rgba(0,0,0,0.15); }
         .zone-payment { width: 25%; background: #0f172a; border-left: 1px solid var(--border); }
 
-        .glass-card { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 1.5rem; }
+        .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 1.5rem; }
         
-        /* Typography Scale */
-        .text-title { font-family: 'Prompt', sans-serif !important; font-weight: 700; }
-        .input-money { background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #fbbf24; outline: none; border-radius: 1rem; transition: 0.2s; }
-        .input-money:focus { border-color: var(--teal); background: rgba(0,0,0,0.6); }
+        .input-money { background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #fbbf24; outline: none; border-radius: 1rem; transition: 0.2s; font-weight: 800; }
+        .input-money:focus { border-color: var(--teal); background: rgba(0,0,0,0.6); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
 
-        /* Bill Cards */
-        .bill-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 1rem; cursor: pointer; transition: 0.2s; }
-        .bill-card:hover { background: rgba(255, 255, 255, 0.06); transform: translateX(4px); }
-        .bill-card.active { border-color: var(--teal); background: rgba(16, 185, 129, 0.1); }
-        .bill-card.paid { border-left: 4px solid var(--teal); opacity: 0.8; }
+        .bill-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 1.25rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .bill-card:hover { background: rgba(255, 255, 255, 0.07); transform: translateX(6px); border-color: var(--teal); }
+        .bill-card.active { border-color: var(--teal); background: rgba(16, 185, 129, 0.08); box-shadow: 0 10px 20px -10px rgba(16, 185, 129, 0.3); }
+        .bill-card.paid { border-left: 5px solid var(--teal); opacity: 0.9; }
 
-        /* Buttons */
-        .btn-primary { background: linear-gradient(135deg, #10b981 0%, #059669 100%); transition: 0.3s; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2); }
-        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.3); }
+        .btn-action { background: linear-gradient(135deg, #10b981 0%, #059669 100%); transition: 0.3s; }
+        .btn-action:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 15px 30px -10px rgba(16, 185, 129, 0.4); }
         
-        .numpad button { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 1rem; padding: 1rem; font-weight: 600; font-size: 1.25rem; transition: 0.15s; }
-        .numpad button:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--teal); }
-        .numpad button:active { background: var(--teal); transform: scale(0.95); }
+        .numpad button { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); border-radius: 1.25rem; font-weight: 700; transition: 0.2s; }
+        .numpad button:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--teal); }
+        .numpad button:active { background: var(--teal); color: white; transform: scale(0.95); }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 100; display: none; align-items: center; justify-content: center; }
-        .receipt-paper { background: white; color: black; width: 80mm; min-height: 120mm; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
-        
+        .receipt-paper { background: white; color: black; width: 80mm; min-height: 120mm; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.6); }
+
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-
         @media print { #main-ui, .modal-overlay { display: none !important; } }
     </style>
 </head>
 <body class="flex flex-col">
 
     <div id="main-ui" class="flex flex-1 overflow-hidden">
-        <div class="zone-sidebar flex flex-col p-5 overflow-hidden">
-            <div class="flex items-center gap-3 mb-8">
-                <a href="index.html" class="w-10 h-10 glass-card flex items-center justify-center text-xl hover:bg-white/10 transition">🏠</a>
-                <h2 class="text-xl font-bold text-white tracking-tight">PK-VMS <span class="text-teal-500">POS</span></h2>
+        <div class="zone-sidebar flex flex-col p-6 overflow-hidden">
+            <div class="flex items-center gap-4 mb-10">
+                <a href="index.html" class="w-12 h-12 glass-panel flex items-center justify-center text-2xl hover:bg-white/10 transition shadow-lg">🏠</a>
+                <div>
+                    <h2 class="text-xl font-black text-white leading-tight">PK-VMS</h2>
+                    <p class="text-[10px] text-teal-500 font-black uppercase tracking-widest">Smart POS System</p>
+                </div>
             </div>
             
-            <div class="flex-1 overflow-y-auto space-y-6">
+            <div class="flex-1 overflow-y-auto space-y-8 pr-2">
                 <div>
-                    <label class="text-[10px] font-black text-gray-500 mb-4 block uppercase tracking-widest">⏳ รอชำระเงิน</label>
-                    <div id="pending-bills-list" class="space-y-3"></div>
+                    <label class="text-[11px] font-black text-gray-500 mb-4 block uppercase tracking-[0.2em]">⏳ รอการชำระเงิน</label>
+                    <div id="pending-bills-list" class="space-y-4"></div>
                 </div>
                 
-                <div class="pt-4 border-t border-white/5">
-                    <label class="text-[10px] font-black text-teal-600 mb-4 block uppercase tracking-widest">✅ จ่ายแล้ววันนี้</label>
-                    <div id="paid-bills-list" class="space-y-3"></div>
+                <div class="pt-6 border-t border-white/5">
+                    <label class="text-[11px] font-black text-teal-600 mb-4 block uppercase tracking-[0.2em]">✅ ชำระแล้ววันนี้</label>
+                    <div id="paid-bills-list" class="space-y-4"></div>
                 </div>
             </div>
         </div>
 
         <div class="zone-cart flex flex-col p-8 overflow-hidden">
-            <div class="flex justify-between items-center mb-8">
-                <h1 class="text-3xl font-black text-white flex items-center gap-3">
-                    <span class="w-2 h-8 bg-teal-500 rounded-full"></span>
-                    รายการในบิล
+            <div class="flex justify-between items-center mb-8 px-2">
+                <h1 class="text-3xl font-black text-white flex items-center gap-4">
+                    <span class="w-2.5 h-10 bg-teal-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></span>
+                    รายการชำระเงิน
                 </h1>
-                <button onclick="openCatalog()" class="bg-blue-600/10 border border-blue-600/30 text-blue-400 px-6 py-2.5 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all active:scale-95 text-sm">
-                    + เพิ่มสินค้า/บริการ
+                <button onclick="openCatalog()" class="bg-blue-600/10 border border-blue-600/30 text-blue-400 px-6 py-3 rounded-2xl font-bold hover:bg-blue-600 hover:text-white transition-all active:scale-95">
+                    + เพิ่มสินค้า
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto glass-card relative">
+            <div class="flex-1 overflow-y-auto glass-panel shadow-2xl relative">
                 <table class="w-full text-left">
-                    <thead class="sticky top-0 bg-slate-900/90 backdrop-blur-md border-b border-white/5 z-10">
-                        <tr>
-                            <th class="p-5 text-xs font-bold text-gray-500 uppercase tracking-wider">รายการ</th>
-                            <th class="p-5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">จำนวน</th>
-                            <th class="p-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">ราคา</th>
-                            <th class="p-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">รวม</th>
-                            <th class="p-5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">#</th>
+                    <thead class="sticky top-0 bg-slate-900/95 backdrop-blur-xl border-b border-white/5 z-20">
+                        <tr class="text-gray-500 text-[11px] font-black uppercase tracking-widest">
+                            <th class="p-6">รายการ</th>
+                            <th class="p-6 text-center">จำนวน</th>
+                            <th class="p-6 text-right">ราคา</th>
+                            <th class="p-6 text-right">รวม</th>
+                            <th class="p-6 text-center">#</th>
                         </tr>
                     </thead>
                     <tbody id="cart-items-body" class="divide-y divide-white/5"></tbody>
                 </table>
                 <div id="cart-empty" class="absolute inset-0 flex flex-col items-center justify-center text-gray-700 pointer-events-none">
-                    <span class="text-8xl opacity-10 mb-4">🛒</span>
-                    <p class="text-lg font-medium opacity-20">เลือกรายการบิลจากด้านซ้าย</p>
+                    <span class="text-9xl opacity-5 mb-6">🛒</span>
+                    <p class="text-xl font-bold opacity-10">เลือกบิลเพื่อเริ่มรับชำระ</p>
                 </div>
             </div>
         </div>
 
-        <div class="zone-payment flex flex-col p-6 overflow-y-auto">
+        <div class="zone-payment flex flex-col p-8 overflow-y-auto">
             <div class="flex-1">
-                <h3 class="text-xs font-bold text-gray-500 mb-8 uppercase tracking-widest text-center">Payment Summary</h3>
+                <h3 class="text-[10px] font-black text-gray-500 mb-10 uppercase tracking-[0.3em] text-center border-b border-white/5 pb-4">Order Summary</h3>
                 
-                <div class="space-y-4 mb-8 px-2">
-                    <div class="flex justify-between items-center text-gray-400">
-                        <span class="text-sm font-medium">รวมเป็นเงิน</span>
-                        <span id="sum-price" class="text-xl font-bold text-white">0.00</span>
+                <div class="space-y-6 mb-10 px-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400 font-medium">รวมยอดเงิน</span>
+                        <span id="sum-price" class="text-2xl font-bold text-white tracking-tight">0.00</span>
                     </div>
                     <div class="flex justify-between items-center text-red-400">
-                        <span class="text-sm font-medium">ส่วนลด (฿)</span>
-                        <input type="number" id="discount-val" class="bg-transparent border-b border-red-500/20 text-right w-24 outline-none font-bold text-xl" value="0" oninput="calculateTotal()">
+                        <span class="font-bold">ส่วนลดพิเศษ</span>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="discount-val" class="bg-white/5 border border-white/10 text-right w-28 p-2 rounded-xl outline-none font-black text-xl text-red-400 focus:border-red-500/50" value="0" oninput="calculateTotal()">
+                        </div>
                     </div>
-                    <div class="border-t border-white/10 pt-6 mt-6 flex flex-col items-end">
-                        <span class="text-[10px] font-black text-teal-500 uppercase tracking-widest mb-1">ยอดสุทธิที่ต้องชำระ</span>
-                        <span class="text-5xl font-black text-white tracking-tighter" id="net-total">0.00</span>
+                    <div class="border-t border-white/10 pt-8 mt-8 flex flex-col items-end">
+                        <span class="text-[11px] font-black text-teal-500 uppercase tracking-widest mb-1">ยอดสุทธิ (Net Total)</span>
+                        <span class="text-6xl font-black text-white tracking-tighter" id="net-total">0.00</span>
                     </div>
                 </div>
 
-                <div class="space-y-4 mt-10">
-                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2">💵 รับเงินสด</label>
-                    <input type="number" id="received-amount" class="input-money w-full text-4xl font-black text-center py-5 shadow-2xl" placeholder="0.00" oninput="calculateChange()">
+                <div class="space-y-5 mt-12 bg-black/20 p-6 rounded-[2rem] border border-white/5">
+                    <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest block text-center">💵 รับเงินสด</label>
+                    <input type="number" id="received-amount" class="input-money w-full text-5xl font-black text-center py-6 shadow-inner" placeholder="0.00" oninput="calculateChange()">
                     
-                    <div class="numpad grid grid-cols-3 gap-2">
+                    <div class="numpad grid grid-cols-3 gap-3">
                         <button onclick="quickCash(100)">100</button>
                         <button onclick="quickCash(500)">500</button>
                         <button onclick="quickCash(1000)">1,000</button>
                     </div>
 
-                    <div class="p-5 glass-card bg-black/40 flex justify-between items-center mt-6">
-                        <span class="text-gray-500 text-sm font-bold">เงินทอน</span>
-                        <span class="text-3xl font-black text-emerald-400" id="change-val">0.00</span>
+                    <div class="pt-4 flex justify-between items-center px-2">
+                        <span class="text-gray-500 font-bold text-sm">เงินทอน</span>
+                        <span class="text-4xl font-black text-emerald-400" id="change-val">0.00</span>
                     </div>
                 </div>
             </div>
             
-            <div class="mt-8 space-y-3">
-                <div id="reprint-info" class="hidden p-3 bg-blue-500/10 text-blue-400 text-center rounded-xl text-[10px] font-black border border-blue-500/20 uppercase tracking-widest">
-                    ⚠️ โหมดพิมพ์ซ้ำ
+            <div class="mt-10 space-y-4">
+                <div id="reprint-info" class="hidden p-4 bg-blue-500/10 text-blue-400 text-center rounded-2xl text-[10px] font-black border border-blue-500/20 uppercase tracking-[0.2em]">
+                    ⚠️ ประวัติการจ่ายเงิน
                 </div>
-                <div class="grid grid-cols-5 gap-2">
-                    <button onclick="showPreview()" class="col-span-2 glass-card hover:bg-white/5 text-white py-4 rounded-2xl font-bold transition flex items-center justify-center gap-2 text-sm">
+                <div class="flex gap-3 h-20">
+                    <button onclick="showPreview()" class="flex-1 glass-panel hover:bg-white/5 text-white rounded-3xl font-bold transition flex items-center justify-center gap-2 border-white/10">
                         <span>🔍</span> Preview
                     </button>
-                    <button id="pay-button" onclick="confirmPayment()" class="col-span-3 btn-primary text-white py-4 rounded-2xl font-black text-xl active:scale-95">
-                        ยืนยันการชำระ
+                    <button id="pay-button" onclick="confirmPayment()" class="flex-[2] btn-action text-white rounded-3xl font-black text-2xl shadow-2xl active:scale-95">
+                        บันทึก & พิมพ์
                     </button>
                 </div>
             </div>
@@ -155,29 +155,29 @@
     </div>
 
     <div id="preview-modal" class="modal-overlay">
-        <div class="modal-content !max-w-md glass-card bg-slate-900 border-teal-500/30">
-            <div class="p-6 border-b border-white/5 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-white">ตรวจสอบใบเสร็จ</h3>
-                <button onclick="closePreview()" class="text-xl opacity-50 hover:opacity-100">✕</button>
+        <div class="max-w-md w-full glass-panel bg-slate-900 p-2 overflow-hidden flex flex-col h-[90vh]">
+            <div class="p-6 flex justify-between items-center border-b border-white/5">
+                <h3 class="font-bold text-white">ตรวจสอบความถูกต้อง</h3>
+                <button onclick="closePreview()" class="text-2xl opacity-50 hover:opacity-100">✕</button>
             </div>
             <div class="flex-1 overflow-y-auto p-10 bg-slate-950 flex justify-center">
                 <div id="receipt-preview-content" class="receipt-paper"></div>
             </div>
-            <div class="p-6 grid grid-cols-2 gap-4 bg-slate-900">
-                <button onclick="closePreview()" class="bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-700 transition">แก้ไขข้อมูล</button>
-                <button onclick="confirmPayment()" class="bg-teal-600 text-white py-4 rounded-xl font-bold hover:bg-teal-500 transition shadow-lg">ยืนยันพิมพ์</button>
+            <div class="p-6 grid grid-cols-2 gap-4">
+                <button onclick="closePreview()" class="bg-slate-800 text-white py-4 rounded-2xl font-bold">กลับไปแก้ไข</button>
+                <button onclick="confirmPayment()" class="btn-action text-white py-4 rounded-2xl font-bold shadow-lg">ยืนยันพิมพ์</button>
             </div>
         </div>
     </div>
 
     <div id="catalog-modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="p-8 border-b border-white/5 flex justify-between items-center">
-                <h3 class="text-2xl font-bold">📦 แคตตาล็อกสินค้า</h3>
+        <div class="max-w-5xl w-full glass-panel bg-slate-900 p-2 overflow-hidden flex flex-col h-[85vh]">
+            <div class="p-8 flex justify-between items-center border-b border-white/5">
+                <h3 class="text-2xl font-black text-white">📦 แคตตาล็อกสินค้าและบริการ</h3>
                 <button onclick="closeCatalog()" class="text-3xl">✕</button>
             </div>
             <div class="p-6 bg-black/20">
-                <input type="text" id="catalog-search" class="input-box text-lg" placeholder="พิมพ์เพื่อค้นหา..." oninput="filterCatalog()">
+                <input type="text" id="catalog-search" class="input-box text-xl py-4 px-6 rounded-2xl" placeholder="ค้นหาชื่อสินค้า..." oninput="filterCatalog()">
             </div>
             <div id="catalog-grid" class="flex-1 overflow-y-auto p-8 grid grid-cols-3 gap-6"></div>
         </div>
@@ -195,7 +195,8 @@
             await fetchProducts();
         };
 
-        // 1. ดึงรายการบิล
+        // --- Core Functions ---
+
         async function fetchTodayBills() {
             const today = new Date().toISOString().split('T')[0];
             const { data: pending } = await db.from('medical_records').select('id, owner_hn, created_at, total_cost, owners(owner_name), animals(pet_name)').or('payment_status.is.null,payment_status.eq.pending').gte('created_at', today).order('created_at', { ascending: false });
@@ -210,19 +211,19 @@
                 container.innerHTML = data.map(rec => {
                     const time = new Date(isPaid ? rec.paid_at : rec.created_at).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
                     return `
-                    <div class="bill-card p-4 ${isPaid ? 'paid' : ''}" onclick="selectBill('${rec.id}', ${isPaid}, this)">
+                    <div class="bill-card p-5 ${isPaid ? 'paid' : ''}" onclick="selectBill('${rec.id}', ${isPaid}, this)">
                         <div class="flex justify-between items-center mb-1">
-                            <span class="text-hn text-[10px]">HN: ${rec.owner_hn}</span>
-                            <span class="text-[10px] text-gray-500 font-bold">${time}</span>
+                            <span class="text-hn text-[9px] opacity-60">HN: ${rec.owner_hn}</span>
+                            <span class="text-[10px] text-gray-500">${time}</span>
                         </div>
-                        <div class="text-sm font-bold text-white truncate">${rec.owners.owner_name}</div>
-                        <div class="flex justify-between items-center mt-2">
-                            <span class="text-[10px] text-gray-500">🐾 ${rec.animals.pet_name}</span>
-                            <span class="font-bold text-sm ${isPaid ? 'text-teal-400' : 'text-white'}">฿${(isPaid ? rec.net_amount : rec.total_cost).toLocaleString()}</span>
+                        <div class="text-base font-bold text-white truncate">${rec.owners.owner_name}</div>
+                        <div class="flex justify-between items-center mt-3">
+                            <span class="text-[10px] text-gray-400">🐾 ${rec.animals.pet_name}</span>
+                            <span class="font-black text-sm ${isPaid ? 'text-teal-400' : 'text-white'}">฿${(isPaid ? rec.net_amount : rec.total_cost).toLocaleString()}</span>
                         </div>
                     </div>`;
                 }).join('');
-            } else { container.innerHTML = `<p class="text-gray-700 text-center py-4 text-xs italic">ไม่มีรายการ</p>`; }
+            } else { container.innerHTML = `<p class="text-gray-700 text-center py-6 text-xs italic">ไม่มีรายการ</p>`; }
         }
 
         async function selectBill(id, isPaid, element) {
@@ -264,23 +265,23 @@
                 if(item.type === 'Rx') { rxIdx++; suffix = ` (${rxIdx})`; }
                 else if(item.type === 'Tx' && item.name.toLowerCase().includes('inj')) { injIdx++; suffix = ` (${injIdx})`; }
                 return `
-                <tr class="hover:bg-white/[0.02] transition">
-                    <td class="p-5">
-                        <div class="font-bold text-white text-lg">${item.name}${suffix}</div>
+                <tr class="hover:bg-white/[0.03] transition">
+                    <td class="p-6">
+                        <div class="font-bold text-white text-xl">${item.name}${suffix}</div>
                         <div class="text-[10px] text-gray-500 uppercase font-black tracking-widest mt-1">${item.type}</div>
                     </td>
-                    <td class="p-5 text-center">
+                    <td class="p-6 text-center">
                         ${isReprintMode ? `<span class="font-bold text-teal-400 text-xl">${item.qty}</span>` : 
-                        `<div class="flex items-center justify-center gap-3">
-                            <button onclick="updateQty(${idx}, -1)" class="w-9 h-9 rounded-xl bg-white/5 border border-white/5 text-lg">-</button>
-                            <span class="font-black text-xl w-6">${item.qty}</span>
-                            <button onclick="updateQty(${idx}, 1)" class="w-9 h-9 rounded-xl bg-white/5 border border-white/5 text-lg">+</button>
+                        `<div class="flex items-center justify-center gap-4">
+                            <button onclick="updateQty(${idx}, -1)" class="w-10 h-10 rounded-xl bg-white/5 border border-white/5 text-xl">-</button>
+                            <span class="font-black text-2xl w-8">${item.qty}</span>
+                            <button onclick="updateQty(${idx}, 1)" class="w-10 h-10 rounded-xl bg-white/5 border border-white/5 text-xl">+</button>
                         </div>`}
                     </td>
-                    <td class="p-5 text-right font-medium text-gray-400 text-lg">${item.price.toLocaleString()}</td>
-                    <td class="p-5 text-right font-black text-white text-xl">฿${(item.price * item.qty).toLocaleString()}</td>
-                    <td class="p-5 text-center">
-                        ${isReprintMode ? '' : `<button onclick="removeItem(${idx})" class="text-red-500/20 hover:text-red-500 transition text-xl">✕</button>`}
+                    <td class="p-6 text-right font-medium text-gray-400 text-xl">${item.price.toLocaleString()}</td>
+                    <td class="p-6 text-right font-black text-white text-2xl">฿${(item.price * item.qty).toLocaleString()}</td>
+                    <td class="p-6 text-center">
+                        ${isReprintMode ? '' : `<button onclick="removeItem(${idx})" class="text-red-500/30 hover:text-red-500 transition text-2xl">✕</button>`}
                     </td>
                 </tr>`;
             }).join('');
@@ -326,15 +327,15 @@
             const px = 3.78;
             const now = isReprintMode ? new Date(originalPrintData.paid_at) : new Date();
 
-            let rxIdx = 0, injIdx = 0;
-            const itemsText = cart.map((item, idx) => {
-                let name = item.name;
-                if(item.type === 'Rx') { rxIdx++; name += ` (${rxIdx})`; }
-                else if(item.type === 'Tx' && name.toLowerCase().includes('inj')) { injIdx++; name += ` (${injIdx})`; }
-                const cleanName = name.substring(0, 22);
-                const dots = ".".repeat(Math.max(2, 26 - cleanName.length));
-                return `${idx + 1}. ${cleanName}${dots}${(item.price * item.qty).toLocaleString()}`;
-            }).join('\n');
+            // เจน Items List แบบ Table HTML
+            const itemsTable = `
+                <table style="width:100%; border-collapse:collapse; font-family:'Sarabun'; font-size:11px; color:black;">
+                    ${cart.map((item, idx) => {
+                        let name = item.name;
+                        const price = (item.price * item.qty).toLocaleString();
+                        return `<tr><td style="padding:1px 0;">${idx+1}. ${name}</td><td style="text-align:right; white-space:nowrap; padding:1px 0;">${price}</td></tr>`;
+                    }).join('')}
+                </table>`;
 
             const dataVars = {
                 clinic_name: "PK-VMS Animal Clinic",
@@ -344,7 +345,7 @@
                 receipt_no: isReprintMode ? originalPrintData.receipt_no : await generateReceiptID(activeRecord?.owner_hn),
                 date: now.toLocaleDateString('th-TH'),
                 time: now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}),
-                items_list: itemsText,
+                items_list: itemsTable,
                 total_price: document.getElementById('sum-price').innerText,
                 discount_val: document.getElementById('discount-val').value,
                 net_total: document.getElementById('net-total').innerText,
@@ -359,22 +360,26 @@
 
             return sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
-                let renderedText = (l.text || "").replace(/\{\{(.*?)\}\}/g, (match, key) => dataVars[key.trim()] || match);
+                let textContent = (l.text || "").replace(/\{\{(.*?)\}\}/g, (match, key) => dataVars[key.trim()] || match);
+                
+                // คำนวณความสูงตารางเพื่อดันบรรทัดถัดไป
                 if (l.text && l.text.includes('{{items_list}}')) {
-                    const lineCount = renderedText.split('\n').length;
-                    if (lineCount > 1) pushOffset += (lineCount - 1) * lineHeightMm;
+                    const rowCount = cart.length;
+                    if (rowCount > 1) pushOffset += (rowCount * 4.5); // ดันพิกัดลงตามจำนวนแถว
                 }
+
                 let style = `top:${currentY * px}px; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'};`;
+                
                 if (l.type === 'text') {
+                    const boxWidth = l.w ? (l.w * px) : (302); // 80mm approx
+                    style += `width:${boxWidth}px;`;
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
-                    else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x * px}px;`;
+                    else if (l.align === 'right') style += `right:${l.x * px}px; text-align:right;`;
                     else style += `left:${l.x * px}px;`;
-                    return `<div class="receipt-element" style="${style}">${renderedText}</div>`;
+                    return `<div class="absolute" style="${style}">${textContent}</div>`;
                 } else if (l.type === 'rect') {
-                    let rStyle = `top:${currentY * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid black; border-radius:${(l.radius || 0) * px}px;`;
-                    if (l.align === 'center') rStyle += `left:50%; transform:translateX(-50%);`;
-                    else rStyle += `left:${l.x * px}px;`;
-                    return `<div class="receipt-element" style="${rStyle}"></div>`;
+                    let rStyle = `top:${l.y * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; border-radius:${(l.radius || 0) * px}px;`;
+                    return `<div class="absolute" style="${rStyle}"></div>`;
                 }
             }).join('');
         }
@@ -411,12 +416,13 @@
                 }
 
                 const win = window.open('', '_blank', 'width=450,height=700');
-                win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body { margin:0; padding:0; font-family:'Sarabun'; } .page { position:relative; width:80mm; min-height:100mm; background:white; } .receipt-element { position:absolute; white-space:pre-wrap; } @media print { @page { size: 80mm auto; margin:0; } }</style></head><body><div class="page">${html}</div><script>window.onload=function(){ setTimeout(()=>{window.print();window.close();},500); };<\/script></body></html>`);
+                win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body { margin:0; padding:0; font-family:'Sarabun'; } .page { position:relative; width:80mm; min-height:100mm; background:white; } @media print { @page { size: 80mm auto; margin:0; } }</style></head><body><div class="page">${html}</div><script>window.onload=function(){ setTimeout(()=>{window.print();window.close();},500); };<\/script></body></html>`);
                 win.document.close();
-                alert("ดำเนินการสำเร็จ!"); location.reload();
+                alert("บันทึกสำเร็จ!"); location.reload();
             } catch (err) { alert("Error: " + err.message); }
         }
 
+        // Inventory
         async function fetchProducts() { const { data } = await db.from('pharmacy').select('*').order('item_name'); allProducts = data || []; }
         function openCatalog() { if(!activeRecord) return alert("กรุณาเลือกบิลก่อน"); document.getElementById('catalog-modal').style.display = 'flex'; renderCatalog(allProducts); }
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
@@ -424,9 +430,9 @@
         function renderCatalog(items) {
             const grid = document.getElementById('catalog-grid');
             grid.innerHTML = items.map(p => `
-                <div class="p-6 glass-card bg-slate-800/40 border-white/5 hover:border-teal-500 hover:bg-teal-500/5 cursor-pointer transition active:scale-95" onclick='addToCart(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
-                    <div class="font-bold text-white text-xl mb-1">${p.item_name}</div>
-                    <div class="text-teal-400 font-black text-2xl">฿${parseFloat(p.price_per_unit).toLocaleString()}</div>
+                <div class="p-6 glass-card bg-slate-800/40 hover:border-teal-500 hover:bg-teal-500/5 cursor-pointer transition" onclick='addToCart(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+                    <div class="font-bold text-white text-lg mb-1">${p.item_name}</div>
+                    <div class="text-teal-400 font-black text-xl">฿${parseFloat(p.price_per_unit).toLocaleString()}</div>
                 </div>`).join('');
         }
         function addToCart(p) {
