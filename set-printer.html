@@ -168,8 +168,7 @@
             if (type === 'text') {
                 newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 14, bold: false, italic: false, align: "left" };
             } else if (type === 'rect') {
-                // อัปเดตคุณสมบัติพื้นฐานของสี่เหลี่ยม: เพิ่ม borderStyle, borderWidth, fill
-                newLine = { ...newLine, w: 70, h: 8, radius: 4, borderWidth: 1, borderStyle: 'solid', fill: true };
+                newLine = { ...newLine, w: 70, h: 8, radius: 4, borderWidth: 1, borderStyle: 'solid', fill: true, align: 'left' };
             } else {
                 newLine = { ...newLine, w: 15, h: 15, url: "" };
             }
@@ -198,26 +197,31 @@
         }
 
         function renderEditor(l, i) {
+            // ส่วนควบคุมการจัดวาง (SVG Icons)
+            const alignControl = `
+                <div class="col-span-2">
+                    <label class="text-xs text-gray-500 mb-1 block">การจัดวาง</label>
+                    <div class="flex gap-2">
+                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path></svg>
+                        </button>
+                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path></svg>
+                        </button>
+                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+
             if (l.type === 'text') {
                 return `
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
                         <div class="col-span-4"><label class="text-xs text-gray-500 mb-1 block">ข้อความ</label>
                             <input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)">
                         </div>
-                        <div class="col-span-2">
-                            <label class="text-xs text-gray-500 mb-1 block">การจัดวาง</label>
-                            <div class="flex gap-2">
-                                <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path></svg>
-                                </button>
-                                <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path></svg>
-                                </button>
-                                <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path></svg>
-                                </button>
-                            </div>
-                        </div>
+                        ${alignControl}
                         <div><label class="text-xs text-gray-500 mb-1 block">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         <div class="flex items-end gap-1">
                             <button class="w-12 h-12 rounded-xl border border-white/10 ${l.bold?'bg-teal-600 text-white':'bg-white/5'}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();"><b>B</b></button>
@@ -230,8 +234,11 @@
             } else if (l.type === 'rect') {
                 return `
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
-                        <div><label class="text-xs text-gray-500 mb-1 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
-                        <div><label class="text-xs text-gray-500 mb-1 block">สูง (มม.)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">สูง (มม.)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>
+                        
+                        ${alignControl}
+                        
                         <div><label class="text-xs text-gray-500 mb-1 block">หนาเส้นขอบ</label><input type="number" class="input-control" value="${l.borderWidth || 1}" step="0.1" oninput="updateLine(${i},'borderWidth',this.value)"></div>
                         <div><label class="text-xs text-gray-500 mb-1 block">ชนิดเส้น</label>
                             <select class="input-control" onchange="updateLine(${i},'borderStyle',this.value)">
@@ -240,11 +247,12 @@
                                 <option value="dotted" ${l.borderStyle==='dotted'?'selected':''}>ไข่ปลา</option>
                             </select>
                         </div>
+                        
                         <div><label class="text-xs text-gray-500 mb-1 block">โค้ง (Radius)</label><input type="number" class="input-control" value="${l.radius}" oninput="updateLine(${i},'radius',this.value)"></div>
                         <div class="flex items-end pb-2">
                              <label class="flex items-center gap-2 cursor-pointer bg-white/5 p-3 rounded-xl border border-white/10 w-full justify-center">
                                 <input type="checkbox" ${l.fill ? 'checked' : ''} onchange="updateLine(${i},'fill',this.checked)" class="w-5 h-5 accent-teal-500">
-                                <span class="text-xs font-bold">เติมสีพื้น (ดำ)</span>
+                                <span class="text-xs font-bold">เติมพื้นดำ</span>
                              </label>
                         </div>
                         <div><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง X</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
@@ -269,20 +277,22 @@
                 let style = `top:${l.y*px}px; font-family:${l.font}; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; font-style:${l.italic?'italic':'normal'};`;
                 
                 if (l.type === 'text') {
-                    if (l.align === 'center') {
-                        style += `left:0; width:100%; text-align:center;`;
-                    } else if (l.align === 'right') {
-                        style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
-                    } else {
-                        style += `left:${l.x*px}px; text-align:left;`;
-                    }
+                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
+                    else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
+                    else style += `left:${l.x*px}px; text-align:left;`;
                     return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${style}" onclick="activeLineIndex=${i}; renderLinesList();">${replaceVars(l.text)}</div>`;
                 } else if (l.type === 'rect') {
-                    // ปรับสไตล์สี่เหลี่ยมให้รองรับ Border Width, Style และ Fill
-                    const bw = (l.borderWidth || 1) * (px/2); // ปรับสเกลเส้นขอบให้ดูสมจริง
+                    const bw = (l.borderWidth || 1) * (px/2);
                     const bStyle = l.borderStyle || 'solid';
                     const bgColor = l.fill ? '#000' : 'transparent';
-                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="left:${l.x*px}px; top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border-radius:${l.radius}px; border:${bw}px ${bStyle} #000; background:${bgColor};" onclick="activeLineIndex=${i}; renderLinesList();"></div>`;
+                    
+                    let rectStyle = `top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border-radius:${l.radius}px; border:${bw}px ${bStyle} #000; background:${bgColor};`;
+                    
+                    if (l.align === 'center') rectStyle += `left:50%; transform:translateX(-50%);`;
+                    else if (l.align === 'right') rectStyle += `right:${l.x*px}px;`;
+                    else rectStyle += `left:${l.x*px}px;`;
+
+                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${rectStyle}" onclick="activeLineIndex=${i}; renderLinesList();"></div>`;
                 } else if (l.type === 'image') {
                     return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="left:${l.x*px}px; top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center; font-size:10px; color:#999;" onclick="activeLineIndex=${i}; renderLinesList();">IMAGE</div>`;
                 }
@@ -298,26 +308,13 @@
             const contents = document.getElementById('canvas_wrapper').innerHTML;
             const pw = window.open('', '_blank', 'width=800,height=600');
             pw.document.write(`
-                <html>
-                <head>
-                    <title>Print Preview</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Prompt:wght@400;600&family=Sarabun:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-                    <style>
-                        body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; }
+                <html><head><title>Print Preview</title><link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Prompt:wght@400;600&family=Sarabun:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+                    <style>body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; }
                         .sticker { position: relative; width: ${document.getElementById('paper_w').value}mm; height: ${document.getElementById('paper_h').value}mm; overflow: hidden; }
                         .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; outline:none !important; box-sizing: border-box; }
                         @page { size: ${document.getElementById('paper_w').value}mm ${document.getElementById('paper_h').value}mm; margin: 0; }
-                    </style>
-                </head>
-                <body>
-                    <div class="sticker">${contents}</div>
-                    <script>
-                        window.onload = function() {
-                            setTimeout(function() { window.print(); window.close(); }, 500);
-                        };
-                    <\/script>
-                </body>
-                </html>
+                    </style></head>
+                <body><div class="sticker">${contents}</div><script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); };<\/script></body></html>
             `);
             pw.document.close();
         }
