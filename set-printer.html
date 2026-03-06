@@ -114,8 +114,8 @@
             clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร จ.พิษณุโลก", phone: "081-999-8888", tax_id: "0123456789012",
             owner_name: "คุณสมชาย ใจดี", pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-26-001", weight: "12.5", breed: "Golden Retriever",
             drug_name: "Amoxicillin 500", drug_name_th: "ยาฆ่าเชื้อ", dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง", meal_timing: "หลังอาหาร", total_qty: "14", warning: "กินติดต่อกันจนหมด",
-            // แก้ไข items_list ตามคำสั่ง: เลขข้อคงไว้, ชื่อรายการคงไว้, ตัดเส้นประ, ราคาชิดขวา, ทศนิยม 2 จุด
-            items_list: "1. ตรวจรักษาทั่วไป                           300.00\n2. ยาฆ่าเชื้อ Amoxy                           500.00\n3. รายการพิเศษ                               200.00", 
+            // แก้ไข items_list: ใช้จำนวนช่องว่างคงที่เพื่อให้ราคาชิดขวาเสมอกัน (จำลองแบบ Monospace)
+            items_list: "1. ตรวจรักษาทั่วไป           300.00\n2. ยาฆ่าเชื้อ Amoxy           500.00\n3. รายการพิเศษ               200.00", 
             total_price: "1,000.00", discount_val: "0.00", net_total: "1,000.00", date: "06/03/26", time: "19:00"
         };
 
@@ -262,8 +262,14 @@
             const dynamicLines = calculateDynamicElements();
             
             wrapper.innerHTML = dynamicLines.map((l, idx) => {
+                // เพิ่มการบังคับใช้ monospace font เฉพาะเมื่อมีตัวแปร items_list เพื่อให้ราคาเรียงตรงกันเป๊ะ
+                const isItemList = l.text && l.text.includes('{{items_list}}');
                 let style = `top:${l.renderedY * px}px; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                 
+                if (isItemList) {
+                    style += `font-family: 'monospace' !important; letter-spacing: -0.5px;`;
+                }
+
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
@@ -298,16 +304,22 @@
                     body { margin: 0; padding: 0; background: white; }
                     .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; font-family: 'Sarabun', sans-serif; }
                     .canvas-element { position: absolute; white-space: pre-wrap; color: black; line-height: 1.4; word-break: break-all; }
+                    .monospace-list { font-family: 'monospace' !important; }
                     @media print { @page { size: ${pw_val}mm auto; margin: 0; } body { margin: 0; } }
                 </style></head>
                 <body><div class="page">
                     ${dynamicLines.map(l => {
+                        const isItemList = l.text && l.text.includes('{{items_list}}');
                         let style = `top:${l.renderedY}mm; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+                        
+                        let className = "canvas-element";
+                        if (isItemList) className += " monospace-list";
+
                         if (l.type === 'text') {
                             if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                             else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
                             else style += `left:${l.x}mm; text-align:left;`;
-                            return `<div class="canvas-element" style="${style}">${l.renderedText}</div>`;
+                            return `<div class="${className}" style="${style}">${l.renderedText}</div>`;
                         } else {
                             const bs = l.borderStyle || 'solid';
                             const bg = l.fill ? 'black' : 'transparent';
