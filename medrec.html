@@ -193,7 +193,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-base">
                             <div><b class="label-clinical text-sm">🔬 Lab:</b> ${drawBullets(labs)}</div>
                             <div><b class="label-clinical text-sm">💉 Tx:</b> ${drawBullets(txs)}</div>
-                            <div><div class="flex justify-between items-center mb-1"><b class="label-clinical text-sm">💊 Rx:</b><button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold transition">🖨️ พิมพ์ทั้งหมด</button></div>${drawBullets(rxs)}</div></div><div class="flex justify-between items-center border-t border-white/5 pt-4"><div class="text-sm"><b>Plan:</b> ${rec.plan || '-'}</div><div class="text-2xl font-black text-yellow-400">฿ ${rec.cost?.toLocaleString()}</div></div></div></div>`;
+                            <div><div class="flex justify-between items-center mb-1"><b class="label-clinical text-sm">💊 Rx:</b><button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold transition">🖨️ พิมพ์ทั้งหมด</button></div>${drawBullets(rxs)}</div></div><div class="flex justify-between items-center border-t border-white/5 pt-4"><div class="text-sm"><b>Plan:</b> ${rec.plan || '-'}</div><div class="text-2xl font-black text-yellow-400">฿ ${rec.total_cost?.toLocaleString()}</div></div></div></div>`;
             }).join('');
         }
 
@@ -214,12 +214,14 @@
 
         async function saveMedicalRecord() {
             try {
+                // แก้ไขชื่อคอลัมน์จาก cost เป็น total_cost และเพิ่ม net_amount เพื่อรองรับ POS
                 const headerData = { 
                     animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, 
                     cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, 
                     dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, 
                     appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, 
-                    note: "", cost: parseFloat(document.getElementById('f_cost').value) || 0 
+                    note: "", total_cost: parseFloat(document.getElementById('f_cost').value) || 0,
+                    net_amount: parseFloat(document.getElementById('f_cost').value) || 0 
                 };
 
                 let currentRecordId = editingId;
@@ -380,7 +382,7 @@
             document.getElementById('f_plan').value = rec.plan || "";
             document.getElementById('f_appointment').value = rec.appointment || "";
             document.getElementById('f_app_note').value = rec.appointment_note || "";
-            document.getElementById('f_cost').value = rec.cost || 0;
+            document.getElementById('f_cost').value = rec.total_cost || 0;
             selectedItems = rec.medical_record_items.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
             updateFormUI(); showFormView();
         }
