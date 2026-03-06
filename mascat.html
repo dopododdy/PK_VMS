@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master Data Management | PK-VMS Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Prompt:wght@300;400;600&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -136,6 +136,8 @@
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_1" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_1" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_2" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_2" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_3" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_3" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_4" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_4" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_dog_dose_5" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_dog_for_5" class="col-span-8 input-box" placeholder="For..."></div>
                             </div>
                         </div>
                         <div class="bg-pink-500/5 p-5 rounded-2xl border border-pink-500/20">
@@ -144,6 +146,8 @@
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_1" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_1" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_2" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_2" class="col-span-8 input-box" placeholder="For..."></div>
                                 <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_3" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_3" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_4" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_4" class="col-span-8 input-box" placeholder="For..."></div>
+                                <div class="grid grid-cols-12 gap-2"><input type="number" id="f_cat_dose_5" class="col-span-4 input-box text-center" placeholder="Dose"><input type="text" id="f_cat_for_5" class="col-span-8 input-box" placeholder="For..."></div>
                             </div>
                         </div>
                     </div>
@@ -202,7 +206,6 @@
             const labels = { 'TakeHome': 'ยาจ่ายกลับบ้าน', 'ProcInj': 'หัตถการ/ยาฉีด', 'Lab': 'Lab', 'General': 'สินค้าทั่วไป' };
             document.getElementById('current-mode-label').innerText = `หมวด: ${labels[cat]}`;
             
-            // หมวดหัตถการ/ยาฉีด ให้โชว์ทั้ง Weight Tier และ Dosage Guide
             const isProcInj = (cat === 'ProcInj');
             document.getElementById('tiered-price-section').classList.toggle('hidden', !isProcInj);
             document.getElementById('fixed-price-section').classList.toggle('hidden', isProcInj);
@@ -220,7 +223,6 @@
                 const res = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'Oral', 'ยา']);
                 data = (res.data || []).map(i => ({ ...i, source: 'pharmacy' }));
             } else if (currentCat === 'ProcInj') {
-                // ดึงทั้งยาฉีด (pharmacy) และหัตถการ (services)
                 const resInj = await db.from('pharmacy').select('*').eq('category', 'Injection');
                 const resProc = await db.from('services').select('*').eq('category', 'หัตถการ');
                 data = [
@@ -250,12 +252,12 @@
             selectedItem = items.find(i => i.id === id);
             if (!selectedItem) return;
 
-            document.getElementById('f_name_en').value = selectedItem.item_name;
+            document.getElementById('f_name_en').value = selectedItem.item_name || selectedItem.service_name || '';
             document.getElementById('f_name_th').value = selectedItem.name_th || '';
             document.getElementById('f_unit').value = selectedItem.unit || '';
-            document.getElementById('f_price').value = selectedItem.price_per_unit || 0;
+            document.getElementById('f_price').value = selectedItem.price_per_unit || selectedItem.price || 0;
             
-            // โหลดช่วงราคา
+            // โหลดราคาตามน้ำหนัก
             if (selectedItem.price_config && Array.isArray(selectedItem.price_config)) {
                 selectedItem.price_config.forEach((tier, idx) => {
                     if (idx < 5) {
@@ -270,22 +272,24 @@
                 }
             }
 
-            if (selectedItem.source === 'pharmacy') {
-                document.getElementById('f_conc').value = selectedItem.concentration_mg_unit || 1;
-                document.getElementById('f_sub_cat').value = selectedItem.sub_category || '';
-                document.getElementById('f_side_effects').value = selectedItem.side_effects || '';
-                for(let i=1; i<=3; i++) {
-                    document.getElementById(`f_dog_dose_${i}`).value = selectedItem[`dog_dose_${i}`] || '';
-                    document.getElementById(`f_dog_for_${i}`).value = selectedItem[`dog_for_${i}`] || '';
-                    document.getElementById(`f_cat_dose_${i}`).value = selectedItem[`cat_dose_${i}`] || '';
-                    document.getElementById(`f_cat_for_${i}`).value = selectedItem[`cat_for_${i}`] || '';
-                }
+            // โหลด Dosage และ Config
+            document.getElementById('f_conc').value = selectedItem.concentration_mg_unit || 1;
+            document.getElementById('f_sub_cat').value = selectedItem.sub_category || '';
+            document.getElementById('f_side_effects').value = selectedItem.side_effects || '';
+            
+            for(let i=1; i<=5; i++) {
+                document.getElementById(`f_dog_dose_${i}`).value = selectedItem[`dog_dose_${i}`] || '';
+                document.getElementById(`f_dog_for_${i}`).value = selectedItem[`dog_for_${i}`] || '';
+                document.getElementById(`f_cat_dose_${i}`).value = selectedItem[`cat_dose_${i}`] || '';
+                document.getElementById(`f_cat_for_${i}`).value = selectedItem[`cat_for_${i}`] || '';
             }
+
             document.getElementById('btn-delete').classList.remove('hidden');
         }
 
         async function saveData() {
             const nameEN = document.getElementById('f_name_en').value.trim();
+            const nameTH = document.getElementById('f_name_th').value.trim();
             if (!nameEN) return alert('กรุณาระบุชื่อ');
 
             let tierData = [];
@@ -295,10 +299,8 @@
                 if (!isNaN(max) && !isNaN(price)) tierData.push({ max, price });
             }
 
-            // ตัดสินใจว่าจะลงตารางไหน
             let table = (currentCat === 'Lab') ? 'services' : 'pharmacy';
             if (currentCat === 'ProcInj') {
-                // ถ้าใส่ Dose Guide ให้เป็นยาฉีด (pharmacy), ถ้าไม่ใส่ให้เป็นหัตถการ (services)
                 table = (document.getElementById('f_dog_dose_1').value > 0) ? 'pharmacy' : 'services';
             }
 
@@ -306,6 +308,7 @@
             if (table === 'services') {
                 payload = {
                     service_name: nameEN,
+                    name_th: nameTH, // เพิ่มการบันทึกชื่อภาษาไทย
                     category: (currentCat === 'Lab' ? 'Lab' : 'หัตถการ'),
                     price: parseFloat(document.getElementById('f_price').value) || 0,
                     price_config: tierData.length > 0 ? tierData : null,
@@ -314,9 +317,9 @@
             } else {
                 payload = {
                     item_name: nameEN,
-                    name_th: document.getElementById('f_name_th').value,
+                    name_th: nameTH, // เพิ่มการบันทึกชื่อภาษาไทย
                     category: (currentCat === 'TakeHome' ? 'TakeHome' : (currentCat === 'ProcInj' ? 'Injection' : 'General')),
-                    sub_category: document.getElementById('f_sub_cat').value,
+                    sub_category: document.getElementById('f_sub_cat').value, // เพิ่มหมวดหมู่ย่อย
                     unit: document.getElementById('f_unit').value,
                     price_per_unit: parseFloat(document.getElementById('f_price').value) || 0,
                     price_config: tierData.length > 0 ? tierData : null,
@@ -324,7 +327,8 @@
                     side_effects: document.getElementById('f_side_effects').value,
                     is_medication: true
                 };
-                for(let i=1; i<=3; i++) {
+                // เพิ่มลูปบันทึก Dosage 1-5
+                for(let i=1; i<=5; i++) {
                     payload[`dog_dose_${i}`] = parseFloat(document.getElementById(`f_dog_dose_${i}`).value) || 0;
                     payload[`dog_for_${i}`] = document.getElementById(`f_dog_for_${i}`).value;
                     payload[`cat_dose_${i}`] = parseFloat(document.getElementById(`f_cat_dose_${i}`).value) || 0;
@@ -355,7 +359,7 @@
 
         function filterItems() {
             const term = document.getElementById('item-search').value.toLowerCase();
-            renderItemList(items.filter(i => i.item_name.toLowerCase().includes(term)));
+            renderItemList(items.filter(i => (i.item_name || i.service_name || '').toLowerCase().includes(term)));
         }
     </script>
 </body>
