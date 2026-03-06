@@ -25,7 +25,7 @@
 
         /* Canvas Preview */
         .canvas-wrapper { background: #ffffff; position: relative; transform-origin: center top; transition: transform 0.2s; overflow: hidden; margin: 0 auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.2; }
+        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.2; box-sizing: border-box; }
         .canvas-element.active { outline: 2px solid var(--teal); background: rgba(20, 184, 17, 0.1); z-index: 50; }
         
         /* Variables Category */
@@ -168,7 +168,8 @@
             if (type === 'text') {
                 newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 14, bold: false, italic: false, align: "left" };
             } else if (type === 'rect') {
-                newLine = { ...newLine, w: 70, h: 8, radius: 4, color: "#000000" };
+                // อัปเดตคุณสมบัติพื้นฐานของสี่เหลี่ยม: เพิ่ม borderStyle, borderWidth, fill
+                newLine = { ...newLine, w: 70, h: 8, radius: 4, borderWidth: 1, borderStyle: 'solid', fill: true };
             } else {
                 newLine = { ...newLine, w: 15, h: 15, url: "" };
             }
@@ -231,10 +232,23 @@
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
                         <div><label class="text-xs text-gray-500 mb-1 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
                         <div><label class="text-xs text-gray-500 mb-1 block">สูง (มม.)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>
+                        <div><label class="text-xs text-gray-500 mb-1 block">หนาเส้นขอบ</label><input type="number" class="input-control" value="${l.borderWidth || 1}" step="0.1" oninput="updateLine(${i},'borderWidth',this.value)"></div>
+                        <div><label class="text-xs text-gray-500 mb-1 block">ชนิดเส้น</label>
+                            <select class="input-control" onchange="updateLine(${i},'borderStyle',this.value)">
+                                <option value="solid" ${l.borderStyle==='solid'?'selected':''}>เส้นทึบ</option>
+                                <option value="dashed" ${l.borderStyle==='dashed'?'selected':''}>เส้นประ</option>
+                                <option value="dotted" ${l.borderStyle==='dotted'?'selected':''}>ไข่ปลา</option>
+                            </select>
+                        </div>
                         <div><label class="text-xs text-gray-500 mb-1 block">โค้ง (Radius)</label><input type="number" class="input-control" value="${l.radius}" oninput="updateLine(${i},'radius',this.value)"></div>
-                        <div><label class="text-xs text-gray-500 mb-1 block">สีพื้น</label><input type="color" class="w-full h-12 rounded-lg bg-transparent" value="${l.color || '#000000'}" oninput="updateLine(${i},'color',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง X</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง Y</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
+                        <div class="flex items-end pb-2">
+                             <label class="flex items-center gap-2 cursor-pointer bg-white/5 p-3 rounded-xl border border-white/10 w-full justify-center">
+                                <input type="checkbox" ${l.fill ? 'checked' : ''} onchange="updateLine(${i},'fill',this.checked)" class="w-5 h-5 accent-teal-500">
+                                <span class="text-xs font-bold">เติมสีพื้น (ดำ)</span>
+                             </label>
+                        </div>
+                        <div><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง X</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
+                        <div><label class="text-xs text-gray-500 mb-1 block">ตำแหน่ง Y</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
                     </div>
                 `;
             }
@@ -264,7 +278,11 @@
                     }
                     return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="${style}" onclick="activeLineIndex=${i}; renderLinesList();">${replaceVars(l.text)}</div>`;
                 } else if (l.type === 'rect') {
-                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="left:${l.x*px}px; top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border-radius:${l.radius}px; background:${l.color || '#000'};" onclick="activeLineIndex=${i}; renderLinesList();"></div>`;
+                    // ปรับสไตล์สี่เหลี่ยมให้รองรับ Border Width, Style และ Fill
+                    const bw = (l.borderWidth || 1) * (px/2); // ปรับสเกลเส้นขอบให้ดูสมจริง
+                    const bStyle = l.borderStyle || 'solid';
+                    const bgColor = l.fill ? '#000' : 'transparent';
+                    return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="left:${l.x*px}px; top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border-radius:${l.radius}px; border:${bw}px ${bStyle} #000; background:${bgColor};" onclick="activeLineIndex=${i}; renderLinesList();"></div>`;
                 } else if (l.type === 'image') {
                     return `<div class="canvas-element ${i===activeLineIndex?'active':''}" style="left:${l.x*px}px; top:${l.y*px}px; width:${l.w*px}px; height:${l.h*px}px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center; font-size:10px; color:#999;" onclick="activeLineIndex=${i}; renderLinesList();">IMAGE</div>`;
                 }
@@ -287,7 +305,7 @@
                     <style>
                         body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; }
                         .sticker { position: relative; width: ${document.getElementById('paper_w').value}mm; height: ${document.getElementById('paper_h').value}mm; overflow: hidden; }
-                        .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; outline:none !important; }
+                        .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; outline:none !important; box-sizing: border-box; }
                         @page { size: ${document.getElementById('paper_w').value}mm ${document.getElementById('paper_h').value}mm; margin: 0; }
                     </style>
                 </head>
