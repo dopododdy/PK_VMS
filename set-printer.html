@@ -22,7 +22,6 @@
         .label-title { color: var(--teal); font-weight: 800; font-size: 0.9rem; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; border: 1px solid var(--border); }
 
-        /* ปรับปรุง Live Preview ให้แม่นยำ */
         .preview-area { background: #050b14; border-radius: 20px; border: 2px dashed rgba(255,255,255,0.1); overflow: auto; display: flex; align-items: center; justify-content: center; position: relative; }
         .canvas-wrapper { background: #ffffff; position: relative; transform-origin: center center; box-shadow: 0 0 40px rgba(0, 0, 0, 0.7); overflow: hidden; }
         .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; transition: outline 0.1s; }
@@ -50,7 +49,7 @@
                 <a href="master_data.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
                 <div>
                     <h1 class="text-2xl font-black text-white tracking-tight">🖨️ PK-VMS Template Designer</h1>
-                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบสติ๊กเกอร์และใบเสร็จรับเงิน</p>
+                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบสติ๊กเกอร์และใบเสร็จ (ระบบ Dynamic Push)</p>
                 </div>
             </div>
             <div class="flex gap-4">
@@ -101,7 +100,7 @@
             <div class="w-5/12 flex flex-col bg-[#050b14]">
                 <div class="flex-1 p-6 flex flex-col overflow-hidden">
                     <div class="flex justify-between items-center mb-4 px-2">
-                        <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Live Preview (ไม้บรรทัด mm)</span>
+                        <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Live Preview (Smart Auto-Flow)</span>
                         <div class="flex items-center gap-3">
                             <span class="text-[10px] text-gray-500 font-bold">ZOOM</span>
                             <input type="range" id="zoom_level" min="30" max="200" value="100" class="accent-teal-500 w-32" oninput="applyZoom()">
@@ -127,6 +126,9 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
+        // ข้อมูลจำลองรายการสินค้าเพื่อทดสอบ
+        const mockItems = Array(4).fill({ name: "รายการสินค้า/บริการจำลอง", price: 150.00 });
+
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic",
             clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
@@ -139,7 +141,7 @@
             hn: "690001",
             weight: "12.5",
             breed: "ชิวาวา",
-            owner_address: "456 ถ.มิตรภาพ ต.หมากแข้ง อ.เมือง จ.อุดรธานี 41000",
+            owner_address: "456 ถ.มิตรภาพ จ.ขอนแก่น",
             drug_name: "Amoxicillin 500mg",
             drug_name_th: "ยาฆ่าเชื้อ (อะม็อกซี่)",
             dose_per_time: "1",
@@ -153,9 +155,7 @@
             receipt_no: "2569030769000101",
             items_list: `
                 <table style="width: calc(100% - 10px); border-collapse:collapse; font-family:'Sarabun'; font-size: 11px; color:black;">
-                    <tr><td style="padding-bottom:2px;">1. Amoxicillin 500mg</td><td style="text-align:right; white-space:nowrap;">210.00</td></tr>
-                    <tr><td style="padding-bottom:2px;">2. ค่าบริการตรวจรักษา</td><td style="text-align:right; white-space:nowrap;">300.00</td></tr>
-                    <tr><td style="padding-bottom:2px;">3. Lab - CBC Test</td><td style="text-align:right; white-space:nowrap;">450.00</td></tr>
+                    ${mockItems.map(item => `<tr><td>${item.name}</td><td style="text-align:right;">${item.price.toFixed(2)}</td></tr>`).join('')}
                 </table>`, 
             total_price: "960.00",
             discount_val: "60.00",
@@ -181,11 +181,14 @@
             I: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m-4 0h8M6 20h8"></path></svg>`
         };
 
-        function replaceVars(text) {
-            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
-                const cleanKey = key.trim();
-                return mockData[cleanKey] !== undefined ? mockData[cleanKey] : match;
-            });
+        function replaceVars(text, fontSize) {
+            if (text.includes("{{items_list}}")) {
+                return `
+                <table style="width: calc(100% - 10px); border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:black;">
+                    ${mockItems.map(item => `<tr><td>${item.name}</td><td style="text-align:right;">${item.price.toFixed(2)}</td></tr>`).join('')}
+                </table>`;
+            }
+            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
         }
 
         async function fetchAvailableTemplates() {
@@ -194,7 +197,7 @@
             if (data && data.length > 0) {
                 select.innerHTML = data.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join('');
                 loadTemplate();
-            } else { select.innerHTML = '<option value="">ไม่พบ Template</option>'; }
+            }
         }
 
         async function loadTemplate() {
@@ -211,7 +214,7 @@
 
         async function saveTemplate() {
             const type = document.getElementById('template_type').value;
-            if (!type) return alert('กรุณาเลือก Template');
+            if (!type) return;
             currentConfig.width = parseFloat(document.getElementById('paper_w').value);
             currentConfig.height = parseFloat(document.getElementById('paper_h').value);
             const { error } = await db.from('print_templates').update({ config: currentConfig }).eq('template_type', type);
@@ -223,7 +226,7 @@
             let newLine = { type, x: 5, y: 5 };
             if (type === 'text') newLine = { ...newLine, text: "ข้อความตัวอย่าง", font: "Sarabun", size: 12, bold: false, italic: false, align: "left" };
             else if (type === 'rect') newLine = { ...newLine, w: 70, h: 5, radius: 0, align: 'left' };
-            else if (type === 'image') newLine = { ...newLine, w: 20, h: 20, url: 'https://via.placeholder.com/150', align: 'left' };
+            else if (type === 'image') newLine = { ...newLine, w: 20, h: 20, url: '', align: 'left' };
             currentConfig.lines.push(newLine);
             activeLineIndex = currentConfig.lines.length - 1;
             renderLinesList(); renderCanvas();
@@ -250,10 +253,7 @@
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
-                updateLine(index, 'url', e.target.result);
-                renderLinesList();
-            };
+            reader.onload = function(e) { updateLine(index, 'url', e.target.result); renderLinesList(); };
             reader.readAsDataURL(file);
         }
 
@@ -310,7 +310,6 @@
                         <div class="editor-group">
                             <label class="label-title">อัปโหลดรูปภาพ</label>
                             <input type="file" class="input-control text-xs" accept="image/*" onchange="handleImageUpload(event, ${i})">
-                            <div class="mt-2 text-[10px] text-gray-500">แนะนำ: ใช้รูปพื้นหลังโปร่งใส (.png) ขนาดไม่เกิน 500KB</div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="editor-group"><label class="label-title">กว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
@@ -336,28 +335,38 @@
             const px = 3.78; 
             const pw = document.getElementById('paper_w').value;
             const ph = document.getElementById('paper_h').value;
-            
             wrapper.style.width = (pw * px) + 'px';
             wrapper.style.height = (ph * px) + 'px';
 
-            wrapper.innerHTML = currentConfig.lines.map((l) => {
-                let style = `top:${l.y * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+            const sortedLines = [...currentConfig.lines].sort((a,b) => a.y - b.y);
+            let pushOffset = 0;
+
+            wrapper.innerHTML = sortedLines.map((l) => {
+                // คำนวณความสูงบรรทัดตามขนาด pt (pt * 0.35 * 1.4)
+                const lineH_mm = parseFloat(l.size) * 0.35 * 1.4;
+                const currentY = parseFloat(l.y) + pushOffset;
                 
-                const boxWidth = l.w ? (l.w * px) : (pw * px - (l.x * 2 * px));
-                style += `width:${boxWidth}px;`;
+                let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+                
+                const reductionMm = (l.text && l.text.includes("{{items_list}}")) ? 2.64 : 0;
+                const boxWidthPx = (l.w ? l.w : (pw - (l.x * 2)) - reductionMm) * px;
+                style += `width:${boxWidthPx}px;`;
+
+                if (l.text && l.text.includes("{{items_list}}")) {
+                    pushOffset += (mockItems.length - 1) * lineH_mm;
+                }
 
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
                     else style += `left:${l.x*px}px; text-align:left;`;
-                    return `<div class="canvas-element" style="${style}">${replaceVars(l.text)}</div>`;
+                    return `<div class="canvas-element" style="${style}">${replaceVars(l.text, l.size)}</div>`;
                 } else if (l.type === 'rect') {
-                    let rStyle = `top:${l.y * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:transparent; border-radius:${(l.radius || 0) * px}px;`;
+                    let rStyle = `top:${currentY * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:transparent; border-radius:${(l.radius || 0) * px}px;`;
                     return `<div class="canvas-element" style="${rStyle}"></div>`;
                 } else if (l.type === 'image') {
                     let iStyle = `top:${l.y * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
                     if (l.align === 'center') iStyle = `top:${l.y * px}px; left:50%; transform:translateX(-50%); width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
-                    else if (l.align === 'right') iStyle = `top:${l.y * px}px; right:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
                     return `<img src="${l.url}" class="canvas-element" style="${iStyle}">`;
                 }
             }).join('');
@@ -369,59 +378,44 @@
         }
         
         function printTest() {
-            const dynamicLines = currentConfig.lines;
+            const sortedLines = [...currentConfig.lines].sort((a,b) => a.y - b.y);
             const pw_val = document.getElementById('paper_w').value;
             const ph_val = document.getElementById('paper_h').value;
             const win = window.open('', '_blank', 'width=800,height=600');
             
-            win.document.write(`
-                <html><head><style>
-                    @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun&display=swap');
-                    body { margin: 0; padding: 0; background: white; font-family: 'Sarabun'; }
-                    .page { position: relative; width: ${pw_val}mm; height: ${ph_val}mm; overflow: hidden; }
-                    .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
-                    @media print { @page { size: ${pw_val}mm ${ph_val}mm; margin: 0; } body { margin: 0; } }
-                </style></head>
-                <body><div class="page">
-                    ${dynamicLines.map(l => {
-                        let style = `top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
-                        const boxWidthMm = l.w ? l.w : (pw_val - (l.x * 2));
-                        style += `width:${boxWidthMm}mm;`;
+            let pushOffset = 0;
+            const printContent = sortedLines.map(l => {
+                const lineH_mm = parseFloat(l.size) * 0.35 * 1.4;
+                const currentY = parseFloat(l.y) + pushOffset;
+                let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+                const reductionMm = (l.text && l.text.includes("{{items_list}}")) ? 2.64 : 0;
+                const boxWidthMm = (l.w ? l.w : (pw_val - (l.x * 2)) - reductionMm);
+                style += `width:${boxWidthMm}mm;`;
 
-                        if (l.type === 'text') {
-                            if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
-                            else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
-                            else style += `left:${l.x}mm;`;
-                            return `<div class="elem" style="${style}">${replaceVars(l.text)}</div>`;
-                        } else if (l.type === 'rect') {
-                            let rStyle = `top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; background:transparent; border-radius:${l.radius || 0}mm;`;
-                            return `<div class="elem" style="${rStyle}"></div>`;
-                        } else if (l.type === 'image') {
-                            let iStyle = `top:${l.y}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                            if (l.align === 'center') iStyle = `top:${l.y}mm; left:50%; transform:translateX(-50%); width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                            else if (l.align === 'right') iStyle = `top:${l.y}mm; right:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                            else iStyle += `left:${l.x}mm;`;
-                            return `<img src="${l.url}" class="elem" style="${iStyle}">`;
-                        }
-                    }).join('')}
-                </div>
-                <script>window.onload=function(){ setTimeout(()=> {window.print(); window.close();}, 500); };<\/script>
-                </body></html>
-            `);
+                if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * lineH_mm;
+
+                if (l.type === 'text') {
+                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
+                    else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
+                    else style += `left:${l.x}mm;`;
+                    return `<div class="elem" style="${style}">${replaceVars(l.text, l.size)}</div>`;
+                } else if (l.type === 'rect') {
+                    return `<div class="elem" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
+                } else if (l.type === 'image') {
+                    let iStyle = `top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                    if (l.align === 'center') iStyle = `top:${currentY}mm; left:50%; transform:translateX(-50%); width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                    return `<img src="${l.url}" class="elem" style="${iStyle}">`;
+                }
+            }).join('');
+
+            win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body { margin: 0; padding: 0; background: white; font-family: 'Sarabun'; } .page { position: relative; width: ${pw_val}mm; height: auto; min-height: ${ph_val}mm; overflow: hidden; } .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; } @media print { @page { size: ${pw_val}mm auto; margin: 0; } }</style></head><body><div class="page">${printContent}</div><script>window.onload=function(){ setTimeout(()=> {window.print(); window.close();}, 500); };<\/script></body></html>`);
             win.document.close();
         }
 
         window.onload = async () => {
             await fetchAvailableTemplates();
             const sideContainer = document.getElementById('var_sidebar_container');
-            sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
-                <div>
-                    <div class="var-category-title">${group}</div>
-                    <div class="flex flex-wrap bg-white/5 p-2 rounded-xl border border-white/5">
-                        ${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy: {{${v}}}')">{{${v}}}</span>`).join('')}
-                    </div>
-                </div>
-            `).join('');
+            sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `<div><div class="var-category-title">${group}</div><div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy: {{${v}}}')">{{${v}}}</span>`).join('')}</div></div>`).join('');
         };
     </script>
 </body>
