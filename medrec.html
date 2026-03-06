@@ -197,32 +197,59 @@
             }).join('');
         }
 
-        // --- เพิ่มฟังก์ชัน printCurrentRx สำหรับปุ่มใน Rx-Modal ---
         async function printCurrentRx() {
             if (!pendingItem) return;
-            
             const qty = parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value);
             const unit = pendingItem.data.unit || 'เม็ด';
-            
             const data = {
-                clinic_name: "PK-VMS Clinic",
-                pet_name: document.getElementById('v-pet-name').innerText,
-                species: petType,
-                hn: ownerHN,
-                drug_name: pendingItem.name,
-                drug_name_th: pendingItem.data.name_th || "",
-                warning: pendingItem.data.side_effects || "",
-                dose_per_time: document.getElementById('rx-tabs-display').innerText.split(' ')[0],
-                unit: unit,
+                clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN,
+                drug_name: pendingItem.name, drug_name_th: pendingItem.data.name_th || "", warning: pendingItem.data.side_effects || "",
+                dose_per_time: document.getElementById('rx-tabs-display').innerText.split(' ')[0], unit: unit,
                 frequency: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`,
-                meal_timing: document.getElementById('rx-meal-timing').value,
-                day_timing: document.getElementById('rx-day-timing').value,
-                duration_days: document.getElementById('rx-days').value,
-                total_qty: `${Math.ceil(qty)} ${unit}`,
-                date: new Date().toLocaleDateString('th-TH')
+                meal_timing: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value,
+                duration_days: document.getElementById('rx-days').value, total_qty: `${Math.ceil(qty)} ${unit}`, date: new Date().toLocaleDateString('th-TH')
             };
-            
             await executeDynamicPrint([data], 'drug_sticker');
+        }
+
+        async function saveMedicalRecord() {
+            try {
+                const headerData = { 
+                    animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, 
+                    cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, 
+                    dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, 
+                    appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, 
+                    note: "", cost: parseFloat(document.getElementById('f_cost').value) || 0 
+                };
+
+                let currentRecordId = editingId;
+
+                if (editingId) {
+                    const { error: upErr } = await db.from('medical_records').update(headerData).eq('id', editingId);
+                    if (upErr) throw upErr;
+                    await db.from('medical_record_items').delete().eq('record_id', editingId);
+                } else {
+                    const { data: record, error: hErr } = await db.from('medical_records').insert([headerData]).select().single();
+                    if (hErr) throw hErr;
+                    currentRecordId = record.id;
+                }
+
+                const itemInserts = selectedItems.map(item => ({ 
+                    record_id: currentRecordId, item_type: item.type, item_name: item.name, 
+                    dose_per_time: item.dose || null, unit: item.unit || null, frequency: item.freq || null, 
+                    meal_timing: item.meal || null, day_timing: item.day_timing || null, duration_days: item.days || null, 
+                    quantity: item.qty || 1, unit_price: item.unit_price || item.price, total_price: item.price 
+                }));
+
+                const { error: iErr } = await db.from('medical_record_items').insert(itemInserts);
+                if (iErr) throw iErr;
+
+                alert("บันทึกข้อมูลเรียบร้อยแล้ว");
+                location.reload();
+            } catch (err) { 
+                console.error(err);
+                alert("เกิดข้อผิดพลาดในการบันทึก: " + err.message); 
+            }
         }
 
         function calculateInjMl() {
