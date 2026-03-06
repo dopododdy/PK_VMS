@@ -183,7 +183,7 @@
                 <div class="p-5 rounded-2xl border ${i === activeLineIndex ? 'bg-navy-light border-teal-500 shadow-lg' : 'bg-white/5 border-white/5'}">
                     <div class="flex justify-between items-center cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
                         <span class="font-bold text-lg">
-                            ${l.type === 'rect' ? '🟧 สี่เหลี่ยม/เส้น' : (l.type === 'image' ? '🖼️ รูปภาพ' : l.text)}
+                            ${l.type === 'rect' ? '🟧 สี่เหลี่ยม/เส้น' : (l.type === 'image' ? '🖼️ รูปภาพ' : l.text.substring(0, 30))}
                         </span>
                         <button class="text-red-400 font-bold px-3 py-1" onclick="currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();">ลบ</button>
                     </div>
@@ -193,13 +193,22 @@
         }
 
         function renderEditor(l, i) {
+            // Alignment Icons SVG
+            const iconL = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path></svg>`;
+            const iconC = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path></svg>`;
+            const iconR = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path></svg>`;
+            
+            // Bold/Italic Icons SVG
+            const iconB = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"></path></svg>`;
+            const iconI = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m-4 0h8M6 20h8"></path></svg>`;
+
             const alignControl = `
                 <div class="col-span-2">
                     <label class="text-xs text-gray-400 mb-1 block">การจัดวาง</label>
                     <div class="flex gap-2">
-                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">L</button>
-                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">C</button>
-                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">R</button>
+                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">${iconL}</button>
+                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">${iconC}</button>
+                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">${iconR}</button>
                     </div>
                 </div>
             `;
@@ -224,8 +233,8 @@
                         ${alignControl}
                         <div><label class="text-xs text-gray-400 mb-1 block">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         <div class="flex gap-2 items-end">
-                            <button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();">B</button>
-                            <button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic}); renderLinesList();">I</button>
+                            <button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();">${iconB}</button>
+                            <button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic}); renderLinesList();">${iconI}</button>
                         </div>
                         <div class="col-span-2"><label class="text-xs text-gray-400">X (มม.)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
                         <div class="col-span-2"><label class="text-xs text-gray-400">Y (มม.)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
@@ -237,12 +246,7 @@
                         <div class="col-span-2"><label class="text-xs text-gray-400 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
                         <div class="col-span-2"><label class="text-xs text-gray-400 block">สูง (มม.)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div>
                         ${alignControl}
-                        <div class="flex items-end pb-1">
-                             <label class="flex items-center gap-2 cursor-pointer bg-white/5 p-3 rounded-xl border border-white/10 w-full justify-center">
-                                <input type="checkbox" ${l.fill ? 'checked' : ''} onchange="updateLine(${i},'fill',this.checked)" class="w-5 h-5 accent-teal-500">
-                                <span class="text-xs">ถมสี</span>
-                             </label>
-                        </div>
+                        <div class="col-span-2"><label class="text-xs text-gray-400 block">ความโค้งมน (มม.)</label><input type="number" class="input-control" value="${l.radius || 0}" oninput="updateLine(${i},'radius',this.value)"></div>
                         <div class="col-span-2"><label class="text-xs text-gray-400">X</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div>
                         <div class="col-span-2"><label class="text-xs text-gray-400">Y</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div>
                     </div>
@@ -281,8 +285,7 @@
                     else style += `left:${l.x*px}px; text-align:left;`;
                     return `<div class="canvas-element" style="${style}">${replaceVars(l.text)}</div>`;
                 } else if (l.type === 'rect') {
-                    const bg = l.fill ? '#000' : 'transparent';
-                    let rStyle = `top:${l.y * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:${bg}; border-radius:${l.radius}px;`;
+                    let rStyle = `top:${l.y * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:transparent; border-radius:${(l.radius || 0) * px}px;`;
                     if (l.align === 'center') rStyle += `left:50%; transform:translateX(-50%);`;
                     else if (l.align === 'right') rStyle += `right:${l.x*px}px;`;
                     else rStyle += `left:${l.x*px}px;`;
@@ -323,8 +326,7 @@
                             else style += `left:${l.x}mm;`;
                             return `<div class="elem" style="${style}">${replaceVars(l.text)}</div>`;
                         } else if (l.type === 'rect') {
-                            const bg = l.fill ? 'black' : 'transparent';
-                            let rStyle = `top:${l.y}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; background:${bg};`;
+                            let rStyle = `top:${l.y}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; background:transparent; border-radius:${l.radius || 0}mm;`;
                             if (l.align === 'center') rStyle += `left:50%; transform:translateX(-50%);`;
                             else if (l.align === 'right') rStyle += `right:${l.x}mm;`;
                             else rStyle += `left:${l.x}mm;`;
