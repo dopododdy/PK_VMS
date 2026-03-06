@@ -22,9 +22,8 @@
         .label-title { color: var(--teal); font-weight: 800; font-size: 1rem; margin-bottom: 6px; display: block; text-transform: uppercase; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 20px; border: 1px solid var(--border); }
 
-        /* Canvas Preview */
         .canvas-wrapper { background: #ffffff; position: relative; transform-origin: center top; transition: transform 0.2s; overflow: hidden; margin: 0 auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.2; box-sizing: border-box; white-space: pre-wrap; }
+        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; }
         .canvas-element.active { outline: 2px solid var(--teal); background: rgba(20, 184, 17, 0.1); z-index: 50; }
         
         .var-category-title { font-size: 0.9rem; font-weight: 800; color: #64748b; margin-top: 15px; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
@@ -36,9 +35,6 @@
 
         .btn-align { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: 0.2s; }
         .btn-align.active { background: var(--teal); color: white; border-color: var(--teal); }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
 </head>
 <body class="overflow-hidden">
@@ -115,19 +111,19 @@
         let activeLineIndex = -1;
 
         const mockData = {
-            clinic_name: "PK-VMS Animal Hospital", clinic_address: "123 ถ.นเรศวร จ.พิษณุโลก", phone: "081-999-8888", tax_id: "0123456789012",
-            owner_name: "คุณสมชาย ใจดี", pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-2026-001", weight: "12.5", breed: "Golden Retriever",
-            drug_name: "Amoxicillin 500", drug_name_th: "อะม็อกซี่ (ฆ่าเชื้อ)", dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง",
-            meal_timing: "หลังอาหารทันที", day_timing: "เช้า-เย็น", duration_days: "7", total_qty: "14", warning: "กินติดต่อกันจนหมด",
-            receipt_no: "REC-260306-001", items_list: "1. ตรวจรักษาทั่วไป..............300.00\n2. ยาฆ่าเชื้อ Amoxy..............500.00", 
-            total_price: "800.00", discount_val: "0.00", net_total: "800.00", date: "06 มี.ค. 26", time: "14:30 น."
+            clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร จ.พิษณุโลก", phone: "081-999-8888", tax_id: "0123456789012",
+            owner_name: "คุณสมชาย ใจดี", pet_name: "โคล่า", species: "สุนัข", sex: "ผู้ตอน", hn: "HN-26-001", weight: "12.5", breed: "Golden Retriever",
+            drug_name: "Amoxicillin 500", drug_name_th: "ยาฆ่าเชื้อ", dose_per_time: "1", unit: "เม็ด", frequency: "วันละ 2 ครั้ง",
+            meal_timing: "หลังอาหาร", total_qty: "14", warning: "กินติดต่อกันจนหมด",
+            receipt_no: "REC-260306-001", items_list: "1. ตรวจรักษาทั่วไป..............300.00\n2. ยาฆ่าเชื้อ Amoxy..............500.00\n3. รายการพิเศษ..................200.00", 
+            total_price: "1,000.00", net_total: "1,000.00", date: "06/03/26", time: "19:00"
         };
 
         const varGroups = {
             "🏥 คลินิก": ["clinic_name", "clinic_address", "phone", "tax_id"],
             "🐾 สัตว์/เจ้าของ": ["owner_name", "pet_name", "species", "sex", "hn", "weight", "breed"],
-            "💊 ข้อมูลยา": ["drug_name", "drug_name_th", "dose_per_time", "unit", "frequency", "meal_timing", "day_timing", "duration_days", "total_qty", "warning"],
-            "💰 การเงิน": ["receipt_no", "items_list", "total_price", "discount_val", "net_total", "date", "time"]
+            "💊 ข้อมูลยา": ["drug_name", "drug_name_th", "dose_per_time", "unit", "frequency", "meal_timing", "total_qty", "warning"],
+            "💰 การเงิน": ["receipt_no", "items_list", "total_price", "net_total", "date", "time"]
         };
 
         function replaceVars(text) {
@@ -150,7 +146,7 @@
             currentConfig.width = parseFloat(document.getElementById('paper_w').value);
             currentConfig.height = parseFloat(document.getElementById('paper_h').value);
             await db.from('print_templates').upsert({ template_type: type, config: currentConfig });
-            alert('✅ บันทึกรูปแบบเรียบร้อยแล้ว');
+            alert('✅ บันทึกเรียบร้อยแล้ว');
         }
 
         function addLine(type) {
@@ -167,22 +163,18 @@
 
         function renderLinesList() {
             const container = document.getElementById('lines_container');
-            container.innerHTML = currentConfig.lines.map((l, i) => {
-                const active = i === activeLineIndex;
-                return `
-                    <div class="p-5 rounded-2xl border ${active ? 'bg-navy-light border-teal-500 shadow-lg' : 'bg-white/5 border-white/5'}">
-                        <div class="flex justify-between items-center cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
-                            <span class="font-bold text-lg">${l.type === 'rect' ? '🟧 ส่วนประกอบรูปทรง' : l.text}</span>
-                            <button class="text-red-400 font-bold px-3 py-1 hover:bg-red-400/10 rounded" onclick="currentConfig.lines.splice(${i},1); renderLinesList(); renderCanvas();">ลบ</button>
-                        </div>
-                        ${active ? renderEditor(l, i) : ''}
+            container.innerHTML = currentConfig.lines.map((l, i) => `
+                <div class="p-5 rounded-2xl border ${i === activeLineIndex ? 'bg-navy-light border-teal-500' : 'bg-white/5 border-white/5'}">
+                    <div class="flex justify-between items-center cursor-pointer" onclick="activeLineIndex=${i}; renderLinesList();">
+                        <span class="font-bold text-lg">${l.type === 'rect' ? '🟧 สี่เหลี่ยม/เส้น' : l.text}</span>
+                        <button class="text-red-400 font-bold px-3 py-1" onclick="currentConfig.lines.splice(${i},1); renderLinesList(); renderCanvas();">ลบ</button>
                     </div>
-                `;
-            }).join('');
+                    ${i === activeLineIndex ? renderEditor(l, i) : ''}
+                </div>
+            `).join('');
         }
 
         function renderEditor(l, i) {
-            // Icon การจัดวาง (L, C, R)
             const alignControl = `
                 <div class="col-span-2">
                     <label class="text-xs text-gray-400 mb-1 block">การจัดวาง</label>
@@ -217,11 +209,10 @@
             } else {
                 return `
                     <div class="grid grid-cols-4 gap-4 mt-5 pt-5 border-t border-white/5">
-                        <div class="col-span-2"><label class="text-xs text-gray-400 block">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
-                        <div class="col-span-2"><label class="text-xs text-gray-400 block">สูง/หนา (มม.)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-400">กว้าง</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div>
+                        <div class="col-span-2"><label class="text-xs text-gray-400">สูง/หนา</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div>
                         ${alignControl}
-                        <div>
-                            <label class="text-xs text-gray-400 block">ชนิดเส้น</label>
+                        <div><label class="text-xs text-gray-400">ชนิดเส้น</label>
                             <select class="input-control text-sm" onchange="updateLine(${i},'borderStyle',this.value)">
                                 <option value="solid" ${l.borderStyle==='solid'?'selected':''}>เส้นทึบ</option>
                                 <option value="dashed" ${l.borderStyle==='dashed'?'selected':''}>เส้นประ</option>
@@ -254,7 +245,7 @@
             const sortedLines = [...currentConfig.lines].sort((a, b) => a.y - b.y);
             let pushOffset = 0;
 
-            wrapper.innerHTML = sortedLines.map((l, idx) => {
+            wrapper.innerHTML = sortedLines.map((l) => {
                 const currentY = parseFloat(l.y) + pushOffset;
                 const text = replaceVars(l.text || '');
                 if (l.text && l.text.includes('{{items_list}}')) {
@@ -262,7 +253,7 @@
                     if (linesCount > 1) pushOffset += (linesCount - 1) * 5.2;
                 }
 
-                let style = `top:${currentY * px}px; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+                let style = `top:${currentY * px}px; font-size:${l.size * 1.33}px; font-weight:${l.bold?'bold':'normal'}; font-style:${l.italic?'italic':'normal'};`;
                 
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
@@ -282,14 +273,20 @@
         }
 
         function applyZoom() { document.getElementById('canvas_wrapper').style.transform = `scale(${document.getElementById('zoom_level').value/100})`; }
-        function printTest() { alert("กำลังสั่งพิมพ์..."); }
+        
+        function printTest() {
+            const wrapper = document.getElementById('canvas_wrapper');
+            const win = window.open('', '_blank', 'width=800,height=600');
+            win.document.write(`<html><head><style>body{margin:0;padding:0;background:white;} .page{position:relative;width:${document.getElementById('paper_w').value}mm;min-height:${document.getElementById('paper_h').value}mm;} .canvas-element{position:absolute;white-space:pre-wrap;color:black;line-height:1.4;}</style></head><body><div class="page">${wrapper.innerHTML}</div><script>window.print();window.close();<\/script></body></html>`);
+            win.document.close();
+        }
 
         window.onload = () => {
             loadTemplate();
             const sideContainer = document.getElementById('var_sidebar_container');
             sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
                 <div class="var-category-title">${group}</div>
-                <div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('คัดลอก {{${v}}} แล้ว')">{{${v}}}</span>`).join('')}</div>
+                <div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy {{${v}}}')">{{${v}}}</span>`).join('')}</div>
             `).join('');
         };
     </script>
