@@ -57,6 +57,15 @@
             <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl border border-white/5">🏠</a>
         </header>
 
+        <div class="section-card border-l-8 border-blue-500">
+            <h3 class="text-2xl font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
+            <div class="grid grid-cols-12 gap-6">
+                <div class="col-span-12 md:col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><div id="info-owner-name" class="text-xl font-bold text-white">-</div></div>
+                <div class="col-span-12 md:col-span-3"><label class="label-text">เบอร์โทรศัพท์</label><div id="info-owner-phone" class="text-xl font-bold text-teal-400">-</div></div>
+                <div class="col-span-12 md:col-span-5"><label class="label-text">ที่อยู่</label><div id="info-owner-address" class="text-base text-slate-400">-</div></div>
+            </div>
+        </div>
+
         <div id="history-view-container">
             <div class="section-card border-l-8 border-teal-500">
                 <div class="flex justify-between items-center mb-8">
@@ -193,35 +202,50 @@
         const urlParams = new URLSearchParams(window.location.search);
         const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let editingId = null, records = [], fullCatalog = [], pendingItem = null, currentCatalogType = null;
-        let selectedItems = []; // เก็บทุกอย่างแยกเป็น Object {type, name, price, metadata}
+        let selectedItems = []; 
         let petType = 'สุนัข', petData = { sex: "ผู้", dob: "" };
 
         window.onload = async () => {
-            if (!animalId) return location.href='animals.html';
+            if (!animalId || !ownerHN) return location.href='animals.html';
             flatpickr(".datepicker", { locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y" });
-            await fetchInfo(); await fetchRecords();
+            await fetchInfo(); 
+            await fetchRecords();
         };
 
+        // ปรับปรุงฟังก์ชัน fetchInfo ให้ดึงเบอร์โทรศัพท์จากตารางใหม่
         async function fetchInfo() {
-            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
-            const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
-            if (owner && pet) {
-                petType = pet.pet_type; petData.sex = pet.gender || "ไม่ระบุ";
-                petData.dob = pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('th-TH') : "-";
-                document.getElementById('info-owner-name').innerText = owner.owner_name;
-                document.getElementById('info-owner-phone').innerText = (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN)).data?.[0]?.phone_number || '-';
-                document.getElementById('info-owner-address').innerText = owner.address || '-';
-                document.getElementById('head-hn').innerText = `HN: ${owner.hn}`;
-                document.getElementById('head-pet-name').innerText = pet.pet_name;
-                document.getElementById('v-pet-name').innerText = pet.pet_name;
-                document.getElementById('v-pet-weight').innerText = pet.weight || '0';
-                document.getElementById('f_weight').value = pet.weight || 0;
-                document.getElementById('v-pet-congenital').innerText = pet.congenital_disease || 'ไม่มี';
+            try {
+                const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+                const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
+                
+                // ดึงเบอร์โทรศัพท์จากตารางแยก (owner_phones)
+                const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN);
+                const phoneStr = phones && phones.length > 0 ? phones.map(p => p.phone_number).join(', ') : '-';
+
+                if (owner && pet) {
+                    petType = pet.pet_type; 
+                    petData.sex = pet.gender || "ไม่ระบุ";
+                    petData.dob = pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('th-TH') : "-";
+                    
+                    // อัปเดตข้อมูลเจ้าของ
+                    document.getElementById('info-owner-name').innerText = owner.owner_name;
+                    document.getElementById('info-owner-phone').innerText = phoneStr;
+                    document.getElementById('info-owner-address').innerText = owner.address || '-';
+                    document.getElementById('head-hn').innerText = `HN: ${owner.hn}`;
+                    
+                    // อัปเดตข้อมูลสัตว์
+                    document.getElementById('head-pet-name').innerText = pet.pet_name;
+                    document.getElementById('v-pet-name').innerText = pet.pet_name;
+                    document.getElementById('v-pet-weight').innerText = pet.weight || '0';
+                    document.getElementById('f_weight').value = pet.weight || 0;
+                    document.getElementById('v-pet-congenital').innerText = pet.congenital_disease || 'ไม่มี';
+                }
+            } catch (error) {
+                console.error("Error fetching info:", error);
             }
         }
 
         async function fetchRecords() {
-            // ดึงข้อมูลพร้อมกับ items ย่อย (Join)
             const { data } = await db.from('medical_records')
                 .select('*, medical_record_items(*)')
                 .eq('animal_id', animalId)
@@ -234,13 +258,10 @@
             document.getElementById('record-count').innerText = records.length;
             list.innerHTML = records.map(rec => {
                 const dateStr = new Date(rec.created_at).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' });
-                
-                // แยกหมวดหมู่จาก items ย่อยที่ดึงมา
                 const labs = rec.medical_record_items.filter(i => i.item_type === 'Lab').map(i => i.item_name);
                 const txs = rec.medical_record_items.filter(i => i.item_type === 'Tx').map(i => i.item_name);
                 const rxs = rec.medical_record_items.filter(i => i.item_type === 'Rx').map(i => {
-                    const instr = `${i.item_name} (ป้อน ${i.dose_per_time} ${i.unit} ${i.frequency} ${i.meal_timing} ${i.day_timing} x ${i.duration_days}วัน)`;
-                    return instr;
+                    return `${i.item_name} (ป้อน ${i.dose_per_time} ${i.unit} ${i.frequency} ${i.meal_timing} ${i.day_timing} x ${i.duration_days}วัน)`;
                 });
 
                 return `<div class="history-item">
@@ -276,44 +297,29 @@
                 appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, 
                 note: document.getElementById('f_note').value, cost: parseFloat(document.getElementById('f_cost').value) || 0
             };
-
-            // 1. บันทึกหัวข้อลง medical_records
             const { data: record, error: hErr } = await db.from('medical_records').insert([headerData]).select().single();
             if (hErr) return alert(hErr.message);
-
-            // 2. บันทึกรายการย่อยลง medical_record_items
             const itemInserts = selectedItems.map(item => ({
-                record_id: record.id,
-                item_type: item.type,
-                item_name: item.name,
-                dose_per_time: item.dose || null,
-                unit: item.unit || null,
-                frequency: item.freq || null,
-                meal_timing: item.meal || null,
-                day_timing: item.day_timing || null,
-                duration_days: item.days || null,
-                quantity: item.qty || 1,
-                unit_price: item.unit_price || item.price,
-                total_price: item.price
+                record_id: record.id, item_type: item.type, item_name: item.name,
+                dose_per_time: item.dose || null, unit: item.unit || null, frequency: item.freq || null,
+                meal_timing: item.meal || null, day_timing: item.day_timing || null, duration_days: item.days || null,
+                quantity: item.qty || 1, unit_price: item.unit_price || item.price, total_price: item.price
             }));
-
             const { error: iErr } = await db.from('medical_record_items').insert(itemInserts);
-            if (iErr) alert("บันทึกรายการย่อยไม่สำเร็จ: " + iErr.message);
+            if (iErr) alert("บันทึกรายการไม่สำเร็จ: " + iErr.message);
             else { alert("บันทึกสำเร็จ!"); location.reload(); }
         }
-
-        // --- Logic Modals & Item Selection ---
 
         async function openCatalog(type) {
             currentCatalogType = type; 
             document.getElementById('catalog-modal').style.display = 'flex';
             updateModalUI();
             let items = [];
-            if (type === 'lab') items = (await db.from('services').select('*').eq('category', 'Lab')).data.map(i=>({name:i.service_name, price:i.price, config:i.price_config, type:'Lab'}));
+            if (type === 'lab') items = (await db.from('services').select('*').eq('category', 'Lab')).data.map(i=>({name:i.service_name, price:i.price, type:'Lab'}));
             else if (type === 'tx') {
                 const r1 = await db.from('pharmacy').select('*').eq('category', 'Injection');
                 const r2 = await db.from('services').select('*').eq('category', 'หัตถการ');
-                items = [...(r1.data||[]).map(i=>({name:i.item_name, price:i.price_per_unit, type:'Tx', subtype:'inj', data:i})), ...(r2.data||[]).map(i=>({name:i.service_name, price:i.price, config:i.price_config, type:'Tx', subtype:'proc'}))];
+                items = [...(r1.data||[]).map(i=>({name:i.item_name, price:i.price_per_unit, type:'Tx', subtype:'inj', data:i})), ...(r2.data||[]).map(i=>({name:i.service_name, price:i.price, type:'Tx', subtype:'proc'}))];
             } else if (type === 'rx') items = (await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral'])).data.map(i=>({name:i.item_name, price:i.price_per_unit, type:'Rx', data:i}));
             fullCatalog = items; renderCatalog(items);
         }
@@ -347,10 +353,7 @@
             const days = parseInt(document.getElementById('rx-days').value);
             const total_p = parseFloat(document.getElementById('rx-final-price-val').value);
             const qty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * days);
-
-            addItem('Rx', pendingItem.name, total_p, { 
-                dose, unit: pendingItem.data.unit || 'เม็ด', freq, meal, day_timing: day_t, days, qty, unit_price: pendingItem.price 
-            });
+            addItem('Rx', pendingItem.name, total_p, { dose, unit: pendingItem.data.unit || 'เม็ด', freq, meal, day_timing: day_t, days, qty, unit_price: pendingItem.price });
             document.getElementById('rx-calc-modal').style.display = 'none';
         }
 
@@ -377,7 +380,6 @@
             const labs = selectedItems.filter(i => i.type === 'Lab').map(i => i.name);
             const txs = selectedItems.filter(i => i.type === 'Tx').map(i => i.name);
             const rxs = selectedItems.filter(i => i.type === 'Rx').map(i => `${i.name} (${i.dose} ${i.unit} ${i.freq} ${i.meal})`);
-            
             document.getElementById('list_lab_display').innerHTML = drawBullets(labs, 'form_item');
             document.getElementById('list_tx_display').innerHTML = drawBullets(txs, 'form_item');
             document.getElementById('list_rx_display').innerHTML = drawBullets(rxs, 'form_item');
@@ -393,7 +395,6 @@
             return `<ul class="bullet-list">${arr.map((n, idx) => `<li onclick="${mode==='form_item'?'removeItem('+idx+')':''}"><span>${n}</span></li>`).join('')}</ul>`;
         }
 
-        // --- Rx Calculation Logic ---
         function calculateRxTablets() {
             const w = parseFloat(document.getElementById('f_weight').value) || 0, d = parseFloat(document.getElementById('rx-dose-val').value) || 0, c = parseFloat(document.getElementById('rx-conc-val').value) || 1;
             let t = Math.round(((w * d) / c) * 4) / 4;
@@ -422,33 +423,40 @@
         function goBack() { location.href = 'animals.html'; }
         function filterCatalog() { const t = document.getElementById('catalog-search').value.toLowerCase(); renderCatalog(fullCatalog.filter(i=>i.name.toLowerCase().includes(t))); }
 
-        // พิมพ์ Sticker (ดึงจาก Data ล่าสุด)
         async function printRxSticker() {
-            const qty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value));
-            const data = {
-                pet_name: document.getElementById('head-pet-name').innerText,
+            // (ฟังก์ชันพิมพ์สติ๊กเกอร์ - ปรับปรุงตัวแปรให้ตรงตาม SCHEMA ใหม่)
+            const { data: t } = await db.from('print_templates').select('config').eq('template_type', 'drug_sticker').single();
+            const config = t.config;
+            const container = document.getElementById('sticker-container');
+            
+            const printData = {
+                pet_name: document.getElementById('v-pet-name').innerText,
                 drug_name: pendingItem.name,
-                dose: document.getElementById('rx-tabs-display').innerText,
+                dose_per_time: document.getElementById('rx-tabs-display').innerText.split(' ')[0],
+                unit: pendingItem.data.unit || 'เม็ด',
                 frequency: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`,
                 meal_timing: document.getElementById('rx-meal-timing').value,
                 day_timing: document.getElementById('rx-day-timing').value,
-                duration: document.getElementById('rx-days').value,
-                qty: `${qty} ${pendingItem.data.unit || 'เม็ด'}`
+                duration_days: document.getElementById('rx-days').value,
+                total_qty: (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value))
             };
-            executeDynamicPrint(data, 'drug_sticker');
-        }
 
-        async function executeDynamicPrint(mockData, templateType) {
-            const { data: t } = await db.from('print_templates').select('config').eq('template_type', templateType).single();
-            const config = t.config;
-            const container = document.getElementById('sticker-container');
-            container.style.width = config.width + 'mm'; container.style.height = config.height + 'mm';
+            container.style.width = config.width + 'mm'; 
+            container.style.height = config.height + 'mm';
             container.innerHTML = config.lines.map(l => {
                 let txt = l.text;
-                Object.keys(mockData).forEach(k => txt = txt.replace(`{{${k}}}`, mockData[k]));
+                Object.keys(printData).forEach(k => txt = txt.replace(new RegExp(`{{${k}}}`, 'g'), printData[k]));
                 return `<div class="canvas-line" style="left:${l.x}px; top:${l.y}px; font-size:${l.size}px; font-weight:${l.bold?'bold':'normal'}">${txt}</div>`;
             }).join('');
             window.print();
+        }
+        
+        async function deleteRecord(id) {
+            if(confirm("ต้องการลบประวัติการรักษานี้หรือไม่?")) {
+                const { error } = await db.from('medical_records').delete().eq('id', id);
+                if (error) alert(error.message);
+                else location.reload();
+            }
         }
     </script>
 </body>
