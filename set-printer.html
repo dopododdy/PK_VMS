@@ -17,16 +17,12 @@
         }
         body { font-family: "Sarabun", sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; overflow-x: hidden; }
         
-        /* Layout Structure */
         .app-container { display: flex; flex-direction: column; height: 100vh; }
         .editor-workspace { display: flex; flex: 1; overflow: hidden; }
-        .sidebar { width: 380px; background: var(--navy-mid); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
-        .preview-area { flex: 1; background: #07101a; position: relative; display: flex; justify-content: center; align-items: center; overflow: auto; padding: 2rem; }
         
         /* Custom Inputs */
-        .input-group { margin-bottom: 1rem; }
-        .input-group label { display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.4rem; font-weight: 600; }
-        .input-control { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: #fff; padding: 0.6rem 0.8rem; border-radius: 8px; outline: none; transition: border-color 0.2s; font-family: inherit; font-size: 0.9rem; }
+        .input-group label { display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.3rem; font-weight: 600; }
+        .input-control { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: #fff; padding: 0.5rem 0.8rem; border-radius: 8px; outline: none; transition: border-color 0.2s; font-family: inherit; font-size: 0.9rem; }
         .input-control:focus { border-color: var(--teal); }
         select.input-control option { background: var(--navy-mid); }
 
@@ -35,11 +31,12 @@
             background: #ffffff;
             box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
             position: relative;
-            transform-origin: center center;
+            transform-origin: center top;
             transition: transform 0.2s ease;
             overflow: hidden;
+            margin: 0 auto;
         }
-        .canvas-line {
+        .canvas-element {
             position: absolute;
             white-space: pre-wrap;
             word-break: break-word;
@@ -49,9 +46,12 @@
             user-select: none;
             border: 1px dashed transparent;
         }
-        .canvas-line:hover { border-color: rgba(14, 165, 160, 0.5); background: rgba(14, 165, 160, 0.05); }
-        .canvas-line.active { border-color: var(--teal); background: rgba(14, 165, 160, 0.1); z-index: 10; }
+        .canvas-element:hover { border-color: rgba(14, 165, 160, 0.5); background: rgba(14, 165, 160, 0.05); }
+        .canvas-element.active { border-color: var(--teal); background: rgba(14, 165, 160, 0.1); z-index: 10; }
         
+        .var-badge { background: rgba(14, 165, 160, 0.15); border: 1px solid rgba(14, 165, 160, 0.3); color: var(--teal-light); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.75rem; display: inline-block; margin: 2px; cursor: pointer; transition: 0.2s; }
+        .var-badge:hover { background: var(--teal); color: #fff; }
+
         /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -73,54 +73,101 @@
                 <h1 class="text-xl font-bold border-l pl-4 border-white/20">🖨️ ตั้งค่าเครื่องพิมพ์และกระดาษ</h1>
             </div>
             <div class="flex gap-3">
-                <button class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm transition font-bold" onclick="printTest()">🖨️ ทดสอบพิมพ์</button>
-                <button class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-xl text-sm transition font-bold shadow-lg shadow-teal-500/20" onclick="saveTemplate()">💾 บันทึกรูปแบบ</button>
+                <button class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-sm transition font-bold" onclick="printTest()">🖨️ ทดสอบพิมพ์</button>
+                <button class="bg-teal-600 hover:bg-teal-500 text-white px-5 py-2 rounded-xl text-sm transition font-bold shadow-lg shadow-teal-500/20" onclick="saveTemplate()">💾 บันทึกรูปแบบ</button>
             </div>
         </header>
 
-        <div class="editor-workspace">
-            <div class="sidebar">
-                <div class="p-5 border-b border-white/10 bg-black/20">
-                    <div class="input-group mb-0">
-                        <label>รูปแบบเอกสาร (TEMPLATE) <span class="text-xs text-teal-400 ml-2 font-normal">ดึงจาก Master Data</span></label>
-                        <select id="template_type" class="input-control font-bold text-teal-400" onchange="loadTemplate()">
+        <div class="editor-workspace flex flex-col lg:flex-row">
+            
+            <div class="w-full lg:w-2/3 flex flex-col border-r border-white/10 bg-[#0a1320]">
+                <div class="p-5 border-b border-white/5 bg-black/20 flex flex-wrap gap-6 items-end">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block font-bold text-teal-400 mb-2">📂 รูปแบบเอกสาร (TEMPLATE)</label>
+                        <select id="template_type" class="input-control text-lg font-bold" onchange="loadTemplate()">
                             <option value="" disabled selected>กำลังโหลดข้อมูล...</option>
                         </select>
                     </div>
+                    <div class="flex gap-4">
+                        <div class="w-24">
+                            <label class="block text-xs text-gray-400 mb-1">กว้าง (มม.)</label>
+                            <input type="number" id="paper_w" class="input-control text-center" value="80" onchange="updatePaperSize()">
+                        </div>
+                        <div class="w-24">
+                            <label class="block text-xs text-gray-400 mb-1">สูง (มม.)</label>
+                            <input type="number" id="paper_h" class="input-control text-center" value="50" onchange="updatePaperSize()">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-5 overflow-y-auto flex-1">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">การตั้งค่าหน้ากระดาษ (มม.)</h3>
-                    <div class="grid grid-cols-2 gap-3 mb-6">
-                        <div class="input-group mb-0">
-                            <label>ความกว้าง (Width)</label>
-                            <input type="number" id="paper_w" class="input-control" value="80" onchange="updatePaperSize()">
+                <div class="p-6 flex-1 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-white">📝 องค์ประกอบบนสติ๊กเกอร์ (Elements)</h3>
+                        <div class="flex gap-2">
+                            <button onclick="addLine('text')" class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-bold text-white transition">+ เพิ่มข้อความ</button>
+                            <button onclick="addLine('image')" class="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-bold text-teal-400 transition">+ แทรกรูปภาพ/QR (สูงสุด 2)</button>
                         </div>
-                        <div class="input-group mb-0">
-                            <label>ความสูง (Height)</label>
-                            <input type="number" id="paper_h" class="input-control" value="50" onchange="updatePaperSize()">
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">ส่วนประกอบข้อความ (Lines)</h3>
-                        <span class="text-xs text-teal-400 cursor-pointer hover:underline" onclick="addLine()">+ เพิ่มบรรทัด</span>
                     </div>
                     
-                    <div id="lines_container" class="space-y-3">
+                    <div id="lines_container" class="space-y-4 pb-20">
                         </div>
                 </div>
             </div>
 
-            <div class="preview-area">
-                <div class="absolute top-4 right-4 bg-navy-mid border border-white/10 p-2 rounded-lg flex items-center gap-2 shadow-2xl z-20">
-                    <span class="text-xs text-gray-400 font-bold px-2">ZOOM</span>
-                    <input type="range" id="zoom_level" min="50" max="250" value="100" class="w-32 accent-teal-500" oninput="applyZoom()">
-                    <span id="zoom_val" class="text-xs font-mono text-teal-400 w-8 text-right">100%</span>
+            <div class="w-full lg:w-1/3 flex flex-col bg-[#050b14]">
+                
+                <div class="flex-1 relative flex flex-col">
+                    <div class="p-3 bg-black/40 border-b border-white/5 flex justify-between items-center z-10">
+                        <span class="text-sm font-bold text-gray-400">👁️ ตัวอย่างการพิมพ์ (Preview)</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">Zoom</span>
+                            <input type="range" id="zoom_level" min="50" max="250" value="120" class="w-24 accent-teal-500" oninput="applyZoom()">
+                            <span id="zoom_val" class="text-xs font-mono text-teal-400 w-8 text-right">120%</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto p-6 flex justify-center items-start">
+                        <div id="canvas_wrapper" class="canvas-wrapper">
+                            </div>
+                    </div>
                 </div>
 
-                <div id="canvas_wrapper" class="canvas-wrapper">
+                <div class="h-64 border-t border-white/10 bg-[#0a1320] flex flex-col shrink-0">
+                    <div class="p-3 bg-black/20 border-b border-white/5">
+                        <span class="text-sm font-bold text-teal-400">💡 ตัวแปรที่รองรับ (กดเพื่อคัดลอก)</span>
                     </div>
+                    <div class="p-4 overflow-y-auto space-y-4">
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">ข้อมูลสัตว์และเจ้าของ</div>
+                            <span class="var-badge" onclick="copyVar(this)">{{pet_name}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{species}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{sex}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{breed}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{weight}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{owner_name}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{hn}}</span>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">ข้อมูลยา (หน้าซองยา)</div>
+                            <span class="var-badge" onclick="copyVar(this)">{{drug_name}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{drug_name_th}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{dose}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{frequency}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{timing}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{duration}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{qty}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{warning}}</span>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">คิวและวัคซีน</div>
+                            <span class="var-badge" onclick="copyVar(this)">{{queue}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{date}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{time}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{vaccine_name}}</span>
+                            <span class="var-badge" onclick="copyVar(this)">{{next_appt}}</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -129,7 +176,7 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
-        // 1. โหลดรายชื่อ Template จากตาราง print_templates
+        // 1. Load Templates Dropdown
         async function loadTemplateDropdown() {
             try {
                 const { data: templates, error } = await db.from('print_templates').select('template_type').order('template_type');
@@ -139,19 +186,15 @@
                 if (templates && templates.length > 0) {
                     selectEl.innerHTML = '<option value="" disabled>-- เลือกรูปแบบเอกสาร --</option>' + 
                         templates.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join('');
-                    
-                    // เลือกตัวแรกเป็นค่าเริ่มต้น
                     selectEl.value = templates[0].template_type;
                     await loadTemplate();
                 } else {
                     selectEl.innerHTML = '<option value="" disabled>ไม่พบข้อมูลใน Master Data</option>';
                 }
-            } catch (err) {
-                console.error("Error loading templates:", err);
-            }
+            } catch (err) { console.error("Error loading templates:", err); }
         }
 
-        // 2. โหลด Config ของ Template ที่เลือก
+        // 2. Load Selected Template Config
         async function loadTemplate() {
             const type = document.getElementById('template_type').value;
             if (!type) return;
@@ -165,10 +208,12 @@
                     document.getElementById('paper_w').value = currentConfig.width || 80;
                     document.getElementById('paper_h').value = currentConfig.height || 50;
                     
-                    // แปลง format เก่าให้รองรับ align หากไม่มี
+                    // Normalize old format
                     currentConfig.lines = (currentConfig.lines || []).map(line => ({
                         ...line,
-                        align: line.align || 'left'
+                        type: line.type || 'text',
+                        align: line.align || 'left',
+                        italic: line.italic || false
                     }));
 
                     activeLineIndex = -1;
@@ -176,30 +221,24 @@
                     renderCanvas();
                     applyZoom();
                 }
-            } catch (err) {
-                console.error("Error loading config:", err);
-            }
+            } catch (err) { console.error("Error loading config:", err); }
         }
 
-        // 3. บันทึกกลับลงฐานข้อมูล
+        // 3. Save to DB
         async function saveTemplate() {
             const type = document.getElementById('template_type').value;
             if (!type) return alert('กรุณาเลือกรูปแบบเอกสารก่อนบันทึก');
-
             try {
-                // อัปเดตข้อมูลขนาดกระดาษล่าสุดก่อนเซฟ
                 currentConfig.width = parseFloat(document.getElementById('paper_w').value);
                 currentConfig.height = parseFloat(document.getElementById('paper_h').value);
 
                 const { error } = await db.from('print_templates').update({ config: currentConfig }).eq('template_type', type);
                 if (error) throw error;
                 alert('✅ บันทึกรูปแบบเอกสารเรียบร้อยแล้ว');
-            } catch (err) {
-                alert('❌ Error: ' + err.message);
-            }
+            } catch (err) { alert('❌ Error: ' + err.message); }
         }
 
-        // --- ระบบ Editor พื้นฐาน ---
+        // --- Editor Functions ---
         function updatePaperSize() {
             currentConfig.width = parseFloat(document.getElementById('paper_w').value) || 80;
             currentConfig.height = parseFloat(document.getElementById('paper_h').value) || 50;
@@ -212,64 +251,34 @@
             document.getElementById('canvas_wrapper').style.transform = `scale(${zoom / 100})`;
         }
 
-        function renderLinesList() {
-            const container = document.getElementById('lines_container');
-            container.innerHTML = '';
-            
-            currentConfig.lines.forEach((line, i) => {
-                const isActive = (i === activeLineIndex);
-                const el = document.createElement('div');
-                el.className = `p-3 rounded-lg border transition-all ${isActive ? 'bg-teal-900/20 border-teal-500' : 'bg-black/20 border-white/10'}`;
-                
-                el.innerHTML = `
-                    <div class="flex justify-between items-center mb-2 cursor-pointer" onclick="setActiveLine(${i})">
-                        <span class="font-bold text-sm ${isActive ? 'text-teal-400' : 'text-gray-300'} text-truncate" style="max-width:200px; white-space:nowrap; overflow:hidden;">
-                            ${i+1}. ${line.text || '(ว่าง)'}
-                        </span>
-                        <button class="text-red-400 hover:text-red-300 text-xs px-2" onclick="event.stopPropagation(); removeLine(${i})">ลบ</button>
-                    </div>
-                    ${isActive ? `
-                        <div class="grid grid-cols-2 gap-2 mt-3">
-                            <div><label class="text-[10px] text-gray-400">แกน X (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.x}" onchange="updateLine(${i}, 'x', this.value)"></div>
-                            <div><label class="text-[10px] text-gray-400">แกน Y (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.y}" onchange="updateLine(${i}, 'y', this.value)"></div>
-                            <div class="col-span-2"><label class="text-[10px] text-gray-400">ข้อความ / ตัวแปร {{var}}</label><input type="text" class="input-control text-sm py-1 font-mono" value="${line.text.replace(/"/g, '&quot;')}" oninput="updateLine(${i}, 'text', this.value)"></div>
-                            <div><label class="text-[10px] text-gray-400">ขนาด Font (pt)</label><input type="number" class="input-control text-sm py-1" value="${line.size}" onchange="updateLine(${i}, 'size', this.value)"></div>
-                            <div><label class="text-[10px] text-gray-400">ฟอนต์</label>
-                                <select class="input-control text-sm py-1" onchange="updateLine(${i}, 'font', this.value)">
-                                    <option value="Sarabun" ${line.font==='Sarabun'?'selected':''}>Sarabun</option>
-                                    <option value="Prompt" ${line.font==='Prompt'?'selected':''}>Prompt</option>
-                                </select>
-                            </div>
-                            <div><label class="text-[10px] text-gray-400">จัดแนว</label>
-                                <select class="input-control text-sm py-1" onchange="updateLine(${i}, 'align', this.value)">
-                                    <option value="left" ${line.align==='left'?'selected':''}>ซ้าย (Left)</option>
-                                    <option value="center" ${line.align==='center'?'selected':''}>กลาง (Center)</option>
-                                    <option value="right" ${line.align==='right'?'selected':''}>ขวา (Right)</option>
-                                </select>
-                            </div>
-                            <div class="flex items-end pb-1">
-                                <label class="flex items-center gap-2 cursor-pointer text-sm">
-                                    <input type="checkbox" ${line.bold ? 'checked' : ''} onchange="updateLine(${i}, 'bold', this.checked)" class="accent-teal-500">
-                                    ตัวหนา (Bold)
-                                </label>
-                            </div>
-                        </div>
-                    ` : ''}
-                `;
-                container.appendChild(el);
-            });
+        function copyVar(element) {
+            navigator.clipboard.writeText(element.innerText);
+            const oldText = element.innerText;
+            element.innerText = "Copied!";
+            setTimeout(() => element.innerText = oldText, 1000);
         }
 
-        function setActiveLine(index) {
-            activeLineIndex = index;
-            renderLinesList();
-            renderCanvas();
+        // Image Handling
+        function handleImageUpload(index, input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentConfig.lines[index].url = e.target.result;
+                renderLinesList();
+                renderCanvas();
+            };
+            reader.readAsDataURL(file);
         }
 
-        function addLine() {
-            currentConfig.lines.push({
-                x: 10, y: 10, font: "Sarabun", size: 14, text: "ข้อความใหม่", align: "left", bold: false
-            });
+        function addLine(type) {
+            if (type === 'image') {
+                const imgCount = currentConfig.lines.filter(l => l.type === 'image').length;
+                if (imgCount >= 2) return alert("สามารถใส่รูปภาพได้สูงสุด 2 รูปเท่านั้นครับ");
+                currentConfig.lines.push({ type: 'image', url: '', x: 5, y: 5, w: 20, h: 20 });
+            } else {
+                currentConfig.lines.push({ type: 'text', x: 5, y: 10, font: "Sarabun", size: 14, text: "ข้อความใหม่", align: "left", bold: false, italic: false });
+            }
             activeLineIndex = currentConfig.lines.length - 1;
             renderLinesList();
             renderCanvas();
@@ -283,56 +292,145 @@
         }
 
         function updateLine(index, key, value) {
-            if (key === 'x' || key === 'y' || key === 'size') value = parseFloat(value) || 0;
+            if (['x', 'y', 'size', 'w', 'h'].includes(key)) value = parseFloat(value) || 0;
             currentConfig.lines[index][key] = value;
-            if(key === 'text') {
-                // อัปเดตเฉพาะ Canvas ทันทีเมื่อพิมพ์ข้อความ เพื่อไม่ให้ input เสียโฟกัส
-                renderCanvas();
-            } else {
-                renderLinesList();
-                renderCanvas();
-            }
+            
+            if(key === 'text') renderCanvas(); // Update canvas instantly while typing
+            else { renderLinesList(); renderCanvas(); }
         }
 
+        // Render UI List
+        function renderLinesList() {
+            const container = document.getElementById('lines_container');
+            container.innerHTML = '';
+            
+            currentConfig.lines.forEach((line, i) => {
+                const isActive = (i === activeLineIndex);
+                const isImage = line.type === 'image';
+                const el = document.createElement('div');
+                el.className = `rounded-xl border transition-all overflow-hidden ${isActive ? 'bg-navy-mid border-teal-500 shadow-lg shadow-teal-500/10' : 'bg-black/30 border-white/10'}`;
+                
+                // Header Row
+                const headerHtml = `
+                    <div class="flex justify-between items-center p-3 cursor-pointer ${isActive ? 'bg-teal-500/10' : ''}" onclick="setActiveLine(${i})">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-black/30 text-xs px-2 py-1 rounded-md text-gray-400 font-mono">${i+1}</span>
+                            <span class="font-bold text-sm ${isActive ? 'text-white' : 'text-gray-400'}">
+                                ${isImage ? '🖼️ รูปภาพ / Logo' : '📝 ' + (line.text || '(ว่าง)')}
+                            </span>
+                        </div>
+                        <button class="text-red-400 hover:bg-red-500/20 px-3 py-1 rounded-md text-xs font-bold transition" onclick="event.stopPropagation(); removeLine(${i})">ลบ</button>
+                    </div>
+                `;
+
+                // Body (Config)
+                let bodyHtml = '';
+                if (isActive) {
+                    if (isImage) {
+                        bodyHtml = `
+                            <div class="p-4 border-t border-white/5 bg-black/20 grid grid-cols-4 gap-4">
+                                <div class="col-span-4">
+                                    <label class="block text-xs text-gray-400 mb-1">อัปโหลดไฟล์รูปภาพ (แนะนำ PNG/JPG)</label>
+                                    <input type="file" accept="image/*" class="input-control text-sm py-1" onchange="handleImageUpload(${i}, this)">
+                                    ${line.url ? `<img src="${line.url}" class="h-12 mt-2 object-contain bg-white/10 rounded">` : ''}
+                                </div>
+                                <div><label class="block text-[10px] text-gray-400 mb-1">แกน X (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.x}" onchange="updateLine(${i}, 'x', this.value)"></div>
+                                <div><label class="block text-[10px] text-gray-400 mb-1">แกน Y (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.y}" onchange="updateLine(${i}, 'y', this.value)"></div>
+                                <div><label class="block text-[10px] text-gray-400 mb-1">กว้าง (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.w}" onchange="updateLine(${i}, 'w', this.value)"></div>
+                                <div><label class="block text-[10px] text-gray-400 mb-1">สูง (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.h}" onchange="updateLine(${i}, 'h', this.value)"></div>
+                            </div>
+                        `;
+                    } else {
+                        bodyHtml = `
+                            <div class="p-4 border-t border-white/5 bg-black/20 grid grid-cols-6 gap-4">
+                                <div class="col-span-6"><label class="block text-[10px] text-teal-400 mb-1">ข้อความ / ตัวแปร {{var}}</label><input type="text" class="input-control font-mono" value="${line.text.replace(/"/g, '&quot;')}" oninput="updateLine(${i}, 'text', this.value)"></div>
+                                
+                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">ฟอนต์ (Font)</label>
+                                    <select class="input-control text-sm py-1" onchange="updateLine(${i}, 'font', this.value)">
+                                        <option value="Sarabun" ${line.font==='Sarabun'?'selected':''}>Sarabun</option>
+                                        <option value="Prompt" ${line.font==='Prompt'?'selected':''}>Prompt</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">ขนาด (pt)</label><input type="number" class="input-control text-sm py-1" value="${line.size}" onchange="updateLine(${i}, 'size', this.value)"></div>
+                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">การจัดตำแหน่ง</label>
+                                    <select class="input-control text-sm py-1" onchange="updateLine(${i}, 'align', this.value)">
+                                        <option value="left" ${line.align==='left'?'selected':''}>ซ้าย (Left)</option>
+                                        <option value="center" ${line.align==='center'?'selected':''}>กลาง (Center)</option>
+                                        <option value="right" ${line.align==='right'?'selected':''}>ขวา (Right)</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-span-2 flex flex-col gap-2 justify-center mt-2">
+                                    <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white">
+                                        <input type="checkbox" ${line.bold ? 'checked' : ''} onchange="updateLine(${i}, 'bold', this.checked)" class="accent-teal-500 w-4 h-4">
+                                        <b>ตัวหนา (Bold)</b>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white">
+                                        <input type="checkbox" ${line.italic ? 'checked' : ''} onchange="updateLine(${i}, 'italic', this.checked)" class="accent-teal-500 w-4 h-4">
+                                        <i>ตัวเอียง (Italic)</i>
+                                    </label>
+                                </div>
+                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">แกน X (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.x}" onchange="updateLine(${i}, 'x', this.value)"></div>
+                                <div class="col-span-2"><label class="block text-[10px] text-gray-400 mb-1">แกน Y (มม.)</label><input type="number" class="input-control text-sm py-1" value="${line.y}" onchange="updateLine(${i}, 'y', this.value)"></div>
+                            </div>
+                        `;
+                    }
+                }
+
+                el.innerHTML = headerHtml + bodyHtml;
+                container.appendChild(el);
+            });
+        }
+
+        function setActiveLine(index) {
+            activeLineIndex = index;
+            renderLinesList();
+            renderCanvas();
+        }
+
+        // Render Canvas
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
-            // แปลงมิลลิเมตร (mm) เป็นพิกเซลหน้าจอ (ใช้ประมาณ 1mm = 3.78px เพื่อการแสดงผล)
             const mmToPx = 3.78; 
             wrapper.style.width = (currentConfig.width * mmToPx) + 'px';
             wrapper.style.height = (currentConfig.height * mmToPx) + 'px';
             wrapper.innerHTML = '';
 
             currentConfig.lines.forEach((line, i) => {
-                const el = document.createElement('div');
-                el.className = `canvas-line ${i === activeLineIndex ? 'active' : ''}`;
-                el.innerText = line.text;
+                const el = document.createElement(line.type === 'image' ? 'img' : 'div');
+                el.className = `canvas-element ${i === activeLineIndex ? 'active' : ''}`;
                 
-                // แปลงหน่วย x, y เป็นเปอร์เซ็นต์ หรือจุดตายตัว (ในตัวอย่างใช้การคำนวณ mm -> px)
-                if (line.align === 'center') {
-                    el.style.left = '50%';
-                    el.style.transform = 'translateX(-50%)';
-                    el.style.textAlign = 'center';
-                    el.style.width = '100%';
-                } else if (line.align === 'right') {
-                    el.style.right = (line.x * mmToPx) + 'px';
-                    el.style.textAlign = 'right';
-                } else {
+                if (line.type === 'image') {
+                    if (line.url) el.src = line.url;
+                    else { el.style.background = '#eee'; el.alt = 'No Image'; }
                     el.style.left = (line.x * mmToPx) + 'px';
-                    el.style.textAlign = 'left';
+                    el.style.top = (line.y * mmToPx) + 'px';
+                    el.style.width = (line.w * mmToPx) + 'px';
+                    el.style.height = (line.h * mmToPx) + 'px';
+                    el.style.objectFit = 'contain';
+                } else {
+                    el.innerText = line.text;
+                    if (line.align === 'center') {
+                        el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
+                        el.style.textAlign = 'center'; el.style.width = '100%';
+                    } else if (line.align === 'right') {
+                        el.style.right = (line.x * mmToPx) + 'px'; el.style.textAlign = 'right';
+                    } else {
+                        el.style.left = (line.x * mmToPx) + 'px'; el.style.textAlign = 'left';
+                    }
+                    el.style.top = (line.y * mmToPx) + 'px';
+                    el.style.fontFamily = `'${line.font}', sans-serif`;
+                    el.style.fontSize = (line.size * 1.33) + 'px';
+                    el.style.fontWeight = line.bold ? '700' : '400';
+                    el.style.fontStyle = line.italic ? 'italic' : 'normal';
                 }
-                
-                el.style.top = (line.y * mmToPx) + 'px';
-                el.style.fontFamily = `'${line.font}', sans-serif`;
-                // แปลง pt เป็น px (1pt = 1.33px)
-                el.style.fontSize = (line.size * 1.33) + 'px';
-                el.style.fontWeight = line.bold ? '700' : '400';
                 
                 el.onclick = () => setActiveLine(i);
                 wrapper.appendChild(el);
             });
         }
 
-        // 4. ฟังก์ชันทดสอบพิมพ์ (Print Test)
+        // 4. Print Test
         function printTest() {
             const contents = document.getElementById('canvas_wrapper').innerHTML;
             const pw = window.open('', '_blank', 'width=800,height=600');
@@ -340,12 +438,11 @@
                 <html>
                 <head>
                     <title>Print Test</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Sarabun:wght@400;600;700&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Sarabun:wght@400;600;700;italic&family=Prompt:wght@400;600;italic&display=swap" rel="stylesheet">
                     <style>
                         body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; }
-                        /* ให้ขนาดตรงตามมิลลิเมตรที่ระบุไว้เวลาสั่งปริ้นจริง */
                         .sticker { position: relative; width: ${currentConfig.width}mm; height: ${currentConfig.height}mm; background: #fff; overflow: hidden; margin: 0; }
-                        .canvas-line { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
+                        .canvas-element { position: absolute; white-space: pre-wrap; word-break: break-word; line-height: 1.2; color: #000; }
                         @page { size: ${currentConfig.width}mm ${currentConfig.height}mm; margin: 0; }
                         .active { border: none !important; background: transparent !important; }
                     </style>
@@ -354,7 +451,7 @@
                     <div class="sticker">${contents}</div>
                     <script>
                         window.onload = function() {
-                            setTimeout(function() { window.print(); window.close(); }, 500);
+                            setTimeout(function() { window.print(); window.close(); }, 800);
                         };
                     <\/script>
                 </body>
@@ -363,13 +460,9 @@
             pw.document.close();
         }
 
-        // Initialize On Load
         window.onload = async () => {
-            // ปรับ Zoom ตามหน้าจอ
-            if (window.innerWidth < 1024) document.getElementById('zoom_level').value = 80;
+            if (window.innerWidth < 1024) document.getElementById('zoom_level').value = 90;
             else if (window.innerWidth >= 1600) document.getElementById('zoom_level').value = 150;
-            
-            // โหลด Dropdown
             await loadTemplateDropdown();
         };
     </script>
