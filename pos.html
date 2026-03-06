@@ -63,13 +63,12 @@
                         <tr>
                             <th class="p-4">รายการ</th>
                             <th class="p-4 text-center">จำนวน</th>
-                            <th class="p-4 text-right">ราคา</th>
+                            <th class="p-4 text-right">ราคา/หน่วย</th>
                             <th class="p-4 text-right">รวม</th>
                             <th class="p-4 text-center">#</th>
                         </tr>
                     </thead>
-                    <tbody id="cart-items-body">
-                        </tbody>
+                    <tbody id="cart-items-body"></tbody>
                 </table>
                 <div id="cart-empty" class="p-20 text-center text-gray-600 flex flex-col items-center">
                     <span class="text-6xl mb-4">🛒</span>
@@ -81,7 +80,6 @@
         <div class="w-1/4 bg-slate-900/80 p-6 flex flex-col shadow-2xl">
             <div class="flex-1">
                 <h3 class="text-gray-400 font-bold mb-6">สรุปยอดชำระ</h3>
-                
                 <div class="space-y-4 mb-8">
                     <div class="flex justify-between text-lg"><span>รวมเงิน</span><span id="sum-price">0.00</span></div>
                     <div class="flex justify-between text-lg text-red-400">
@@ -106,20 +104,17 @@
                 <div id="cash-panel" class="space-y-4">
                     <label class="text-xs text-gray-500 block uppercase">รับเงินสด (F10)</label>
                     <input type="number" id="received-amount" class="input-box text-3xl font-black text-yellow-400 text-center" placeholder="0.00" oninput="calculateChange()">
-                    
                     <div class="numpad grid grid-cols-3 gap-2">
                         <button onclick="quickCash(100)">100</button>
                         <button onclick="quickCash(500)">500</button>
                         <button onclick="quickCash(1000)">1,000</button>
                     </div>
-
                     <div class="p-4 bg-black/40 rounded-xl flex justify-between items-center mt-4">
                         <span class="text-gray-400">เงินทอน</span>
                         <span class="text-3xl font-bold text-white" id="change-val">0.00</span>
                     </div>
                 </div>
             </div>
-
             <button onclick="processPayment()" class="btn-pay">✅ ยืนยันชำระเงิน</button>
         </div>
     </div>
@@ -133,8 +128,7 @@
             <div class="p-4 bg-black/20">
                 <input type="text" id="catalog-search" class="input-box" placeholder="ค้นหาชื่อสินค้า..." oninput="filterCatalog()">
             </div>
-            <div id="catalog-grid" class="flex-1 overflow-y-auto p-6 grid grid-cols-3 gap-4">
-                </div>
+            <div id="catalog-grid" class="flex-1 overflow-y-auto p-6 grid grid-cols-3 gap-4"></div>
         </div>
     </div>
 
@@ -142,17 +136,15 @@
         let cart = [];
         let payMethod = 'cash';
         let allProducts = [];
-        let currentRecordId = null;
 
         window.onload = async () => {
             await fetchTodayBills();
             await fetchProducts();
         };
 
-        // --- 1. ดึงรายการบิลวันนี้ ---
         async function fetchTodayBills() {
             const today = new Date().toISOString().split('T')[0];
-            const { data, error } = await db.from('medical_records')
+            const { data } = await db.from('medical_records')
                 .select('id, owner_hn, created_at, owners(owner_name), animals(pet_name)')
                 .gte('created_at', today)
                 .order('created_at', { ascending: false });
@@ -174,26 +166,28 @@
             }
         }
 
-        // --- 2. ดึงรายการจากห้องตรวจเข้า POS ---
+        // --- แก้ไข Logic การดึงรายการ: ยา = 1 ซอง ---
         async function loadBillToCart(recordId, element) {
-            currentRecordId = recordId;
             document.querySelectorAll('.bill-card').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
 
             const { data } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
             
-            cart = (data || []).map(i => ({
-                id: i.id,
-                name: i.item_name,
-                price: parseFloat(i.unit_price),
-                qty: parseFloat(i.quantity),
-                type: i.item_type
-            }));
-            
+            cart = (data || []).map(i => {
+                const isMed = i.item_type === 'Rx';
+                return {
+                    id: i.id,
+                    name: i.item_name,
+                    // หากเป็นยา (Rx) ให้ใช้ total_price เป็นราคาหน่วย (ราคาต่อซอง)
+                    price: isMed ? parseFloat(i.total_price) : parseFloat(i.unit_price),
+                    // หากเป็นยา (Rx) ให้แสดงเป็น 1 (ซอง) เสมอ
+                    qty: isMed ? 1 : parseFloat(i.quantity),
+                    type: i.item_type
+                };
+            });
             renderCart();
         }
 
-        // --- 3. ดึงรายการสินค้าทั้งหมด (Catalog) ---
         async function fetchProducts() {
             const { data } = await db.from('pharmacy').select('*').order('item_name');
             allProducts = data || [];
@@ -204,20 +198,17 @@
             renderCatalog(allProducts);
         }
 
-        function closeCatalog() {
-            document.getElementById('catalog-modal').style.display = 'none';
-        }
+        function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
 
         function filterCatalog() {
             const q = document.getElementById('catalog-search').value.toLowerCase();
-            const filtered = allProducts.filter(p => p.item_name.toLowerCase().includes(q));
-            renderCatalog(filtered);
+            renderCatalog(allProducts.filter(p => p.item_name.toLowerCase().includes(q)));
         }
 
         function renderCatalog(items) {
             const grid = document.getElementById('catalog-grid');
             grid.innerHTML = items.map(p => `
-                <div class="p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-blue-500 cursor-pointer transition" onclick="addToCart('${p.item_name}', ${p.price_per_unit}, 'Product')">
+                <div class="p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-blue-500 cursor-pointer transition" onclick='addToCart(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
                     <div class="font-bold text-white text-lg mb-1">${p.item_name}</div>
                     <div class="text-teal-400 font-bold italic">฿${parseFloat(p.price_per_unit).toFixed(2)}</div>
                     <div class="text-[10px] text-gray-500 mt-2 uppercase">${p.category}</div>
@@ -225,17 +216,23 @@
             `).join('');
         }
 
-        function addToCart(name, price, type) {
-            const existing = cart.find(i => i.name === name);
-            if (existing) {
+        function addToCart(p) {
+            const isMed = p.category !== 'General';
+            const existing = cart.find(i => i.name === p.item_name);
+            
+            if (existing && !isMed) {
                 existing.qty++;
             } else {
-                cart.push({ name, price: parseFloat(price), qty: 1, type });
+                cart.push({ 
+                    name: p.item_name, 
+                    price: parseFloat(p.price_per_unit), 
+                    qty: 1, 
+                    type: isMed ? 'Rx' : 'Product' 
+                });
             }
             renderCart();
         }
 
-        // --- UI & Calc Logic ---
         function renderCart() {
             const body = document.getElementById('cart-items-body');
             const empty = document.getElementById('cart-empty');
@@ -252,11 +249,14 @@
                             <div class="text-[10px] text-gray-500 uppercase">${item.type}</div>
                         </td>
                         <td class="p-4 text-center">
-                            <div class="flex items-center justify-center gap-2">
-                                <button onclick="updateQty(${idx}, -1)" class="w-8 h-8 rounded bg-white/5 hover:bg-red-500/20">-</button>
-                                <span class="font-bold">${item.qty}</span>
-                                <button onclick="updateQty(${idx}, 1)" class="w-8 h-8 rounded bg-white/5 hover:bg-teal-500/20">+</button>
-                            </div>
+                            ${item.type === 'Rx' ? 
+                                `<span class="font-black text-teal-400 text-lg">1 ซอง</span>` : 
+                                `<div class="flex items-center justify-center gap-2">
+                                    <button onclick="updateQty(${idx}, -1)" class="w-8 h-8 rounded bg-white/5 hover:bg-red-500/20">-</button>
+                                    <span class="font-bold">${item.qty}</span>
+                                    <button onclick="updateQty(${idx}, 1)" class="w-8 h-8 rounded bg-white/5 hover:bg-teal-500/20">+</button>
+                                </div>`
+                            }
                         </td>
                         <td class="p-4 text-right">฿${item.price.toFixed(2)}</td>
                         <td class="p-4 text-right font-black text-white">฿${(item.price * item.qty).toFixed(2)}</td>
@@ -273,16 +273,12 @@
             renderCart();
         }
 
-        function removeItem(idx) {
-            cart.splice(idx, 1);
-            renderCart();
-        }
+        function removeItem(idx) { cart.splice(idx, 1); renderCart(); }
 
         function calculateTotal() {
             const sum = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
             const disc = parseFloat(document.getElementById('discount-val').value) || 0;
             const net = sum - disc;
-            
             document.getElementById('sum-price').innerText = sum.toLocaleString('th-TH', {minimumFractionDigits: 2});
             document.getElementById('net-total').innerText = net.toLocaleString('th-TH', {minimumFractionDigits: 2});
             calculateChange();
@@ -310,11 +306,8 @@
 
         async function processPayment() {
             if (cart.length === 0) return alert("ไม่มีรายการสินค้า");
-            const net = document.getElementById('net-total').innerText;
-            
-            if (confirm(`ยืนยันการชำระเงินจำนวน ฿${net} ?`)) {
-                // ในชีวิตจริงควรบันทึกลงตาราง sales หรือ invoices ด้วย
-                alert("ชำระเงินเสร็จสิ้น! (ระบบพิมพ์ใบเสร็จกำลังทำงาน)");
+            if (confirm(`ยืนยันการชำระเงินจำนวน ฿${document.getElementById('net-total').innerText} ?`)) {
+                alert("ชำระเงินเสร็จสิ้น!");
                 location.reload();
             }
         }
