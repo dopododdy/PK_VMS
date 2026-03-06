@@ -77,7 +77,7 @@
 
         <div id="form-view-container" class="view-hidden">
             <div class="section-card border-l-8 border-teal-400">
-                <h3 class="text-2xl font-bold text-white mb-8">🏥 บันทึกการตรวจรักษา</h3>
+                <h3 class="text-2xl font-bold text-white mb-8" id="form-title">🏥 บันทึกการตรวจรักษา</h3>
                 <div class="grid grid-cols-12 gap-5">
                     <div class="col-span-12 md:col-span-2"><label class="label-clinical text-yellow-400">น้ำหนัก (กก.)</label><input type="number" id="f_weight" class="input-box font-bold text-yellow-400 text-2xl" step="0.1"></div>
                     <div class="col-span-12 md:col-span-5"><label class="label-clinical">CC</label><textarea id="f_cc" class="input-box h-24" placeholder="ระบุอาการสำคัญ..."></textarea></div>
@@ -96,7 +96,7 @@
                     <div class="col-span-12 md:col-span-3"><label class="label-text text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-3xl font-black text-yellow-400" value="0" step="0.01"></div>
                 </div>
                 <div class="flex gap-4 mt-10">
-                    <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-2xl py-5 shadow-2xl">💾 บันทึกข้อมูลการตรวจทั้งหมด</button>
+                    <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-2xl py-5 shadow-2xl" id="btn-save-main">💾 บันทึกข้อมูลการตรวจทั้งหมด</button>
                     <button onclick="showHistoryView()" class="btn-base btn-red px-10">ยกเลิก</button>
                 </div>
             </div>
@@ -141,6 +141,7 @@
         let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
         let selectedItems = []; 
         let petType = 'สุนัข', petData = { sex: "ผู้", dob: "" };
+        let editingId = null; // เพิ่มตัวแปรสำหรับโหมดแก้ไข
 
         window.onload = async () => {
             if (!animalId || !ownerHN) return location.href='animals.html';
@@ -186,6 +187,7 @@
                         <div class="w-24 text-teal-400 font-black text-xl">${dateStr}</div>
                         <div class="flex-1 border-l border-white/10 pl-4"><div class="truncate text-base"><b>CC:</b> ${rec.cc || '-'} | <b>Dx:</b> ${rec.dx || '-'}</div></div>
                         <div class="flex items-center gap-3">
+                            <button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-base bg-blue-600 hover:bg-blue-500 !py-2 !px-4 text-sm">✏️</button>
                             <button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-base btn-red !py-2 !px-4 text-sm">🗑️</button>
                             <div id="arrow-${rec.id}" class="text-teal-400 text-xl">🔽</div>
                         </div>
@@ -211,47 +213,84 @@
             }).join('');
         }
 
-        // ฟังก์ชันใหม่: พิมพ์รายการยาจากประวัติเก่า
+        // --- ฟังก์ชันแก้ไขประวัติ ---
+        async function editRecord(id) {
+            const rec = records.find(r => r.id === id);
+            if (!rec) return;
+
+            editingId = id; // กำหนดค่า id ที่กำลังแก้ไข
+            document.getElementById('form-title').innerText = "✏️ แก้ไขบันทึกการตรวจรักษา";
+            document.getElementById('btn-save-main').innerText = "💾 บันทึกการแก้ไข";
+
+            // เติมข้อมูลลงฟอร์ม
+            document.getElementById('f_weight').value = rec.weight || 0;
+            document.getElementById('f_cc').value = rec.cc || "";
+            document.getElementById('f_hx').value = rec.hx || "";
+            document.getElementById('f_pe').value = rec.pe || "";
+            document.getElementById('f_dx').value = rec.dx || "";
+            document.getElementById('f_plan').value = rec.plan || "";
+            document.getElementById('f_appointment').value = rec.appointment || "";
+            document.getElementById('f_app_note').value = rec.appointment_note || "";
+            document.getElementById('f_cost').value = rec.cost || 0;
+
+            // เติมรายการ Lab, Tx, Rx เข้าตัวแปร selectedItems
+            selectedItems = rec.medical_record_items.map(i => ({
+                type: i.item_type,
+                name: i.item_name,
+                price: parseFloat(i.total_price),
+                dose: i.dose_per_time,
+                unit: i.unit,
+                freq: i.frequency,
+                meal: i.meal_timing,
+                day_timing: i.day_timing,
+                days: i.duration_days,
+                qty: i.quantity,
+                unit_price: i.unit_price
+            }));
+
+            updateFormUI();
+            showFormView();
+        }
+
         async function printHistoryRx(recordId) {
             const rec = records.find(r => r.id === recordId);
             if (!rec || !rec.medical_record_items) return;
-            
             const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
             if (rxItems.length === 0) return alert("ไม่มีรายการยาในประวัตินี้");
-
-            // แสดง Loading เบาๆ (Optional)
             const printBatch = await Promise.all(rxItems.map(async (i) => {
-                // ดึงชื่อไทยและคำเตือนจาก pharmacy เพื่อให้ข้อมูลสติกเกอร์ครบถ้วน
                 const { data: drug } = await db.from('pharmacy').select('name_th, side_effects').eq('item_name', i.item_name).maybeSingle();
-                return {
-                    clinic_name: "PK-VMS Clinic",
-                    pet_name: document.getElementById('v-pet-name').innerText,
-                    species: petType, hn: ownerHN,
-                    drug_name: i.item_name,
-                    drug_name_th: drug?.name_th || "",
-                    warning: drug?.side_effects || "",
-                    dose_per_time: i.dose_per_time,
-                    unit: i.unit,
-                    frequency: i.frequency,
-                    meal_timing: i.meal_timing,
-                    day_timing: i.day_timing,
-                    duration_days: i.duration_days,
-                    total_qty: `${i.quantity} ${i.unit}`,
-                    date: new Date(rec.created_at).toLocaleDateString('th-TH')
-                };
+                return { clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN, drug_name: i.item_name, drug_name_th: drug?.name_th || "", warning: drug?.side_effects || "", dose_per_time: i.dose_per_time, unit: i.unit, frequency: i.frequency, meal_timing: i.meal_timing, day_timing: i.day_timing, duration_days: i.duration_days, total_qty: `${i.quantity} ${i.unit}`, date: new Date(rec.created_at).toLocaleDateString('th-TH') };
             }));
             await executeDynamicPrint(printBatch, 'drug_sticker');
         }
 
         async function saveMedicalRecord() {
             try {
-                const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, note: "", cost: parseFloat(document.getElementById('f_cost').value) || 0 };
-                const { data: record, error: hErr } = await db.from('medical_records').insert([headerData]).select().single();
-                if (hErr) throw hErr;
-                const itemInserts = selectedItems.map(item => ({ record_id: record.id, item_type: item.type, item_name: item.name, dose_per_time: item.dose || null, unit: item.unit || null, frequency: item.freq || null, meal_timing: item.meal || null, day_timing: item.day_timing || null, duration_days: item.days || null, quantity: item.qty || 1, unit_price: item.unit_price || item.price, total_price: item.price }));
+                const headerData = { 
+                    animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, note: "", cost: parseFloat(document.getElementById('f_cost').value) || 0 
+                };
+
+                let recordId = editingId;
+
+                if (editingId) {
+                    // กรณีแก้ไข: อัปเดตตารางหลัก และลบรายการย่อยเก่าทิ้ง
+                    const { error: upErr } = await db.from('medical_records').update(headerData).eq('id', editingId);
+                    if (upErr) throw upErr;
+                    await db.from('medical_record_items').delete().eq('record_id', editingId);
+                } else {
+                    // กรณีสร้างใหม่
+                    const { data: record, error: hErr } = await db.from('medical_records').insert([headerData]).select().single();
+                    if (hErr) throw hErr;
+                    recordId = record.id;
+                }
+
+                // บันทึกรายการย่อย (เหมือนเดิมทั้งเคสใหม่และเคสแก้ไข)
+                const itemInserts = selectedItems.map(item => ({ record_id: recordId, item_type: item.type, item_name: item.name, dose_per_time: item.dose || null, unit: item.unit || null, frequency: item.freq || null, meal_timing: item.meal || null, day_timing: item.day_timing || null, duration_days: item.days || null, quantity: item.qty || 1, unit_price: item.unit_price || item.price, total_price: item.price }));
                 const { error: iErr } = await db.from('medical_record_items').insert(itemInserts);
                 if (iErr) throw iErr;
-                alert("บันทึกข้อมูลเรียบร้อยแล้ว"); location.reload();
+
+                alert(editingId ? "อัปเดตข้อมูลเรียบร้อยแล้ว" : "บันทึกข้อมูลเรียบร้อยแล้ว");
+                location.reload();
             } catch (err) { alert(err.message); }
         }
 
@@ -267,7 +306,7 @@
 
         function calculateRxTotal() {
             const t = parseFloat(document.getElementById('rx-tabs-val').value) || 0, f = parseFloat(document.getElementById('rx-freq').value) || 1, d = parseInt(document.getElementById('rx-days').value) || 1;
-            const q = Math.ceil(t * f * d); 
+            const q = Math.ceil(t * f * d); 
             const pr = pendingItem ? (pendingItem.price || 0) : 0;
             const total = q * pr;
             const unit = (pendingItem && pendingItem.data) ? pendingItem.data.unit : 'เม็ด';
@@ -284,7 +323,7 @@
                 pendingItem = item;
                 document.getElementById('rx-calc-name').innerText = item.name;
                 document.getElementById('rx-conc-val').value = item.data.concentration_mg_unit || 1;
-                const ds = document.getElementById('rx-dose-select'); 
+                const ds = document.getElementById('rx-dose-select'); 
                 ds.innerHTML = '<option value="">-- โดสแนะนำ --</option>';
                 const p = petType === 'แมว' ? 'cat' : 'dog';
                 for(let k=1; k<=5; k++) if(item.data[`${p}_dose_${k}`] > 0) ds.innerHTML += `<option value="${item.data[`${p}_dose_${k}`]}">${item.data[`${p}_dose_${k}`]} mg/kg</option>`;
@@ -337,25 +376,12 @@
             document.getElementById('rx-calc-modal').style.display = 'none';
         }
 
-        async function printCurrentRx() {
-            const unit = pendingItem.data.unit || 'เม็ด';
-            const data = { clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN, drug_name: pendingItem.name, drug_name_th: pendingItem.data.name_th || "", warning: pendingItem.data.side_effects || "", dose_per_time: document.getElementById('rx-tabs-display').innerText.split(' ')[0], unit: unit, frequency: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`, meal_timing: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value, duration_days: document.getElementById('rx-days').value, total_qty: `${pendingItem.calculatedQty} ${unit}`, date: new Date().toLocaleDateString('th-TH') };
-            await executeDynamicPrint([data], 'drug_sticker');
-        }
-
-        async function printAllRx() {
-            const rxItems = selectedItems.filter(i => i.type === 'Rx');
-            if (rxItems.length === 0) return alert("ยังไม่มีรายการยา");
-            const printBatch = rxItems.map(i => ({ clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN, drug_name: i.name, drug_name_th: i.drug_name_th || "", warning: i.warning || "", dose_per_time: i.dose, unit: i.unit, frequency: i.freq, meal_timing: i.meal, day_timing: i.day_timing, duration_days: i.days, total_qty: `${i.qty} ${i.unit}`, date: new Date().toLocaleDateString('th-TH') }));
-            await executeDynamicPrint(printBatch, 'drug_sticker');
-        }
-
         async function executeDynamicPrint(dataList, templateType) {
             const { data: t } = await db.from('print_templates').select('config').eq('template_type', templateType).single();
             if (!t) return alert("ไม่พบ Template");
             const config = t.config;
             const px = 3.78; const pw = window.open('', '_blank');
-            let html = `<html><head><link href="https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun&display=swap" rel="stylesheet"><style>body { margin:0; padding:0; } .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; } .elem { position:absolute; color:black; line-height:1.2; box-sizing:border-box; } @page { size: ${config.width}mm ${config.height}mm; margin:0; }</style></head><body>`;
+            let html = `<html><head><link href="https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun&display=swap" rel="stylesheet"><style>body { margin:0; padding:0; } .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; } .elem { position:absolute; color:black; line-height:1.2; } @page { size: ${config.width}mm ${config.height}mm; margin:0; }</style></head><body>`;
             dataList.forEach(data => {
                 html += `<div class="sticker">`;
                 config.lines.forEach(l => {
