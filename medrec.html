@@ -137,7 +137,7 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
-        let records = [], fullCatalog = [], pendingItem = null, currentCatalogType = null;
+        let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
         let selectedItems = []; 
         let petType = 'สุนัข', petData = { sex: "ผู้", dob: "" };
 
@@ -207,7 +207,6 @@
             } catch (err) { alert(err.message); }
         }
 
-        // --- Logic คำนวณ (ใช้หน่วยตาม DB) ---
         function calculateRxTablets() {
             const w = parseFloat(document.getElementById('f_weight').value) || 0, d = parseFloat(document.getElementById('rx-dose-val').value) || 0, c = parseFloat(document.getElementById('rx-conc-val').value) || 1;
             let t = Math.round(((w * d) / c) * 4) / 4;
@@ -228,17 +227,13 @@
             document.getElementById('rx-final-price-val').value = total.toFixed(2);
         }
 
-        // --- Logic การพิมพ์ (ดึง TH Name และ Warning) ---
         async function printCurrentRx() {
             const qty = parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value);
             const unit = pendingItem.data.unit || 'เม็ด';
             const data = {
                 clinic_name: "PK-VMS Animal Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN,
-                drug_name: pendingItem.name, 
-                drug_name_th: pendingItem.data.name_th || "", // ชื่อยาภาษาไทย
-                warning: pendingItem.data.side_effects || "", // คำเตือน
-                dose_per_time: document.getElementById('rx-tabs-display').innerText.split(' ')[0], 
-                unit: unit,
+                drug_name: pendingItem.name, drug_name_th: pendingItem.data.name_th || "", warning: pendingItem.data.side_effects || "",
+                dose_per_time: document.getElementById('rx-tabs-display').innerText.split(' ')[0], unit: unit,
                 frequency: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`,
                 meal_timing: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value,
                 duration_days: document.getElementById('rx-days').value, total_qty: `${qty} ${unit}`, date: new Date().toLocaleDateString('th-TH')
@@ -251,9 +246,7 @@
             if (rxItems.length === 0) return alert("ยังไม่มีรายการยา");
             const printBatch = rxItems.map(i => ({
                 clinic_name: "PK-VMS Animal Clinic", pet_name: document.getElementById('v-pet-name').innerText, species: petType, hn: ownerHN,
-                drug_name: i.name, 
-                drug_name_th: i.drug_name_th || "", // ดึงจาก metadata ที่เก็บไว้ตอน confirm
-                warning: i.warning || "",           // ดึงจาก metadata
+                drug_name: i.name, drug_name_th: i.drug_name_th || "", warning: i.warning || "",
                 dose_per_time: i.dose, unit: i.unit, frequency: i.freq, meal_timing: i.meal, day_timing: i.day_timing,
                 duration_days: i.days, total_qty: `${i.qty} ${i.unit}`, date: new Date().toLocaleDateString('th-TH')
             }));
@@ -269,17 +262,13 @@
             const days = parseInt(document.getElementById('rx-days').value);
             const total_p = parseFloat(document.getElementById('rx-final-price-val').value);
             const qty = (parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * days);
-
-            // เก็บ Metadata เพิ่มเติม (ชื่อไทย และ คำเตือน) ลงใน selectedItems
             addItem('Rx', pendingItem.name, total_p, { 
                 dose, unit, freq, meal, day_timing: day_t, days, qty, 
-                drug_name_th: pendingItem.data.name_th || "", 
-                warning: pendingItem.data.side_effects || "" 
+                drug_name_th: pendingItem.data.name_th || "", warning: pendingItem.data.side_effects || "" 
             });
             document.getElementById('rx-calc-modal').style.display = 'none';
         }
 
-        // --- Logic พื้นฐานและฟังก์ชันเสริม (คงเดิม) ---
         async function openCatalog(type) {
             currentCatalogType = type; document.getElementById('catalog-modal').style.display = 'flex';
             document.getElementById('modal-title').innerText = type === 'rx' ? '💊 เลือกยา/สินค้า' : type === 'tx' ? '💉 เลือกหัตถการ/ยาฉีด' : '🔬 เลือก Lab';
@@ -290,15 +279,21 @@
                 const r2 = await db.from('services').select('*').eq('category', 'หัตถการ');
                 items = [...(r1.data||[]).map(i=>({name:i.item_name, price:i.price_per_unit, type:'Tx', subtype:'inj', data:i})), ...(r2.data||[]).map(i=>({name:i.service_name, price:i.price, type:'Tx', subtype:'proc'}))];
             } else if (type === 'rx') items = (await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา'])).data.map(i=>({name:i.item_name, price:i.price_per_unit, type:'Rx', data:i}));
-            fullCatalog = items; renderCatalog(items); updateModalUI();
+            fullCatalog = items; displayedItems = items; renderCatalog(displayedItems); updateModalUI();
         }
 
         function renderCatalog(data) {
             document.getElementById('catalog-items').innerHTML = data.map((i, idx) => `<div class="p-4 bg-white/5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/10" onclick="handleSelectionByIndex(${idx})"><div><b>${i.name}</b><br><small>฿${i.price}</small></div><div class="text-teal-500 text-2xl">+</div></div>`).join('');
         }
 
+        function filterCatalog() { 
+            const t = document.getElementById('catalog-search').value.toLowerCase(); 
+            displayedItems = fullCatalog.filter(i=>i.name.toLowerCase().includes(t));
+            renderCatalog(displayedItems); 
+        }
+
         function handleSelectionByIndex(idx) {
-            const i = fullCatalog[idx];
+            const i = displayedItems[idx];
             if (i.type === 'Rx') openRxCalc(i);
             else if (i.subtype === 'inj') { pendingItem = i; document.getElementById('inj-modal').style.display='flex'; }
             else addItem(i.type, i.name, i.price);
@@ -345,7 +340,7 @@
                 config.lines.forEach(l => {
                     if (l.type === 'text') {
                         let txt = l.text.replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || "");
-                        let style = `top:${l.y*px}px; font-family:'${l.font}'; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; font-style:${l.italic?'italic':'normal'};`;
+                        let style = `top:${l.y*px}px; font-family:'${l.font}'; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'};`;
                         if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                         else if (l.align === 'right') style += `right:${l.x*px}px; text-align:right;`;
                         else style += `left:${l.x*px}px;`;
@@ -375,7 +370,6 @@
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
         function confirmInj() { addItem('Tx', `${pendingItem.name} (${document.getElementById('inj-ml').value}ml) ${Array.from(document.querySelectorAll('input[name="route"]:checked')).map(c=>c.value).join('/')}`, pendingItem.price); document.getElementById('inj-modal').style.display='none'; }
         function goBack() { location.href = 'animals.html'; }
-        function filterCatalog() { const t = document.getElementById('catalog-search').value.toLowerCase(); renderCatalog(fullCatalog.filter(i=>i.name.toLowerCase().includes(t))); }
         function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
         async function deleteRecord(id) { if(confirm("ลบประวัติ?")) { await db.from('medical_records').delete().eq('id', id); location.reload(); } }
     </script>
