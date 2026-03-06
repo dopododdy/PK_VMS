@@ -127,7 +127,7 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
-        // ข้อมูล Mock Data สำหรับแสดงผล Live Preview ให้เห็นภาพจริง
+        // Mock Data สำหรับ Live Preview
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic",
             clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
@@ -152,7 +152,13 @@
             total_qty: "14 เม็ด",
             warning: "กินติดต่อกันจนหมดตามสัตวแพทย์สั่ง",
             receipt_no: "2569030769000101",
-            items_list: "1. Amoxicillin 500mg (14).......210.00\n2. ค่าบริการตรวจรักษา.............300.00\n3. Lab - CBC...................450.00", 
+            // การจัดรูปแบบรายการสินค้าโดยใช้ HTML Table เพื่อให้ราคาชิดขวาใน Sarabun
+            items_list: `
+                <table style="width:100%; border-collapse:collapse; font-family:'Sarabun'; font-size: 11px; color:black;">
+                    <tr><td style="padding-bottom:2px;">1. Amoxicillin 500mg</td><td style="text-align:right; white-space:nowrap;">210.00</td></tr>
+                    <tr><td style="padding-bottom:2px;">2. ค่าบริการตรวจรักษา</td><td style="text-align:right; white-space:nowrap;">300.00</td></tr>
+                    <tr><td style="padding-bottom:2px;">3. Lab - CBC Test</td><td style="text-align:right; white-space:nowrap;">450.00</td></tr>
+                </table>`, 
             total_price: "960.00",
             discount_val: "60.00",
             net_total: "900.00",
@@ -178,7 +184,6 @@
         };
 
         function replaceVars(text) {
-            // ค้นหาตัวแปร {{...}} และแทนที่ด้วยค่าจาก mockData
             return text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
                 const cleanKey = key.trim();
                 return mockData[cleanKey] !== undefined ? mockData[cleanKey] : match;
@@ -260,8 +265,8 @@
                     <div class="space-y-4 mt-4">
                         <div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option><option value="Courier New" ${l.font==='Courier New'?'selected':''}>Mono</option></select></div>
-                            <div class="editor-group"><label class="label-title">ขนาดตัวอักษร</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
+                            <div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun">Sarabun</option><option value="Kanit">Kanit</option><option value="Prompt">Prompt</option></select></div>
+                            <div class="editor-group"><label class="label-title">ขนาด (pt)</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             ${alignControl}
@@ -315,7 +320,7 @@
 
         function renderCanvas() {
             const wrapper = document.getElementById('canvas_wrapper');
-            const px = 3.78; // 1mm = 3.78px (มาตรฐานหน้าจอ 96dpi)
+            const px = 3.78; 
             const pw = document.getElementById('paper_w').value;
             const ph = document.getElementById('paper_h').value;
             
@@ -325,22 +330,20 @@
             wrapper.innerHTML = currentConfig.lines.map((l) => {
                 let style = `top:${l.y * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                 
+                // สำหรับ Items List และ Text อื่นๆ ให้รองรับความกว้างตามการจัดแนว
+                const boxWidth = l.w ? (l.w * px) : (pw * px - (l.x * 2 * px));
+                style += `width:${boxWidth}px;`;
+
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
                     else style += `left:${l.x*px}px; text-align:left;`;
                     return `<div class="canvas-element" style="${style}">${replaceVars(l.text)}</div>`;
                 } else if (l.type === 'rect') {
-                    let rStyle = `top:${l.y * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:transparent; border-radius:${(l.radius || 0) * px}px;`;
-                    if (l.align === 'center') rStyle += `left:50%; transform:translateX(-50%);`;
-                    else if (l.align === 'right') rStyle += `right:${l.x*px}px;`;
-                    else rStyle += `left:${l.x*px}px;`;
+                    let rStyle = `top:${l.y * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:transparent; border-radius:${(l.radius || 0) * px}px;`;
                     return `<div class="canvas-element" style="${rStyle}"></div>`;
                 } else if (l.type === 'image') {
-                    let iStyle = `top:${l.y * px}px; width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
-                    if (l.align === 'center') iStyle += `left:50%; transform:translateX(-50%);`;
-                    else if (l.align === 'right') iStyle += `right:${l.x*px}px;`;
-                    else iStyle += `left:${l.x*px}px;`;
+                    let iStyle = `top:${l.y * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
                     return `<img src="${l.url}" class="canvas-element" style="${iStyle}">`;
                 }
             }).join('');
@@ -360,31 +363,28 @@
             win.document.write(`
                 <html><head><style>
                     @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun&display=swap');
-                    body { margin: 0; padding: 0; background: white; }
+                    body { margin: 0; padding: 0; background: white; font-family: 'Sarabun'; }
                     .page { position: relative; width: ${pw_val}mm; height: ${ph_val}mm; overflow: hidden; }
-                    .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+                    .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; }
                     @media print { @page { size: ${pw_val}mm ${ph_val}mm; margin: 0; } body { margin: 0; } }
                 </style></head>
                 <body><div class="page">
                     ${dynamicLines.map(l => {
                         let style = `top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                         
+                        const boxWidthMm = l.w ? l.w : (pw_val - (l.x * 2));
+                        style += `width:${boxWidthMm}mm;`;
+
                         if (l.type === 'text') {
                             if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                             else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
                             else style += `left:${l.x}mm;`;
                             return `<div class="elem" style="${style}">${replaceVars(l.text)}</div>`;
                         } else if (l.type === 'rect') {
-                            let rStyle = `top:${l.y}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; background:transparent; border-radius:${l.radius || 0}mm;`;
-                            if (l.align === 'center') rStyle += `left:50%; transform:translateX(-50%);`;
-                            else if (l.align === 'right') rStyle += `right:${l.x}mm;`;
-                            else rStyle += `left:${l.x}mm;`;
+                            let rStyle = `top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; background:transparent; border-radius:${l.radius || 0}mm;`;
                             return `<div class="elem" style="${rStyle}"></div>`;
                         } else if (l.type === 'image') {
-                            let iStyle = `top:${l.y}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                            if (l.align === 'center') iStyle += `left:50%; transform:translateX(-50%);`;
-                            else if (l.align === 'right') iStyle += `right:${l.x}mm;`;
-                            else iStyle += `left:${l.x}mm;`;
+                            let iStyle = `top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
                             return `<img src="${l.url}" class="elem" style="${iStyle}">`;
                         }
                     }).join('')}
