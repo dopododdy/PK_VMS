@@ -81,9 +81,12 @@
                         <label class="label-clinical">ชื่อภาษาไทย</label>
                         <input type="text" id="f_name_th" class="input-box" placeholder="ชื่อเรียกภาษาไทย">
                     </div>
+                    
                     <div>
                         <label class="label-clinical">หน่วย (Unit)</label>
-                        <input type="text" id="f_unit" class="input-box" placeholder="เม็ด, mL, ครั้ง...">
+                        <select id="f_unit" class="input-box cursor-pointer">
+                            <option value="">-- กำลังโหลด --</option>
+                        </select>
                     </div>
                     
                     <div id="fixed-price-section">
@@ -105,8 +108,17 @@
 
                 <div id="med-config-section">
                     <div class="grid grid-cols-2 gap-6 mb-8">
-                        <div><label class="label-clinical">ความเข้มข้น</label><input type="number" id="f_conc" class="input-box" placeholder="mg/unit"></div>
-                        <div><label class="label-clinical">หมวดหมู่ย่อย</label><input type="text" id="f_sub_cat" class="input-box" placeholder="Antibiotic, etc."></div>
+                        <div>
+                            <label class="label-clinical">ความเข้มข้น</label>
+                            <input type="number" id="f_conc" class="input-box" placeholder="mg/unit">
+                        </div>
+                        
+                        <div>
+                            <label class="label-clinical">หมวดหมู่ย่อย</label>
+                            <select id="f_sub_cat" class="input-box cursor-pointer">
+                                <option value="">-- กำลังโหลด --</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <div id="dosage-section" class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -154,9 +166,34 @@
         let items = [], selectedItem = null;
 
         window.onload = async () => { 
+            // 1. เรียกใช้งานฟังก์ชันโหลดข้อมูล Dropdown อัตโนมัติเมื่อเปิดหน้าเว็บ
+            await loadMasterDataDropdowns();
             renderTierInputs();
             await setCategory('TakeHome'); 
         };
+
+        // ฟังก์ชันใหม่: ดึงข้อมูลหน่วยนับและหมวดหมู่ย่อยจาก Master Data
+        async function loadMasterDataDropdowns() {
+            try {
+                // โหลดหน่วยนับ
+                const { data: units } = await db.from('mas_units').select('name').order('name');
+                const unitEl = document.getElementById('f_unit');
+                if (units && unitEl) {
+                    unitEl.innerHTML = '<option value="">-- เลือกหน่วย --</option>' + 
+                        units.map(u => `<option value="${u.name}" style="background: #0b1929">${u.name}</option>`).join('');
+                }
+
+                // โหลดหมวดหมู่สินค้า (Sub Category)
+                const { data: subcats } = await db.from('mas_sub_cat').select('name').order('name');
+                const subcatEl = document.getElementById('f_sub_cat');
+                if (subcats && subcatEl) {
+                    subcatEl.innerHTML = '<option value="">-- เลือกหมวดหมู่ --</option>' + 
+                        subcats.map(s => `<option value="${s.name}" style="background: #0b1929">${s.name}</option>`).join('');
+                }
+            } catch (err) {
+                console.error("โหลดข้อมูล Master Data ไม่สำเร็จ:", err);
+            }
+        }
 
         function renderTierInputs() {
             const container = document.getElementById('tiers-container');
@@ -255,7 +292,6 @@
                 document.getElementById('f_conc').value = selectedItem.concentration_mg_unit || 1;
                 document.getElementById('f_sub_cat').value = selectedItem.sub_category || '';
                 document.getElementById('f_side_effects').value = selectedItem.side_effects || '';
-                // Loop mapping 5 doses
                 for(let i=1; i<=5; i++) {
                     document.getElementById(`f_dog_dose_${i}`).value = selectedItem[`dog_dose_${i}`] || '';
                     document.getElementById(`f_dog_for_${i}`).value = selectedItem[`dog_for_${i}`] || '';
@@ -307,7 +343,6 @@
                     side_effects: document.getElementById('f_side_effects').value,
                     is_medication: (currentCat !== 'General')
                 };
-                // Append 5 doses data
                 for(let i=1; i<=5; i++) {
                     payload[`dog_dose_${i}`] = parseFloat(document.getElementById(`f_dog_dose_${i}`).value) || 0;
                     payload[`dog_for_${i}`] = document.getElementById(`f_dog_for_${i}`).value;
@@ -326,7 +361,8 @@
 
         function addNewItem() {
             selectedItem = null;
-            document.querySelectorAll('input, textarea').forEach(i => i.value = '');
+            // เพิ่มคำสั่งให้ล้างค่าใน select (Dropdown) ด้วย
+            document.querySelectorAll('input, textarea, select').forEach(i => i.value = '');
             document.getElementById('f_conc').value = 1;
             document.getElementById('btn-delete').classList.add('hidden');
         }
