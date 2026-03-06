@@ -47,7 +47,6 @@
 <body class="flex flex-col">
 
     <div id="main-ui" class="flex flex-1 overflow-hidden">
-        
         <div class="w-1/4 border-r border-white/5 flex flex-col p-5 overflow-hidden">
             <div class="flex items-center gap-3 mb-6">
                 <a href="index.html" class="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-2xl">🏠</a>
@@ -173,15 +172,12 @@
 
         async function fetchTodayBills() {
             const today = new Date().toISOString().split('T')[0];
-            
-            // 1. ดึงบิลรอชำระ
             const { data: pending } = await db.from('medical_records')
                 .select('id, owner_hn, created_at, total_cost, owners(owner_name), animals(pet_name)')
                 .or('payment_status.is.null,payment_status.eq.pending')
                 .gte('created_at', today)
                 .order('created_at', { ascending: false });
 
-            // 2. ดึงบิลที่จ่ายแล้ว
             const { data: paid } = await db.from('medical_records')
                 .select('id, owner_hn, created_at, owners(owner_name), animals(pet_name), net_amount')
                 .eq('payment_status', 'paid')
@@ -225,14 +221,17 @@
             activeRecord = header;
             cart = (items || []).map(i => {
                 const type = i.item_type;
-                let label = "รายการ";
+                let label = "รายการ"; // ค่าเริ่มต้น
                 let qty = parseFloat(i.quantity);
                 let price = parseFloat(i.unit_price);
 
+                // --- แก้ไขตรงนี้: ตัดเลข 1 ออกจากหน่วย ---
                 if(type === 'Rx') {
-                    label = "1 ซอง"; qty = 1; price = parseFloat(i.total_price);
+                    label = "ซอง"; qty = 1; price = parseFloat(i.total_price);
                 } else if(type === 'Tx' && i.item_name.toLowerCase().includes('inj')) {
-                    label = "1 เข็ม"; qty = 1; price = parseFloat(i.total_price);
+                    label = "เข็ม"; qty = 1; price = parseFloat(i.total_price);
+                } else if(type === 'Lab' || type === 'Tx') {
+                    label = "รายการ";
                 }
 
                 return { id: i.id, name: i.item_name, price: price, qty: qty, type: type, label: label };
@@ -275,7 +274,7 @@
                     price: parseFloat(p.price_per_unit), 
                     qty: 1, 
                     type: isMed ? 'Rx' : 'Product',
-                    label: isMed ? 'ซอง' : 'ชิ้น'
+                    label: isMed ? 'ซอง' : 'ชิ้น' // ตัดเลข 1 ออก
                 });
             }
             renderCart();
@@ -285,19 +284,29 @@
             const body = document.getElementById('cart-items-body');
             document.getElementById('cart-empty').classList.toggle('hidden', cart.length > 0);
             
-            body.innerHTML = cart.map((item, idx) => `
+            body.innerHTML = cart.map((item, idx) => {
+                // เช็คว่ารายการไหนห้ามแก้จำนวน (พวกยาฉีดหรือ Rx ที่ Fix มาจากบันทึกหมอ)
+                const isFixed = item.label === "ซอง" || item.label === "เข็ม";
+
+                return `
                 <tr class="cart-item">
                     <td class="p-5">
                         <div class="font-bold text-white text-lg">${item.name}</div>
                         <div class="text-xs text-gray-500 uppercase">${item.type}</div>
                     </td>
                     <td class="p-5 text-center">
-                        ${item.label.includes('1') ? 
-                            `<span class="font-black text-teal-400 text-lg">${item.label}</span>` : 
-                            `<div class="flex items-center justify-center gap-3">
-                                <button onclick="updateQty(${idx}, -1)" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-red-500/20">-</button>
-                                <span class="font-bold text-lg">${item.qty}</span>
-                                <button onclick="updateQty(${idx}, 1)" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-teal-500/20">+</button>
+                        ${isFixed ? 
+                            `<div>
+                                <span class="font-black text-teal-400 text-2xl">${item.qty}</span>
+                                <div class="text-[10px] text-gray-500 uppercase">${item.label}</div>
+                            </div>` : 
+                            `<div class="flex flex-col items-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="updateQty(${idx}, -1)" class="w-7 h-7 rounded bg-white/10 hover:bg-red-500/20">-</button>
+                                    <span class="font-bold text-lg w-8">${item.qty}</span>
+                                    <button onclick="updateQty(${idx}, 1)" class="w-7 h-7 rounded bg-white/10 hover:bg-teal-500/20">+</button>
+                                </div>
+                                <div class="text-[10px] text-gray-500 uppercase mt-1">${item.label}</div>
                             </div>`
                         }
                     </td>
@@ -305,7 +314,7 @@
                     <td class="p-5 text-right font-black text-white text-xl">฿${(item.price * item.qty).toFixed(2)}</td>
                     <td class="p-5 text-center"><button onclick="removeItem(${idx})" class="text-red-500 hover:text-red-400 text-xl">🗑️</button></td>
                 </tr>
-            `).join('');
+            `}).join('');
             calculateTotal();
         }
 
@@ -401,7 +410,6 @@
                     if (error) throw error;
                 }
 
-                // สั่งพิมพ์หน้าต่างใหม่
                 const win = window.open('', '_blank', 'width=450,height=700');
                 win.document.write(`<html><head><title>Print Receipt</title><style>body{margin:0;padding:30px;font-family:sans-serif;}</style></head><body>${document.getElementById('receipt-preview-content').innerHTML}</body></html>`);
                 win.document.close();
@@ -414,7 +422,6 @@
 
         async function reprintReceipt(id) {
             await loadBillToCart(id, null);
-            // เมื่อโหลดเสร็จให้ดึงส่วนลดจาก activeRecord มาใส่ในฟิลด์
             document.getElementById('discount-val').value = activeRecord.discount || 0;
             showPreview();
         }
