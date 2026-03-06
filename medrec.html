@@ -83,9 +83,15 @@
                     <div class="col-span-12 md:col-span-5"><label class="label-clinical">CC</label><textarea id="f_cc" class="input-box h-24" placeholder="ระบุอาการสำคัญ..."></textarea></div>
                     <div class="col-span-12 md:col-span-5"><label class="label-clinical">Hx</label><textarea id="f_hx" class="input-box h-24" placeholder="ประวัติย้อนหลัง..."></textarea></div>
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE</label><textarea id="f_pe" class="input-box h-32" placeholder="ร่างกาย..."></textarea></div>
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">🔬 Lab</label><div id="list_lab_display" class="list-box overflow-y-auto max-h-40" onclick="openCatalog('lab')">คลิกเพื่อเลือก...</div></div>
+                    <div class="col-span-12 md:col-span-4">
+                        <label class="label-clinical">🔬 Lab/หัตถการ</label>
+                        <div id="list_lab_display" class="list-box overflow-y-auto max-h-40" onclick="openCatalog('lab')">คลิกเพื่อเลือก...</div>
+                    </div>
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical text-yellow-400">Dx</label><textarea id="f_dx" class="input-box h-32" placeholder="วินิจฉัย..."></textarea></div>
-                    <div class="col-span-12 md:col-span-6"><label class="label-clinical">💉 Tx (หัตถการ/ยาฉีด)</label><div id="list_tx_display" class="list-box overflow-y-auto max-h-40" onclick="openCatalog('tx')">คลิกเพื่อเลือก...</div></div>
+                    <div class="col-span-12 md:col-span-6">
+                        <label class="label-clinical">💉 Tx (ยาฉีด)</label>
+                        <div id="list_tx_display" class="list-box overflow-y-auto max-h-40" onclick="openCatalog('tx')">คลิกเพื่อเลือก...</div>
+                    </div>
                     <div class="col-span-12 md:col-span-6">
                         <div class="flex justify-between items-center mb-1"><label class="label-clinical">💊 Rx (ยากลับบ้าน/สินค้า)</label><button onclick="printAllRx()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded-lg font-bold">🖨️ พิมพ์ทั้งหมด</button></div>
                         <div id="list_rx_display" class="list-box border-blue-500/50 overflow-y-auto max-h-40" onclick="openCatalog('rx')">คลิกเพื่อเลือก...</div>
@@ -191,11 +197,31 @@
                     </div>
                     <div id="detail-${rec.id}" class="hidden mt-6 pt-6 border-t border-white/5">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-base">
-                            <div><b class="label-clinical text-sm">🔬 Lab:</b> ${drawBullets(labs)}</div>
-                            <div><b class="label-clinical text-sm">💉 Tx:</b> ${drawBullets(txs)}</div>
+                            <div><b class="label-clinical text-sm">🔬 Lab/หัตถการ:</b> ${drawBullets(labs)}</div>
+                            <div><b class="label-clinical text-sm">💉 Tx (ยาฉีด):</b> ${drawBullets(txs)}</div>
                             <div><div class="flex justify-between items-center mb-1"><b class="label-clinical text-sm">💊 Rx:</b><button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold transition">🖨️ พิมพ์ทั้งหมด</button></div>${drawBullets(rxs)}</div></div><div class="flex justify-between items-center border-t border-white/5 pt-4"><div class="text-sm"><b>Plan:</b> ${rec.plan || '-'}</div><div class="text-2xl font-black text-yellow-400">฿ ${rec.total_cost?.toLocaleString()}</div></div></div></div>`;
             }).join('');
         }
+
+        async function openCatalog(type) {
+            currentCatalogType = type; document.getElementById('catalog-modal').style.display = 'flex';
+            let items = [];
+            if (type === 'lab') {
+                // แก้ไข: ดึงข้อมูล Lab และ หัตถการ จากตาราง services มารวมกัน
+                const { data } = await db.from('services').select('*').in('category', ['Lab', 'หัตถการ']);
+                items = (data || []).map(i => ({ name: i.service_name, price: i.price, type: 'Lab', data: i }));
+            } else if (type === 'tx') {
+                // แก้ไข: ดึงเฉพาะ ยาฉีด จากตาราง pharmacy
+                const { data } = await db.from('pharmacy').select('*').eq('category', 'Injection');
+                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Tx', subtype: 'inj', data: i }));
+            } else if (type === 'rx') {
+                const { data } = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']);
+                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Rx', is_med: i.category !== 'General', data: i }));
+            }
+            fullCatalog = items; displayedItems = [...items]; renderCatalog(); updateModalUI();
+        }
+
+        // --- ส่วนที่เหลือของ Logic เดิม ---
 
         async function printCurrentRx() {
             if (!pendingItem) return;
@@ -214,7 +240,6 @@
 
         async function saveMedicalRecord() {
             try {
-                // แก้ไขชื่อคอลัมน์จาก cost เป็น total_cost และเพิ่ม net_amount เพื่อรองรับ POS
                 const headerData = { 
                     animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, 
                     cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, 
@@ -225,7 +250,6 @@
                 };
 
                 let currentRecordId = editingId;
-
                 if (editingId) {
                     const { error: upErr } = await db.from('medical_records').update(headerData).eq('id', editingId);
                     if (upErr) throw upErr;
@@ -295,23 +319,6 @@
             }
         };
 
-        async function openCatalog(type) {
-            currentCatalogType = type; document.getElementById('catalog-modal').style.display = 'flex';
-            let items = [];
-            if (type === 'lab') {
-                const { data } = await db.from('services').select('*').eq('category', 'Lab');
-                items = (data || []).map(i => ({ name: i.service_name, price: i.price, type: 'Lab', data: i }));
-            } else if (type === 'tx') {
-                const r1 = await db.from('pharmacy').select('*').eq('category', 'Injection');
-                const r2 = await db.from('services').select('*').eq('category', 'หัตถการ');
-                items = [...(r1.data||[]).map(i=>({name:i.item_name, price:i.price_per_unit, type:'Tx', subtype:'inj', data:i})), ...(r2.data||[]).map(i=>({name:i.service_name, price:i.price, type:'Tx', subtype:'proc', data: i}))];
-            } else if (type === 'rx') {
-                const { data } = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']);
-                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Rx', is_med: i.category !== 'General', data: i }));
-            }
-            fullCatalog = items; displayedItems = [...items]; renderCatalog(); updateModalUI();
-        }
-
         function renderCatalog() {
             document.getElementById('catalog-items').innerHTML = displayedItems.map((i, idx) => `<div class="p-4 bg-white/5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/10 border border-transparent hover:border-teal-500/50" onclick="handleItemSelect(${idx})"><div><b>${i.name}</b><br><small class="text-teal-400">฿${parseFloat(i.price).toFixed(2)}</small></div><div class="text-teal-500 text-2xl font-bold">+</div></div>`).join('');
         }
@@ -325,8 +332,8 @@
             updateFormUI(); updateModalUI();
         }
 
-        function confirmInj() { 
-            const ml = document.getElementById('inj-ml').value; 
+        function confirmInj() { 
+            const ml = document.getElementById('inj-ml').value; 
             const route = Array.from(document.querySelectorAll('input[name="route"]:checked')).map(c=>c.value).join('/');
             let finalPrice = pendingItem.price;
             const weight = parseFloat(document.getElementById('f_weight').value) || 0;
@@ -334,8 +341,8 @@
                 const tier = pendingItem.data.price_config.find(t => weight <= t.max);
                 if (tier) finalPrice = tier.price;
             }
-            addItem('Tx', `${pendingItem.name} (${ml}ml) ${route}`, finalPrice); 
-            document.getElementById('inj-modal').style.display='none'; 
+            addItem('Tx', `${pendingItem.name} (${ml}ml) ${route}`, finalPrice); 
+            document.getElementById('inj-modal').style.display='none'; 
         }
 
         function calculateRxTablets() {
@@ -350,7 +357,7 @@
 
         function calculateRxTotal() {
             const t = parseFloat(document.getElementById('rx-tabs-val').value) || 0, f = parseFloat(document.getElementById('rx-freq').value) || 1, d = parseInt(document.getElementById('rx-days').value) || 1;
-            const q = Math.ceil(t * f * d); 
+            const q = Math.ceil(t * f * d); 
             const pr = pendingItem ? (pendingItem.price || 0) : 0;
             const total = q * pr;
             const unit = (pendingItem && pendingItem.data) ? pendingItem.data.unit : 'เม็ด';
