@@ -14,7 +14,7 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy-dark); color: #e2e8f0; height: 100vh; overflow: hidden; }
 
-        /* --- 1. Typography Consistency (Uniform across 3 columns) --- */
+        /* --- 1. Typography Consistency --- */
         .txt-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.025em; }
         .txt-body { font-size: 14px; color: #cbd5e1; }
         .txt-title { font-size: 18px; font-weight: 800; color: #ffffff; }
@@ -37,6 +37,10 @@
 
         .numpad button { background: rgba(255,255,255,0.05); height: 50px; border-radius: 10px; font-weight: 800; font-size: 18px; }
         .numpad button:active { background: var(--teal-accent); color: var(--navy-dark); }
+        
+        /* Utility for print button */
+        .btn-print { background-color: #2563eb !important; color: white !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important; }
+        .btn-print:hover { background-color: #1d4ed8 !important; }
     </style>
 </head>
 <body class="flex">
@@ -44,7 +48,7 @@
     <div class="col-side flex flex-col p-5">
         <div class="mb-6">
             <h2 class="txt-title flex items-center gap-2 mb-4">
-                <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS Pro
+                <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS
             </h2>
             <div class="relative">
                 <input type="text" id="main-search" class="search-input" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="filterPatients()">
@@ -73,7 +77,7 @@
     <div class="col-main flex flex-col p-6">
         <div class="flex justify-between items-start mb-6">
             <div>
-                <div id="view-mode-tag" class="hidden bg-amber-500/20 text-amber-500 text-[10px] px-2 py-0.5 rounded font-bold mb-1 w-fit">HISTORY VIEW (PAID)</div>
+                <div id="view-mode-tag" class="hidden bg-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded font-bold mb-1 w-fit">PAID & REPRINT MODE</div>
                 <h1 id="display-pet-name" class="txt-title">รายการรอชำระเงิน</h1>
                 <p id="display-owner-info" class="txt-body text-gray-500">กรุณาเลือกรายการจากคอลัมน์ซ้าย</p>
             </div>
@@ -128,20 +132,23 @@
             </div>
         </div>
 
-        <button id="btn-pay" onclick="processPayment()" class="w-full h-16 bg-teal-500 rounded-xl text-navy-dark font-black text-lg hover:bg-teal-400 transition-all active:scale-95 shadow-lg shadow-teal-500/20">
-            ยืนยันการชำระเงิน
+        <button id="btn-pay" onclick="processPayment()" class="w-full h-16 bg-teal-500 rounded-xl text-navy-dark font-black text-lg hover:bg-teal-400 transition-all active:scale-95 shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2">
+            <i data-lucide="check-circle" class="w-5" id="btn-icon"></i>
+            <span id="btn-text">ยืนยันการชำระเงิน</span>
         </button>
     </div>
 
     <script>
         lucide.createIcons();
         let allPatients = [], currentCart = [];
+        let activeRecordId = null; // เก็บ ID ของบิลที่กำลังเปิดอยู่
+        let activePatient = null;
 
         window.onload = async () => {
             await fetchPatients();
         };
 
-        // --- FETCH PATIENTS (ตรงตาม SQL: owners.hn & animals.owner_hn) ---
+        // --- 1. FETCH & SEARCH PATIENTS ---
         async function fetchPatients() {
             try {
                 const { data, error } = await db
@@ -179,9 +186,9 @@
             `).join('');
         }
 
-        // --- LOAD HISTORY (แสดงรายการที่เคยชำระแล้ว) ---
+        // --- 2. LOAD HISTORY ---
         async function loadPatientHistory(hn, petName, ownerName) {
-            // Update Header Information
+            activePatient = { hn, petName, ownerName };
             document.getElementById('display-pet-name').innerText = `คนไข้: ${petName}`;
             document.getElementById('display-owner-info').innerText = `HN: ${hn} | เจ้าของ: ${ownerName}`;
 
@@ -213,21 +220,38 @@
             lucide.createIcons();
         }
 
-        // --- VIEW RECORD DETAIL (แสดงรายการสินค้า/ราคา ใน Column 2 & 3) ---
+        // --- 3. VIEW RECORD & TOGGLE REPRINT BUTTON ---
         async function viewRecordDetail(recordId, status) {
+            activeRecordId = recordId;
             const isPaid = status === 'paid';
+            
+            // Toggle Button State
+            const btnPay = document.getElementById('btn-pay');
+            const btnText = document.getElementById('btn-text');
+            const btnIcon = document.getElementById('btn-icon');
+            
             document.getElementById('view-mode-tag').classList.toggle('hidden', !isPaid);
-            document.getElementById('btn-pay').disabled = isPaid;
-            document.getElementById('btn-pay').style.opacity = isPaid ? '0.3' : '1';
+            
+            if (isPaid) {
+                btnText.innerText = "พิมพ์ใบเสร็จ (Reprint)";
+                btnIcon.setAttribute('data-lucide', 'printer');
+                btnPay.classList.add('btn-print');
+                btnPay.classList.remove('bg-teal-500');
+                btnPay.onclick = () => printReceipt(recordId); // Switch to Print Function
+            } else {
+                btnText.innerText = "ยืนยันการชำระเงิน";
+                btnIcon.setAttribute('data-lucide', 'check-circle');
+                btnPay.classList.remove('btn-print');
+                btnPay.classList.add('bg-teal-500');
+                btnPay.onclick = processPayment; // Switch to Pay Function
+            }
+            lucide.createIcons();
 
-            // 1. Get Master Record
+            // Fetch Data
             const { data: record } = await db.from('medical_records').select('*').eq('id', recordId).single();
-            // 2. Get Items (ตรงตามตาราง medical_record_items)
             const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
 
             currentCart = items || [];
-            
-            // Render Cart
             const cartContainer = document.getElementById('cart-items');
             cartContainer.innerHTML = currentCart.map(item => `
                 <div class="grid grid-cols-12 p-4 items-center">
@@ -241,15 +265,163 @@
                 </div>
             `).join('');
 
-            // Update Summary
+            // UI Input limits based on state
+            document.getElementById('input-discount').disabled = isPaid;
+            document.getElementById('received-cash').disabled = isPaid;
+
+            // Load Values
             document.getElementById('sum-total').innerText = parseFloat(record.total_cost).toLocaleString();
-            document.getElementById('input-discount').value = record.discount;
+            document.getElementById('input-discount').value = record.discount || 0;
             document.getElementById('net-total').innerText = parseFloat(record.net_amount).toLocaleString();
             document.getElementById('received-cash').value = isPaid ? record.received_amount : "";
             calculateChange();
         }
 
-        // --- MATH LOGIC ---
+        // --- 4. PAYMENT PROCESS ---
+        async function processPayment() {
+            if (!activeRecordId) return alert("กรุณาเลือกรายการชำระเงินก่อน");
+
+            const netTotal = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, ''));
+            const receivedCash = parseFloat(document.getElementById('received-cash').value) || 0;
+            const discount = parseFloat(document.getElementById('input-discount').value) || 0;
+            const changeAmount = receivedCash - netTotal;
+
+            if (receivedCash < netTotal) {
+                return alert("จำนวนเงินที่รับมาไม่เพียงพอ");
+            }
+
+            // Generate Receipt No (e.g. INV20260307-XXXX)
+            const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
+            const randomPad = Math.floor(1000 + Math.random() * 9000);
+            const receiptNo = `INV${dateStr}-${randomPad}`;
+
+            try {
+                // Update Database
+                const { error } = await db.from('medical_records').update({
+                    payment_status: 'paid',
+                    receipt_no: receiptNo,
+                    discount: discount,
+                    net_amount: netTotal,
+                    received_amount: receivedCash,
+                    change_amount: changeAmount,
+                    paid_at: new Date().toISOString()
+                }).eq('id', activeRecordId);
+
+                if (error) throw error;
+
+                alert("ชำระเงินสำเร็จ! กำลังพิมพ์ใบเสร็จ...");
+                
+                // Print immediately after payment
+                printReceipt(activeRecordId);
+                
+                // Refresh History Panel
+                if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
+                
+            } catch (error) {
+                console.error("Payment Error:", error);
+                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
+            }
+        }
+
+        // --- 5. PRINT THERMAL RECEIPT ---
+        async function printReceipt(recordId) {
+            // Fetch detailed record with joins
+            const { data: record } = await db.from('medical_records')
+                .select('*, animals(pet_name), owners(owner_name)')
+                .eq('id', recordId).single();
+                
+            const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
+
+            // Open Hidden/Popup Window for Printing
+            const printWindow = window.open('', '_blank', 'width=350,height=600');
+            
+            let itemsHtml = items.map(i => `
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                    <div style="width: 70%;">${i.item_name} <br><small>x${i.quantity}</small></div>
+                    <div style="width: 30%; text-align: right;">${parseFloat(i.total_price).toLocaleString()}</div>
+                </div>
+            `).join('');
+
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Receipt - ${record.receipt_no}</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+                    <style>
+                        @page { margin: 0; }
+                        body { font-family: 'Sarabun', sans-serif; width: 80mm; padding: 10px; margin: 0 auto; color: #000; }
+                        .text-center { text-align: center; }
+                        .header { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
+                        .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                        .footer { font-size: 12px; margin-top: 20px; text-align: center; }
+                    </style>
+                </head>
+                <body>
+                    <div class="text-center">
+                        <div class="header">PK-VMS CLINIC</div>
+                        <div style="font-size: 13px;">ใบเสร็จรับเงิน / Receipt</div>
+                        <div style="font-size: 12px; margin-top:5px;">(Reprint)</div>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <div style="font-size: 12px; line-height: 1.6;">
+                        <div><strong>No:</strong> ${record.receipt_no || record.id.slice(0,8)}</div>
+                        <div><strong>Date:</strong> ${new Date(record.paid_at || record.created_at).toLocaleString('th-TH')}</div>
+                        <div><strong>HN:</strong> ${record.owner_hn}</div>
+                        <div><strong>Pet:</strong> ${record.animals?.pet_name || '-'}</div>
+                        <div><strong>Owner:</strong> ${record.owners?.owner_name || '-'}</div>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    ${itemsHtml}
+                    
+                    <div class="divider"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span>รวมเงิน:</span>
+                        <span>${parseFloat(record.total_cost).toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span>ส่วนลด:</span>
+                        <span>-${parseFloat(record.discount || 0).toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-top: 8px;">
+                        <span>ยอดสุทธิ:</span>
+                        <span>฿${parseFloat(record.net_amount).toLocaleString()}</span>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <div style="font-size: 13px; display: flex; justify-content: space-between;">
+                        <span>รับเงินสด:</span>
+                        <span>${parseFloat(record.received_amount || 0).toLocaleString()}</span>
+                    </div>
+                    <div style="font-size: 13px; display: flex; justify-content: space-between;">
+                        <span>เงินทอน:</span>
+                        <span>${parseFloat(record.change_amount || 0).toLocaleString()}</span>
+                    </div>
+
+                    <div class="footer">
+                        ขอบคุณที่ใช้บริการครับ/ค่ะ<br>
+                        PK-VMS Smart POS
+                    </div>
+                </body>
+                </html>
+            `);
+
+            printWindow.document.close();
+            
+            // Wait for font to load before triggering print dialogue
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
+
+        // --- MATH CALCULATIONS ---
         function calculateNet() {
             const sum = parseFloat(document.getElementById('sum-total').innerText.replace(/,/g, '')) || 0;
             const disc = parseFloat(document.getElementById('input-discount').value) || 0;
