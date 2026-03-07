@@ -77,6 +77,9 @@
                     ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
                 </h3>
                 <div class="flex gap-3">
+                    <button onclick="printBothLabels(animalId)" class="btn-base bg-emerald-600 hover:bg-emerald-500 shadow-lg text-sm px-4 py-2">
+                        🖨️ พิมพ์ข้อมูลสัตว์ + นัดหมาย
+                    </button>
                     <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-sm px-4 py-2">
                         🪪 พิมพ์ข้อมูลประจำตัวสัตว์
                     </button>
@@ -165,7 +168,6 @@
         let petType = 'สุนัข', petData = { sex: "ผู้", dob: "" };
         let editingId = null;
 
-        // ฟังก์ชันช่วยจัดรูปแบบวันที่เป็นภาษาไทย
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
             const date = new Date(dateString);
@@ -188,7 +190,6 @@
             const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
             const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN);
             
-            // ระบบป้องกัน Error ถ้าไม่มีข้อมูลในตาราง
             if (!pet || !owner) {
                 alert("❌ ไม่พบข้อมูลสัตว์เลี้ยงหรือเจ้าของในระบบ (ข้อมูลอาจถูกลบไปแล้ว หรือเปิดหน้าต่างค้างไว้)\\nระบบจะพากลับไปหน้าค้นหา");
                 window.location.href = 'animals.html';
@@ -340,7 +341,68 @@
             await executeDynamicPrint(printBatch, 'sticker_drug');
         }
 
-        // --- เพิ่มฟังก์ชันสำหรับพิมพ์ข้อมูลสัตว์ (จากหน้า medrec) ---
+        // --- ฟังก์ชันสำหรับการพิมพ์ที่รวมสติ๊กเกอร์ ---
+        
+        async function printBothLabels(petId) {
+            try {
+                const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
+                const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+                const { data: phoneInfo } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).eq('label', 'เบอร์หลัก').maybeSingle();
+                const latestRecWithAppt = records.find(r => r.appointment || r.appointment_2);
+
+                if (!pet || !owner) return alert("ไม่พบข้อมูลสัตว์หรือเจ้าของ");
+
+                // ดึง Template ทั้งสองแบบ
+                const [tplPetRes, tplApptRes] = await Promise.all([
+                    db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(),
+                    db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()
+                ]);
+
+                if (!tplPetRes.data) return alert("ไม่พบ Template: sticker_pet_id");
+                
+                // ถ้าไม่มีข้อมูลนัดหมาย หรือไม่มี template นัดหมาย จะพิมพ์แค่บัตรประจำตัว
+                if (!latestRecWithAppt || !tplApptRes.data) {
+                    if(!latestRecWithAppt) alert("ไม่พบข้อมูลนัดหมาย ระบบจะพิมพ์เฉพาะข้อมูลประจำตัวสัตว์");
+                    return printPetLabel(petId);
+                }
+
+                const ownerPhone = phoneInfo ? phoneInfo.phone_number : '-';
+
+                const petData = {
+                    clinic_name: "PK-VMS Animal Clinic",
+                    owner_name: owner.owner_name || "-",
+                    owner_phone: ownerPhone,
+                    pet_name: pet.pet_name || "-",
+                    hn: pet.owner_hn || "-",
+                    species: pet.pet_type || "-",
+                    breed: pet.breed || "-",
+                    sex: pet.gender || "-",
+                    weight: (pet.weight || 0).toFixed(2),
+                    date: formatThaiDate(new Date().toISOString(), 'long')
+                };
+
+                const apptData = {
+                    clinic_name: "PK-VMS Animal Clinic",
+                    owner_name: owner.owner_name || "-",
+                    owner_phone: ownerPhone,
+                    pet_name: pet.pet_name || "-",
+                    hn: pet.owner_hn || "-",
+                    appointment_date_1: latestRecWithAppt.appointment ? formatThaiDate(latestRecWithAppt.appointment, 'long') : "-",
+                    appointment_note_1: latestRecWithAppt.appointment_note || "-",
+                    appointment_date_2: latestRecWithAppt.appointment_2 ? formatThaiDate(latestRecWithAppt.appointment_2, 'long') : "-",
+                    appointment_note_2: latestRecWithAppt.appointment_note_2 || "-",
+                    date: formatThaiDate(new Date().toISOString(), 'short')
+                };
+
+                // ส่งไปพิมพ์รวมเป็นไฟล์เดียว
+                executeMultiTemplatePrint([
+                    { config: tplPetRes.data.config, data: petData },
+                    { config: tplApptRes.data.config, data: apptData }
+                ]);
+
+            } catch (e) { alert("Error: " + e.message); }
+        }
+
         async function printPetLabel(petId) {
             try {
                 const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
@@ -367,14 +429,12 @@
             } catch (e) { alert("Error: " + e.message); }
         }
 
-        // --- เพิ่มฟังก์ชันสำหรับพิมพ์ใบนัดหมาย (จากหน้า medrec) ---
         async function printApptLabel(petId) {
             try {
                 const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
                 const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
                 const { data: phoneInfo } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).eq('label', 'เบอร์หลัก').maybeSingle();
                 
-                // หาประวัติล่าสุดที่มีนัดหมาย (หาจากตัวแปร records ที่โหลดมาแล้ว)
                 const latestRecWithAppt = records.find(r => r.appointment || r.appointment_2);
                 if (!latestRecWithAppt) return alert("ไม่พบข้อมูลการนัดหมายในประวัติการรักษา");
 
@@ -591,6 +651,7 @@
             document.getElementById('modal-session-list').innerHTML = current.map((i, idx) => `<span class="bg-teal-500 text-black px-3 py-1 rounded-lg text-sm font-bold cursor-pointer" onclick="removeItem(${idx})">✕ ${i.name}</span>`).join('');
         }
 
+        // --- Core Print Executor ---
         async function executeDynamicPrint(dataList, templateType) {
             const { data: t } = await db.from('print_templates').select('config').eq('template_type', templateType).single();
             if (!t) return alert("ไม่พบ Template: " + templateType);
@@ -624,6 +685,41 @@
                 });
                 html += `</div>`;
             });
+            html += `</body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></html>`;
+            pw.document.write(html); pw.document.close();
+        }
+
+        // --- Multi Template Print Executor (สำหรับพิมพ์ควบ 2 หน้าต่างใน 1 ไฟล์) ---
+        function executeMultiTemplatePrint(jobs) {
+            const px = 3.78; 
+            const pw = window.open('', '_blank', 'width=400');
+            const pageWidth = jobs[0].config.width || 80;
+            const pageHeight = jobs[0].config.height || 50;
+
+            let html = `<html><head><link href="https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun&display=swap" rel="stylesheet"><style>body { margin:0; padding:0; } .sticker { position:relative; width:${pageWidth}mm; height:${pageHeight}mm; overflow:hidden; page-break-after:always; } .elem { position:absolute; color:black; line-height:1.2; } @page { size: ${pageWidth}mm ${pageHeight}mm; margin:0; }</style></head><body>`;
+            
+            jobs.forEach(job => {
+                const config = job.config;
+                const data = job.data;
+                html += `<div class="sticker">`;
+                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
+                    const availableWidthMm = pageWidth - parseFloat(l.x);
+                    const finalWidth = l.w ? l.w : availableWidthMm;
+                    
+                    let style = `top:${l.y*px}px; left:${l.x*px}px; width:${finalWidth*px}px; font-family:'${l.font || 'Sarabun'}'; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; position:absolute;`;
+                    if (l.align === 'center') style = `top:${l.y*px}px; left:0; width:${pageWidth*px}px; text-align:center; font-family:'${l.font || 'Sarabun'}'; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; position:absolute;`;
+                    else if (l.align === 'right') style = `top:${l.y*px}px; right:${l.x*px}px; text-align:right; font-family:'${l.font || 'Sarabun'}'; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; position:absolute;`;
+                    
+                    let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || m);
+                    
+                    if (l.type==='text') return `<div class="elem" style="${style}">${content}</div>`;
+                    if (l.type==='rect') return `<div class="elem" style="top:${l.y*px}px; left:${l.x*px}px; width:${l.w*px}px; height:${l.h*px}px; border:1px solid black; position:absolute; border-radius:${l.radius || 0}px;"></div>`;
+                    if (l.type==='image') return `<img class="elem" src="${l.url}" style="top:${l.y*px}px; left:${l.x*px}px; width:${l.w*px}px; height:${l.h*px}px; position:absolute; object-fit:contain;">`;
+                }).join('');
+                html += elements;
+                html += `</div>`;
+            });
+            
             html += `</body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></html>`;
             pw.document.write(html); pw.document.close();
         }
