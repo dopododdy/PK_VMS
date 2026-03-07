@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่าห้องแล็บ | PK-VMS Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+
+    <style>
+        :root { --navy: #0b1929; --navy-light: #112240; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
+        * { font-family: "Sarabun", sans-serif !important; }
+        body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
+
+        .sidebar-container { position: relative; width: 400px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .param-card { 
+            padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
+            transition: 0.2s;
+        }
+        .param-card:hover { background: rgba(255,255,255,0.07); }
+        .param-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
+
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
+        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        
+        .btn-base { padding: 12px 24px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; }
+        .btn-teal { background-color: #0d9488 !important; }
+        .btn-red { background-color: #dc2626 !important; }
+        .btn-gray { background-color: #475569 !important; }
+
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 35px; border: 1px solid var(--border); margin-bottom: 24px; }
+        .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px; display: block; font-weight: 700; }
+        
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="sidebar-container">
+        <div class="p-6 border-b border-white/5">
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-2xl font-black text-white">ผลเลือด Master</h2>
+                <a href="index.html" class="text-3xl opacity-60 hover:opacity-100 transition-all">🏠</a>
+            </div>
+            <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อ Parameter..." oninput="renderList()">
+        </div>
+        <div id="param-list" class="flex-1 overflow-y-auto custom-scroll p-2"></div>
+        <div class="p-5">
+            <button onclick="resetForm()" class="w-full btn-base btn-teal py-4 text-xl shadow-lg">
+                + เพิ่มรายการตรวจใหม่
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-12 bg-[#020617] custom-scroll">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-10">
+                <h1 class="text-4xl font-black text-white">🔬 ตั้งค่าพารามิเตอร์ห้องแล็บ</h1>
+            </div>
+
+            <div class="section-card border-l-[12px] border-teal-500 shadow-2xl">
+                <input type="hidden" id="f_id">
+                
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="col-span-8">
+                        <label class="label-text">ชื่อ Parameter (เช่น WBC, RBC, ALT, BUN)</label>
+                        <input type="text" id="f_name" class="input-box text-2xl font-black text-teal-400" placeholder="ระบุชื่อเรียก...">
+                    </div>
+
+                    <div class="col-span-4">
+                        <label class="label-text">หน่วย (Unit)</label>
+                        <select id="f_unit_select" class="input-box mb-2" onchange="handleUnitChange()">
+                            <option value="">-- ไม่มีหน่วย --</option>
+                            <option value="10^3/µL">10^3/µL</option>
+                            <option value="10^6/µL">10^6/µL</option>
+                            <option value="g/dL">g/dL</option>
+                            <option value="mg/dL">mg/dL</option>
+                            <option value="mmol/L">mmol/L</option>
+                            <option value="µmol/L">µmol/L</option>
+                            <option value="U/L">U/L</option>
+                            <option value="fL">fL</option>
+                            <option value="pg">pg</option>
+                            <option value="%">%</option>
+                            <option value="CUSTOM">อื่นๆ (ระบุเอง)</option>
+                        </select>
+                        <input type="text" id="f_unit_custom" class="input-box hidden" placeholder="พิมพ์หน่วยเอง...">
+                    </div>
+
+                    <div class="col-span-12"><hr class="opacity-10 my-4"></div>
+
+                    <div class="col-span-6">
+                        <h3 class="text-blue-400 font-black mb-4 flex items-center gap-2 text-xl">🐶 ค่าอ้างอิง: สุนัข</h3>
+                        <div class="grid grid-cols-2 gap-4 bg-blue-500/5 p-6 rounded-2xl border border-blue-500/10">
+                            <div>
+                                <label class="label-text">Minimum</label>
+                                <input type="number" id="f_dog_min" class="input-box text-center text-xl font-bold" step="0.001" placeholder="0.00">
+                            </div>
+                            <div>
+                                <label class="label-text">Maximum</label>
+                                <input type="number" id="f_dog_max" class="input-box text-center text-xl font-bold" step="0.001" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-6">
+                        <h3 class="text-pink-400 font-black mb-4 flex items-center gap-2 text-xl">🐱 ค่าอ้างอิง: แมว</h3>
+                        <div class="grid grid-cols-2 gap-4 bg-pink-500/5 p-6 rounded-2xl border border-pink-500/10">
+                            <div>
+                                <label class="label-text">Minimum</label>
+                                <input type="number" id="f_cat_min" class="input-box text-center text-xl font-bold" step="0.001" placeholder="0.00">
+                            </div>
+                            <div>
+                                <label class="label-text">Maximum</label>
+                                <input type="number" id="f_cat_max" class="input-box text-center text-xl font-bold" step="0.001" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-12 flex gap-4 mt-10">
+                        <button onclick="saveData()" class="btn-base btn-teal flex-1 text-2xl py-6 shadow-2xl">💾 บันทึกข้อมูลพารามิเตอร์</button>
+                        <button id="btn-delete" onclick="deleteData()" class="btn-base btn-red px-10 hidden">🗑️ ลบรายการ</button>
+                        <button onclick="resetForm()" class="btn-base btn-gray px-10">ล้างฟอร์ม</button>
+                    </div>
+                </div>
+            </div>
+            
+            <p class="text-gray-500 text-sm text-center">ค่า Reference Range ที่ตั้งไว้นี้ จะถูกนำไปแสดงเป็นแถบเขียว-แดงในหน้าบันทึกผลเลือด (lab.html) เพื่อตรวจสอบความผิดปกติโดยอัตโนมัติ</p>
+        </div>
+    </main>
+
+    <script>
+        let allParams = [];
+
+        window.onload = async () => {
+            if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
+            await loadParams();
+        };
+
+        async function loadParams() {
+            const { data } = await db.from('mas_lab_parameters').select('*').order('parameter_name');
+            allParams = data || [];
+            renderList();
+        }
+
+        function renderList() {
+            const term = document.getElementById('search-box').value.toLowerCase();
+            const container = document.getElementById('param-list');
+            const filtered = allParams.filter(p => p.parameter_name.toLowerCase().includes(term));
+
+            container.innerHTML = filtered.map(p => `
+                <div class="param-card" onclick="editParam('${p.id}')" id="param-${p.id}">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-white font-bold text-lg">${p.parameter_name}</span>
+                        <span class="text-teal-400 text-xs font-bold bg-teal-400/10 px-2 py-1 rounded">${p.unit || 'No Unit'}</span>
+                    </div>
+                    <div class="flex gap-4 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                        <span>🐶 ${p.dog_min} - ${p.dog_max}</span>
+                        <span>🐱 ${p.cat_min} - ${p.cat_max}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function handleUnitChange() {
+            const select = document.getElementById('f_unit_select');
+            const custom = document.getElementById('f_unit_custom');
+            if (select.value === 'CUSTOM') {
+                custom.classList.remove('hidden');
+                custom.focus();
+            } else {
+                custom.classList.add('hidden');
+                custom.value = '';
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('f_id').value = '';
+            document.getElementById('f_name').value = '';
+            document.getElementById('f_unit_select').value = '';
+            document.getElementById('f_unit_custom').value = '';
+            document.getElementById('f_unit_custom').classList.add('hidden');
+            document.getElementById('f_dog_min').value = '';
+            document.getElementById('f_dog_max').value = '';
+            document.getElementById('f_cat_min').value = '';
+            document.getElementById('f_cat_max').value = '';
+            document.getElementById('btn-delete').classList.add('hidden');
+            document.querySelectorAll('.param-card').forEach(el => el.classList.remove('active'));
+        }
+
+        function editParam(id) {
+            resetForm();
+            const p = allParams.find(item => item.id === id);
+            if (!p) return;
+
+            document.getElementById('f_id').value = p.id;
+            document.getElementById('f_name').value = p.parameter_name;
+            
+            // จัดการหน่วย (Standard vs Custom)
+            const stdUnits = ['10^3/µL', '10^6/µL', 'g/dL', 'mg/dL', 'mmol/L', 'µmol/L', 'U/L', 'fL', 'pg', '%'];
+            if (stdUnits.includes(p.unit)) {
+                document.getElementById('f_unit_select').value = p.unit;
+            } else if (p.unit) {
+                document.getElementById('f_unit_select').value = 'CUSTOM';
+                document.getElementById('f_unit_custom').value = p.unit;
+                document.getElementById('f_unit_custom').classList.remove('hidden');
+            }
+
+            document.getElementById('f_dog_min').value = p.dog_min;
+            document.getElementById('f_dog_max').value = p.dog_max;
+            document.getElementById('f_cat_min').value = p.cat_min;
+            document.getElementById('f_cat_max').value = p.cat_max;
+
+            document.getElementById('btn-delete').classList.remove('hidden');
+            document.getElementById(`param-${id}`).classList.add('active');
+        }
+
+        async function saveData() {
+            const name = document.getElementById('f_name').value.trim();
+            if (!name) return alert("❌ โปรดระบุชื่อ Parameter");
+
+            const unitSelect = document.getElementById('f_unit_select').value;
+            const unit = unitSelect === 'CUSTOM' ? document.getElementById('f_unit_custom').value.trim() : unitSelect;
+
+            const payload = {
+                parameter_name: name,
+                unit: unit,
+                dog_min: parseFloat(document.getElementById('f_dog_min').value) || 0,
+                dog_max: parseFloat(document.getElementById('f_dog_max').value) || 0,
+                cat_min: parseFloat(document.getElementById('f_cat_min').value) || 0,
+                cat_max: parseFloat(document.getElementById('f_cat_max').value) || 0,
+                updated_at: new Date()
+            };
+
+            const id = document.getElementById('f_id').value;
+            if (id) payload.id = id;
+
+            try {
+                const { error } = await db.from('mas_lab_parameters').upsert(payload);
+                if (error) throw error;
+                alert("✅ บันทึกพารามิเตอร์สำเร็จ");
+                await loadParams();
+                resetForm();
+            } catch (err) { alert(err.message); }
+        }
+
+        async function deleteData() {
+            const id = document.getElementById('f_id').value;
+            const name = document.getElementById('f_name').value;
+            if (!id || !confirm(`⚠️ ยืนยันการลบ "${name}"?\nค่านี้จะไม่สามารถนำไปใช้งานได้ในอนาคต`)) return;
+
+            try {
+                await db.from('mas_lab_parameters').delete().eq('id', id);
+                alert("🗑️ ลบพารามิเตอร์สำเร็จ");
+                await loadParams();
+                resetForm();
+            } catch (err) { alert(err.message); }
+        }
+    </script>
+</body>
+</html>
