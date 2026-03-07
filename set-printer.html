@@ -126,8 +126,8 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
-        // ข้อมูลจำลองรายการสินค้าเพื่อทดสอบ
-        const mockItems = Array(4).fill({ name: "รายการสินค้า/บริการจำลอง", price: 150.00 });
+        // แก้ไข: แสดงรายการจำลอง 1 รายการ
+        const mockItems = Array(1).fill({ name: "รายการสินค้า/บริการจำลอง", price: 150.00 });
 
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic",
@@ -153,9 +153,10 @@
             total_qty: "14 เม็ด",
             warning: "กินติดต่อกันจนหมดตามสัตวแพทย์สั่ง",
             receipt_no: "2569030769000101",
+            // แก้ไข: แสดงทศนิยม 2 ตำแหน่งในตาราง
             items_list: `
-                <table style="width: calc(100% - 10px); border-collapse:collapse; font-family:'Sarabun'; font-size: 11px; color:black;">
-                    ${mockItems.map(item => `<tr><td>${item.name}</td><td style="text-align:right;">${item.price.toFixed(2)}</td></tr>`).join('')}
+                <table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: 11px; color:black;">
+                    ${mockItems.map(item => `<tr><td>${item.name}</td><td style="text-align:right;">${item.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`).join('')}
                 </table>`, 
             total_price: "960.00",
             discount_val: "60.00",
@@ -184,8 +185,8 @@
         function replaceVars(text, fontSize) {
             if (text.includes("{{items_list}}")) {
                 return `
-                <table style="width: calc(100% - 10px); border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:black;">
-                    ${mockItems.map(item => `<tr><td>${item.name}</td><td style="text-align:right;">${item.price.toFixed(2)}</td></tr>`).join('')}
+                <table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:black;">
+                    ${mockItems.map(item => `<tr><td>${item.name}</td><td style="text-align:right;">${item.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`).join('')}
                 </table>`;
             }
             return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
@@ -342,14 +343,15 @@
             let pushOffset = 0;
 
             wrapper.innerHTML = sortedLines.map((l) => {
-                // คำนวณความสูงบรรทัดตามขนาด pt (pt * 0.35 * 1.4)
                 const lineH_mm = parseFloat(l.size) * 0.35 * 1.4;
                 const currentY = parseFloat(l.y) + pushOffset;
                 
                 let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                 
-                const reductionMm = (l.text && l.text.includes("{{items_list}}")) ? 2.64 : 0;
-                const boxWidthPx = (l.w ? l.w : (pw - (l.x * 2)) - reductionMm) * px;
+                // แก้ไข: พิกัด X จะเลื่อนตำแหน่งจริง และ Width จะเป็นพื้นที่คงเหลือถึงขอบขวา
+                const availableWidthMm = pw - parseFloat(l.x) - 5; // ลบขอบขวาเผื่อ 5mm
+                const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
+                
                 style += `width:${boxWidthPx}px;`;
 
                 if (l.text && l.text.includes("{{items_list}}")) {
@@ -388,8 +390,10 @@
                 const lineH_mm = parseFloat(l.size) * 0.35 * 1.4;
                 const currentY = parseFloat(l.y) + pushOffset;
                 let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
-                const reductionMm = (l.text && l.text.includes("{{items_list}}")) ? 2.64 : 0;
-                const boxWidthMm = (l.w ? l.w : (pw_val - (l.x * 2)) - reductionMm);
+                
+                // แก้ไข: คำนวณความกว้างที่อิงตามพิกัด X
+                const availableWidthMm = pw_val - parseFloat(l.x) - 5;
+                const boxWidthMm = (l.w ? l.w : availableWidthMm);
                 style += `width:${boxWidthMm}mm;`;
 
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * lineH_mm;
@@ -415,7 +419,7 @@
         window.onload = async () => {
             await fetchAvailableTemplates();
             const sideContainer = document.getElementById('var_sidebar_container');
-            sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `<div><div class="var-category-title">${group}</div><div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy: {{${v}}}')">{{${v}}}</span>`).join('')}</div></div>`).join('');
+            sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `<div><div class="var-category-title" style="color:var(--teal); font-weight:800; font-size:0.8rem; margin-bottom:5px; margin-top:10px;">${group}</div><div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy: {{${v}}}')">{{${v}}}</span>`).join('')}</div></div>`).join('');
         };
     </script>
 </body>
