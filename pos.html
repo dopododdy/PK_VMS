@@ -182,8 +182,6 @@
             lucide.createIcons();
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
-            
-            // หน้าจอ POS (UI) ยังคงใช้ i.item_name (ภาษาอังกฤษ) ตาม medrec.html
             document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
                 <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white">${i.item_name}</div></div>
@@ -191,7 +189,6 @@
                     <div class="col-span-2 text-right txt-body text-gray-400">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     <div class="col-span-2 text-right txt-body font-bold text-white">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                 </div>`).join('');
-
             document.getElementById('input-discount').disabled = isPaid;
             document.getElementById('received-cash').disabled = isPaid;
             document.getElementById('sum-total').innerText = parseFloat(rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -217,21 +214,25 @@
             if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
         }
 
-        // --- DYNAMIC PRINT ENGINE (ROBUST THAI NAMES MAPPING) ---
+        // --- DYNAMIC PRINT ENGINE (GLOBAL CASE-INSENSITIVE MAPPING) ---
         async function printReceipt(recordId) {
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
 
-                // 1. ดึง Master ชื่อไทยจากทุกแหล่งที่อาจเก็บยาฉีดและยาอื่นๆ
+                // 1. ดึง Master ชื่อไทยจากทุกตาราง (ยา, สินค้า, บริการ, Lab)
                 const { data: pharmaData } = await db.from('pharmacy').select('item_name, name_th');
                 const { data: servicesData } = await db.from('services').select('service_name, name_th');
-                
-                // 2. สร้าง Master Map ที่รวมทั้ง 2 แหล่ง และใช้ .trim() เพื่อป้องกันช่องว่างทำให้หาไม่เจอ
+
+                // 2. สร้าง Master Map แบบ Case-Insensitive (ใช้ตัวพิมพ์เล็กทั้งหมดเป็น Key)
                 const masterThaiMap = {};
-                if (pharmaData) pharmaData.forEach(p => { if (p.name_th) masterThaiMap[p.item_name.trim()] = p.name_th.trim(); });
-                if (servicesData) servicesData.forEach(s => { if (s.name_th) masterThaiMap[s.service_name.trim()] = s.name_th.trim(); });
+                if (pharmaData) pharmaData.forEach(p => { 
+                    if (p.name_th && p.item_name) masterThaiMap[p.item_name.toLowerCase().trim()] = p.name_th.trim(); 
+                });
+                if (servicesData) servicesData.forEach(s => { 
+                    if (s.name_th && s.service_name) masterThaiMap[s.service_name.toLowerCase().trim()] = s.name_th.trim(); 
+                });
 
                 if (!template) return alert("กรุณาตั้งค่า Template ในหน้า Designer");
                 const config = template.config;
@@ -249,14 +250,13 @@
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
                     
-                    // รายการสินค้า: ตรวจสอบทั้งยากิน (Rx) และยาฉีด (Inj/Tx)
+                    // รายการสินค้า: ค้นหาชื่อไทยแบบไม่สนใจตัวพิมพ์เล็ก/ใหญ่
                     items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:'Sarabun';">
                         ${items.map(i => {
-                            // ใช้ชื่อ EN เป็นกุญแจในการหาชื่อไทย
-                            const searchKey = (i.item_name || "").trim();
-                            const nameTH = masterThaiMap[searchKey] || i.item_name; 
+                            const searchKey = (i.item_name || "").toLowerCase().trim();
+                            const nameToShow = masterThaiMap[searchKey] || i.item_name; // ถ้าหาชื่อไทยไม่เจอจริงๆ ให้ใช้ชื่อเดิม
                             return `<tr>
-                                <td style="padding:1mm 0;">${nameTH} x ${i.quantity}</td>
+                                <td style="padding:1mm 0;">${nameToShow} x ${i.quantity}</td>
                                 <td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             </tr>`;
                         }).join('')}
@@ -264,8 +264,7 @@
                 };
 
                 let pushOffset = 0;
-                const sortedLines = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
-                const elements = sortedLines.map(l => {
+                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
                     const currentY = parseFloat(l.y) + pushOffset;
                     const availableWidthMm = pw - parseFloat(l.x) - 5;
                     const finalWidth = l.w ? l.w : availableWidthMm;
@@ -278,6 +277,7 @@
                     if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
                     if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
                 }).join('');
+
                 const win = window.open('', '_blank', 'width=400');
                 win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body{margin:0; padding:0;} .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} @media print { @page { size: ${pw}mm auto; margin: 0; } }</style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
                 win.document.close();
