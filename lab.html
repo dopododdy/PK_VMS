@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab Results | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -13,147 +14,300 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
-        /* Sidebar - แบบ 3 ส่วนเหมือน medrec */
-        .sidebar-container { width: 450px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .pet-card { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: grid; grid-template-columns: 80px 1fr 60px; gap: 12px; transition: 0.2s; }
+        /* Sidebar Style */
+        .sidebar-container { width: 420px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .pet-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: grid; grid-template-columns: 80px 1fr 50px; gap: 12px; transition: 0.2s; }
+        .pet-card:hover { background: rgba(255,255,255,0.05); }
         .pet-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
-        .hn-col { background: rgba(30, 41, 59, 1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; }
+        .hn-col { background: rgba(30, 41, 59, 1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; font-size: 0.9rem; }
 
-        /* Main Lab Area */
-        .lab-tab { @apply px-6 py-3 font-bold transition-all cursor-pointer border-b-4 border-transparent; }
-        .lab-tab.active { @apply border-teal-500 text-teal-400 bg-teal-500/5; }
+        /* Lab Tabs */
+        .lab-tab { padding: 12px 24px; font-weight: 800; cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; opacity: 0.5; }
+        .lab-tab.active { border-color: var(--teal); color: var(--teal); opacity: 1; background: rgba(20, 184, 177, 0.05); }
+
+        /* Lab Grid */
+        .lab-grid-header { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1.5fr; gap: 15px; padding: 10px; border-bottom: 1px solid var(--border); color: #64748b; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+        .lab-row { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1.5fr; gap: 15px; align-items: center; padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.2s; }
+        .lab-row:hover { background: rgba(255,255,255,0.02); }
+
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
+        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
-        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 25px; padding: 25px; border: 1px solid var(--border); }
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: white; width: 100%; outline: none; }
-        
-        .btn-base { padding: 10px 20px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: white !important; }
-        .btn-teal { background-color: #0d9488 !important; }
-        .btn-blue { background-color: #2563eb !important; }
-        
-        /* สไตล์ตารางค่าเลือด */
-        .blood-grid { display: grid; grid-template-columns: 1fr 120px 150px; gap: 10px; align-items: center; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .btn-base { padding: 10px 20px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; cursor: pointer; }
+        .btn-teal { background: #0d9488; color: white; }
+        .btn-teal:hover { background: #0f766e; transform: translateY(-2px); }
+
+        .status-badge { font-size: 0.7rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; }
+        .status-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status-low { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+        .status-normal { color: #10b981; }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
     </style>
 </head>
-<body>
-    <div class="flex h-screen overflow-hidden">
-        <aside class="sidebar-container">
-            <div class="p-6 border-b border-white/5">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-black">🔬 รายการตรวจแล็บ</h2>
-                    <a href="index.html" class="text-2xl">🏠</a>
-                </div>
-                <input type="text" id="search-box" class="input-box" placeholder="ค้นหา HN, ชื่อ..." oninput="renderSidebar()">
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="sidebar-container">
+        <div class="p-6 border-b border-white/5 bg-navy-light/50">
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                    <i data-lucide="flask-conical" class="text-teal-400"></i> Lab Room
+                </h2>
+                <a href="index.html" class="p-2 hover:bg-white/5 rounded-xl transition"><i data-lucide="home"></i></a>
             </div>
-            <div id="owner-list" class="flex-1 overflow-y-auto px-2"></div>
-        </aside>
+            <div class="relative">
+                <input type="text" id="search-box" class="input-box pl-10" placeholder="ค้นหา HN หรือชื่อสัตว์..." oninput="fetchAnimals()">
+                <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-500"></i>
+            </div>
+        </div>
+        <div id="animal-list" class="flex-1 overflow-y-auto custom-scroll p-2">
+            <div class="text-center py-10 opacity-30">กำลังโหลดรายชื่อ...</div>
+        </div>
+    </aside>
 
-        <main class="flex-1 overflow-y-auto p-8" id="main-view">
-            <div id="no-selection" class="h-full flex flex-col items-center justify-center opacity-20">
-                <span class="text-9xl">🔬</span>
-                <h2 class="text-3xl font-bold">เลือกสัตว์เพื่อบันทึกผลแล็บ</h2>
+    <main class="flex-1 overflow-y-auto bg-[#020617] relative flex flex-col">
+        <div id="no-selection" class="flex-1 flex flex-col items-center justify-center opacity-10">
+            <i data-lucide="microscope" class="w-32 h-32 mb-4"></i>
+            <h2 class="text-3xl font-bold">เลือกรายการสัตว์ด้านซ้ายเพื่อเริ่มงาน</h2>
+        </div>
+
+        <div id="lab-editor" class="hidden flex-1 flex flex-col overflow-hidden">
+            <div class="p-8 border-b border-white/5 flex justify-between items-center bg-navy-light/20">
+                <div>
+                    <h1 class="text-4xl font-black text-white mb-1" id="disp-name">ชื่อสัตว์</h1>
+                    <div class="flex gap-4 text-sm font-bold text-slate-500">
+                        <span id="disp-hn" class="text-blue-400"></span>
+                        <span id="disp-info"></span>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveLabResults()" class="btn-base btn-teal text-lg py-4 px-8 shadow-xl">
+                        <i data-lucide="save"></i> บันทึกผลแล็บ
+                    </button>
+                </div>
             </div>
 
-            <div id="lab-editor" class="hidden">
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 class="text-3xl font-black" id="p-name">ชื่อสัตว์</h1>
-                        <p class="text-teal-400 font-bold" id="p-hn">HN: 000000</p>
-                    </div>
-                    <div class="flex gap-3">
-                        <button onclick="printLabReport()" class="btn-base btn-blue">🖨️ พิมพ์รายงาน</button>
-                        <button onclick="saveLab()" class="btn-base btn-teal">💾 บันทึกผลแล็บ</button>
+            <div class="flex px-8 bg-navy-light/10">
+                <div class="lab-tab active" onclick="switchTab('blood', this)">🩸 Blood Chemistry & CBC</div>
+                <div class="lab-tab" onclick="switchTab('imaging', this)">🖼️ Imaging (US/Echo)</div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-8 custom-scroll">
+                <div id="blood-section">
+                    <div class="section-card shadow-2xl">
+                        <div class="lab-grid-header">
+                            <span>Parameter</span>
+                            <span>Result (ผลที่ได้)</span>
+                            <span>Unit</span>
+                            <span>Reference Range</span>
+                        </div>
+                        <div id="parameters-container" class="mt-2">
+                            </div>
                     </div>
                 </div>
 
-                <div class="flex border-b border-white/10 mb-8">
-                    <div class="lab-tab active" onclick="switchTab('blood', this)">🩸 ตรวจเลือด (Blood Test)</div>
-                    <div class="lab-tab" onclick="switchTab('us', this)">🌊 Ultrasound</div>
-                    <div class="lab-tab" onclick="switchTab('echo', this)">❤️ Echocardiography</div>
+                <div id="imaging-section" class="hidden space-y-6">
+                    <div class="section-card">
+                        <h3 class="text-xl font-black text-teal-400 mb-4 flex items-center gap-2"><i data-lucide="scan"></i> Ultrasound Findings</h3>
+                        <textarea id="us-note" class="input-box h-48" placeholder="ระบุรายละเอียดผลการตรวจช่องท้อง..."></textarea>
+                    </div>
+                    <div class="section-card">
+                        <h3 class="text-xl font-black text-pink-400 mb-4 flex items-center gap-2"><i data-lucide="heart-pulse"></i> Echocardiography</h3>
+                        <textarea id="echo-note" class="input-box h-48" placeholder="ระบุรายละเอียดผลการตรวจหัวใจ..."></textarea>
+                    </div>
                 </div>
 
-                <div id="lab-content" class="section-card">
+                <div class="mt-12">
+                    <h3 class="text-xl font-black text-white mb-4">⏳ ประวัติแล็บล่าสุดของตัวนี้</h3>
+                    <div id="lab-history" class="space-y-3">
+                        <div class="text-gray-600 italic">ไม่พบประวัติย้อนหลัง</div>
                     </div>
+                </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <script>
+        let allAnimals = [];
+        let masterParams = [];
         let currentAnimal = null;
-        let currentTab = 'blood';
 
-        const LAB_TEMPLATES = {
-            blood: `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <h4 class="text-teal-400 font-black mb-4">Hematology (CBC)</h4>
-                        <div class="blood-grid font-bold text-xs text-slate-500 uppercase"><span>รายการ</span><span>ค่าที่วัดได้</span><span>ค่าปกติ</span></div>
-                        <div class="blood-grid"><span>WBC</span><input type="number" class="input-box py-1" id="wbc"><span>6.0 - 17.0</span></div>
-                        <div class="blood-grid"><span>RBC</span><input type="number" class="input-box py-1" id="rbc"><span>5.5 - 8.5</span></div>
-                        <div class="blood-grid"><span>HGB</span><input type="number" class="input-box py-1" id="hgb"><span>12.0 - 18.0</span></div>
-                        <div class="blood-grid"><span>PLT Count</span><input type="number" class="input-box py-1" id="plt"><span>200 - 500</span></div>
-                    </div>
-                    <div>
-                        <h4 class="text-yellow-400 font-black mb-4">Chemistry / Electrolytes</h4>
-                        <div class="blood-grid"><span>BUN</span><input type="number" class="input-box py-1" id="bun"><span>7.0 - 27.0</span></div>
-                        <div class="blood-grid"><span>Creatinine</span><input type="number" class="input-box py-1" id="cre"><span>0.5 - 1.8</span></div>
-                        <div class="blood-grid"><span>ALT / SGPT</span><input type="number" class="input-box py-1" id="alt"><span>10 - 100</span></div>
-                    </div>
-                </div>
-            `,
-            us: `
-                <div class="space-y-4">
-                    <label class="label-clinical">Ultrasound Findings (ผลการตรวจช่องท้อง/อวัยวะ)</label>
-                    <textarea class="input-box h-64" id="us_finding" placeholder="ระบุรายละเอียดสิ่งที่พบในแต่ละ Organs..."></textarea>
-                </div>
-            `,
-            echo: `
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="col-span-2"><label class="label-clinical">Echocardiography Report</label></div>
-                    <div><label class="label-text">LA/Ao Ratio</label><input type="text" class="input-box" id="la_ao"></div>
-                    <div><label class="label-text">FS (%)</label><input type="text" class="input-box" id="fs"></div>
-                    <div class="col-span-2"><label class="label-text">สรุปผลการตรวจหัวใจ</label><textarea class="input-box h-32" id="echo_summary"></textarea></div>
-                </div>
-            `
+        window.onload = async () => {
+            lucide.createIcons();
+            await fetchMasterParams();
+            await fetchAnimals();
         };
 
-        async function renderSidebar() {
-            const { data: animals } = await db.from('animals').select('*');
-            const container = document.getElementById('owner-list');
-            container.innerHTML = animals.map(a => `
-                <div class="pet-card" onclick="selectAnimal('${a.id}', '${a.pet_name}', '${a.owner_hn}')">
+        async function fetchMasterParams() {
+            const { data } = await db.from('mas_lab_parameters').select('*').order('parameter_name');
+            masterParams = data || [];
+        }
+
+        async function fetchAnimals() {
+            const term = document.getElementById('search-box').value.toLowerCase();
+            const { data } = await db.from('animals').select('*, owners(owner_name)');
+            const filtered = data.filter(a => a.pet_name.toLowerCase().includes(term) || a.owner_hn.includes(term));
+            
+            document.getElementById('animal-list').innerHTML = filtered.map(a => `
+                <div class="pet-card" onclick="selectAnimal('${a.id}')" id="pet-${a.id}">
                     <div class="hn-col">#${a.owner_hn}</div>
-                    <div class="flex flex-col justify-center px-2">
-                        <span class="font-black text-white text-lg">${a.pet_name}</span>
-                        <span class="text-xs text-slate-500">${a.pet_type} (${a.breed})</span>
+                    <div class="flex flex-col justify-center min-w-0">
+                        <span class="text-white font-bold truncate">${a.pet_name}</span>
+                        <span class="text-[10px] text-gray-500 truncate">${a.owners?.owner_name || '-'}</span>
                     </div>
-                    <div class="flex items-center justify-center text-2xl">${a.pet_type==='สุนัข'?'🐶':'🐱'}</div>
+                    <div class="text-xl flex items-center justify-center">${a.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
                 </div>
             `).join('');
         }
 
-        function selectAnimal(id, name, hn) {
-            currentAnimal = {id, name, hn};
+        async function selectAnimal(id) {
+            const { data: a } = await db.from('animals').select('*, owners(*)').eq('id', id).single();
+            currentAnimal = a;
+
+            // Update UI
+            document.querySelectorAll('.pet-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`pet-${id}`).classList.add('active');
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('lab-editor').classList.remove('hidden');
-            document.getElementById('p-name').innerText = name;
-            document.getElementById('p-hn').innerText = 'HN: ' + hn;
-            switchTab('blood', document.querySelector('.lab-tab'));
+
+            document.getElementById('disp-name').innerText = a.pet_name;
+            document.getElementById('disp-hn').innerText = `HN: ${a.owner_hn}`;
+            document.getElementById('disp-info').innerText = `| ${a.pet_type} (${a.breed}) | ${a.gender} | ${a.weight} kg.`;
+
+            renderParameters();
+            fetchLabHistory(id);
         }
 
-        function switchTab(type, el) {
-            currentTab = type;
+        function renderParameters() {
+            const container = document.getElementById('parameters-container');
+            const isDog = currentAnimal.pet_type === 'สุนัข';
+
+            container.innerHTML = masterParams.map(p => {
+                const min = isDog ? p.dog_min : p.cat_min;
+                const max = isDog ? p.dog_max : p.cat_max;
+                
+                return `
+                    <div class="lab-row">
+                        <div class="font-bold text-white">${p.parameter_name}</div>
+                        <div class="flex items-center gap-2">
+                            <input type="number" step="0.01" class="input-box py-1 lab-input" 
+                                data-id="${p.id}" data-name="${p.parameter_name}" data-min="${min}" data-max="${max}" data-unit="${p.unit}"
+                                oninput="validateValue(this)">
+                        </div>
+                        <div class="text-gray-500 text-xs">${p.unit || '-'}</div>
+                        <div class="text-slate-400 text-xs font-mono">
+                            ${min} - ${max}
+                            <span class="status-indicator ml-2"></span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function validateValue(input) {
+            const val = parseFloat(input.value);
+            const min = parseFloat(input.dataset.min);
+            const max = parseFloat(input.dataset.max);
+            const indicator = input.parentElement.parentElement.querySelector('.status-indicator');
+            
+            input.classList.remove('text-red-500', 'text-blue-400', 'font-black');
+            indicator.innerHTML = '';
+
+            if (isNaN(val)) return;
+
+            if (val > max) {
+                input.classList.add('text-red-500', 'font-black');
+                indicator.innerHTML = `<span class="status-badge status-high">HIGH ▲</span>`;
+            } else if (val < min) {
+                input.classList.add('text-blue-400', 'font-black');
+                indicator.innerHTML = `<span class="status-badge status-low">LOW ▼</span>`;
+            } else {
+                indicator.innerHTML = `<span class="status-normal">● Normal</span>`;
+            }
+        }
+
+        function switchTab(tab, el) {
             document.querySelectorAll('.lab-tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
-            document.getElementById('lab-content').innerHTML = LAB_TEMPLATES[type];
+            
+            document.getElementById('blood-section').classList.toggle('hidden', tab !== 'blood');
+            document.getElementById('imaging-section').classList.toggle('hidden', tab !== 'imaging');
         }
 
-        async function saveLab() {
-            alert('บันทึกผลแล็บสำเร็จ! (เชื่อมโยงเข้าประวัติการรักษาแล้ว)');
-            // Logic: ดึงค่าจาก input ทั้งหมดใน tab นั้นๆ มาทำ JSON และ save ลง lab_results
+        async function saveLabResults() {
+            if (!currentAnimal) return;
+
+            const inputs = document.querySelectorAll('.lab-input');
+            const results = [];
+            
+            inputs.forEach(inp => {
+                if (inp.value) {
+                    const val = parseFloat(inp.value);
+                    const min = parseFloat(inp.dataset.min);
+                    const max = parseFloat(inp.dataset.max);
+                    results.push({
+                        animal_id: currentAnimal.id,
+                        parameter_id: inp.dataset.id,
+                        parameter_name: inp.dataset.name,
+                        test_value: val,
+                        unit: inp.dataset.unit,
+                        is_abnormal: (val < min || val > max)
+                    });
+                }
+            });
+
+            if (results.length === 0 && !document.getElementById('us-note').value) {
+                return alert("กรุณากรอกข้อมูลอย่างน้อย 1 รายการ");
+            }
+
+            try {
+                // บันทึกลงตาราง lab_results
+                const { error } = await db.from('lab_results').insert(results);
+                if (error) throw error;
+
+                alert("✅ บันทึกผลแล็บเรียบร้อยแล้ว");
+                fetchLabHistory(currentAnimal.id);
+                // ล้างค่าในช่องกรอก
+                inputs.forEach(i => i.value = '');
+                document.querySelectorAll('.status-indicator').forEach(s => s.innerHTML = '');
+            } catch (err) { alert(err.message); }
         }
 
-        function goBack() { window.location.href = 'index.html'; }
-        window.onload = renderSidebar;
+        async function fetchLabHistory(animalId) {
+            const { data } = await db.from('lab_results')
+                .select('*')
+                .eq('animal_id', animalId)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            const container = document.getElementById('lab-history');
+            if (!data || data.length === 0) {
+                container.innerHTML = `<div class="text-gray-600 italic">ไม่พบประวัติย้อนหลัง</div>`;
+                return;
+            }
+
+            // จัดกลุ่มตามวันที่ตรวจ
+            const groups = data.reduce((acc, row) => {
+                const date = new Date(row.created_at).toLocaleDateString('th-TH');
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(row);
+                return acc;
+            }, {});
+
+            container.innerHTML = Object.entries(groups).map(([date, items]) => `
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <div class="text-teal-400 font-bold mb-2">${date}</div>
+                    <div class="flex flex-wrap gap-2">
+                        ${items.map(i => `
+                            <span class="text-xs bg-black/40 px-2 py-1 rounded border border-white/10 ${i.is_abnormal ? 'text-red-400 border-red-400/50' : ''}">
+                                ${i.parameter_name}: <b>${i.test_value}</b> ${i.unit || ''}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
     </script>
 </body>
 </html>
