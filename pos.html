@@ -59,9 +59,7 @@
                 <h2 class="txt-title flex items-center gap-2">
                     <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS
                 </h2>
-                <button onclick="window.location.href='index.html'" class="btn-home text-gray-300">
-                    <i data-lucide="home" class="w-5 h-5"></i>
-                </button>
+                <button onclick="window.location.href='index.html'" class="btn-home text-gray-300"><i data-lucide="home" class="w-5 h-5"></i></button>
             </div>
             <div class="relative">
                 <input type="text" id="main-search" class="search-input" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="filterPatients()">
@@ -105,36 +103,21 @@
     <div class="col-pay flex flex-col p-6">
         <div class="flex-1">
             <div class="space-y-4 mb-8">
-                <div class="flex justify-between txt-body">
-                    <span class="text-gray-400">รวมยอดเงิน</span>
-                    <span id="sum-total" class="font-bold text-white text-lg">0.00</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="txt-label text-red-400">ส่วนลด (฿)</span>
-                    <input type="number" id="input-discount" class="search-input w-24 text-right p-1 font-bold" value="0" oninput="calculateNet()">
-                </div>
-                <div class="pt-6 border-t border-white/10 flex flex-col items-end">
-                    <label class="txt-label text-teal-500 mb-1">ยอดสุทธิ</label>
-                    <div class="txt-price" id="net-total">0.00</div>
-                </div>
+                <div class="flex justify-between txt-body"><span class="text-gray-400">รวมยอดเงิน</span><span id="sum-total" class="font-bold text-white text-lg">0.00</span></div>
+                <div class="flex justify-between items-center"><span class="txt-label text-red-400">ส่วนลด (฿)</span><input type="number" id="input-discount" class="search-input w-24 text-right p-1 font-bold" value="0" oninput="calculateNet()"></div>
+                <div class="pt-6 border-t border-white/10 flex flex-col items-end"><label class="txt-label text-teal-500 mb-1">ยอดสุทธิ</label><div class="txt-price" id="net-total">0.00</div></div>
             </div>
             <div class="space-y-4 mt-10">
                 <label class="txt-label flex items-center gap-2"><i data-lucide="banknote" class="w-3"></i> รับเงินสด</label>
                 <input type="number" id="received-cash" class="search-input txt-price h-16 text-center text-amber-400" placeholder="0.00" oninput="calculateChange()">
                 <div class="numpad grid grid-cols-3 gap-2">
-                    <button onclick="addCash(100)">100</button>
-                    <button onclick="addCash(500)">500</button>
-                    <button onclick="addCash(1000)">1000</button>
+                    <button onclick="addCash(100)">100</button><button onclick="addCash(500)">500</button><button onclick="addCash(1000)">1000</button>
                 </div>
-                <div class="flex justify-between items-center pt-6 px-2">
-                    <span class="txt-label">เงินทอน</span>
-                    <span id="change-amount" class="text-2xl font-black text-white">0.00</span>
-                </div>
+                <div class="flex justify-between items-center pt-6 px-2"><span class="txt-label">เงินทอน</span><span id="change-amount" class="text-2xl font-black text-white">0.00</span></div>
             </div>
         </div>
         <button id="btn-pay" onclick="processPayment()" class="w-full h-16 bg-teal-500 rounded-xl text-navy-dark font-black text-lg hover:bg-teal-400 transition-all flex items-center justify-center gap-2">
-            <i data-lucide="check-circle" class="w-5" id="btn-icon"></i>
-            <span id="btn-text">ยืนยันการชำระเงิน</span>
+            <i data-lucide="check-circle" class="w-5" id="btn-icon"></i><span id="btn-text">ยืนยันการชำระเงิน</span>
         </button>
     </div>
 
@@ -200,6 +183,7 @@
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
             
+            // หน้าจอ POS (UI) ยังคงใช้ i.item_name (ภาษาอังกฤษ) ตาม medrec.html
             document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
                 <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white">${i.item_name}</div></div>
@@ -233,21 +217,21 @@
             if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
         }
 
-        // --- DYNAMIC PRINT ENGINE (THAI NAMES FOR BOTH RX & TX) ---
+        // --- DYNAMIC PRINT ENGINE (ROBUST THAI NAMES MAPPING) ---
         async function printReceipt(recordId) {
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
 
-                // 1. ดึง Master ชื่อไทยจาก 2 แหล่ง (ยา และ บริการ/Lab)
+                // 1. ดึง Master ชื่อไทยจากทุกแหล่งที่อาจเก็บยาฉีดและยาอื่นๆ
                 const { data: pharmaData } = await db.from('pharmacy').select('item_name, name_th');
                 const { data: servicesData } = await db.from('services').select('service_name, name_th');
-
-                // 2. สร้าง Master Map ที่รวมทั้ง 2 แหล่ง
+                
+                // 2. สร้าง Master Map ที่รวมทั้ง 2 แหล่ง และใช้ .trim() เพื่อป้องกันช่องว่างทำให้หาไม่เจอ
                 const masterThaiMap = {};
-                if (pharmaData) pharmaData.forEach(p => { if (p.name_th) masterThaiMap[p.item_name] = p.name_th; });
-                if (servicesData) servicesData.forEach(s => { if (s.name_th) masterThaiMap[s.service_name] = s.name_th; });
+                if (pharmaData) pharmaData.forEach(p => { if (p.name_th) masterThaiMap[p.item_name.trim()] = p.name_th.trim(); });
+                if (servicesData) servicesData.forEach(s => { if (s.name_th) masterThaiMap[s.service_name.trim()] = s.name_th.trim(); });
 
                 if (!template) return alert("กรุณาตั้งค่า Template ในหน้า Designer");
                 const config = template.config;
@@ -265,13 +249,14 @@
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
                     
-                    // รายการสินค้า: เปลี่ยนเป็นไทยทั้งหมด (ถ้ามีใน Master)
+                    // รายการสินค้า: ตรวจสอบทั้งยากิน (Rx) และยาฉีด (Inj/Tx)
                     items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:'Sarabun';">
                         ${items.map(i => {
-                            // ตรวจสอบชื่อไทยจาก Master Map โดยใช้ชื่อ EN เป็น Key
-                            let nameToShow = masterThaiMap[i.item_name] || i.item_name;
+                            // ใช้ชื่อ EN เป็นกุญแจในการหาชื่อไทย
+                            const searchKey = (i.item_name || "").trim();
+                            const nameTH = masterThaiMap[searchKey] || i.item_name; 
                             return `<tr>
-                                <td style="padding:1mm 0;">${nameToShow} x ${i.quantity}</td>
+                                <td style="padding:1mm 0;">${nameTH} x ${i.quantity}</td>
                                 <td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             </tr>`;
                         }).join('')}
@@ -279,22 +264,20 @@
                 };
 
                 let pushOffset = 0;
-                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
+                const sortedLines = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
+                const elements = sortedLines.map(l => {
                     const currentY = parseFloat(l.y) + pushOffset;
                     const availableWidthMm = pw - parseFloat(l.x) - 5;
                     const finalWidth = l.w ? l.w : availableWidthMm;
                     let style = `top:${currentY}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                    
                     if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 6;
                     let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
-                    
                     if (l.type==='text') return `<div style="${style}">${content}</div>`;
                     if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
                     if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
                 }).join('');
-
                 const win = window.open('', '_blank', 'width=400');
                 win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body{margin:0; padding:0;} .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} @media print { @page { size: ${pw}mm auto; margin: 0; } }</style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
                 win.document.close();
