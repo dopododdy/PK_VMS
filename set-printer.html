@@ -24,8 +24,11 @@
 
         .preview-area { background: #050b14; border-radius: 20px; border: 2px dashed rgba(255,255,255,0.1); overflow: auto; display: flex; align-items: center; justify-content: center; position: relative; }
         .canvas-wrapper { background: #ffffff; position: relative; transform-origin: center center; box-shadow: 0 0 40px rgba(0, 0, 0, 0.7); overflow: hidden; }
+        
+        /* แก้ไขสไตล์ Highlight สำหรับวัตถุที่ถูกเลือก */
         .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; transition: outline 0.1s; }
-        .canvas-element.active { outline: 2px solid var(--teal); background: rgba(20, 184, 17, 0.05); z-index: 50; }
+        .canvas-element:hover { outline: 1px dashed var(--teal); }
+        .canvas-element.active { outline: 2px solid var(--teal) !important; background: rgba(20, 184, 17, 0.08); z-index: 100; }
         
         .var-badge { background: rgba(20, 184, 17, 0.08); border: 1px solid rgba(20, 184, 17, 0.15); color: #4ade80; padding: 5px 12px; border-radius: 10px; font-size: 0.8rem; cursor: pointer; display: inline-block; margin: 4px; transition: 0.2s; font-family: monospace; }
         .var-badge:hover { background: var(--teal); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(20, 184, 17, 0.3); }
@@ -62,7 +65,7 @@
         </header>
 
         <div class="flex flex-1 overflow-hidden">
-            <div class="w-7/12 flex flex-col border-r border-white/10 bg-[#020617] overflow-y-auto p-6">
+            <div class="w-7/12 flex flex-col border-r border-white/10 bg-[#020617] overflow-y-auto p-6" id="left-scroll-container">
                 <div class="section-card p-6 mb-8 bg-slate-900/60 backdrop-blur-sm">
                     <div class="grid grid-cols-12 gap-5 items-end">
                         <div class="col-span-6">
@@ -100,7 +103,7 @@
             <div class="w-5/12 flex flex-col bg-[#050b14]">
                 <div class="flex-1 p-6 flex flex-col overflow-hidden">
                     <div class="flex justify-between items-center mb-4 px-2">
-                        <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Live Preview (Smart Auto-Flow)</span>
+                        <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Live Preview (Click to Select / Arrows to Move)</span>
                         <div class="flex items-center gap-3">
                             <span class="text-[10px] text-gray-500 font-bold">ZOOM</span>
                             <input type="range" id="zoom_level" min="30" max="200" value="100" class="accent-teal-500 w-32" oninput="applyZoom()">
@@ -126,7 +129,6 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
 
-        // แก้ไข: แสดงรายการจำลอง 1 รายการ
         const mockItems = Array(1).fill({ name: "รายการสินค้า/บริการจำลอง", price: 150.00 });
 
         const mockData = {
@@ -208,6 +210,7 @@
                 currentConfig = data.config;
                 document.getElementById('paper_w').value = currentConfig.width || 80;
                 document.getElementById('paper_h').value = currentConfig.height || 50;
+                activeLineIndex = -1; // Reset selection
                 renderLinesList(); renderCanvas(); applyZoom();
             }
         }
@@ -230,23 +233,37 @@
             currentConfig.lines.push(newLine);
             activeLineIndex = currentConfig.lines.length - 1;
             renderLinesList(); renderCanvas();
+            scrollToActive();
         }
 
         function renderLinesList() {
             const container = document.getElementById('lines_container');
             container.innerHTML = currentConfig.lines.map((l, i) => `
-                <div class="p-5 rounded-3xl border ${i === activeLineIndex ? 'bg-slate-800 border-teal-500 shadow-2xl' : 'bg-white/5 border-white/5'} transition-all">
-                    <div class="flex justify-between items-center cursor-pointer mb-2" onclick="activeLineIndex=${i}; renderLinesList();">
+                <div id="line-item-${i}" class="p-5 rounded-3xl border ${i === activeLineIndex ? 'bg-slate-800 border-teal-500 shadow-2xl' : 'bg-white/5 border-white/5'} transition-all">
+                    <div class="flex justify-between items-center cursor-pointer mb-2" onclick="selectLine(${i})">
                         <span class="font-black text-sm uppercase tracking-widest ${i === activeLineIndex ? 'text-teal-400' : 'text-gray-500'}">
                             ${l.type === 'rect' ? '🟧 Rectangle' : (l.type === 'image' ? '🖼️ Image' : '📝 Text')}
                         </span>
                         <div class="flex gap-2">
-                             <button class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white w-8 h-8 rounded-full text-xs transition flex items-center justify-center" onclick="currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();">✕</button>
+                             <button class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white w-8 h-8 rounded-full text-xs transition flex items-center justify-center" onclick="event.stopPropagation(); currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();">✕</button>
                         </div>
                     </div>
-                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="text-white font-bold opacity-60 truncate">${l.type==='image' ? 'Image Component' : (l.type==='rect' ? 'สี่เหลี่ยมโค้งมน' : l.text)}</div>`}
+                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="text-white font-bold opacity-60 truncate" onclick="selectLine(${i})">${l.type==='image' ? 'Image Component' : (l.type==='rect' ? 'สี่เหลี่ยมโค้งมน' : l.text)}</div>`}
                 </div>
             `).join('');
+        }
+
+        // ฟังก์ชันใหม่สำหรับการเลือกบรรทัด
+        function selectLine(index) {
+            activeLineIndex = index;
+            renderLinesList();
+            renderCanvas();
+            scrollToActive();
+        }
+
+        function scrollToActive() {
+            const activeElem = document.getElementById(`line-item-${activeLineIndex}`);
+            if (activeElem) activeElem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function handleImageUpload(event, index) {
@@ -338,40 +355,74 @@
             wrapper.style.width = (pw * px) + 'px';
             wrapper.style.height = (ph * px) + 'px';
 
-            // เรียงลำดับตามพิกัด Y จริง เพื่อคำนวณ Push Offset
-            const sortedLines = [...currentConfig.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
+            // สำหรับ Preview เราต้องจำเลขดั้งเดิมไว้เพื่อ Select
+            const canvasLines = currentConfig.lines.map((l, originalIndex) => ({...l, originalIndex}));
+            canvasLines.sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
+            
             let pushOffset = 0;
 
-            wrapper.innerHTML = sortedLines.map((l) => {
+            wrapper.innerHTML = canvasLines.map((l) => {
                 const currentY = parseFloat(l.y) + pushOffset;
+                const isActive = l.originalIndex === activeLineIndex;
                 
                 let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
                 
-                // คำนวณความกว้างที่เหลือจาก X
                 const availableWidthMm = pw - parseFloat(l.x) - 5; 
                 const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
                 style += `width:${boxWidthPx}px;`;
 
-                // Logic Push สำหรับทุก Object ที่อยู่หลัง items_list
                 if (l.text && l.text.includes("{{items_list}}")) {
-                    pushOffset += (mockItems.length - 1) * 6; // ผลักลง 6mm ต่อรายการ
+                    pushOffset += (mockItems.length - 1) * 6;
                 }
 
+                const commonAttr = `class="canvas-element ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); selectLine(${l.originalIndex})"`;
+
                 if (l.type === 'text') {
-                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
-                    else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
-                    else style += `left:${l.x*px}px; text-align:left;`;
-                    return `<div class="canvas-element" style="${style}">${replaceVars(l.text, l.size)}</div>`;
+                    let tStyle = style;
+                    if (l.align === 'center') tStyle += `left:0; width:100%; text-align:center;`;
+                    else if (l.align === 'right') tStyle += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
+                    else tStyle += `left:${l.x*px}px; text-align:left;`;
+                    return `<div ${commonAttr} style="${tStyle}">${replaceVars(l.text, l.size)}</div>`;
                 } else if (l.type === 'rect') {
                     let rStyle = `top:${currentY * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:transparent; border-radius:${(l.radius || 0) * px}px;`;
-                    return `<div class="canvas-element" style="${rStyle}"></div>`;
+                    return `<div ${commonAttr} style="${rStyle}"></div>`;
                 } else if (l.type === 'image') {
                     let iStyle = `top:${currentY * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
                     if (l.align === 'center') iStyle = `top:${currentY * px}px; left:50%; transform:translateX(-50%); width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
-                    return `<img src="${l.url}" class="canvas-element" style="${iStyle}">`;
+                    return `<img src="${l.url}" ${commonAttr} style="${iStyle}">`;
                 }
             }).join('');
         }
+
+        // ระบบ Keyboard Control
+        window.addEventListener('keydown', function(e) {
+            // ไม่ทำงานถ้าไม่ได้เลือกวัตถุ หรือ กำลังพิมพ์ใน Input
+            if (activeLineIndex === -1) return;
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA') return;
+
+            const step = e.shiftKey ? 5 : 1; // กด Shift ขยับทีละ 5mm
+            let moved = false;
+
+            if (e.key === 'ArrowUp') {
+                currentConfig.lines[activeLineIndex].y = parseFloat(currentConfig.lines[activeLineIndex].y) - step;
+                moved = true;
+            } else if (e.key === 'ArrowDown') {
+                currentConfig.lines[activeLineIndex].y = parseFloat(currentConfig.lines[activeLineIndex].y) + step;
+                moved = true;
+            } else if (e.key === 'ArrowLeft') {
+                currentConfig.lines[activeLineIndex].x = parseFloat(currentConfig.lines[activeLineIndex].x) - step;
+                moved = true;
+            } else if (e.key === 'ArrowRight') {
+                currentConfig.lines[activeLineIndex].x = parseFloat(currentConfig.lines[activeLineIndex].x) + step;
+                moved = true;
+            }
+
+            if (moved) {
+                e.preventDefault(); // ป้องกันหน้าจอสกรอลล์
+                renderCanvas();
+                renderLinesList(); // Update เลขในช่องกรอก
+            }
+        });
 
         function applyZoom() { 
             const zoom = document.getElementById('zoom_level').value / 100;
