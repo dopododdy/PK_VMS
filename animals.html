@@ -56,6 +56,9 @@
 
         .btn-red { background-color: #dc2626 !important; } 
         .btn-red:hover { background-color: #b91c1c !important; }
+        
+        .btn-gray { background-color: #475569 !important; } 
+        .btn-gray:hover { background-color: #334155 !important; }
 
         /* Form Controls */
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
@@ -204,7 +207,8 @@
                     <div class="flex justify-between items-center mb-8">
                         <h4 class="text-3xl font-black text-white">${headIcon} ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'}</h4>
                         <div class="flex gap-3">
-                            ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติการรักษา</button>` : ''}
+                            ${pet.id ? `<button onclick="printPetLabel('${pet.id}')" class="btn-base btn-gray">🖨️ พิมพ์ข้อมูล</button>
+                                        <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติการรักษา</button>` : ''}
                             <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red">🗑️ ลบ</button>
                         </div>
                     </div>
@@ -382,6 +386,66 @@
         }
 
         function gotoMedicalRecord(petId, petName, hn) { window.location.href = `medrec.html?id=${petId}&name=${encodeURIComponent(petName)}&hn=${hn}`; }
+
+        // --- เพิ่มฟังก์ชันพิมพ์ข้อมูลสัตว์ (ดึง Template sticker_pet_id) ---
+        async function printPetLabel(petId) {
+            try {
+                // 1. ดึงข้อมูลสัตว์และเจ้าของ
+                const pet = allAnimals.find(a => a.id === petId);
+                const owner = allOwners.find(o => o.hn === pet.owner_hn);
+                if (!pet || !owner) return alert("ไม่พบข้อมูลสัตว์หรือเจ้าของ");
+
+                // 2. ดึง Template สติ๊กเกอร์
+                const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single();
+                if (!template) return alert("ไม่พบการตั้งค่า Template สติ๊กเกอร์ข้อมูลสัตว์ (sticker_pet_id) กรุณาตั้งค่าในหน้า Designer ก่อน");
+
+                const config = template.config;
+                const pw = config.width || 80;
+                const ph = config.height || 50;
+
+                // 3. เตรียมข้อมูลตัวแปรสำหรับแทนที่ใน Template
+                const printData = {
+                    clinic_name: "PK-VMS Animal Clinic",
+                    owner_name: owner.owner_name || "-",
+                    pet_name: pet.pet_name || "-",
+                    hn: pet.owner_hn || "-",
+                    species: pet.pet_type || "-",
+                    breed: pet.breed || "-",
+                    sex: pet.gender || "-",
+                    weight: (pet.weight || 0).toFixed(2),
+                    date: new Date().toLocaleDateString('th-TH')
+                };
+
+                // 4. สร้าง HTML สำหรับพิมพ์
+                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
+                    const availableWidthMm = pw - parseFloat(l.x);
+                    const finalWidth = l.w ? l.w : availableWidthMm;
+                    
+                    let style = `top:${l.y}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
+                    if (l.align === 'center') style = `top:${l.y}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
+                    else if (l.align === 'right') style = `top:${l.y}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
+                    
+                    let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
+                    
+                    if (l.type==='text') return `<div style="${style}">${content}</div>`;
+                    if (l.type==='rect') return `<div style="top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
+                    if (l.type==='image') return `<img src="${l.url}" style="top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
+                }).join('');
+
+                // 5. เปิดหน้าต่างพิมพ์
+                const win = window.open('', '_blank', 'width=400');
+                win.document.write(`<html><head><style>
+                    @import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); 
+                    body{margin:0; padding:0;} 
+                    .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} 
+                    @media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }
+                </style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
+                win.document.close();
+
+            } catch (e) { 
+                alert("Error: " + e.message); 
+            }
+        }
 
         window.onload = async () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
