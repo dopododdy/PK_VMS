@@ -124,8 +124,11 @@
         let activeLineIndex = -1;
         let draggedIndex = null;
         
-        // ข้อมูลจำลอง: เปลี่ยนเป็นภาษาไทยเพื่อการออกแบบที่แม่นยำ
-        const mockItems = Array(1).fill({ name: "ยาฆ่าเชื้อ อะม็อกซี่ (ชื่อภาษาไทย)", price: 150.00 });
+        // ข้อมูลจำลอง: เพิ่มแถวเพื่อจำลองการลดช่องว่าง
+        const mockItems = [
+            { name: "ยาฆ่าเชื้อ อะม็อกซี่ (ชื่อภาษาไทย)", price: 150.00 },
+            { name: "วัคซีนป้องกันโรคพิษสุนัขบ้า", price: 80.00 }
+        ];
 
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
@@ -153,10 +156,15 @@
             I: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 20l4-16m-4 0h8M6 20h8" stroke-width="2"/></svg>`
         };
 
+        // ปรับปรุงฟังก์ชัน replaceVars: ลดช่องว่างบรรทัด และตรึงราคาสูงสุดทางขวา
         function replaceVars(text, fontSize) {
             if (text.includes("{{items_list}}")) {
-                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:black;">
-                    ${mockItems.map(item => `<tr><td>${item.name}</td><td style="text-align:right;">${item.price.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`).join('')}
+                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:black; line-height: 1;">
+                    ${mockItems.map(item => `
+                        <tr>
+                            <td style="padding: 1px 0; text-align: left; vertical-align: top;">${item.name}</td>
+                            <td style="padding: 1px 0; text-align: right; vertical-align: top; white-space: nowrap;">${item.price.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        </tr>`).join('')}
                 </table>`;
             }
             return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
@@ -272,11 +280,15 @@
                 const availableWidthMm = pw - parseFloat(l.x) - 5; 
                 const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
                 let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px;`;
+                
+                // คำนวณระยะผลักตามจำนวนรายการสินค้า
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
+                
                 const commonAttr = `class="canvas-element ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); selectLine(${l.originalIndex})"`;
                 if (l.type === 'text') {
                     let tStyle = style;
                     if (l.align === 'center') tStyle += `left:0; width:100%; text-align:center;`;
+                    // เมื่อ Align: Left จะเริ่มที่พิกัด X แต่ราคาใน Table (100%) จะเกาะขอบขวาของพื้นที่กล่อง
                     else if (l.align === 'right') tStyle += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
                     else tStyle += `left:${l.x*px}px; text-align:left;`;
                     return `<div ${commonAttr} style="${tStyle}">${replaceVars(l.text, l.size)}</div>`;
