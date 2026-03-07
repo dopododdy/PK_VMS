@@ -209,15 +209,15 @@
                 <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white">${i.item_name}</div></div>
                     <div class="col-span-2 text-center txt-body">${i.quantity}</div>
-                    <div class="col-span-2 text-right txt-body text-gray-400">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-                    <div class="col-span-2 text-right txt-body font-bold text-white">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                    <div class="col-span-2 text-right txt-body text-gray-400">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div class="col-span-2 text-right txt-body font-bold text-white">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                 </div>`).join('');
 
             document.getElementById('input-discount').disabled = isPaid;
             document.getElementById('received-cash').disabled = isPaid;
-            document.getElementById('sum-total').innerText = parseFloat(rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('sum-total').innerText = parseFloat(rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('input-discount').value = rec.discount || 0;
-            document.getElementById('net-total').innerText = parseFloat(rec.net_amount || rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('net-total').innerText = parseFloat(rec.net_amount || rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('received-cash').value = isPaid ? rec.received_amount : "";
             calculateChange();
         }
@@ -240,7 +240,7 @@
             if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
         }
 
-        // --- DYNAMIC PRINT ENGINE (FIXED VARIABLES & DECIMALS) ---
+        // --- DYNAMIC PRINT ENGINE (FIXED OVERLAP & VARIABLES) ---
         async function printReceipt(recordId) {
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
@@ -258,54 +258,41 @@
                     pet_name: record.animals?.pet_name || "-",
                     hn: record.owner_hn || "-",
                     receipt_no: record.receipt_no || record.id.slice(0,8),
-                    
-                    // เพิ่มตัวแปรที่ขาดหายไปและตั้งทศนิยม 2 ตำแหน่ง
                     time: new Date(record.paid_at || record.created_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}),
                     total_price: parseFloat(record.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     discount_val: parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                    
                     net_total: parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     received_amount: parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
-                    
-                    // รายการสินค้าแบบ Squeeze Logic
-                    items_list: `
-                        <table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:'Sarabun';">
-                            ${items.map(i => `
-                                <tr>
-                                    <td style="padding:1mm 0;">${i.item_name} x ${i.quantity}</td>
-                                    <td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                </tr>
-                            `).join('')}
-                        </table>`
+                    items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:'Sarabun';">${items.map(i => `<tr><td>${i.item_name} x ${i.quantity}</td><td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`).join('')}</table>`
                 };
 
                 let pushOffset = 0;
-                const elements = [...config.lines].sort((a,b) => a.y - b.y).map(l => {
+                // เรียงลำดับตาม Y ก่อนเริ่มไล่ Push
+                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
                     const currentY = parseFloat(l.y) + pushOffset;
                     
-                    // คำนวณความกว้างตามพิกัด X (Squeeze Column Logic)
                     const availableWidthMm = pw - parseFloat(l.x) - 5;
                     const finalWidth = l.w ? l.w : availableWidthMm;
 
-                    let style = `top:${currentY}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                    
+                    let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; width:${finalWidth}mm; left:${l.x}mm; ${l.bold?'font-weight:bold;':''}`;
                     if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     
-                    // Dynamic Push สำหรับวัตถุทุกประเภทด้านล่าง
+                    // ปรับค่า PushOffset หลังจากสร้าง items_list แล้ว เพื่อให้วัตถุถัดไปเลื่อนลง
                     if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 6;
 
                     let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
                     
                     if (l.type==='text') return `<div style="${style}">${content}</div>`;
-                    if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute;"></div>`;
-                    if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; position:absolute;">`;
+                    // แก้ไข: Rect และ Image ต้องใช้ currentY ด้วย
+                    if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
+                    if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
                 }).join('');
 
                 const win = window.open('', '_blank', 'width=400');
-                win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body{margin:0;} .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} @media print { @page { size: ${pw}mm auto; margin: 0; } }</style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
+                win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body{margin:0; padding:0;} .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} @media print { @page { size: ${pw}mm auto; margin: 0; } }</style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
                 win.document.close();
             } catch (e) { alert("Error: " + e.message); }
         }
@@ -313,14 +300,14 @@
         function calculateNet() {
             const sum = parseFloat(document.getElementById('sum-total').innerText.replace(/,/g, '')) || 0;
             const net = sum - (parseFloat(document.getElementById('input-discount').value) || 0);
-            document.getElementById('net-total').innerText = net.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('net-total').innerText = net.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             calculateChange();
         }
 
         function calculateChange() {
             const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
             const recv = parseFloat(document.getElementById('received-cash').value) || 0;
-            document.getElementById('change-amount').innerText = (recv - net > 0 ? recv - net : 0).toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('change-amount').innerText = (recv - net > 0 ? recv - net : 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
         function addCash(amt) {
