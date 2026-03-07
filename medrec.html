@@ -23,7 +23,12 @@
         .label-text { color: #94a3b8; font-size: 1rem; margin-bottom: 4px; display: block; font-weight: 600; }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; display: block; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
-        .history-item { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 25px; border: 1px solid var(--border); transition: 0.3s; margin-bottom: 15px; }
+        
+        /* History Details Styles (นำกลับมา) */
+        .history-record-box { background: rgba(0,0,0,0.2); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px; }
+        .data-label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+        .data-value { font-size: 1rem; color: #cbd5e1; }
+        
         .btn-base { padding: 12px 24px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; font-size: 1.1rem; }
         .btn-teal { background-color: #0d9488 !important; }
         .btn-blue { background-color: #2563eb !important; }
@@ -216,50 +221,84 @@
             records = data || []; renderRecordsList();
         }
 
+        // นำการเรนเดอร์แบบจัดเต็ม (จาก animals.html) มาใส่กลับในฟังก์ชันนี้
         function renderRecordsList() {
             const list = document.getElementById('history-list');
             document.getElementById('record-count').innerText = records.length;
+            
+            if (records.length === 0) {
+                list.innerHTML = `<p class="text-gray-500 py-10 text-center">ยังไม่มีประวัติการรักษา</p>`;
+                return;
+            }
+            
             list.innerHTML = records.map(rec => {
-                const dateStr = new Date(rec.created_at).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'2-digit' });
-                const labs = rec.medical_record_items.filter(i => i.item_type === 'Lab').map(i => i.item_name);
-                const txs = rec.medical_record_items.filter(i => i.item_type === 'Tx').map(i => i.item_name);
+                const dateStr = formatThaiDate(rec.created_at, 'long');
+                const weightStr = rec.weight ? `${rec.weight} กก.` : '-';
                 
+                const labs = rec.medical_record_items.filter(i => i.item_type === 'Lab').map(i => i.item_name).join(', ') || '-';
+                const txs = rec.medical_record_items.filter(i => i.item_type === 'Tx').map(i => i.item_name).join(', ') || '-';
+                
+                // สำหรับ Rx ให้แสดงแบบมี Checkbox เพื่อพิมพ์ทีละรายการได้เหมือนเดิม
                 const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
-                const rxListHtml = rxItems.map((i, idx) => `
-                    <li class="flex items-start gap-2 py-1 border-b border-white/5 last:border-none">
-                        <input type="checkbox" class="rx-select-${rec.id} mt-1.5 accent-teal-500 w-4 h-4 cursor-pointer" value="${i.id}" checked>
-                        <span class="flex-1 text-sm">${i.item_name} (ป้อน ${i.dose_per_time} ${i.unit} ${i.frequency} ${i.meal_timing})</span>
-                    </li>
-                `).join('');
-
-                return `<div class="history-item">
-                    <div class="flex items-center gap-4 cursor-pointer" onclick="toggleCollapse('${rec.id}')">
-                        <div class="w-24 text-teal-400 font-black text-xl">${dateStr}</div>
-                        <div class="flex-1 border-l border-white/10 pl-4"><div class="truncate text-base"><b>CC:</b> ${rec.cc || '-'} | <b>Dx:</b> ${rec.dx || '-'}</div></div>
-                        <div class="flex items-center gap-3">
-                            <button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-base bg-blue-600 hover:bg-blue-500 !py-2 !px-4 text-sm">✏️</button>
-                            <button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-base btn-red !py-2 !px-4 text-sm">🗑️</button>
-                            <div id="arrow-${rec.id}" class="text-teal-400 text-xl">🔽</div>
+                let rxsHtml = '-';
+                if(rxItems.length > 0) {
+                    rxsHtml = rxItems.map((i) => `
+                        <div class="flex items-start gap-2 mb-1">
+                            <input type="checkbox" class="rx-select-${rec.id} mt-1 accent-teal-500 w-4 h-4 cursor-pointer" value="${i.id}" checked>
+                            <span>${i.item_name} x ${Math.floor(i.quantity)}</span>
                         </div>
-                    </div>
-                    <div id="detail-${rec.id}" class="hidden mt-6 pt-6 border-t border-white/5">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-base">
-                            <div><b class="label-clinical text-sm">🔬 Lab/หัตถการ:</b> ${drawBullets(labs)}</div>
-                            <div><b class="label-clinical text-sm">💉 Tx (ยาฉีด):</b> ${drawBullets(txs)}</div>
+                    `).join('');
+                }
+                
+                let apptStr = '-';
+                let apptArr = [];
+                if(rec.appointment) apptArr.push(`${formatThaiDate(rec.appointment, 'short')} ${rec.appointment_note ? `(${rec.appointment_note})` : ''}`);
+                if(rec.appointment_2) apptArr.push(`${formatThaiDate(rec.appointment_2, 'short')} ${rec.appointment_note_2 ? `(${rec.appointment_note_2})` : ''}`);
+                if(apptArr.length > 0) apptStr = apptArr.join(' <br> ');
+
+                return `
+                    <div class="history-record-box shadow-xl relative">
+                        <div class="absolute top-4 right-4 flex gap-2">
+                            <button onclick="editRecord('${rec.id}')" class="bg-blue-600 hover:bg-blue-500 text-white rounded p-2 text-xs">✏️ แก้ไข</button>
+                            <button onclick="deleteRecord('${rec.id}')" class="bg-red-600 hover:bg-red-500 text-white rounded p-2 text-xs">🗑️ ลบ</button>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-4 border-b border-white/10 pb-4 pr-32">
                             <div>
-                                <div class="flex justify-between items-center mb-2">
-                                    <b class="label-clinical text-sm">💊 Rx:</b>
-                                    <button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-1 rounded font-bold transition">🖨️ พิมพ์ที่เลือก</button>
-                                </div>
-                                <ul class="bullet-list">${rxListHtml || '-'}</ul>
+                                <span class="text-teal-400 font-black text-xl">${dateStr}</span>
+                                <span class="text-slate-400 text-sm ml-3">น้ำหนัก: ${weightStr}</span>
                             </div>
                         </div>
-                        <div class="flex justify-between items-center border-t border-white/5 pt-4 mt-4">
-                            <div class="text-sm"><b>Plan:</b> ${rec.plan || '-'}</div>
-                            <div class="text-2xl font-black text-yellow-400">฿ ${rec.total_cost?.toLocaleString()}</div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 mb-4 border-b border-white/10 pb-4">
+                            <div><span class="data-label">CC (อาการสำคัญ)</span><div class="data-value">${rec.cc || '-'}</div></div>
+                            <div><span class="data-label">Dx (วินิจฉัย)</span><div class="data-value text-blue-300 font-bold">${rec.dx || '-'}</div></div>
+                            <div><span class="data-label">Hx (ประวัติย้อนหลัง)</span><div class="data-value">${rec.hx || '-'}</div></div>
+                            <div><span class="data-label">PE (ตรวจร่างกาย)</span><div class="data-value">${rec.pe || '-'}</div></div>
                         </div>
-                    </div>
-                </div>`;
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 border-b border-white/10 pb-4">
+                            <div><span class="data-label text-purple-400">🔬 Lab / หัตถการ</span><div class="data-value">${labs}</div></div>
+                            <div><span class="data-label text-pink-400">💉 Tx (ยาฉีด)</span><div class="data-value">${txs}</div></div>
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="data-label text-emerald-400 !mb-0">💊 Rx (ยากลับบ้าน)</span>
+                                    <button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-1 rounded font-bold transition">🖨️ พิมพ์ที่เลือก</button>
+                                </div>
+                                <div class="data-value text-sm">${rxsHtml}</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-white/10 pb-4 mb-4">
+                            <div><span class="data-label text-orange-300">📌 Plan (แผนการรักษา)</span><div class="data-value">${rec.plan || '-'}</div></div>
+                            <div><span class="data-label text-orange-400">📅 การนัดหมาย</span><div class="data-value font-bold">${apptStr}</div></div>
+                        </div>
+                        
+                        <div class="text-right">
+                            <span class="data-label inline-block mr-2">ค่ารักษา</span>
+                            <span class="text-yellow-400 font-black text-2xl">฿${(rec.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+                        </div>
+                    </div>`;
             }).join('');
         }
 
@@ -607,7 +646,6 @@
             document.getElementById('f_dx').value = rec.dx || "";
             document.getElementById('f_plan').value = rec.plan || "";
             
-            // โหลดข้อมูลวันนัด 1 และ 2 กลับมาในฟอร์ม
             document.getElementById('f_appointment').value = rec.appointment || "";
             document.getElementById('f_app_note').value = rec.appointment_note || "";
             document.getElementById('f_appointment_2').value = rec.appointment_2 || "";
