@@ -68,7 +68,6 @@
                 <i data-lucide="search" class="absolute left-3 top-3 w-4 text-gray-500"></i>
             </div>
         </div>
-
         <div class="flex-1 overflow-hidden flex flex-col gap-4">
             <div class="flex flex-col h-1/2">
                 <span class="txt-label mb-2">รายชื่อคนไข้ (<span id="count-hn">0</span>)</span>
@@ -92,7 +91,6 @@
             </div>
             <button class="glass-card px-4 py-2 txt-body font-bold text-teal-500 border-teal-500/30">+ เพิ่มรายการ</button>
         </div>
-
         <div class="flex-1 glass-card overflow-hidden flex flex-col border-none bg-slate-900/40">
             <div class="grid grid-cols-12 p-4 border-b border-white/5 txt-label">
                 <div class="col-span-6">รายการ</div>
@@ -120,7 +118,6 @@
                     <div class="txt-price" id="net-total">0.00</div>
                 </div>
             </div>
-
             <div class="space-y-4 mt-10">
                 <label class="txt-label flex items-center gap-2"><i data-lucide="banknote" class="w-3"></i> รับเงินสด</label>
                 <input type="number" id="received-cash" class="search-input txt-price h-16 text-center text-amber-400" placeholder="0.00" oninput="calculateChange()">
@@ -188,7 +185,6 @@
             const isPaid = status === 'paid';
             const btn = document.getElementById('btn-pay');
             document.getElementById('view-mode-tag').classList.toggle('hidden', !isPaid);
-            
             if (isPaid) {
                 document.getElementById('btn-text').innerText = "พิมพ์ใบเสร็จ (Reprint)";
                 document.getElementById('btn-icon').setAttribute('data-lucide', 'printer');
@@ -201,11 +197,9 @@
                 btn.onclick = processPayment;
             }
             lucide.createIcons();
-
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
             
-            // หน้าจอ POS (UI) ยังใช้ i.item_name (ภาษาอังกฤษ) ตาม medrec.html
             document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
                 <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white">${i.item_name}</div></div>
@@ -228,43 +222,41 @@
             const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, ''));
             const recvd = parseFloat(document.getElementById('received-cash').value) || 0;
             if (recvd < net) return alert("เงินรับมาไม่พอ");
-
             const receiptNo = `INV${new Date().toISOString().slice(0,10).replace(/-/g, '')}-${Math.floor(1000+Math.random()*9000)}`;
             const { error } = await db.from('medical_records').update({
                 payment_status: 'paid', receipt_no: receiptNo, discount: parseFloat(document.getElementById('input-discount').value),
                 net_amount: net, received_amount: recvd, change_amount: recvd - net, paid_at: new Date().toISOString()
             }).eq('id', activeRecordId);
-
             if (error) return alert(error.message);
             alert("ชำระเงินสำเร็จ!");
             printReceipt(activeRecordId);
             if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
         }
 
-        // --- DYNAMIC PRINT ENGINE (THAI NAMES ONLY ON PRINT) ---
+        // --- DYNAMIC PRINT ENGINE (THAI NAMES FOR BOTH RX & TX) ---
         async function printReceipt(recordId) {
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
 
-                // 1. ดึง Master ชื่อไทยจาก pharmacy เพื่อ Mapping ชื่อยา
-                const { data: pharmacyData } = await db.from('pharmacy').select('item_name, name_th');
-                const pharmacyMap = {};
-                if (pharmacyData) pharmacyData.forEach(p => { if (p.name_th) pharmacyMap[p.item_name] = p.name_th; });
+                // 1. ดึง Master ชื่อไทยจาก 2 แหล่ง (ยา และ บริการ/Lab)
+                const { data: pharmaData } = await db.from('pharmacy').select('item_name, name_th');
+                const { data: servicesData } = await db.from('services').select('service_name, name_th');
+
+                // 2. สร้าง Master Map ที่รวมทั้ง 2 แหล่ง
+                const masterThaiMap = {};
+                if (pharmaData) pharmaData.forEach(p => { if (p.name_th) masterThaiMap[p.item_name] = p.name_th; });
+                if (servicesData) servicesData.forEach(s => { if (s.name_th) masterThaiMap[s.service_name] = s.name_th; });
 
                 if (!template) return alert("กรุณาตั้งค่า Template ในหน้า Designer");
-
                 const config = template.config;
                 const pw = config.width || 80, ph = config.height || 50;
                 
                 const printData = {
-                    clinic_name: "PK-VMS Animal Clinic",
-                    owner_name: record.owners?.owner_name || "-",
-                    pet_name: record.animals?.pet_name || "-",
-                    hn: record.owner_hn || "-",
+                    clinic_name: "PK-VMS Animal Clinic", owner_name: record.owners?.owner_name || "-",
+                    pet_name: record.animals?.pet_name || "-", hn: record.owner_hn || "-",
                     receipt_no: record.receipt_no || record.id.slice(0,8),
-                    // แก้ไขตัวแปรเวลาและราคาส่วนลด
                     time: new Date(record.paid_at || record.created_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}),
                     total_price: parseFloat(record.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     discount_val: parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
@@ -272,15 +264,14 @@
                     received_amount: parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
-                    // รายการสินค้า: แสดงชื่อไทยเฉพาะยา (Rx/Injection) ถ้ามีในฐานข้อมูล
+                    
+                    // รายการสินค้า: เปลี่ยนเป็นไทยทั้งหมด (ถ้ามีใน Master)
                     items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:'Sarabun';">
                         ${items.map(i => {
-                            let displayName = i.item_name;
-                            if ((i.item_type === 'Rx' || i.item_type === 'Injection') && pharmacyMap[i.item_name]) {
-                                displayName = pharmacyMap[i.item_name];
-                            }
+                            // ตรวจสอบชื่อไทยจาก Master Map โดยใช้ชื่อ EN เป็น Key
+                            let nameToShow = masterThaiMap[i.item_name] || i.item_name;
                             return `<tr>
-                                <td style="padding:1mm 0;">${displayName} x ${i.quantity}</td>
+                                <td style="padding:1mm 0;">${nameToShow} x ${i.quantity}</td>
                                 <td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             </tr>`;
                         }).join('')}
@@ -288,26 +279,17 @@
                 };
 
                 let pushOffset = 0;
-                // เรียงลำดับตาม Y ก่อนเริ่มไล่ Push เพื่อความแม่นยำ
-                const sortedLines = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
-                
-                const elements = sortedLines.map(l => {
+                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
                     const currentY = parseFloat(l.y) + pushOffset;
-                    
-                    // Squeeze Logic: คำนวณความกว้างที่เหลือจากพิกัด X
                     const availableWidthMm = pw - parseFloat(l.x) - 5;
                     const finalWidth = l.w ? l.w : availableWidthMm;
-
                     let style = `top:${currentY}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     
-                    // หากพบรายการสินค้า ให้คำนวณระยะผลักสำหรับวัตถุที่อยู่ถัดไปด้านล่าง
                     if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 6;
-
                     let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
                     
-                    // แก้ไข: ทุกวัตถุต้องใช้ currentY เพื่อป้องกันการซ้อนทับ
                     if (l.type==='text') return `<div style="${style}">${content}</div>`;
                     if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
                     if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
