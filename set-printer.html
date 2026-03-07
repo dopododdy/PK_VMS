@@ -20,7 +20,6 @@
         .label-title { color: var(--teal); font-weight: 800; font-size: 0.9rem; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; border: 1px solid var(--border); }
 
-        /* Zoom & Scroll Engine */
         .preview-area { 
             background: #050b14; border-radius: 20px; border: 2px dashed rgba(255,255,255,0.1); 
             overflow: auto; display: block; position: relative; padding: 100px; 
@@ -58,7 +57,7 @@
             </div>
             <div class="flex gap-4">
                 <button class="bg-slate-700 hover:bg-slate-600 text-white px-8 py-3 rounded-xl font-bold transition flex items-center gap-2" onclick="printTest()">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     ทดสอบพิมพ์
                 </button>
                 <button class="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg shadow-teal-500/30" onclick="saveTemplate()">💾 บันทึกรูปแบบ</button>
@@ -213,7 +212,7 @@
                 </div>`).join('');
         }
 
-        function handleDragStart(index) { draggedIndex = index; setTimeout(() => document.getElementById(`line-item-${index}`).classList.add('dragging'), 0); }
+        function handleDragStart(index) { draggedIndex = index; setTimeout(() => { const el = document.getElementById(`line-item-${index}`); if(el) el.classList.add('dragging'); }, 0); }
         function handleDragOver(e, index) { e.preventDefault(); }
         function handleDragEnd() { document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging')); draggedIndex = null; }
         function handleDrop(index) {
@@ -223,14 +222,18 @@
             activeLineIndex = index; renderLinesList(); renderCanvas();
         }
 
-        function selectLine(index) { activeLineIndex = index; renderLinesList(); renderCanvas(); scrollToActive(); }
+        function selectLine(index) {
+            if (activeLineIndex === index) return; // ป้องกันการ Re-render ซ้ำถ้าเลือกตัวเดิม
+            activeLineIndex = index;
+            renderLinesList(); renderCanvas(); scrollToActive();
+        }
         function scrollToActive() { const activeElem = document.getElementById(`line-item-${activeLineIndex}`); if (activeElem) activeElem.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 
         function renderEditor(l, i) {
             const alignControl = `<div class="editor-group space-y-2"><label class="label-title">การจัดแนว</label><div class="flex gap-2">
-                <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left'); renderLinesList();">${icons.L}</button>
-                <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center'); renderLinesList();">${icons.C}</button>
-                <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right'); renderLinesList();">${icons.R}</button>
+                <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left');">${icons.L}</button>
+                <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center');">${icons.C}</button>
+                <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right');">${icons.R}</button>
             </div></div>`;
 
             let fields = '';
@@ -246,7 +249,15 @@
                     <div class="grid grid-cols-2 gap-4"><div class="editor-group"><label class="label-title">กว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div><div class="editor-group"><label class="label-title">สูง (mm)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div></div><div class="grid grid-cols-2 gap-4">${alignControl}</div>`;
             }
 
-            return `<div class="space-y-4 mt-4">${fields}<div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-4"><div class="editor-group"><label class="label-title">พิกัด X (mm)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div><div class="editor-group"><label class="label-title">พิกัด Y (mm)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div></div></div>`;
+            // เพิ่ม event.stopPropagation() ที่ wrapper เพื่อไม่ให้คลิกใน editor แล้ว Re-render แถว
+            return `<div class="space-y-4 mt-4" onclick="event.stopPropagation()">${fields}<div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-4"><div class="editor-group"><label class="label-title">พิกัด X (mm)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div><div class="editor-group"><label class="label-title">พิกัด Y (mm)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div></div></div>`;
+        }
+
+        // ฟังก์ชันอัปเดตข้อมูล: แปลงเป็นตัวเลขสำหรับค่าพิกัดและขนาด
+        function updateLine(i, k, v) {
+            const numericKeys = ['x', 'y', 'w', 'h', 'size', 'radius'];
+            currentConfig.lines[i][k] = numericKeys.includes(k) ? parseFloat(v) : v;
+            renderCanvas();
         }
 
         function handleImageUpload(event, index) {
