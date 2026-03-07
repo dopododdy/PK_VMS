@@ -20,7 +20,7 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy-dark); color: #e2e8f0; height: 100vh; overflow: hidden; }
 
-        /* Typography - ปรับให้ใหญ่ขึ้นตาม Request */
+        /* Typography */
         .txt-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
         .txt-body { font-size: 16px; color: #cbd5e1; }
         .txt-title { font-size: 22px; font-weight: 800; color: #ffffff; }
@@ -197,7 +197,6 @@
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
             
-            // ขยายฟอนต์รายการในตะกร้า
             document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
                 <div class="grid grid-cols-12 p-5 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white text-base">${i.item_name}</div></div>
@@ -241,6 +240,7 @@
                 .lte('paid_at', endOfDay);
 
             const seq = String((count || 0) + 1).padStart(2, '0');
+            // รูปแบบ: 2569 03 07 690001 01
             const receiptNo = `${yyyy}${mm}${dd}${hn}${seq}`;
 
             const { error } = await db.from('medical_records').update({
@@ -276,7 +276,6 @@
                 const config = template.config;
                 const pw = config.width || 80, ph = config.height || 50;
                 
-                // ดึงขนาดฟอนต์มาใช้แบบ 100% ไม่ลดขนาดแล้ว
                 const itemListConfig = config.lines.find(l => l.text && l.text.includes("{{items_list}}"));
                 const tableFontSize = itemListConfig ? parseFloat(itemListConfig.size) : 12;
 
