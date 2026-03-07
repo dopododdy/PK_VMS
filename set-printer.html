@@ -123,7 +123,9 @@
         let currentConfig = { width: 80, height: 50, lines: [] };
         let activeLineIndex = -1;
         let draggedIndex = null;
-        const mockItems = Array(1).fill({ name: "รายการสินค้า/บริการจำลอง", price: 150.00 });
+        
+        // ข้อมูลจำลอง: เปลี่ยนเป็นภาษาไทยเพื่อการออกแบบที่แม่นยำ
+        const mockItems = Array(1).fill({ name: "ยาฆ่าเชื้อ อะม็อกซี่ (ชื่อภาษาไทย)", price: 150.00 });
 
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
@@ -222,11 +224,7 @@
             activeLineIndex = index; renderLinesList(); renderCanvas();
         }
 
-        function selectLine(index) {
-            if (activeLineIndex === index) return; 
-            activeLineIndex = index;
-            renderLinesList(); renderCanvas(); scrollToActive();
-        }
+        function selectLine(index) { if (activeLineIndex === index) return; activeLineIndex = index; renderLinesList(); renderCanvas(); scrollToActive(); }
         function scrollToActive() { const activeElem = document.getElementById(`line-item-${activeLineIndex}`); if (activeElem) activeElem.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 
         function renderEditor(l, i) {
@@ -235,7 +233,6 @@
                 <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center');">${icons.C}</button>
                 <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right');">${icons.R}</button>
             </div></div>`;
-
             let fields = '';
             if (l.type === 'text') {
                 fields = `<div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
@@ -248,21 +245,14 @@
                 fields = `<div class="editor-group"><label class="label-title">อัปโหลดรูปภาพ</label><input type="file" class="input-control text-xs" accept="image/*" onchange="handleImageUpload(event, ${i})"></div>
                     <div class="grid grid-cols-2 gap-4"><div class="editor-group"><label class="label-title">กว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div><div class="editor-group"><label class="label-title">สูง (mm)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div></div><div class="grid grid-cols-2 gap-4">${alignControl}</div>`;
             }
-
             return `<div class="space-y-4 mt-4" onclick="event.stopPropagation()">${fields}<div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-4"><div class="editor-group"><label class="label-title">พิกัด X (mm)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div><div class="editor-group"><label class="label-title">พิกัด Y (mm)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div></div></div>`;
         }
 
-        // แก้ไขฟังก์ชัน updateLine: บันทึกค่าทันที และสั่งวาด Preview ตลอดเวลา
-        // แต่จะ Refresh Sidebar (เปลี่ยนสีปุ่ม) เฉพาะเมื่อมีการกดปุ่มเท่านั้น ไม่ Refresh ตอนพิมพ์
         function updateLine(i, k, v) {
             const numericKeys = ['x', 'y', 'w', 'h', 'size', 'radius'];
             currentConfig.lines[i][k] = numericKeys.includes(k) ? parseFloat(v) : v;
             renderCanvas();
-            
-            // เช็คว่าเป็นการกดปุ่ม (เช่น align, bold, italic) หรือการพิมพ์
-            if (!numericKeys.includes(k) && k !== 'text') {
-                renderLinesList(); // สลับสีปุ่ม
-            }
+            if (!numericKeys.includes(k) && k !== 'text') renderLinesList();
         }
 
         function handleImageUpload(event, index) {
@@ -274,20 +264,16 @@
             const wrapper = document.getElementById('canvas_wrapper'); const px = 3.78; 
             const pw = document.getElementById('paper_w').value; const ph = document.getElementById('paper_h').value;
             wrapper.style.width = (pw * px) + 'px'; wrapper.style.height = (ph * px) + 'px';
-
             const canvasLines = currentConfig.lines.map((l, originalIndex) => ({...l, originalIndex}));
             const sortedLines = [...canvasLines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
             let pushOffset = 0;
-
             wrapper.innerHTML = sortedLines.map((l) => {
                 const currentY = parseFloat(l.y) + pushOffset; const isActive = l.originalIndex === activeLineIndex;
                 const availableWidthMm = pw - parseFloat(l.x) - 5; 
                 const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
                 let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px;`;
-
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
                 const commonAttr = `class="canvas-element ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); selectLine(${l.originalIndex})"`;
-
                 if (l.type === 'text') {
                     let tStyle = style;
                     if (l.align === 'center') tStyle += `left:0; width:100%; text-align:center;`;
@@ -339,7 +325,6 @@
                     return `<img src="${l.url}" style="${iStyle}">`;
                 }
             }).join('');
-
             win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); 
                 html, body { margin: 0 !important; padding: 0 !important; background: white; width: ${pw_val}mm; overflow: visible; }
                 .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; overflow: visible; }
