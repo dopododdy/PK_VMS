@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <style>
-        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
@@ -28,14 +28,17 @@
         /* Trend Table Styles */
         .trend-container { overflow-x: auto; border-radius: 15px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); }
         .trend-table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        .trend-table th { background: rgba(15, 23, 42, 0.8); padding: 12px; text-align: center; border: 1px solid var(--border); font-size: 0.75rem; color: #94a3b8; }
-        .trend-table td { padding: 12px; border: 1px solid var(--border); text-align: center; font-size: 0.9rem; }
-        .trend-param-name { text-align: left !important; font-weight: 800; color: #fff; background: rgba(255,255,255,0.02); }
+        .trend-table th { background: rgba(15, 23, 42, 0.8); padding: 12px; text-align: center; border: 1px solid var(--border); font-size: 0.75rem; color: #94a3b8; vertical-align: top; }
+        .trend-table td { padding: 12px; border: 1px solid var(--border); text-align: center; font-size: 1rem; }
+        .trend-param-name { text-align: left !important; font-weight: 800; color: #fff; background: rgba(255,255,255,0.02); line-height: 1.2; }
 
         .val-high { color: #ef4444; font-weight: 800; }
         .val-low { color: #38bdf8; font-weight: 800; }
         .val-normal { color: #10b981; }
-        .trend-arrow { font-size: 0.7rem; margin-left: 4px; }
+        .trend-arrow { font-size: 0.75rem; margin-left: 4px; font-weight: 900; }
+
+        .btn-del-col { color: #64748b; transition: 0.2s; margin-bottom: 5px; cursor: pointer; }
+        .btn-del-col:hover { color: #ef4444; transform: scale(1.2); }
 
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
@@ -46,7 +49,7 @@
     <aside class="sidebar-container">
         <div class="p-6 border-b border-white/5">
             <div class="flex justify-between items-center mb-5">
-                <h2 class="text-xl font-black text-white">🔬 Lab Tracking</h2>
+                <h2 class="text-xl font-black text-white">🔬 Lab Room</h2>
                 <a href="index.html" class="p-2 hover:bg-white/10 rounded-lg transition"><i data-lucide="home"></i></a>
             </div>
             <input type="text" id="search-box" class="input-box" placeholder="ค้นหา HN, ชื่อ..." oninput="fetchAnimals()">
@@ -68,22 +71,22 @@
                 </div>
                 <div class="flex gap-3">
                     <button onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-6 py-3 rounded-xl font-bold transition flex items-center gap-2">
-                        <i data-lucide="save" class="w-5 h-5"></i> บันทึกผลใหม่
+                        <i data-lucide="save" class="w-5 h-5"></i> บันทึกผลตรวจชุดนี้
                     </button>
                 </div>
             </div>
 
-            <div class="flex px-8 border-b border-white/5">
-                <div class="lab-tab active" onclick="switchTab('input', this)">➕ กรอกผลเลือด</div>
-                <div class="lab-tab" onclick="switchTab('trends', this)">📊 ดูแนวโน้ม (Trends)</div>
+            <div class="flex px-8 border-b border-white/5 bg-navy-light/20">
+                <div class="lab-tab active" onclick="switchTab('input', this)">➕ กรอกผลเลือดใหม่</div>
+                <div class="lab-tab" onclick="switchTab('trends', this)">📊 ติดตามแนวโน้ม (Trends)</div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-8 custom-scroll" id="content-area">
                 <div id="view-input">
                     <div class="section-card mb-8">
-                        <div class="grid grid-cols-12 gap-4 mb-4 text-xs font-black text-gray-500 uppercase">
+                        <div class="grid grid-cols-12 gap-4 mb-4 text-xs font-black text-gray-500 uppercase tracking-widest">
                             <div class="col-span-4">Parameter</div>
-                            <div class="col-span-4 text-center">Result</div>
+                            <div class="col-span-4 text-center">Result (ผลที่ได้)</div>
                             <div class="col-span-4">Reference Range</div>
                         </div>
                         <div id="parameters-container" class="space-y-2"></div>
@@ -91,9 +94,12 @@
                 </div>
 
                 <div id="view-trends" class="hidden">
-                    <h3 class="text-xl font-black mb-6 text-white flex items-center gap-2">
-                        <i data-lucide="history" class="text-teal-400"></i> ตารางเปรียบเทียบย้อนหลัง
-                    </h3>
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-black text-white flex items-center gap-2">
+                            <i data-lucide="history" class="text-teal-400"></i> ตารางเปรียบเทียบผลย้อนหลัง
+                        </h3>
+                        <p class="text-xs text-gray-500">* ข้อมูลจะถูกจัดกลุ่มตามเวลาที่บันทึก (รอบการตรวจ)</p>
+                    </div>
                     <div class="trend-container custom-scroll">
                         <table class="trend-table" id="trend-table-el">
                             <thead><tr id="trend-head"></tr></thead>
@@ -160,8 +166,8 @@
                 return `
                     <div class="grid grid-cols-12 gap-4 items-center p-3 border-b border-white/5 hover:bg-white/5 transition-all rounded-lg">
                         <div class="col-span-4 font-bold text-slate-300">${p.parameter_name} <span class="text-[10px] opacity-40">${p.unit || ''}</span></div>
-                        <div class="col-span-4">
-                            <input type="number" step="0.01" class="input-box text-center lab-input" 
+                        <div class="col-span-4 text-center">
+                            <input type="number" step="0.001" class="input-box text-center lab-input" 
                                 data-id="${p.id}" data-name="${p.parameter_name}" data-min="${min}" data-max="${max}" data-unit="${p.unit}">
                         </div>
                         <div class="col-span-4 text-xs text-gray-500 font-mono">${min} - ${max}</div>
@@ -179,38 +185,48 @@
         }
 
         function renderTrendTable() {
-            // 1. จัดกลุ่มผลแล็บตาม Timestamp ( session )
+            const isDog = currentAnimal.pet_type === 'สุนัข';
             const sessions = {};
             labHistory.forEach(row => {
-                const ts = new Date(row.created_at).getTime();
-                // ปัดเวลาให้ใกล้กัน (ภายใน 1 นาที) ถือเป็นรอบเดียวกัน
-                const key = Math.floor(ts / 60000) * 60000; 
+                // ใช้ ISO string ของ created_at เป็น key เพื่อความแม่นยำในการรวมกลุ่มชุดเดียวกัน
+                const key = row.created_at; 
                 if (!sessions[key]) sessions[key] = {};
                 sessions[key][row.parameter_name] = row;
             });
 
-            const sortedTimestamps = Object.keys(sessions).sort((a, b) => b - a); // ใหม่ไปเก่า
+            const sortedTimestamps = Object.keys(sessions).sort((a, b) => new Date(b) - new Date(a));
             
-            // 2. สร้าง Header (วัน/เวลา)
+            // Header ตาราง
             const headRow = document.getElementById('trend-head');
-            headRow.innerHTML = `<th class="trend-param-name">Parameter</th>` + sortedTimestamps.map(ts => {
-                const d = new Date(parseInt(ts));
-                return `<th>${formatThaiDate(d, 'short')}<br><span class="text-teal-400">${d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</span></th>`;
+            headRow.innerHTML = `<th class="trend-param-name text-center">Parameter<br><span class="font-normal text-gray-500">(Ref. Range)</span></th>` + sortedTimestamps.map(ts => {
+                const d = new Date(ts);
+                return `<th>
+                    <div class="btn-del-col" onclick="deleteSession('${ts}')" title="ลบคอลัมน์นี้">✕</div>
+                    <div class="text-white">${formatThaiDate(d)}</div>
+                    <div class="text-teal-400 text-[10px]">${d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</div>
+                </th>`;
             }).join('');
 
-            // 3. สร้าง Body (ค่าแต่ละตัว)
+            // Body ตาราง
             const body = document.getElementById('trend-body');
-            const uniqueParams = [...new Set(labHistory.map(h => h.parameter_name))];
-            
-            body.innerHTML = uniqueParams.map(paramName => {
-                let rowHtml = `<td class="trend-param-name">${paramName}</td>`;
+            body.innerHTML = masterParams.map(pMaster => {
+                const paramName = pMaster.parameter_name;
+                const min = isDog ? pMaster.dog_min : pMaster.cat_min;
+                const max = isDog ? pMaster.dog_max : pMaster.cat_max;
+                
+                let rowHtml = `<td class="trend-param-name">
+                    ${paramName}
+                    <span class="block text-[10px] text-gray-500 font-normal">
+                        (${min}-${max}) ${pMaster.unit || ''}
+                    </span>
+                </td>`;
                 
                 sortedTimestamps.forEach((ts, idx) => {
                     const result = sessions[ts][paramName];
                     if (!result) {
-                        rowHtml += `<td class="text-gray-700">-</td>`;
+                        rowHtml += `<td class="text-gray-800 opacity-20">-</td>`;
                     } else {
-                        // คำนวณแนวโน้มเทียบกับครั้งก่อน (idx + 1)
+                        // คำนวณแนวโน้ม
                         let arrow = '';
                         if (idx < sortedTimestamps.length - 1) {
                             const prevSession = sessions[sortedTimestamps[idx+1]][paramName];
@@ -220,12 +236,28 @@
                             }
                         }
 
-                        const statusClass = result.is_abnormal ? (result.test_value > result.dog_max || result.test_value > result.cat_max ? 'val-high' : 'val-low') : 'val-normal';
-                        rowHtml += `<td class="${statusClass}">${result.test_value}${arrow}</td>`;
+                        const val = result.test_value;
+                        const statusClass = (val > max) ? 'val-high' : (val < min) ? 'val-low' : 'val-normal';
+                        rowHtml += `<td class="${statusClass}">${val}${arrow}</td>`;
                     }
                 });
                 return `<tr>${rowHtml}</tr>`;
             }).join('');
+        }
+
+        async function deleteSession(timestamp) {
+            if (!confirm(`⚠️ ยืนยันการลบผลการตรวจรอบเวลา ${new Date(timestamp).toLocaleString('th-TH')} ?\nข้อมูลจะหายไปอย่างถาวร`)) return;
+
+            try {
+                const { error } = await db.from('lab_results')
+                    .delete()
+                    .eq('animal_id', currentAnimal.id)
+                    .eq('created_at', timestamp);
+                
+                if (error) throw error;
+                alert("🗑️ ลบผลการตรวจสำเร็จ");
+                await fetchLabHistory(currentAnimal.id);
+            } catch (err) { alert(err.message); }
         }
 
         async function saveLabResults() {
@@ -264,7 +296,7 @@
             document.getElementById('view-trends').classList.toggle('hidden', tab !== 'trends');
         }
 
-        function formatThaiDate(date, format = 'short') {
+        function formatThaiDate(date) {
             const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
         }
