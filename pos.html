@@ -2,7 +2,6 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PK-VMS Pro | Smart POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -11,96 +10,86 @@
     <script src="supabase-config.js"></script>
 
     <style>
-        :root { --navy-dark: #020617; --navy-panel: #0f172a; --teal-accent: #10b981; --border: rgba(255, 255, 255, 0.06); }
-        * { font-family: "Sarabun", sans-serif !important; -webkit-font-smoothing: antialiased; }
-        body { background: var(--navy-dark); color: #e2e8f0; height: 100vh; overflow: hidden; font-size: 14px; }
+        :root { --navy-dark: #020617; --navy-panel: #0f172a; --teal-accent: #10b981; --border: rgba(255, 255, 255, 0.08); }
+        * { font-family: "Sarabun", sans-serif !important; }
+        body { background: var(--navy-dark); color: #e2e8f0; height: 100vh; overflow: hidden; }
 
-        /* Column Controls */
-        .col-side { width: 22%; background: var(--navy-dark); border-right: 1px solid var(--border); }
-        .col-main { width: 53%; background: rgba(0,0,0,0.2); }
+        /* --- 1. Typography Consistency (Uniform across 3 columns) --- */
+        .txt-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.025em; }
+        .txt-body { font-size: 14px; color: #cbd5e1; }
+        .txt-title { font-size: 18px; font-weight: 800; color: #ffffff; }
+        .txt-price { font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: -1px; }
+
+        /* --- 2. Layout Structure --- */
+        .col-side { width: 23%; border-right: 1px solid var(--border); }
+        .col-main { width: 52%; background: rgba(0,0,0,0.2); }
         .col-pay { width: 25%; background: var(--navy-panel); border-left: 1px solid var(--border); }
 
-        /* Uniform Font Sizes */
-        .text-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
-        .text-body { font-size: 14px; }
-        .text-title { font-size: 18px; font-weight: 800; color: #ffffff; }
-        .text-price-lg { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
-
-        /* UI Components */
-        .glass-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; transition: 0.2s; }
-        .glass-card:hover { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.05); cursor: pointer; }
+        .glass-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; transition: 0.2s; cursor: pointer; }
+        .glass-card:hover { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.05); }
         .glass-card.active { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.1); }
 
-        .search-box { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; width: 100%; padding: 10px 12px; outline: none; }
-        .search-box:focus { border-color: var(--teal-accent); box-shadow: 0 0 0 2px rgba(16,185,129,0.1); }
+        .search-input { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; width: 100%; padding: 10px 12px 10px 40px; outline: none; font-size: 14px; }
+        .search-input:focus { border-color: var(--teal-accent); }
 
-        /* Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
-        .numpad button { background: rgba(255,255,255,0.05); height: 54px; border-radius: 10px; font-weight: 700; font-size: 18px; }
-        .numpad button:active { background: var(--teal-accent); transform: scale(0.98); }
-
-        .btn-primary { background: linear-gradient(135deg, #10b981, #059669); font-weight: 800; transition: 0.3s; }
-        .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
-
-        .history-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.1); color: #38bdf8; }
+        .numpad button { background: rgba(255,255,255,0.05); height: 50px; border-radius: 10px; font-weight: 800; font-size: 18px; }
+        .numpad button:active { background: var(--teal-accent); color: var(--navy-dark); }
     </style>
 </head>
-<body class="flex overflow-hidden">
+<body class="flex">
 
     <div class="col-side flex flex-col p-5">
         <div class="mb-6">
-            <h2 class="text-title flex items-center gap-2 mb-4">
-                <i data-lucide="shield-check" class="text-teal-500"></i> PK-VMS POS
+            <h2 class="txt-title flex items-center gap-2 mb-4">
+                <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS Pro
             </h2>
             <div class="relative">
-                <input type="text" id="master-search" class="search-box text-body pl-10" placeholder="ค้นหา HN หรือ ชื่อเจ้าของ..." oninput="filterHN()">
+                <input type="text" id="main-search" class="search-input" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="filterPatients()">
                 <i data-lucide="search" class="absolute left-3 top-3 w-4 text-gray-500"></i>
             </div>
         </div>
 
         <div class="flex-1 overflow-hidden flex flex-col gap-4">
-            <section class="flex flex-col h-1/2">
-                <label class="text-label mb-2 flex justify-between">
-                    <span>รายชื่อคนไข้ (HN)</span>
-                    <span id="hn-count" class="text-teal-500">0</span>
-                </label>
-                <div id="hn-master-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1">
-                    </div>
-            </section>
-
-            <section class="flex flex-col h-1/2 border-t border-white/5 pt-4">
-                <label class="text-label mb-2 flex items-center gap-2">
-                    <i data-lucide="history" class="w-3"></i> ประวัติการชำระเงิน
-                </label>
-                <div id="hn-history-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1">
-                    <p class="text-gray-600 text-center py-10 text-xs">เลือก HN เพื่อดูประวัติ</p>
+            <div class="flex flex-col h-1/2">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="txt-label">รายชื่อคนไข้ (Total: <span id="count-hn">0</span>)</span>
                 </div>
-            </section>
+                <div id="patient-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1">
+                    </div>
+            </div>
+
+            <div class="flex flex-col h-1/2 border-t border-white/5 pt-4">
+                <span class="txt-label mb-2 flex items-center gap-2"><i data-lucide="history" class="w-3"></i> ประวัติการชำระเงิน</span>
+                <div id="payment-history" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1">
+                    <p class="text-gray-600 text-center py-10 txt-body">เลือกคนไข้เพื่อดูประวัติ</p>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="col-main flex flex-col p-6">
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex justify-between items-start mb-6">
             <div>
-                <span id="record-mode-tag" class="hidden bg-blue-500/20 text-blue-400 text-[10px] px-2 py-1 rounded font-bold mb-1 uppercase tracking-tighter">โหมดพิมพ์ซ้ำ (Paid)</span>
-                <h1 id="active-title" class="text-title">กรุณาเลือกรายการ</h1>
-                <p id="active-sub" class="text-body text-gray-500">รอดำเนินการ...</p>
+                <div id="view-mode-tag" class="hidden bg-amber-500/20 text-amber-500 text-[10px] px-2 py-0.5 rounded font-bold mb-1 w-fit">HISTORY VIEW (PAID)</div>
+                <h1 id="display-pet-name" class="txt-title">รายการรอชำระเงิน</h1>
+                <p id="display-owner-info" class="txt-body text-gray-500">กรุณาเลือกรายการจากคอลัมน์ซ้าย</p>
             </div>
-            <button id="btn-add-item" onclick="openCatalog()" class="glass-card px-4 py-2 text-body font-bold flex items-center gap-2 border-blue-500/30 text-blue-400 hover:bg-blue-500 hover:text-white">
-                <i data-lucide="plus" class="w-4"></i> เพิ่มสินค้า
+            <button class="glass-card px-4 py-2 txt-body font-bold text-teal-500 border-teal-500/30">
+                + เพิ่มรายการสินค้า
             </button>
         </div>
 
         <div class="flex-1 glass-card overflow-hidden flex flex-col border-none bg-slate-900/40">
-            <div class="grid grid-cols-12 p-4 border-b border-white/5 text-label">
-                <div class="col-span-6">รายการสินค้า/บริการ</div>
+            <div class="grid grid-cols-12 p-4 border-b border-white/5 txt-label">
+                <div class="col-span-6">รายการ / การรักษา</div>
                 <div class="col-span-2 text-center">จำนวน</div>
-                <div class="col-span-2 text-right">ราคา/หน่วย</div>
+                <div class="col-span-2 text-right">หน่วยละ</div>
                 <div class="col-span-2 text-right">รวม</div>
             </div>
-            <div id="cart-items-container" class="flex-1 overflow-y-auto custom-scroll divide-y divide-white/5">
+            <div id="cart-items" class="flex-1 overflow-y-auto custom-scroll divide-y divide-white/5">
                 </div>
         </div>
     </div>
@@ -108,184 +97,177 @@
     <div class="col-pay flex flex-col p-6">
         <div class="flex-1">
             <div class="space-y-4 mb-8">
-                <div class="flex justify-between text-body text-gray-400">
-                    <span>รวมเงินรวม</span>
-                    <span id="sum-price" class="text-white font-bold">0.00</span>
+                <div class="flex justify-between txt-body">
+                    <span class="text-gray-400">รวมยอดเงิน</span>
+                    <span id="sum-total" class="font-bold text-white">0.00</span>
                 </div>
-                <div class="flex justify-between items-center text-red-400">
-                    <span class="text-label">ส่วนลด (Discount)</span>
-                    <input type="number" id="discount-val" class="search-box w-24 text-right text-body font-bold text-white border-red-500/20" value="0" oninput="calculateTotal()">
+                <div class="flex justify-between items-center">
+                    <span class="txt-label text-red-400">ส่วนลด</span>
+                    <input type="number" id="input-discount" class="search-input w-24 text-right p-1 font-bold" value="0" oninput="calculateNet()">
                 </div>
                 <div class="pt-6 border-t border-white/10 flex flex-col items-end">
-                    <label class="text-label text-teal-500 mb-1">ยอดสุทธิ</label>
-                    <div class="text-price-lg text-white" id="net-total">0.00</div>
+                    <label class="txt-label text-teal-500 mb-1">ยอดสุทธิที่ต้องชำระ</label>
+                    <div class="txt-price" id="net-total">0.00</div>
                 </div>
             </div>
 
-            <div class="space-y-4 mt-8">
-                <label class="text-label flex items-center gap-2"><i data-lucide="banknote" class="w-3"></i> รับเงินสด</label>
-                <input type="number" id="received-amount" class="search-box text-price-lg h-20 text-center text-amber-400" placeholder="0.00" oninput="calculateChange()">
+            <div class="space-y-4 mt-10">
+                <label class="txt-label flex items-center gap-2"><i data-lucide="banknote" class="w-3"></i> รับเงินสด</label>
+                <input type="number" id="received-cash" class="search-input txt-price h-16 text-center text-amber-400" placeholder="0.00" oninput="calculateChange()">
                 
                 <div class="numpad grid grid-cols-3 gap-2">
-                    <button onclick="quickCash(100)">100</button>
-                    <button onclick="quickCash(500)">500</button>
-                    <button onclick="quickCash(1000)">1000</button>
+                    <button onclick="addCash(100)">100</button>
+                    <button onclick="addCash(500)">500</button>
+                    <button onclick="addCash(1000)">1000</button>
                 </div>
 
-                <div class="flex justify-between items-center pt-4 px-2">
-                    <span class="text-label">เงินทอน</span>
-                    <span id="change-val" class="text-2xl font-black text-white">0.00</span>
+                <div class="flex justify-between items-center pt-6 px-2">
+                    <span class="txt-label">เงินทอน</span>
+                    <span id="change-amount" class="text-2xl font-black text-white">0.00</span>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-5 gap-3 h-16 mt-6">
-            <button class="col-span-2 glass-card flex flex-col items-center justify-center text-gray-400 hover:text-white">
-                <i data-lucide="printer" class="w-5"></i>
-                <span style="font-size:10px">Preview</span>
-            </button>
-            <button id="btn-submit" onclick="confirmPayment()" class="col-span-3 btn-primary rounded-xl text-white text-body active:scale-95">
-                ยืนยันการชำระ
-            </button>
-        </div>
+        <button id="btn-pay" onclick="processPayment()" class="w-full h-16 bg-teal-500 rounded-xl text-navy-dark font-black text-lg hover:bg-teal-400 transition-all active:scale-95 shadow-lg shadow-teal-500/20">
+            ยืนยันการชำระเงิน
+        </button>
     </div>
 
     <script>
         lucide.createIcons();
-        let masterHNs = [], activeCart = [], currentHN = null, isReprint = false;
+        let allPatients = [], currentCart = [];
 
         window.onload = async () => {
-            await fetchAllOwners();
-            // Optional: load pending bills automatically
+            await fetchPatients();
         };
 
-        // --- FETCHING DATA ---
-        async function fetchAllOwners() {
-            const { data } = await db.from('owners').select('owner_hn, owner_name').order('owner_hn');
-            masterHNs = data || [];
-            renderHNList(masterHNs);
-            document.getElementById('hn-count').innerText = masterHNs.length;
+        // --- FETCH PATIENTS (ตรงตาม SQL: owners.hn & animals.owner_hn) ---
+        async function fetchPatients() {
+            try {
+                const { data, error } = await db
+                    .from('animals')
+                    .select('pet_name, owner_hn, owners(owner_name)');
+                
+                if (error) throw error;
+                allPatients = data || [];
+                document.getElementById('count-hn').innerText = allPatients.length;
+                renderPatientList(allPatients);
+            } catch (err) {
+                console.error("Fetch error:", err);
+            }
         }
 
-        function filterHN() {
-            const q = document.getElementById('master-search').value.toLowerCase();
-            const filtered = masterHNs.filter(o => o.owner_hn.includes(q) || o.owner_name.toLowerCase().includes(q));
-            renderHNList(filtered);
+        function filterPatients() {
+            const q = document.getElementById('main-search').value.toLowerCase();
+            const filtered = allPatients.filter(p => 
+                p.owner_hn.toLowerCase().includes(q) || 
+                p.pet_name.toLowerCase().includes(q)
+            );
+            renderPatientList(filtered);
         }
 
-        function renderHNList(list) {
-            const container = document.getElementById('hn-master-list');
-            container.innerHTML = list.map(o => `
-                <div class="glass-card p-3 mb-2" onclick="selectHN('${o.owner_hn}', '${o.owner_name}')">
-                    <div class="flex justify-between items-center">
-                        <span class="text-teal-500 font-bold text-body">${o.owner_hn}</span>
-                        <i data-lucide="chevron-right" class="w-3 text-gray-600"></i>
+        function renderPatientList(list) {
+            const container = document.getElementById('patient-list');
+            container.innerHTML = list.map(p => `
+                <div class="glass-card p-3" onclick="loadPatientHistory('${p.owner_hn}', '${p.pet_name}', '${p.owners?.owner_name}')">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-teal-500 font-bold txt-body">${p.owner_hn}</span>
+                        <span class="text-white font-bold text-[14px]">🐾 ${p.pet_name}</span>
                     </div>
-                    <div class="text-gray-300 font-medium truncate">${o.owner_name}</div>
+                    <div class="text-gray-500 text-[11px] truncate">เจ้าของ: ${p.owners?.owner_name || 'ไม่ระบุ'}</div>
                 </div>
             `).join('');
-            lucide.createIcons();
         }
 
-        // --- SELECTING HN & HISTORY ---
-        async function selectHN(hn, name) {
-            currentHN = hn;
-            document.querySelectorAll('#hn-master-list .glass-card').forEach(el => el.classList.remove('active'));
-            // Find and highlight active HN card if needed
+        // --- LOAD HISTORY (แสดงรายการที่เคยชำระแล้ว) ---
+        async function loadPatientHistory(hn, petName, ownerName) {
+            // Update Header Information
+            document.getElementById('display-pet-name').innerText = `คนไข้: ${petName}`;
+            document.getElementById('display-owner-info').innerText = `HN: ${hn} | เจ้าของ: ${ownerName}`;
 
-            // 1. Fetch History for this HN
-            const { data: history } = await db.from('medical_records')
-                .select('id, paid_at, net_amount, payment_status, animals(pet_name)')
+            const { data: records } = await db
+                .from('medical_records')
+                .select('*')
                 .eq('owner_hn', hn)
                 .order('created_at', { ascending: false });
 
-            const historyContainer = document.getElementById('hn-history-list');
-            if (!history || history.length === 0) {
-                historyContainer.innerHTML = `<p class="text-gray-600 text-center py-10 text-xs">ไม่พบประวัติ</p>`;
-            } else {
-                historyContainer.innerHTML = history.map(h => `
-                    <div class="glass-card p-3 border-l-4 ${h.payment_status === 'paid' ? 'border-teal-500' : 'border-amber-500'}" 
-                         onclick="loadRecord('${h.id}', ${h.payment_status === 'paid'})">
-                        <div class="flex justify-between text-[10px] mb-1">
-                            <span class="text-gray-500">${new Date(h.paid_at || h.created_at).toLocaleDateString('th-TH')}</span>
-                            <span class="${h.payment_status === 'paid' ? 'text-teal-500' : 'text-amber-500'} font-bold uppercase">${h.payment_status || 'pending'}</span>
-                        </div>
-                        <div class="text-body font-bold text-white flex justify-between">
-                            <span>🐾 ${h.animals?.pet_name || '-'}</span>
-                            <span>฿${h.net_amount?.toLocaleString() || '0'}</span>
-                        </div>
-                    </div>
-                `).join('');
+            const historyContainer = document.getElementById('payment-history');
+            if (!records || records.length === 0) {
+                historyContainer.innerHTML = `<p class="text-gray-600 text-center py-10 txt-body">ไม่พบประวัติ</p>`;
+                return;
             }
+
+            historyContainer.innerHTML = records.map(r => `
+                <div class="glass-card p-3 border-l-4 ${r.payment_status === 'paid' ? 'border-teal-500' : 'border-amber-500'}" 
+                     onclick="viewRecordDetail('${r.id}', '${r.payment_status}')">
+                    <div class="flex justify-between txt-label mb-1">
+                        <span>${new Date(r.created_at).toLocaleDateString('th-TH')}</span>
+                        <span class="${r.payment_status === 'paid' ? 'text-teal-500' : 'text-amber-400'}">${r.payment_status}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white font-bold">฿${(r.net_amount || r.total_cost).toLocaleString()}</span>
+                        <i data-lucide="chevron-right" class="w-4 text-gray-700"></i>
+                    </div>
+                </div>
+            `).join('');
             lucide.createIcons();
         }
 
-        // --- LOADING RECORD TO MAIN UI ---
-        async function loadRecord(recordId, paidStatus) {
-            isReprint = paidStatus;
-            const { data: record } = await db.from('medical_records').select('*, owners(*), animals(*)').eq('id', recordId).single();
+        // --- VIEW RECORD DETAIL (แสดงรายการสินค้า/ราคา ใน Column 2 & 3) ---
+        async function viewRecordDetail(recordId, status) {
+            const isPaid = status === 'paid';
+            document.getElementById('view-mode-tag').classList.toggle('hidden', !isPaid);
+            document.getElementById('btn-pay').disabled = isPaid;
+            document.getElementById('btn-pay').style.opacity = isPaid ? '0.3' : '1';
+
+            // 1. Get Master Record
+            const { data: record } = await db.from('medical_records').select('*').eq('id', recordId).single();
+            // 2. Get Items (ตรงตามตาราง medical_record_items)
             const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
 
-            // Update UI State
-            document.getElementById('record-mode-tag').classList.toggle('hidden', !isReprint);
-            document.getElementById('btn-add-item').classList.toggle('hidden', isReprint);
-            document.getElementById('received-amount').disabled = isReprint;
-            document.getElementById('discount-val').disabled = isReprint;
-            document.getElementById('btn-submit').innerText = isReprint ? "พิมพ์ใบเสร็จอีกครั้ง" : "ยืนยันการชำระ";
-
-            // Header Info
-            document.getElementById('active-title').innerText = `คุณ${record.owners.owner_name}`;
-            document.getElementById('active-sub').innerText = `HN: ${record.owner_hn} | สัตว์เลี้ยง: ${record.animals.pet_name}`;
-
-            // Map Items to Cart
-            activeCart = items.map(i => ({
-                name: i.item_name, qty: i.quantity, price: i.unit_price, total: i.total_price, type: i.item_type
-            }));
-
-            // Values
-            document.getElementById('discount-val').value = record.discount || 0;
-            document.getElementById('received-amount').value = isReprint ? record.received_amount : "";
+            currentCart = items || [];
             
-            renderCart();
-        }
-
-        function renderCart() {
-            const container = document.getElementById('cart-items-container');
-            container.innerHTML = activeCart.map(item => `
-                <div class="grid grid-cols-12 p-4 items-center group hover:bg-white/[0.02]">
+            // Render Cart
+            const cartContainer = document.getElementById('cart-items');
+            cartContainer.innerHTML = currentCart.map(item => `
+                <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6">
-                        <div class="text-body font-bold text-white">${item.name}</div>
-                        <div class="text-[10px] text-gray-500 font-black uppercase tracking-widest">${item.type}</div>
+                        <div class="txt-body font-bold text-white">${item.item_name}</div>
+                        <div class="text-[10px] text-gray-500 font-bold uppercase">${item.item_type}</div>
                     </div>
-                    <div class="col-span-2 text-center text-body font-bold">${item.qty}</div>
-                    <div class="col-span-2 text-right text-body text-gray-400">${parseFloat(item.price).toLocaleString()}</div>
-                    <div class="col-span-2 text-right text-body font-bold text-white">${(item.qty * item.price).toLocaleString()}</div>
+                    <div class="col-span-2 text-center txt-body">${item.quantity}</div>
+                    <div class="col-span-2 text-right txt-body text-gray-400">${parseFloat(item.unit_price).toLocaleString()}</div>
+                    <div class="col-span-2 text-right txt-body font-bold text-white">${parseFloat(item.total_price).toLocaleString()}</div>
                 </div>
             `).join('');
-            calculateTotal();
+
+            // Update Summary
+            document.getElementById('sum-total').innerText = parseFloat(record.total_cost).toLocaleString();
+            document.getElementById('input-discount').value = record.discount;
+            document.getElementById('net-total').innerText = parseFloat(record.net_amount).toLocaleString();
+            document.getElementById('received-cash').value = isPaid ? record.received_amount : "";
+            calculateChange();
         }
 
-        // --- CALCULATIONS ---
-        function calculateTotal() {
-            const sum = activeCart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-            const disc = parseFloat(document.getElementById('discount-val').value) || 0;
-            const net = Math.max(0, sum - disc);
-            
-            document.getElementById('sum-price').innerText = sum.toLocaleString(undefined, {minimumFractionDigits: 2});
+        // --- MATH LOGIC ---
+        function calculateNet() {
+            const sum = parseFloat(document.getElementById('sum-total').innerText.replace(/,/g, '')) || 0;
+            const disc = parseFloat(document.getElementById('input-discount').value) || 0;
+            const net = sum - disc;
             document.getElementById('net-total').innerText = net.toLocaleString(undefined, {minimumFractionDigits: 2});
             calculateChange();
         }
 
         function calculateChange() {
-            const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, ''));
-            const received = parseFloat(document.getElementById('received-amount').value) || 0;
+            const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
+            const received = parseFloat(document.getElementById('received-cash').value) || 0;
             const change = received - net;
-            document.getElementById('change-val').innerText = change >= 0 ? change.toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
+            document.getElementById('change-amount').innerText = change > 0 ? change.toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
         }
 
-        function quickCash(amt) {
-            const el = document.getElementById('received-amount');
-            el.value = (parseFloat(el.value) || 0) + amt;
+        function addCash(amt) {
+            const input = document.getElementById('received-cash');
+            input.value = (parseFloat(input.value) || 0) + amt;
             calculateChange();
         }
     </script>
