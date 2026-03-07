@@ -11,44 +11,27 @@
     <script src="supabase-config.js"></script>
 
     <style>
-        :root { 
-            --navy-dark: #020617; 
-            --navy-panel: #0f172a; 
-            --teal-accent: #10b981; 
-            --border: rgba(255, 255, 255, 0.08); 
-        }
+        :root { --navy-dark: #020617; --navy-panel: #0f172a; --teal-accent: #10b981; --border: rgba(255, 255, 255, 0.08); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy-dark); color: #e2e8f0; height: 100vh; overflow: hidden; }
-
-        /* Typography */
         .txt-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
         .txt-body { font-size: 14px; color: #cbd5e1; }
         .txt-title { font-size: 18px; font-weight: 800; color: #ffffff; }
         .txt-price { font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: -1px; }
-
-        /* Layout */
         .col-side { width: 23%; border-right: 1px solid var(--border); }
         .col-main { width: 52%; background: rgba(0,0,0,0.2); }
         .col-pay { width: 25%; background: var(--navy-panel); border-left: 1px solid var(--border); }
-
         .glass-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; transition: 0.2s; cursor: pointer; }
         .glass-card:hover { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.05); }
         .glass-card.active { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.1); }
-
         .search-input { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; width: 100%; padding: 10px 12px 10px 40px; outline: none; font-size: 14px; color: white; }
         .search-input:focus { border-color: var(--teal-accent); }
-
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-
         .numpad button { background: rgba(255,255,255,0.05); height: 50px; border-radius: 10px; font-weight: 800; font-size: 18px; transition: 0.1s; }
         .numpad button:active { background: var(--teal-accent); color: var(--navy-dark); transform: scale(0.95); }
-        
         .btn-print { background-color: #2563eb !important; color: white !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important; }
-        .btn-print:hover { background-color: #1d4ed8 !important; }
-
         .btn-home { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; transition: 0.2s; }
-        .btn-home:hover { background: var(--teal-accent); color: var(--navy-dark); }
     </style>
 </head>
 <body class="flex">
@@ -56,9 +39,7 @@
     <div class="col-side flex flex-col p-5">
         <div class="mb-6">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="txt-title flex items-center gap-2">
-                    <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS
-                </h2>
+                <h2 class="txt-title flex items-center gap-2"><i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS</h2>
                 <button onclick="window.location.href='index.html'" class="btn-home text-gray-300"><i data-lucide="home" class="w-5 h-5"></i></button>
             </div>
             <div class="relative">
@@ -182,6 +163,7 @@
             lucide.createIcons();
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
+            
             document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
                 <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white">${i.item_name}</div></div>
@@ -189,6 +171,7 @@
                     <div class="col-span-2 text-right txt-body text-gray-400">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     <div class="col-span-2 text-right txt-body font-bold text-white">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                 </div>`).join('');
+
             document.getElementById('input-discount').disabled = isPaid;
             document.getElementById('received-cash').disabled = isPaid;
             document.getElementById('sum-total').innerText = parseFloat(rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -214,27 +197,29 @@
             if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
         }
 
-        // --- DYNAMIC PRINT ENGINE (GLOBAL CASE-INSENSITIVE MAPPING) ---
+        // --- DYNAMIC PRINT ENGINE (ULTIMATE NAME MAPPING) ---
         async function printReceipt(recordId) {
             try {
+                // ดึงข้อมูลหลัก
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
 
-                // 1. ดึง Master ชื่อไทยจากทุกตาราง (ยา, สินค้า, บริการ, Lab)
-                const { data: pharmaData } = await db.from('pharmacy').select('item_name, name_th');
-                const { data: servicesData } = await db.from('services').select('service_name, name_th');
+                // ดึงข้อมูลชื่อไทยจากคลังยา (Pharmacy) และ บริการ (Services)
+                const { data: pharma } = await db.from('pharmacy').select('item_name, name_th');
+                const { data: servs } = await db.from('services').select('service_name, name_th');
 
-                // 2. สร้าง Master Map แบบ Case-Insensitive (ใช้ตัวพิมพ์เล็กทั้งหมดเป็น Key)
+                // สร้างแผนผังชื่อไทยแบบกวาดล้าง (Case-Insensitive & Trimmed)
                 const masterThaiMap = {};
-                if (pharmaData) pharmaData.forEach(p => { 
-                    if (p.name_th && p.item_name) masterThaiMap[p.item_name.toLowerCase().trim()] = p.name_th.trim(); 
+                if (pharma) pharma.forEach(p => { 
+                    if (p.name_th) masterThaiMap[p.item_name.toLowerCase().trim()] = p.name_th.trim(); 
                 });
-                if (servicesData) servicesData.forEach(s => { 
-                    if (s.name_th && s.service_name) masterThaiMap[s.service_name.toLowerCase().trim()] = s.name_th.trim(); 
+                if (servs) servs.forEach(s => { 
+                    if (s.name_th) masterThaiMap[s.service_name.toLowerCase().trim()] = s.name_th.trim(); 
                 });
 
                 if (!template) return alert("กรุณาตั้งค่า Template ในหน้า Designer");
+
                 const config = template.config;
                 const pw = config.width || 80, ph = config.height || 50;
                 
@@ -250,13 +235,14 @@
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
                     
-                    // รายการสินค้า: ค้นหาชื่อไทยแบบไม่สนใจตัวพิมพ์เล็ก/ใหญ่
+                    // ส่วนการจัดการรายการสินค้า (เน้นดึงชื่อไทยให้ติด 100%)
                     items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:'Sarabun';">
                         ${items.map(i => {
-                            const searchKey = (i.item_name || "").toLowerCase().trim();
-                            const nameToShow = masterThaiMap[searchKey] || i.item_name; // ถ้าหาชื่อไทยไม่เจอจริงๆ ให้ใช้ชื่อเดิม
+                            // ค้นหาแบบยืดหยุ่น: ตัดช่องว่างและทำเป็นตัวเล็กทั้งหมด
+                            const enKey = (i.item_name || "").toLowerCase().trim();
+                            const thaiName = masterThaiMap[enKey] || i.item_name; // ถ้าไม่เจอชื่อไทยจริงๆ ค่อยใช้ชื่อเดิม
                             return `<tr>
-                                <td style="padding:1mm 0;">${nameToShow} x ${i.quantity}</td>
+                                <td style="padding:1mm 0;">${thaiName} x ${i.quantity}</td>
                                 <td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             </tr>`;
                         }).join('')}
@@ -271,8 +257,10 @@
                     let style = `top:${currentY}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
+                    
                     if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 6;
                     let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
+                    
                     if (l.type==='text') return `<div style="${style}">${content}</div>`;
                     if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
                     if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
