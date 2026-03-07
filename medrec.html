@@ -97,8 +97,13 @@
                         <div id="list_rx_display" class="list-box border-blue-500/50 overflow-y-auto max-h-40" onclick="openCatalog('rx')">คลิกเพื่อเลือก...</div>
                     </div>
                     <div class="col-span-12 md:col-span-3"><label class="label-clinical">Plan</label><input type="text" id="f_plan" class="input-box"></div>
+                    
                     <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">📅 วันนัด</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
                     <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ</label><input type="text" id="f_app_note" class="input-box"></div>
+                    
+                    <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">📅 วันนัด (2)</label><input type="text" id="f_appointment_2" class="input-box datepicker"></div>
+                    <div class="col-span-6 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ (2)</label><input type="text" id="f_app_note_2" class="input-box"></div>
+                    
                     <div class="col-span-12 md:col-span-3"><label class="label-text text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-3xl font-black text-yellow-400" value="0" step="0.01"></div>
                 </div>
                 <div class="flex gap-4 mt-10">
@@ -184,7 +189,6 @@
                 const labs = rec.medical_record_items.filter(i => i.item_type === 'Lab').map(i => i.item_name);
                 const txs = rec.medical_record_items.filter(i => i.item_type === 'Tx').map(i => i.item_name);
                 
-                // แก้ไข: แสดง Rx พร้อม Checkbox เพื่อเลือกพิมพ์
                 const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
                 const rxListHtml = rxItems.map((i, idx) => `
                     <li class="flex items-start gap-2 py-1 border-b border-white/5 last:border-none">
@@ -245,7 +249,6 @@
             const qty = parseFloat(document.getElementById('rx-tabs-val').value) * parseFloat(document.getElementById('rx-freq').value) * parseInt(document.getElementById('rx-days').value);
             const unit = pendingItem.data.unit || 'เม็ด';
             
-            // ดึงชื่อเจ้าของมาใส่ในตัวแปรพิมพ์
             const ownerName = document.getElementById('info-owner-name').innerText;
 
             const data = {
@@ -282,7 +285,6 @@
             const rec = records.find(r => r.id === recordId);
             if (!rec || !rec.medical_record_items) return;
 
-            // ดึงรายการที่ถูกเลือกจาก Checkbox
             const selectedItemIds = Array.from(document.querySelectorAll(`.rx-select-${recordId}:checked`)).map(cb => cb.value);
             const rxItems = rec.medical_record_items.filter(i => selectedItemIds.includes(i.id));
             
@@ -311,6 +313,7 @@
                     cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, 
                     dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, 
                     appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, 
+                    appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value,
                     note: "", total_cost: parseFloat(document.getElementById('f_cost').value) || 0,
                     net_amount: parseFloat(document.getElementById('f_cost').value) || 0 
                 };
@@ -453,8 +456,13 @@
             document.getElementById('f_pe').value = rec.pe || "";
             document.getElementById('f_dx').value = rec.dx || "";
             document.getElementById('f_plan').value = rec.plan || "";
+            
+            // โหลดข้อมูลวันนัด 1 และ 2 กลับมาในฟอร์ม
             document.getElementById('f_appointment').value = rec.appointment || "";
             document.getElementById('f_app_note').value = rec.appointment_note || "";
+            document.getElementById('f_appointment_2').value = rec.appointment_2 || "";
+            document.getElementById('f_app_note_2').value = rec.appointment_note_2 || "";
+            
             document.getElementById('f_cost').value = rec.total_cost || 0;
             selectedItems = rec.medical_record_items.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price, drug_name_th: i.item_name_th, warning: i.warning }));
             updateFormUI(); showFormView();
