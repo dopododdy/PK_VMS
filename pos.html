@@ -178,7 +178,7 @@
             container.innerHTML = data.map(r => `
                 <div class="glass-card p-3 border-l-4 ${r.payment_status === 'paid' ? 'border-teal-500' : 'border-amber-500'} mb-2" onclick="viewRecordDetail('${r.id}', '${r.payment_status}')">
                     <div class="flex justify-between txt-label mb-1"><span>${new Date(r.created_at).toLocaleDateString('th-TH')}</span><span class="${r.payment_status === 'paid' ? 'text-teal-500' : 'text-amber-400'}">${r.payment_status.toUpperCase()}</span></div>
-                    <div class="flex justify-between items-center"><span class="text-white font-bold">฿${(r.net_amount || r.total_cost).toLocaleString()}</span><i data-lucide="chevron-right" class="w-4 text-gray-700"></i></div>
+                    <div class="flex justify-between items-center"><span class="text-white font-bold">฿${parseFloat(r.net_amount || r.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2})}</span><i data-lucide="chevron-right" class="w-4 text-gray-700"></i></div>
                 </div>`).join('');
             lucide.createIcons();
         }
@@ -209,8 +209,8 @@
                 <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white">${i.item_name}</div></div>
                     <div class="col-span-2 text-center txt-body">${i.quantity}</div>
-                    <div class="col-span-2 text-right txt-body text-gray-400">${parseFloat(i.unit_price).toLocaleString()}</div>
-                    <div class="col-span-2 text-right txt-body font-bold text-white">${parseFloat(i.total_price).toLocaleString()}</div>
+                    <div class="col-span-2 text-right txt-body text-gray-400">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                    <div class="col-span-2 text-right txt-body font-bold text-white">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                 </div>`).join('');
 
             document.getElementById('input-discount').disabled = isPaid;
@@ -262,24 +262,34 @@
                     received_amount: parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
-                    items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt;">${items.map(i => `<tr><td>${i.item_name} x ${i.quantity}</td><td style="text-align:right;">${parseFloat(i.total_price).toLocaleString()}</td></tr>`).join('')}</table>`
+                    // แก้ไขส่วน items_list ให้แสดงทศนิยม 2 ตำแหน่ง
+                    items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt;">${items.map(i => `<tr><td>${i.item_name} x ${i.quantity}</td><td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`).join('')}</table>`
                 };
 
                 let pushOffset = 0;
                 const elements = [...config.lines].sort((a,b) => a.y - b.y).map(l => {
                     const currentY = parseFloat(l.y) + pushOffset;
-                    let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; width:${l.w || (pw-(l.x*2))}mm; left:${l.x}mm; ${l.bold?'font-weight:bold;':''}`;
-                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
-                    else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
+                    
+                    // คำนวณความกว้างตามพิกัด X (Squeeze Column Logic)
+                    const availableWidthMm = pw - parseFloat(l.x) - 5;
+                    const finalWidth = l.w ? l.w : availableWidthMm;
+
+                    let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; width:${finalWidth}mm; left:${l.x}mm; ${l.bold?'font-weight:bold;':''}`;
+                    
+                    if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
+                    else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     
                     if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 6;
 
                     let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
-                    return l.type==='text' ? `<div style="${style}">${content}</div>` : (l.type==='rect' ? `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute;"></div>` : `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; position:absolute;">`);
+                    
+                    if (l.type==='text') return `<div style="${style}">${content}</div>`;
+                    if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute;"></div>`;
+                    if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; position:absolute;">`;
                 }).join('');
 
                 const win = window.open('', '_blank', 'width=400');
-                win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body{margin:0;} .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;}</style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
+                win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body{margin:0;} .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} @media print { @page { size: ${pw}mm auto; margin: 0; } }</style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
                 win.document.close();
             } catch (e) { alert("Error: " + e.message); }
         }
