@@ -47,7 +47,7 @@
         .btn-print { background-color: #2563eb !important; color: white !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important; }
         .btn-print:hover { background-color: #1d4ed8 !important; }
 
-        .btn-home { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; transition: 0.2s; }
+        .btn-home { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-home:hover { background: var(--teal-accent); color: var(--navy-dark); }
     </style>
 </head>
@@ -59,7 +59,14 @@
                 <h2 class="txt-title flex items-center gap-2">
                     <i data-lucide="activity" class="text-teal-500 w-6 h-6"></i> PK-VMS POS
                 </h2>
-                <button onclick="window.location.href='index.html'" class="btn-home text-gray-300"><i data-lucide="home" class="w-6 h-6"></i></button>
+                <div class="flex gap-2">
+                    <button onclick="openSummaryModal()" class="btn-home text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white" title="สรุปยอดขาย">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+                    </button>
+                    <button onclick="window.location.href='index.html'" class="btn-home text-gray-300" title="หน้าหลัก">
+                        <i data-lucide="home" class="w-5 h-5"></i>
+                    </button>
+                </div>
             </div>
             <div class="relative">
                 <input type="text" id="main-search" class="search-input" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="filterPatients()">
@@ -135,6 +142,57 @@
         </button>
     </div>
 
+    <div id="summary-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex-col items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-[#0f172a] border border-white/10 rounded-[30px] w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-8 border-b border-white/10 flex justify-between items-center bg-slate-900/50">
+                <h2 class="text-3xl font-black text-white flex items-center gap-3">
+                    <i data-lucide="bar-chart-2" class="text-teal-400 w-8 h-8"></i> สรุปยอดขาย (Sales Dashboard)
+                </h2>
+                <button onclick="closeSummaryModal()" class="text-gray-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-8 h-8"></i>
+                </button>
+            </div>
+            <div class="p-8 overflow-y-auto custom-scroll">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 relative overflow-hidden">
+                        <i data-lucide="calendar" class="absolute -right-4 -bottom-4 w-32 h-32 text-blue-500/10"></i>
+                        <span class="txt-label text-blue-400">ยอดขายวันนี้</span>
+                        <div class="mt-4">
+                            <span class="text-4xl font-black text-white" id="sum-day-amt">0.00</span>
+                            <span class="text-gray-400 text-lg ml-1">฿</span>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-400 font-bold">จำนวน: <span id="sum-day-count" class="text-white">0</span> บิล</div>
+                    </div>
+                    <div class="bg-teal-500/10 border border-teal-500/20 rounded-2xl p-6 relative overflow-hidden">
+                        <i data-lucide="calendar-days" class="absolute -right-4 -bottom-4 w-32 h-32 text-teal-500/10"></i>
+                        <span class="txt-label text-teal-400">ยอดขายเดือนนี้</span>
+                        <div class="mt-4">
+                            <span class="text-4xl font-black text-white" id="sum-month-amt">0.00</span>
+                            <span class="text-gray-400 text-lg ml-1">฿</span>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-400 font-bold">จำนวน: <span id="sum-month-count" class="text-white">0</span> บิล</div>
+                    </div>
+                    <div class="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-6 relative overflow-hidden">
+                        <i data-lucide="trending-up" class="absolute -right-4 -bottom-4 w-32 h-32 text-purple-500/10"></i>
+                        <span class="txt-label text-purple-400">ยอดขายปีนี้</span>
+                        <div class="mt-4">
+                            <span class="text-4xl font-black text-white" id="sum-year-amt">0.00</span>
+                            <span class="text-gray-400 text-lg ml-1">฿</span>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-400 font-bold">จำนวน: <span id="sum-year-count" class="text-white">0</span> บิล</div>
+                    </div>
+                </div>
+                
+                <div class="mt-8">
+                    <p class="text-center text-gray-500 text-sm">ข้อมูลถูกคำนวณจากบิลที่มีสถานะชำระเงินเรียบร้อยแล้ว (Paid)</p>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 bg-black/20 flex justify-end">
+                <button onclick="closeSummaryModal()" class="px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
         let allPatients = [], activeRecordId = null, activePatient = null;
@@ -184,7 +242,6 @@
             const container = document.getElementById('payment-history');
             if (!data || data.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-10 text-sm">ไม่พบประวัติ</p>`; return; }
             container.innerHTML = data.map(r => {
-                // แสดงวันที่แบบย่อภาษาไทย ในช่องประวัติ
                 const dateDisplay = formatThaiDate(r.created_at, 'short');
                 return `
                 <div class="glass-card border-l-4 ${r.payment_status === 'paid' ? 'border-l-teal-500' : 'border-l-amber-500'} mb-3" onclick="viewRecordDetail('${r.id}', '${r.payment_status}')">
@@ -215,7 +272,6 @@
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
             
-            // ขยายฟอนต์รายการในตะกร้า
             document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
                 <div class="grid grid-cols-12 p-5 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white text-base">${i.item_name}</div></div>
@@ -239,7 +295,6 @@
             const recvd = parseFloat(document.getElementById('received-cash').value) || 0;
             if (recvd < net) return alert("เงินรับมาไม่พอ");
 
-            // --- ส่วนสร้าง Receipt No รูปแบบใหม่ ---
             const { data: rec } = await db.from('medical_records').select('owner_hn').eq('id', activeRecordId).single();
             const hn = rec?.owner_hn || "000000";
 
@@ -248,7 +303,6 @@
             const mm = String(now.getMonth() + 1).padStart(2, '0');
             const dd = String(now.getDate()).padStart(2, '0');
             
-            // หาจำนวนบิลที่จ่ายแล้วของวันนี้
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
             const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
             
@@ -259,7 +313,6 @@
                 .lte('paid_at', endOfDay);
 
             const seq = String((count || 0) + 1).padStart(2, '0');
-            // รูปแบบ: 2569 03 07 690001 01
             const receiptNo = `${yyyy}${mm}${dd}${hn}${seq}`;
 
             const { error } = await db.from('medical_records').update({
@@ -278,7 +331,6 @@
             return str.replace(/[^a-zA-Z0-9ก-๙]/g, "").toLowerCase();
         }
 
-        // --- DYNAMIC PRINT ENGINE ---
         async function printReceipt(recordId) {
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
@@ -295,7 +347,6 @@
                 const config = template.config;
                 const pw = config.width || 80, ph = config.height || 50;
                 
-                // ดึงขนาดฟอนต์มาใช้แบบ 100% ไม่ลดขนาดแล้ว
                 const itemListConfig = config.lines.find(l => l.text && l.text.includes("{{items_list}}"));
                 const tableFontSize = itemListConfig ? parseFloat(itemListConfig.size) : 12;
 
@@ -309,8 +360,6 @@
                     net_total: parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     received_amount: parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                    
-                    // ใช้วันที่ภาษาไทยแบบเต็มสำหรับใบเสร็จ
                     date: formatThaiDate(record.paid_at || record.created_at, 'long'),
                     
                     items_list: `<table style="width:100%; border-collapse:collapse; font-family:'Sarabun'; font-size:${tableFontSize}pt; line-height:1.3; color:black;">
@@ -375,6 +424,64 @@
             const input = document.getElementById('received-cash');
             input.value = (parseFloat(input.value) || 0) + amt;
             calculateChange();
+        }
+
+        // --- ระบบสรุปยอดขาย (Sales Dashboard) ---
+        async function openSummaryModal() {
+            document.getElementById('summary-modal').style.display = 'flex';
+            
+            document.getElementById('sum-day-amt').innerText = "...";
+            document.getElementById('sum-month-amt').innerText = "...";
+            document.getElementById('sum-year-amt').innerText = "...";
+
+            const now = new Date();
+            
+            // คำนวณวันที่เริ่มต้นของ วัน, เดือน, ปี
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+            const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
+
+            // ดึงข้อมูลพร้อมกันทั้ง 3 ช่วงเวลา
+            const [daily, monthly, yearly] = await Promise.all([
+                getAggregatedSales(startOfDay),
+                getAggregatedSales(startOfMonth),
+                getAggregatedSales(startOfYear)
+            ]);
+
+            // อัปเดต UI
+            document.getElementById('sum-day-amt').innerText = daily.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('sum-day-count').innerText = daily.count;
+
+            document.getElementById('sum-month-amt').innerText = monthly.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('sum-month-count').innerText = monthly.count;
+
+            document.getElementById('sum-year-amt').innerText = yearly.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('sum-year-count').innerText = yearly.count;
+        }
+
+        function closeSummaryModal() {
+            document.getElementById('summary-modal').style.display = 'none';
+        }
+
+        async function getAggregatedSales(startDate) {
+            const { data, error } = await db.from('medical_records')
+                .select('net_amount')
+                .eq('payment_status', 'paid')
+                .gte('paid_at', startDate);
+
+            if (error) {
+                console.error(error);
+                return { total: 0, count: 0 };
+            }
+
+            let total = 0;
+            let count = data ? data.length : 0;
+            
+            if (data && data.length > 0) {
+                total = data.reduce((sum, row) => sum + parseFloat(row.net_amount || 0), 0);
+            }
+            
+            return { total, count };
         }
     </script>
 </body>
