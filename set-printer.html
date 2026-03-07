@@ -39,7 +39,7 @@
         .btn-tool:hover { background: rgba(255,255,255,0.1); color: var(--teal); border-color: var(--teal); }
         .btn-align { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: 0.2s; color: #94a3b8; }
         .btn-align:hover { background: rgba(255,255,255,0.08); color: white; }
-        .btn-align.active { background: var(--teal); color: white; border-color: var(--teal); box-shadow: 0 0 15px rgba(20, 184, 17, 0.4); }
+        .btn-align.active { background: var(--teal) !important; color: white !important; border-color: var(--teal) !important; box-shadow: 0 0 15px rgba(20, 184, 17, 0.4); }
         .editor-group { background: rgba(0,0,0,0.2); border-radius: 15px; padding: 12px; border: 1px solid rgba(255,255,255,0.03); }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
@@ -223,7 +223,7 @@
         }
 
         function selectLine(index) {
-            if (activeLineIndex === index) return; // ป้องกันการ Re-render ซ้ำถ้าเลือกตัวเดิม
+            if (activeLineIndex === index) return; 
             activeLineIndex = index;
             renderLinesList(); renderCanvas(); scrollToActive();
         }
@@ -240,24 +240,29 @@
             if (l.type === 'text') {
                 fields = `<div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
                     <div class="grid grid-cols-2 gap-4"><div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option></select></div><div class="editor-group"><label class="label-title">ขนาด (pt)</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div></div>
-                    <div class="grid grid-cols-2 gap-4">${alignControl}<div class="editor-group space-y-2"><label class="label-title">สไตล์</label><div class="flex gap-2"><button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold}); renderLinesList();">${icons.B}</button><button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic}); renderLinesList();">${icons.I}</button></div></div></div>`;
+                    <div class="grid grid-cols-2 gap-4">${alignControl}<div class="editor-group space-y-2"><label class="label-title">สไตล์</label><div class="flex gap-2"><button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold});">${icons.B}</button><button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic});">${icons.I}</button></div></div></div>`;
             } else if (l.type === 'rect') {
-                fields = `<div class="grid grid-cols-2 gap-4"><div class="editor-group"><label class="label-title">กว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div><div class="editor-group"><label class="label-title">สูง (mm)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div></div>
+                fields = `<div class="grid grid-cols-2 gap-4"><div class="editor-group"><label class="label-title">ความกว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div><div class="editor-group"><label class="label-title">ความสูง (mm)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div></div>
                     <div class="grid grid-cols-2 gap-4">${alignControl}<div class="editor-group"><label class="label-title">มุมโค้ง (mm)</label><input type="number" class="input-control" value="${l.radius || 0}" oninput="updateLine(${i},'radius',this.value)"></div></div>`;
             } else if (l.type === 'image') {
                 fields = `<div class="editor-group"><label class="label-title">อัปโหลดรูปภาพ</label><input type="file" class="input-control text-xs" accept="image/*" onchange="handleImageUpload(event, ${i})"></div>
                     <div class="grid grid-cols-2 gap-4"><div class="editor-group"><label class="label-title">กว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div><div class="editor-group"><label class="label-title">สูง (mm)</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div></div><div class="grid grid-cols-2 gap-4">${alignControl}</div>`;
             }
 
-            // เพิ่ม event.stopPropagation() ที่ wrapper เพื่อไม่ให้คลิกใน editor แล้ว Re-render แถว
             return `<div class="space-y-4 mt-4" onclick="event.stopPropagation()">${fields}<div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-4"><div class="editor-group"><label class="label-title">พิกัด X (mm)</label><input type="number" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div><div class="editor-group"><label class="label-title">พิกัด Y (mm)</label><input type="number" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div></div></div>`;
         }
 
-        // ฟังก์ชันอัปเดตข้อมูล: แปลงเป็นตัวเลขสำหรับค่าพิกัดและขนาด
+        // แก้ไขฟังก์ชัน updateLine: บันทึกค่าทันที และสั่งวาด Preview ตลอดเวลา
+        // แต่จะ Refresh Sidebar (เปลี่ยนสีปุ่ม) เฉพาะเมื่อมีการกดปุ่มเท่านั้น ไม่ Refresh ตอนพิมพ์
         function updateLine(i, k, v) {
             const numericKeys = ['x', 'y', 'w', 'h', 'size', 'radius'];
             currentConfig.lines[i][k] = numericKeys.includes(k) ? parseFloat(v) : v;
             renderCanvas();
+            
+            // เช็คว่าเป็นการกดปุ่ม (เช่น align, bold, italic) หรือการพิมพ์
+            if (!numericKeys.includes(k) && k !== 'text') {
+                renderLinesList(); // สลับสีปุ่ม
+            }
         }
 
         function handleImageUpload(event, index) {
@@ -336,8 +341,9 @@
             }).join('');
 
             win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); 
-                html, body { margin: 0 !important; padding: 0 !important; background: white; width: ${pw_val}mm; }
+                html, body { margin: 0 !important; padding: 0 !important; background: white; width: ${pw_val}mm; overflow: visible; }
                 .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; overflow: visible; }
+                .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; } 
                 @media print { @page { size: ${pw_val}mm auto; margin: 0 !important; } html, body { width: ${pw_val}mm !important; margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact; } .page { width: ${pw_val}mm !important; } }
             </style></head><body><div class="page">${printContent}</div><script>window.onload=function(){ setTimeout(() => { window.print(); window.close(); }, 600); };<\/script></body></html>`);
             win.document.close();
