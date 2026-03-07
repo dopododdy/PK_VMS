@@ -328,85 +328,133 @@
             }
         }
 
-        // --- 5. THERMAL RECEIPT PRINTING ---
-        async function printReceipt(recordId) {
-            const { data: record } = await db.from('medical_records')
-                .select('*, animals(pet_name), owners(owner_name)')
-                .eq('id', recordId).single();
-                
-            const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
-
-            const printWindow = window.open('', '_blank', 'width=400,height=600');
+        // --- 5. DYNAMIC PRINT RECEIPT (ดึงจาก Template Designer) ---
+async function printReceipt(recordId) {
+    try {
+        // 1. ดึงข้อมูลบันทึกการรักษาและรายการสินค้า
+        const { data: record } = await db.from('medical_records')
+            .select('*, animals(pet_name, breed, species, weight, gender), owners(owner_name, address)')
+            .eq('id', recordId).single();
             
-            let itemsHtml = items.map(i => `
-                <tr class="item-row">
-                    <td class="item-name">${i.item_name}<br><span class="item-qty">${i.quantity} x ${parseFloat(i.unit_price).toLocaleString()}</span></td>
-                    <td class="item-total">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                </tr>
-            `).join('');
+        const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
 
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Receipt - ${record.receipt_no}</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
-                    <style>
-                        @page { margin: 0; size: auto; }
-                        body { font-family: 'Sarabun', sans-serif; width: 72mm; margin: 0 auto; padding: 10px; color: #000; font-size: 13px; line-height: 1.4; }
-                        .text-center { text-align: center; }
-                        .text-right { text-align: right; }
-                        .clinic-name { font-weight: 800; font-size: 18px; margin-bottom: 2px; }
-                        .receipt-type { font-size: 14px; font-weight: 700; border: 1px solid #000; display: inline-block; padding: 2px 10px; margin: 5px 0; }
-                        .divider { border-top: 1px dashed #000; margin: 10px 0; }
-                        .info-table { width: 100%; font-size: 12px; margin-bottom: 5px; }
-                        table.items-table { width: 100%; border-collapse: collapse; }
-                        .items-table th { text-align: left; font-size: 12px; border-bottom: 1px solid #000; padding: 5px 0; }
-                        .item-row td { padding: 5px 0; vertical-align: top; }
-                        .item-total { text-align: right; font-weight: 600; }
-                        .summary-row { display: flex; justify-content: space-between; padding: 2px 0; }
-                        .summary-row.total { font-size: 16px; font-weight: 800; border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; }
-                        .footer { margin-top: 25px; text-align: center; font-size: 11px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="text-center">
-                        <div class="clinic-name">PK-VMS CLINIC</div>
-                        <div class="receipt-type">ใบเสร็จรับเงิน / RECEIPT</div>
-                    </div>
-                    <div class="divider"></div>
-                    <table class="info-table">
-                        <tr><td><strong>เลขที่:</strong></td><td class="text-right">${record.receipt_no || record.id.slice(0,8)}</td></tr>
-                        <tr><td><strong>วันที่:</strong></td><td class="text-right">${new Date(record.paid_at || record.created_at).toLocaleString('th-TH')}</td></tr>
-                        <tr><td><strong>HN / สัตว์:</strong></td><td class="text-right">${record.owner_hn} / ${record.animals?.pet_name}</td></tr>
-                        <tr><td><strong>เจ้าของ:</strong></td><td class="text-right">${record.owners?.owner_name}</td></tr>
-                    </table>
-                    <div class="divider"></div>
-                    <table class="items-table">
-                        <thead><tr><th>รายการ</th><th class="text-right">รวม</th></tr></thead>
-                        <tbody>${itemsHtml}</tbody>
-                    </table>
-                    <div class="divider"></div>
-                    <div class="summary-row"><span>รวมเงิน:</span><span>${parseFloat(record.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                    <div class="summary-row"><span>ส่วนลด:</span><span>-${parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                    <div class="summary-row total"><span>ยอดสุทธิ:</span><span>฿${parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                    <div class="divider"></div>
-                    <div class="summary-row"><span>รับเงินสด:</span><span>${parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                    <div class="summary-row"><span>เงินทอน:</span><span>${parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                    <div class="footer">
-                        <strong>ขอบคุณที่ใช้บริการ</strong><br>PK-VMS Smart POS System
-                    </div>
-                </body>
-                </html>
-            `);
+        // 2. ดึง Template ที่ออกแบบไว้จากฐานข้อมูล
+        const { data: template } = await db.from('print_templates')
+            .select('config')
+            .eq('template_type', 'thermal_receipt')
+            .single();
 
-            printWindow.document.close();
-            setTimeout(() => {
-                printWindow.focus();
-                printWindow.print();
-                printWindow.close();
-            }, 500);
+        if (!template || !template.config) {
+            alert("ไม่พบรูปแบบใบเสร็จ (thermal_receipt) ในระบบ กรุณาตั้งค่าในหน้า Designer ก่อน");
+            return;
         }
+
+        const config = template.config;
+        const pw = config.width || 80;
+        const ph = config.height || 50;
+
+        // 3. เตรียมข้อมูลสำหรับ Replace Variables {{...}}
+        const printData = {
+            clinic_name: "PK-VMS Animal Clinic", // ควรดึงจาก Setting หรือ MasterData
+            clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
+            phone: "081-999-8888",
+            owner_name: record.owners?.owner_name || "-",
+            owner_address: record.owners?.address || "-",
+            pet_name: record.animals?.pet_name || "-",
+            species: record.animals?.species || "-",
+            hn: record.owner_hn || "-",
+            weight: record.animals?.weight || "-",
+            receipt_no: record.receipt_no || record.id.slice(0,8),
+            total_price: parseFloat(record.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2}),
+            discount_val: parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+            net_total: parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2}),
+            received_amount: parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+            change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+            date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
+            time: new Date(record.paid_at || record.created_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})
+        };
+
+        // สร้าง HTML Table สำหรับรายการสินค้า
+        const itemsTableHtml = `
+            <table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: 10pt; color:black; margin-top:2mm;">
+                ${items.map(item => `
+                    <tr>
+                        <td style="padding:1mm 0;">${item.item_name} x ${item.quantity}</td>
+                        <td style="text-align:right;">${parseFloat(item.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    </tr>
+                `).join('')}
+            </table>`;
+
+        // 4. ประมวลผล Logic "Dynamic Push" (คัดลอกจาก Designer)
+        const sortedLines = [...config.lines].sort((a,b) => a.y - b.y);
+        let pushOffset = 0;
+
+        const printElements = sortedLines.map(l => {
+            // คำนวณความสูงเผื่อ (Line Height) ประมาณ 1.4 เท่าของขนาดฟอนต์
+            const lineH_mm = parseFloat(l.size || 12) * 0.35 * 1.4;
+            const currentY = parseFloat(l.y) + pushOffset;
+            
+            let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size || 12}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; position:absolute; color:black; line-height:1.4; white-space:pre-wrap;`;
+            
+            const boxWidthMm = (l.w ? l.w : (pw - (l.x * 2)));
+            style += `width:${boxWidthMm}mm;`;
+
+            // ถ้าเจอตัวแปร items_list ให้บวก pushOffset เพิ่มตามจำนวนรายการ
+            if (l.text && l.text.includes("{{items_list}}")) {
+                pushOffset += (items.length - 1) * 6; // สมมติแต่ละบรรทัดสินค้าสูงประมาณ 6mm
+            }
+
+            if (l.type === 'text') {
+                if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
+                else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
+                else style += `left:${l.x}mm;`;
+
+                // Replace variables
+                let content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
+                    const k = key.trim();
+                    if (k === 'items_list') return itemsTableHtml;
+                    return printData[k] || match;
+                });
+
+                return `<div style="${style}">${content}</div>`;
+            } else if (l.type === 'rect') {
+                return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm; position:absolute;"></div>`;
+            } else if (l.type === 'image') {
+                let iStyle = `top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain; position:absolute;`;
+                if (l.align === 'center') iStyle = `top:${currentY}mm; left:50%; transform:translateX(-50%); width:${l.w}mm; height:${l.h}mm; object-fit:contain; position:absolute;`;
+                return `<img src="${l.url}" style="${iStyle}">`;
+            }
+        }).join('');
+
+        // 5. สั่งพิมพ์
+        const win = window.open('', '_blank', 'width=800,height=600');
+        win.document.write(`
+            <html>
+            <head>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+                    body { margin: 0; padding: 0; background: white; }
+                    .page { position: relative; width: ${pw}mm; height: auto; min-height: ${ph}mm; overflow: hidden; }
+                    @media print { @page { size: ${pw}mm auto; margin: 0; } }
+                </style>
+            </head>
+            <body>
+                <div class="page">${printElements}</div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => { window.print(); window.close(); }, 500);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        win.document.close();
+
+    } catch (err) {
+        console.error("Print Error:", err);
+        alert("เกิดข้อผิดพลาดในการพิมพ์: " + err.message);
+    }
+}
 
         // --- MATH CALCULATIONS ---
         function calculateNet() {
