@@ -56,7 +56,9 @@
     <div class="col-side flex flex-col p-5">
         <div class="mb-6">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="txt-title flex items-center gap-2"><i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS</h2>
+                <h2 class="txt-title flex items-center gap-2">
+                    <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS
+                </h2>
                 <button onclick="window.location.href='index.html'" class="btn-home text-gray-300"><i data-lucide="home" class="w-5 h-5"></i></button>
             </div>
             <div class="relative">
@@ -217,7 +219,7 @@
             return str.replace(/[^a-zA-Z0-9ก-๙]/g, "").toLowerCase();
         }
 
-        // --- DYNAMIC PRINT ENGINE (SYNCED FORMAT WITH DESIGNER) ---
+        // --- DYNAMIC PRINT ENGINE ---
         async function printReceipt(recordId) {
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
@@ -234,7 +236,6 @@
                 const config = template.config;
                 const pw = config.width || 80, ph = config.height || 50;
                 
-                // หาขนาดฟอนต์ของบรรทัดที่มี {{items_list}} เพื่อใช้คำนวณขนาดตาราง
                 const itemListConfig = config.lines.find(l => l.text && l.text.includes("{{items_list}}"));
                 const baseFontSize = itemListConfig ? parseFloat(itemListConfig.size) : 10;
                 const tableFontSize = baseFontSize * 0.9;
@@ -251,8 +252,8 @@
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
                     
-                    // ปรับแต่ง items_list ให้เหมือน set-printer.html (ชิดซ้าย-ขวา, ฟอนต์ 90%, บรรทัดชิด)
-                    items_list: `<table style="width:100%; border-collapse:collapse; font-family:'Sarabun'; font-size:${tableFontSize}pt; line-height:1; color:black;">
+                    // ปรับแต่ง items_list: ขยายช่องว่างด้วย padding:3px 0 และ line-height:1.3
+                    items_list: `<table style="width:100%; border-collapse:collapse; font-family:'Sarabun'; font-size:${tableFontSize}pt; line-height:1.3; color:black;">
                         ${items.map(i => {
                             const itemClean = superClean(i.item_name);
                             let foundThai = masterThaiMap[itemClean];
@@ -264,8 +265,8 @@
                             }
                             const nameToShow = foundThai || i.item_name;
                             return `<tr>
-                                <td style="padding:1px 0; text-align:left; vertical-align:top;">${nameToShow} x ${Math.floor(i.quantity)}</td>
-                                <td style="padding:1px 0; text-align:right; vertical-align:top; white-space:nowrap;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td style="padding:3px 0; text-align:left; vertical-align:top;">${nameToShow} x ${Math.floor(i.quantity)}</td>
+                                <td style="padding:3px 0; text-align:right; vertical-align:top; white-space:nowrap;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             </tr>`;
                         }).join('')}
                     </table>`
@@ -275,7 +276,6 @@
                 const sortedLines = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
                 const elements = sortedLines.map(l => {
                     const currentY = parseFloat(l.y) + pushOffset;
-                    // นำ -5 ออกเพื่อให้กว้างเต็มหน้ากระดาษ (เหมือนใน Designer ตัวล่าสุด)
                     const availableWidthMm = pw - parseFloat(l.x);
                     const finalWidth = l.w ? l.w : availableWidthMm;
                     
@@ -284,7 +284,8 @@
                     if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     
-                    if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 4; // ปรับตัวคูณผลัก (ลดลงเล็กน้อยเพราะบรรทัดชิดขึ้น)
+                    // ปรับตัวคูณผลักให้สอดคล้องกับความสูงบรรทัดที่เพิ่มขึ้น
+                    if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 5.5; 
                     
                     let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
                     if (l.type==='text') return `<div style="${style}">${content}</div>`;
