@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab Results | PK-VMS Pro</title>
+    <title>Lab Results & Trends | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,114 +14,91 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
-        /* Sidebar Style */
-        .sidebar-container { width: 420px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .pet-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: grid; grid-template-columns: 80px 1fr 50px; gap: 12px; transition: 0.2s; }
-        .pet-card:hover { background: rgba(255,255,255,0.05); }
+        .sidebar-container { width: 400px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .pet-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: grid; grid-template-columns: 70px 1fr 40px; gap: 12px; transition: 0.2s; }
         .pet-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
-        .hn-col { background: rgba(30, 41, 59, 1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; font-size: 0.9rem; }
+        .hn-col { background: rgba(30, 41, 59, 1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; font-size: 0.85rem; }
 
-        /* Lab Tabs */
         .lab-tab { padding: 12px 24px; font-weight: 800; cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; opacity: 0.5; }
-        .lab-tab.active { border-color: var(--teal); color: var(--teal); opacity: 1; background: rgba(20, 184, 177, 0.05); }
+        .lab-tab.active { border-color: var(--teal); color: var(--teal); opacity: 1; }
 
-        /* Lab Grid */
-        .lab-grid-header { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1.5fr; gap: 15px; padding: 10px; border-bottom: 1px solid var(--border); color: #64748b; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
-        .lab-row { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1.5fr; gap: 15px; align-items: center; padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.2s; }
-        .lab-row:hover { background: rgba(255,255,255,0.02); }
-
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
-        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 25px; padding: 25px; border: 1px solid var(--border); }
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: white; width: 100%; outline: none; }
         
-        .btn-base { padding: 10px 20px; border-radius: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; cursor: pointer; }
-        .btn-teal { background: #0d9488; color: white; }
-        .btn-teal:hover { background: #0f766e; transform: translateY(-2px); }
+        /* Trend Table Styles */
+        .trend-container { overflow-x: auto; border-radius: 15px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+        .trend-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        .trend-table th { background: rgba(15, 23, 42, 0.8); padding: 12px; text-align: center; border: 1px solid var(--border); font-size: 0.75rem; color: #94a3b8; }
+        .trend-table td { padding: 12px; border: 1px solid var(--border); text-align: center; font-size: 0.9rem; }
+        .trend-param-name { text-align: left !important; font-weight: 800; color: #fff; background: rgba(255,255,255,0.02); }
 
-        .status-badge { font-size: 0.7rem; font-weight: 900; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; }
-        .status-high { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-        .status-low { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
-        .status-normal { color: #10b981; }
+        .val-high { color: #ef4444; font-weight: 800; }
+        .val-low { color: #38bdf8; font-weight: 800; }
+        .val-normal { color: #10b981; }
+        .trend-arrow { font-size: 0.7rem; margin-left: 4px; }
 
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
     <aside class="sidebar-container">
-        <div class="p-6 border-b border-white/5 bg-navy-light/50">
+        <div class="p-6 border-b border-white/5">
             <div class="flex justify-between items-center mb-5">
-                <h2 class="text-2xl font-black text-white flex items-center gap-2">
-                    <i data-lucide="flask-conical" class="text-teal-400"></i> Lab Room
-                </h2>
-                <a href="index.html" class="p-2 hover:bg-white/5 rounded-xl transition"><i data-lucide="home"></i></a>
+                <h2 class="text-xl font-black text-white">🔬 Lab Tracking</h2>
+                <a href="index.html" class="p-2 hover:bg-white/10 rounded-lg transition"><i data-lucide="home"></i></a>
             </div>
-            <div class="relative">
-                <input type="text" id="search-box" class="input-box pl-10" placeholder="ค้นหา HN หรือชื่อสัตว์..." oninput="fetchAnimals()">
-                <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-500"></i>
-            </div>
+            <input type="text" id="search-box" class="input-box" placeholder="ค้นหา HN, ชื่อ..." oninput="fetchAnimals()">
         </div>
-        <div id="animal-list" class="flex-1 overflow-y-auto custom-scroll p-2">
-            <div class="text-center py-10 opacity-30">กำลังโหลดรายชื่อ...</div>
-        </div>
+        <div id="animal-list" class="flex-1 overflow-y-auto custom-scroll p-2"></div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto bg-[#020617] relative flex flex-col">
+    <main class="flex-1 overflow-y-auto bg-[#020617] flex flex-col">
         <div id="no-selection" class="flex-1 flex flex-col items-center justify-center opacity-10">
-            <i data-lucide="microscope" class="w-32 h-32 mb-4"></i>
-            <h2 class="text-3xl font-bold">เลือกรายการสัตว์ด้านซ้ายเพื่อเริ่มงาน</h2>
+            <i data-lucide="line-chart" class="w-32 h-32 mb-4"></i>
+            <h2 class="text-3xl font-bold">เลือกสัตว์เพื่อดูแนวโน้มผลแล็บ</h2>
         </div>
 
         <div id="lab-editor" class="hidden flex-1 flex flex-col overflow-hidden">
-            <div class="p-8 border-b border-white/5 flex justify-between items-center bg-navy-light/20">
+            <div class="p-8 border-b border-white/5 flex justify-between items-center">
                 <div>
-                    <h1 class="text-4xl font-black text-white mb-1" id="disp-name">ชื่อสัตว์</h1>
-                    <div class="flex gap-4 text-sm font-bold text-slate-500">
-                        <span id="disp-hn" class="text-blue-400"></span>
-                        <span id="disp-info"></span>
-                    </div>
+                    <h1 class="text-3xl font-black text-white" id="disp-name">-</h1>
+                    <p class="text-teal-400 font-bold" id="disp-hn">-</p>
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="saveLabResults()" class="btn-base btn-teal text-lg py-4 px-8 shadow-xl">
-                        <i data-lucide="save"></i> บันทึกผลแล็บ
+                    <button onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-6 py-3 rounded-xl font-bold transition flex items-center gap-2">
+                        <i data-lucide="save" class="w-5 h-5"></i> บันทึกผลใหม่
                     </button>
                 </div>
             </div>
 
-            <div class="flex px-8 bg-navy-light/10">
-                <div class="lab-tab active" onclick="switchTab('blood', this)">🩸 Blood Chemistry & CBC</div>
-                <div class="lab-tab" onclick="switchTab('imaging', this)">🖼️ Imaging (US/Echo)</div>
+            <div class="flex px-8 border-b border-white/5">
+                <div class="lab-tab active" onclick="switchTab('input', this)">➕ กรอกผลเลือด</div>
+                <div class="lab-tab" onclick="switchTab('trends', this)">📊 ดูแนวโน้ม (Trends)</div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-8 custom-scroll">
-                <div id="blood-section">
-                    <div class="section-card shadow-2xl">
-                        <div class="lab-grid-header">
-                            <span>Parameter</span>
-                            <span>Result (ผลที่ได้)</span>
-                            <span>Unit</span>
-                            <span>Reference Range</span>
+            <div class="flex-1 overflow-y-auto p-8 custom-scroll" id="content-area">
+                <div id="view-input">
+                    <div class="section-card mb-8">
+                        <div class="grid grid-cols-12 gap-4 mb-4 text-xs font-black text-gray-500 uppercase">
+                            <div class="col-span-4">Parameter</div>
+                            <div class="col-span-4 text-center">Result</div>
+                            <div class="col-span-4">Reference Range</div>
                         </div>
-                        <div id="parameters-container" class="mt-2">
-                            </div>
+                        <div id="parameters-container" class="space-y-2"></div>
                     </div>
                 </div>
 
-                <div id="imaging-section" class="hidden space-y-6">
-                    <div class="section-card">
-                        <h3 class="text-xl font-black text-teal-400 mb-4 flex items-center gap-2"><i data-lucide="scan"></i> Ultrasound Findings</h3>
-                        <textarea id="us-note" class="input-box h-48" placeholder="ระบุรายละเอียดผลการตรวจช่องท้อง..."></textarea>
-                    </div>
-                    <div class="section-card">
-                        <h3 class="text-xl font-black text-pink-400 mb-4 flex items-center gap-2"><i data-lucide="heart-pulse"></i> Echocardiography</h3>
-                        <textarea id="echo-note" class="input-box h-48" placeholder="ระบุรายละเอียดผลการตรวจหัวใจ..."></textarea>
-                    </div>
-                </div>
-
-                <div class="mt-12">
-                    <h3 class="text-xl font-black text-white mb-4">⏳ ประวัติแล็บล่าสุดของตัวนี้</h3>
-                    <div id="lab-history" class="space-y-3">
-                        <div class="text-gray-600 italic">ไม่พบประวัติย้อนหลัง</div>
+                <div id="view-trends" class="hidden">
+                    <h3 class="text-xl font-black mb-6 text-white flex items-center gap-2">
+                        <i data-lucide="history" class="text-teal-400"></i> ตารางเปรียบเทียบย้อนหลัง
+                    </h3>
+                    <div class="trend-container custom-scroll">
+                        <table class="trend-table" id="trend-table-el">
+                            <thead><tr id="trend-head"></tr></thead>
+                            <tbody id="trend-body"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -129,9 +106,9 @@
     </main>
 
     <script>
-        let allAnimals = [];
         let masterParams = [];
         let currentAnimal = null;
+        let labHistory = [];
 
         window.onload = async () => {
             lucide.createIcons();
@@ -156,92 +133,105 @@
                         <span class="text-white font-bold truncate">${a.pet_name}</span>
                         <span class="text-[10px] text-gray-500 truncate">${a.owners?.owner_name || '-'}</span>
                     </div>
-                    <div class="text-xl flex items-center justify-center">${a.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
-                </div>
-            `).join('');
+                    <div class="text-lg flex items-center justify-center">${a.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
+                </div>`).join('');
         }
 
         async function selectAnimal(id) {
-            const { data: a } = await db.from('animals').select('*, owners(*)').eq('id', id).single();
+            const { data: a } = await db.from('animals').select('*').eq('id', id).single();
             currentAnimal = a;
-
-            // Update UI
             document.querySelectorAll('.pet-card').forEach(c => c.classList.remove('active'));
             document.getElementById(`pet-${id}`).classList.add('active');
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('lab-editor').classList.remove('hidden');
-
             document.getElementById('disp-name').innerText = a.pet_name;
-            document.getElementById('disp-hn').innerText = `HN: ${a.owner_hn}`;
-            document.getElementById('disp-info').innerText = `| ${a.pet_type} (${a.breed}) | ${a.gender} | ${a.weight} kg.`;
-
-            renderParameters();
-            fetchLabHistory(id);
+            document.getElementById('disp-hn').innerText = `HN: ${a.owner_hn} | ${a.pet_type} (${a.breed})`;
+            
+            renderInputForm();
+            await fetchLabHistory(id);
         }
 
-        function renderParameters() {
+        function renderInputForm() {
             const container = document.getElementById('parameters-container');
             const isDog = currentAnimal.pet_type === 'สุนัข';
-
             container.innerHTML = masterParams.map(p => {
                 const min = isDog ? p.dog_min : p.cat_min;
                 const max = isDog ? p.dog_max : p.cat_max;
-                
                 return `
-                    <div class="lab-row">
-                        <div class="font-bold text-white">${p.parameter_name}</div>
-                        <div class="flex items-center gap-2">
-                            <input type="number" step="0.01" class="input-box py-1 lab-input" 
-                                data-id="${p.id}" data-name="${p.parameter_name}" data-min="${min}" data-max="${max}" data-unit="${p.unit}"
-                                oninput="validateValue(this)">
+                    <div class="grid grid-cols-12 gap-4 items-center p-3 border-b border-white/5 hover:bg-white/5 transition-all rounded-lg">
+                        <div class="col-span-4 font-bold text-slate-300">${p.parameter_name} <span class="text-[10px] opacity-40">${p.unit || ''}</span></div>
+                        <div class="col-span-4">
+                            <input type="number" step="0.01" class="input-box text-center lab-input" 
+                                data-id="${p.id}" data-name="${p.parameter_name}" data-min="${min}" data-max="${max}" data-unit="${p.unit}">
                         </div>
-                        <div class="text-gray-500 text-xs">${p.unit || '-'}</div>
-                        <div class="text-slate-400 text-xs font-mono">
-                            ${min} - ${max}
-                            <span class="status-indicator ml-2"></span>
-                        </div>
-                    </div>
-                `;
+                        <div class="col-span-4 text-xs text-gray-500 font-mono">${min} - ${max}</div>
+                    </div>`;
             }).join('');
         }
 
-        function validateValue(input) {
-            const val = parseFloat(input.value);
-            const min = parseFloat(input.dataset.min);
-            const max = parseFloat(input.dataset.max);
-            const indicator = input.parentElement.parentElement.querySelector('.status-indicator');
-            
-            input.classList.remove('text-red-500', 'text-blue-400', 'font-black');
-            indicator.innerHTML = '';
-
-            if (isNaN(val)) return;
-
-            if (val > max) {
-                input.classList.add('text-red-500', 'font-black');
-                indicator.innerHTML = `<span class="status-badge status-high">HIGH ▲</span>`;
-            } else if (val < min) {
-                input.classList.add('text-blue-400', 'font-black');
-                indicator.innerHTML = `<span class="status-badge status-low">LOW ▼</span>`;
-            } else {
-                indicator.innerHTML = `<span class="status-normal">● Normal</span>`;
-            }
+        async function fetchLabHistory(animalId) {
+            const { data } = await db.from('lab_results')
+                .select('*')
+                .eq('animal_id', animalId)
+                .order('created_at', { ascending: false });
+            labHistory = data || [];
+            renderTrendTable();
         }
 
-        function switchTab(tab, el) {
-            document.querySelectorAll('.lab-tab').forEach(t => t.classList.remove('active'));
-            el.classList.add('active');
+        function renderTrendTable() {
+            // 1. จัดกลุ่มผลแล็บตาม Timestamp ( session )
+            const sessions = {};
+            labHistory.forEach(row => {
+                const ts = new Date(row.created_at).getTime();
+                // ปัดเวลาให้ใกล้กัน (ภายใน 1 นาที) ถือเป็นรอบเดียวกัน
+                const key = Math.floor(ts / 60000) * 60000; 
+                if (!sessions[key]) sessions[key] = {};
+                sessions[key][row.parameter_name] = row;
+            });
+
+            const sortedTimestamps = Object.keys(sessions).sort((a, b) => b - a); // ใหม่ไปเก่า
             
-            document.getElementById('blood-section').classList.toggle('hidden', tab !== 'blood');
-            document.getElementById('imaging-section').classList.toggle('hidden', tab !== 'imaging');
+            // 2. สร้าง Header (วัน/เวลา)
+            const headRow = document.getElementById('trend-head');
+            headRow.innerHTML = `<th class="trend-param-name">Parameter</th>` + sortedTimestamps.map(ts => {
+                const d = new Date(parseInt(ts));
+                return `<th>${formatThaiDate(d, 'short')}<br><span class="text-teal-400">${d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</span></th>`;
+            }).join('');
+
+            // 3. สร้าง Body (ค่าแต่ละตัว)
+            const body = document.getElementById('trend-body');
+            const uniqueParams = [...new Set(labHistory.map(h => h.parameter_name))];
+            
+            body.innerHTML = uniqueParams.map(paramName => {
+                let rowHtml = `<td class="trend-param-name">${paramName}</td>`;
+                
+                sortedTimestamps.forEach((ts, idx) => {
+                    const result = sessions[ts][paramName];
+                    if (!result) {
+                        rowHtml += `<td class="text-gray-700">-</td>`;
+                    } else {
+                        // คำนวณแนวโน้มเทียบกับครั้งก่อน (idx + 1)
+                        let arrow = '';
+                        if (idx < sortedTimestamps.length - 1) {
+                            const prevSession = sessions[sortedTimestamps[idx+1]][paramName];
+                            if (prevSession) {
+                                if (result.test_value > prevSession.test_value) arrow = '<span class="trend-arrow text-orange-500">↑</span>';
+                                else if (result.test_value < prevSession.test_value) arrow = '<span class="trend-arrow text-blue-500">↓</span>';
+                            }
+                        }
+
+                        const statusClass = result.is_abnormal ? (result.test_value > result.dog_max || result.test_value > result.cat_max ? 'val-high' : 'val-low') : 'val-normal';
+                        rowHtml += `<td class="${statusClass}">${result.test_value}${arrow}</td>`;
+                    }
+                });
+                return `<tr>${rowHtml}</tr>`;
+            }).join('');
         }
 
         async function saveLabResults() {
-            if (!currentAnimal) return;
-
-            const inputs = document.querySelectorAll('.lab-input');
             const results = [];
-            
-            inputs.forEach(inp => {
+            const timestamp = new Date().toISOString();
+            document.querySelectorAll('.lab-input').forEach(inp => {
                 if (inp.value) {
                     const val = parseFloat(inp.value);
                     const min = parseFloat(inp.dataset.min);
@@ -252,61 +242,31 @@
                         parameter_name: inp.dataset.name,
                         test_value: val,
                         unit: inp.dataset.unit,
-                        is_abnormal: (val < min || val > max)
+                        is_abnormal: (val < min || val > max),
+                        created_at: timestamp
                     });
                 }
             });
 
-            if (results.length === 0 && !document.getElementById('us-note').value) {
-                return alert("กรุณากรอกข้อมูลอย่างน้อย 1 รายการ");
-            }
-
-            try {
-                // บันทึกลงตาราง lab_results
-                const { error } = await db.from('lab_results').insert(results);
-                if (error) throw error;
-
-                alert("✅ บันทึกผลแล็บเรียบร้อยแล้ว");
-                fetchLabHistory(currentAnimal.id);
-                // ล้างค่าในช่องกรอก
-                inputs.forEach(i => i.value = '');
-                document.querySelectorAll('.status-indicator').forEach(s => s.innerHTML = '');
-            } catch (err) { alert(err.message); }
+            if (results.length === 0) return alert("กรุณากรอกผลแล็บอย่างน้อย 1 รายการ");
+            const { error } = await db.from('lab_results').insert(results);
+            if (!error) {
+                alert("✅ บันทึกสำเร็จ");
+                document.querySelectorAll('.lab-input').forEach(i => i.value = '');
+                await fetchLabHistory(currentAnimal.id);
+            } else alert(error.message);
         }
 
-        async function fetchLabHistory(animalId) {
-            const { data } = await db.from('lab_results')
-                .select('*')
-                .eq('animal_id', animalId)
-                .order('created_at', { ascending: false })
-                .limit(20);
+        function switchTab(tab, el) {
+            document.querySelectorAll('.lab-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('view-input').classList.toggle('hidden', tab !== 'input');
+            document.getElementById('view-trends').classList.toggle('hidden', tab !== 'trends');
+        }
 
-            const container = document.getElementById('lab-history');
-            if (!data || data.length === 0) {
-                container.innerHTML = `<div class="text-gray-600 italic">ไม่พบประวัติย้อนหลัง</div>`;
-                return;
-            }
-
-            // จัดกลุ่มตามวันที่ตรวจ
-            const groups = data.reduce((acc, row) => {
-                const date = new Date(row.created_at).toLocaleDateString('th-TH');
-                if (!acc[date]) acc[date] = [];
-                acc[date].push(row);
-                return acc;
-            }, {});
-
-            container.innerHTML = Object.entries(groups).map(([date, items]) => `
-                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <div class="text-teal-400 font-bold mb-2">${date}</div>
-                    <div class="flex flex-wrap gap-2">
-                        ${items.map(i => `
-                            <span class="text-xs bg-black/40 px-2 py-1 rounded border border-white/10 ${i.is_abnormal ? 'text-red-400 border-red-400/50' : ''}">
-                                ${i.parameter_name}: <b>${i.test_value}</b> ${i.unit || ''}
-                            </span>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
+        function formatThaiDate(date, format = 'short') {
+            const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
         }
     </script>
 </body>
