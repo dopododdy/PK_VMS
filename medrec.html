@@ -71,7 +71,21 @@
                     <div class="col-span-12 md:col-span-7"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="text-lg font-bold text-red-400">-</div></div>
                 </div>
             </div>
-            <h3 class="text-3xl font-black text-white mb-8 flex items-center gap-3">⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span></h3>
+            
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-3xl font-black text-white flex items-center gap-3">
+                    ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
+                </h3>
+                <div class="flex gap-3">
+                    <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-sm px-4 py-2">
+                        🪪 พิมพ์ข้อมูลประจำตัวสัตว์
+                    </button>
+                    <button onclick="printApptLabel(animalId)" class="btn-base bg-orange-600 hover:bg-orange-500 shadow-lg text-sm px-4 py-2">
+                        📅 พิมพ์ใบนัดหมาย
+                    </button>
+                </div>
+            </div>
+            
             <div id="history-list" class="space-y-4"></div>
         </div>
 
@@ -150,6 +164,18 @@
         let selectedItems = []; 
         let petType = 'สุนัข', petData = { sex: "ผู้", dob: "" };
         let editingId = null;
+
+        // ฟังก์ชันช่วยจัดรูปแบบวันที่เป็นภาษาไทย
+        function formatThaiDate(dateString, format = 'long') {
+            if (!dateString) return "-";
+            const date = new Date(dateString);
+            const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const d = date.getDate();
+            const m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()];
+            const y = date.getFullYear() + 543;
+            return `${d} ${m} ${y}`;
+        }
 
         window.onload = async () => {
             if (!animalId || !ownerHN) return location.href='animals.html';
@@ -312,6 +338,62 @@
                 };
             }));
             await executeDynamicPrint(printBatch, 'sticker_drug');
+        }
+
+        // --- เพิ่มฟังก์ชันสำหรับพิมพ์ข้อมูลสัตว์ (จากหน้า medrec) ---
+        async function printPetLabel(petId) {
+            try {
+                const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
+                const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+                const { data: phoneInfo } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).eq('label', 'เบอร์หลัก').maybeSingle();
+                
+                if (!pet || !owner) return alert("ไม่พบข้อมูลสัตว์หรือเจ้าของ");
+
+                const ownerPhone = phoneInfo ? phoneInfo.phone_number : '-';
+
+                const printData = {
+                    clinic_name: "PK-VMS Animal Clinic",
+                    owner_name: owner.owner_name || "-",
+                    owner_phone: ownerPhone,
+                    pet_name: pet.pet_name || "-",
+                    hn: pet.owner_hn || "-",
+                    species: pet.pet_type || "-",
+                    breed: pet.breed || "-",
+                    sex: pet.gender || "-",
+                    weight: (pet.weight || 0).toFixed(2),
+                    date: formatThaiDate(new Date().toISOString(), 'long')
+                };
+                await executeDynamicPrint([printData], 'sticker_pet_id');
+            } catch (e) { alert("Error: " + e.message); }
+        }
+
+        // --- เพิ่มฟังก์ชันสำหรับพิมพ์ใบนัดหมาย (จากหน้า medrec) ---
+        async function printApptLabel(petId) {
+            try {
+                const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
+                const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+                const { data: phoneInfo } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).eq('label', 'เบอร์หลัก').maybeSingle();
+                
+                // หาประวัติล่าสุดที่มีนัดหมาย (หาจากตัวแปร records ที่โหลดมาแล้ว)
+                const latestRecWithAppt = records.find(r => r.appointment || r.appointment_2);
+                if (!latestRecWithAppt) return alert("ไม่พบข้อมูลการนัดหมายในประวัติการรักษา");
+
+                const ownerPhone = phoneInfo ? phoneInfo.phone_number : '-';
+
+                const printData = {
+                    clinic_name: "PK-VMS Animal Clinic",
+                    owner_name: owner.owner_name || "-",
+                    owner_phone: ownerPhone,
+                    pet_name: pet.pet_name || "-",
+                    hn: pet.owner_hn || "-",
+                    appointment_date_1: latestRecWithAppt.appointment ? formatThaiDate(latestRecWithAppt.appointment, 'long') : "-",
+                    appointment_note_1: latestRecWithAppt.appointment_note || "-",
+                    appointment_date_2: latestRecWithAppt.appointment_2 ? formatThaiDate(latestRecWithAppt.appointment_2, 'long') : "-",
+                    appointment_note_2: latestRecWithAppt.appointment_note_2 || "-",
+                    date: formatThaiDate(new Date().toISOString(), 'short')
+                };
+                await executeDynamicPrint([printData], 'sticker_appt');
+            } catch (e) { alert("Error: " + e.message); }
         }
 
         async function saveMedicalRecord() {
