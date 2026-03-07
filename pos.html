@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PK-VMS Pro | Smart POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -19,13 +20,13 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy-dark); color: #e2e8f0; height: 100vh; overflow: hidden; }
 
-        /* --- 1. Typography Consistency --- */
+        /* Typography */
         .txt-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.025em; }
         .txt-body { font-size: 14px; color: #cbd5e1; }
         .txt-title { font-size: 18px; font-weight: 800; color: #ffffff; }
         .txt-price { font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: -1px; }
 
-        /* --- 2. Layout Structure --- */
+        /* Layout Structure */
         .col-side { width: 23%; border-right: 1px solid var(--border); }
         .col-main { width: 52%; background: rgba(0,0,0,0.2); }
         .col-pay { width: 25%; background: var(--navy-panel); border-left: 1px solid var(--border); }
@@ -34,20 +35,19 @@
         .glass-card:hover { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.05); }
         .glass-card.active { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.1); }
 
-        .search-input { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; width: 100%; padding: 10px 12px 10px 40px; outline: none; font-size: 14px; }
+        .search-input { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; width: 100%; padding: 10px 12px 10px 40px; outline: none; font-size: 14px; color: white; }
         .search-input:focus { border-color: var(--teal-accent); }
 
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
-        .numpad button { background: rgba(255,255,255,0.05); height: 50px; border-radius: 10px; font-weight: 800; font-size: 18px; }
-        .numpad button:active { background: var(--teal-accent); color: var(--navy-dark); }
+        .numpad button { background: rgba(255,255,255,0.05); height: 50px; border-radius: 10px; font-weight: 800; font-size: 18px; transition: 0.1s; }
+        .numpad button:active { background: var(--teal-accent); color: var(--navy-dark); transform: scale(0.95); }
         
         /* Utility for print button */
         .btn-print { background-color: #2563eb !important; color: white !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important; }
         .btn-print:hover { background-color: #1d4ed8 !important; }
 
-        /* Home Button Style */
         .btn-home { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; transition: 0.2s; }
         .btn-home:hover { background: var(--teal-accent); color: var(--navy-dark); }
     </style>
@@ -77,7 +77,7 @@
                     <span class="txt-label">รายชื่อคนไข้ (Total: <span id="count-hn">0</span>)</span>
                 </div>
                 <div id="patient-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1">
-                </div>
+                    </div>
             </div>
 
             <div class="flex flex-col h-1/2 border-t border-white/5 pt-4">
@@ -92,8 +92,8 @@
     <div class="col-main flex flex-col p-6">
         <div class="flex justify-between items-start mb-6">
             <div>
-                <div id="view-mode-tag" class="hidden bg-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded font-bold mb-1 w-fit">PAID & REPRINT MODE</div>
-                <h1 id="display-pet-name" class="txt-title">รายการรอชำระเงิน</h1>
+                <div id="view-mode-tag" class="hidden bg-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded font-bold mb-1 w-fit uppercase">Paid & Reprint Mode</div>
+                <h1 id="display-pet-name" class="txt-title text-2xl">รายการรอชำระเงิน</h1>
                 <p id="display-owner-info" class="txt-body text-gray-500">กรุณาเลือกรายการจากคอลัมน์ซ้าย</p>
             </div>
             <button class="glass-card px-4 py-2 txt-body font-bold text-teal-500 border-teal-500/30">
@@ -109,7 +109,7 @@
                 <div class="col-span-2 text-right">รวม</div>
             </div>
             <div id="cart-items" class="flex-1 overflow-y-auto custom-scroll divide-y divide-white/5">
-            </div>
+                </div>
         </div>
     </div>
 
@@ -118,10 +118,10 @@
             <div class="space-y-4 mb-8">
                 <div class="flex justify-between txt-body">
                     <span class="text-gray-400">รวมยอดเงิน</span>
-                    <span id="sum-total" class="font-bold text-white">0.00</span>
+                    <span id="sum-total" class="font-bold text-white text-lg">0.00</span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="txt-label text-red-400">ส่วนลด</span>
+                    <span class="txt-label text-red-400">ส่วนลด (฿)</span>
                     <input type="number" id="input-discount" class="search-input w-24 text-right p-1 font-bold" value="0" oninput="calculateNet()">
                 </div>
                 <div class="pt-6 border-t border-white/10 flex flex-col items-end">
@@ -220,11 +220,11 @@
             }
 
             historyContainer.innerHTML = records.map(r => `
-                <div class="glass-card p-3 border-l-4 ${r.payment_status === 'paid' ? 'border-teal-500' : 'border-amber-500'}" 
+                <div class="glass-card p-3 border-l-4 ${r.payment_status === 'paid' ? 'border-teal-500' : 'border-amber-500'} mb-2" 
                      onclick="viewRecordDetail('${r.id}', '${r.payment_status}')">
                     <div class="flex justify-between txt-label mb-1">
                         <span>${new Date(r.created_at).toLocaleDateString('th-TH')}</span>
-                        <span class="${r.payment_status === 'paid' ? 'text-teal-500' : 'text-amber-400'}">${r.payment_status}</span>
+                        <span class="${r.payment_status === 'paid' ? 'text-teal-500' : 'text-amber-400'}">${r.payment_status.toUpperCase()}</span>
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-white font-bold">฿${(r.net_amount || r.total_cost).toLocaleString()}</span>
@@ -235,7 +235,7 @@
             lucide.createIcons();
         }
 
-        // --- 3. VIEW RECORD & TOGGLE REPRINT BUTTON ---
+        // --- 3. VIEW RECORD & TOGGLE UI ---
         async function viewRecordDetail(recordId, status) {
             activeRecordId = recordId;
             const isPaid = status === 'paid';
@@ -281,9 +281,9 @@
             document.getElementById('input-discount').disabled = isPaid;
             document.getElementById('received-cash').disabled = isPaid;
 
-            document.getElementById('sum-total').innerText = parseFloat(record.total_cost).toLocaleString();
+            document.getElementById('sum-total').innerText = parseFloat(record.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('input-discount').value = record.discount || 0;
-            document.getElementById('net-total').innerText = parseFloat(record.net_amount).toLocaleString();
+            document.getElementById('net-total').innerText = parseFloat(record.net_amount || record.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('received-cash').value = isPaid ? record.received_amount : "";
             calculateChange();
         }
@@ -318,10 +318,8 @@
 
                 if (error) throw error;
 
-                alert("ชำระเงินสำเร็จ! กำลังพิมพ์ใบเสร็จ...");
-                
+                alert("ชำระเงินสำเร็จ!");
                 printReceipt(activeRecordId);
-                
                 if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
                 
             } catch (error) {
@@ -330,7 +328,7 @@
             }
         }
 
-        // --- 5. PRINT THERMAL RECEIPT (Template based on set-printer) ---
+        // --- 5. THERMAL RECEIPT PRINTING ---
         async function printReceipt(recordId) {
             const { data: record } = await db.from('medical_records')
                 .select('*, animals(pet_name), owners(owner_name)')
@@ -338,17 +336,15 @@
                 
             const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
 
-            const printWindow = window.open('', '_blank', 'width=350,height=600');
+            const printWindow = window.open('', '_blank', 'width=400,height=600');
             
-            // เตรียมข้อมูลรายการสินค้า (Item rows)
             let itemsHtml = items.map(i => `
                 <tr class="item-row">
-                    <td class="item-name">${i.item_name} <br><span class="item-qty">x${i.quantity}</span></td>
+                    <td class="item-name">${i.item_name}<br><span class="item-qty">${i.quantity} x ${parseFloat(i.unit_price).toLocaleString()}</span></td>
                     <td class="item-total">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>
             `).join('');
 
-            // โครงสร้าง HTML สำหรับ Thermal Printer (58mm / 80mm)
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
@@ -356,139 +352,55 @@
                     <title>Receipt - ${record.receipt_no}</title>
                     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
                     <style>
-                        /* Printer Setup Configuration */
                         @page { margin: 0; size: auto; }
-                        body { 
-                            font-family: 'Sarabun', sans-serif; 
-                            width: 100%;
-                            max-width: 80mm; /* รองรับกระดาษ 80mm (แก้ไขเป็น 58mm ได้ถ้าจำเป็น) */
-                            padding: 10px 15px; 
-                            margin: 0 auto; 
-                            color: #000; 
-                            font-size: 13px;
-                            box-sizing: border-box;
-                        }
-                        
-                        /* Header Section */
+                        body { font-family: 'Sarabun', sans-serif; width: 72mm; margin: 0 auto; padding: 10px; color: #000; font-size: 13px; line-height: 1.4; }
                         .text-center { text-align: center; }
-                        .clinic-name { font-weight: 700; font-size: 18px; margin-bottom: 2px; }
-                        .receipt-type { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
-                        .receipt-reprint { font-size: 12px; color: #555; }
-                        
-                        /* Structural Elements */
-                        .divider { border-top: 1px dashed #000; margin: 12px 0; }
-                        .divider-solid { border-top: 1px solid #000; margin: 12px 0; }
-                        
-                        /* Info Section */
-                        .info-grid { display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 12px; }
-                        .info-row { display: flex; justify-content: space-between; }
-                        .info-label { font-weight: 600; }
-                        
-                        /* Items Table */
-                        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-                        th { text-align: left; font-size: 12px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
-                        th.right { text-align: right; }
-                        td { padding: 4px 0; vertical-align: top; }
-                        .item-name { width: 75%; font-size: 13px; line-height: 1.2; }
-                        .item-qty { font-size: 11px; color: #333; }
-                        .item-total { width: 25%; text-align: right; font-size: 13px; }
-                        
-                        /* Summary Section */
-                        .summary-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px; }
-                        .summary-row.bold { font-weight: 700; font-size: 16px; margin: 5px 0; }
-                        
-                        /* Footer Section */
-                        .footer { margin-top: 20px; text-align: center; font-size: 12px; line-height: 1.4; }
-                        
-                        /* Utility for hiding print button on screen */
-                        @media print {
-                            .no-print { display: none; }
-                        }
+                        .text-right { text-align: right; }
+                        .clinic-name { font-weight: 800; font-size: 18px; margin-bottom: 2px; }
+                        .receipt-type { font-size: 14px; font-weight: 700; border: 1px solid #000; display: inline-block; padding: 2px 10px; margin: 5px 0; }
+                        .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                        .info-table { width: 100%; font-size: 12px; margin-bottom: 5px; }
+                        table.items-table { width: 100%; border-collapse: collapse; }
+                        .items-table th { text-align: left; font-size: 12px; border-bottom: 1px solid #000; padding: 5px 0; }
+                        .item-row td { padding: 5px 0; vertical-align: top; }
+                        .item-total { text-align: right; font-weight: 600; }
+                        .summary-row { display: flex; justify-content: space-between; padding: 2px 0; }
+                        .summary-row.total { font-size: 16px; font-weight: 800; border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; }
+                        .footer { margin-top: 25px; text-align: center; font-size: 11px; }
                     </style>
                 </head>
                 <body>
                     <div class="text-center">
                         <div class="clinic-name">PK-VMS CLINIC</div>
-                        <div class="receipt-type">ใบเสร็จรับเงิน / Receipt</div>
-                        <div class="receipt-reprint">(Reprint)</div>
+                        <div class="receipt-type">ใบเสร็จรับเงิน / RECEIPT</div>
                     </div>
-                    
                     <div class="divider"></div>
-                    
-                    <div class="info-grid">
-                        <div class="info-row">
-                            <span class="info-label">เลขที่ (No):</span>
-                            <span>${record.receipt_no || record.id.slice(0,8)}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">วันที่ (Date):</span>
-                            <span>${new Date(record.paid_at || record.created_at).toLocaleString('th-TH')}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">รหัส (HN):</span>
-                            <span>${record.owner_hn}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">ชื่อสัตว์ (Pet):</span>
-                            <span>${record.animals?.pet_name || '-'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">เจ้าของ (Owner):</span>
-                            <span>${record.owners?.owner_name || '-'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>รายการ (Items)</th>
-                                <th class="right">รวม (Total)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHtml}
-                        </tbody>
+                    <table class="info-table">
+                        <tr><td><strong>เลขที่:</strong></td><td class="text-right">${record.receipt_no || record.id.slice(0,8)}</td></tr>
+                        <tr><td><strong>วันที่:</strong></td><td class="text-right">${new Date(record.paid_at || record.created_at).toLocaleString('th-TH')}</td></tr>
+                        <tr><td><strong>HN / สัตว์:</strong></td><td class="text-right">${record.owner_hn} / ${record.animals?.pet_name}</td></tr>
+                        <tr><td><strong>เจ้าของ:</strong></td><td class="text-right">${record.owners?.owner_name}</td></tr>
                     </table>
-                    
-                    <div class="divider-solid"></div>
-                    
-                    <div class="summary-row">
-                        <span>รวมเป็นเงิน:</span>
-                        <span>${parseFloat(record.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>ส่วนลด (Discount):</span>
-                        <span>-${parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-                    <div class="summary-row bold">
-                        <span>ยอดสุทธิ (Net Total):</span>
-                        <span>฿${parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-                    
                     <div class="divider"></div>
-                    
-                    <div class="summary-row">
-                        <span>รับเงินสด (Cash):</span>
-                        <span>${parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>เงินทอน (Change):</span>
-                        <span>${parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>
-
+                    <table class="items-table">
+                        <thead><tr><th>รายการ</th><th class="text-right">รวม</th></tr></thead>
+                        <tbody>${itemsHtml}</tbody>
+                    </table>
+                    <div class="divider"></div>
+                    <div class="summary-row"><span>รวมเงิน:</span><span>${parseFloat(record.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="summary-row"><span>ส่วนลด:</span><span>-${parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="summary-row total"><span>ยอดสุทธิ:</span><span>฿${parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="divider"></div>
+                    <div class="summary-row"><span>รับเงินสด:</span><span>${parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                    <div class="summary-row"><span>เงินทอน:</span><span>${parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
                     <div class="footer">
-                        <strong>ขอบคุณที่ใช้บริการครับ/ค่ะ</strong><br>
-                        PK-VMS Smart POS System
+                        <strong>ขอบคุณที่ใช้บริการ</strong><br>PK-VMS Smart POS System
                     </div>
                 </body>
                 </html>
             `);
 
             printWindow.document.close();
-            
-            // Wait for font to load before triggering print dialogue
             setTimeout(() => {
                 printWindow.focus();
                 printWindow.print();
@@ -498,7 +410,8 @@
 
         // --- MATH CALCULATIONS ---
         function calculateNet() {
-            const sum = parseFloat(document.getElementById('sum-total').innerText.replace(/,/g, '')) || 0;
+            const sumText = document.getElementById('sum-total').innerText.replace(/,/g, '');
+            const sum = parseFloat(sumText) || 0;
             const disc = parseFloat(document.getElementById('input-discount').value) || 0;
             const net = sum - disc;
             document.getElementById('net-total').innerText = net.toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -506,7 +419,8 @@
         }
 
         function calculateChange() {
-            const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
+            const netText = document.getElementById('net-total').innerText.replace(/,/g, '');
+            const net = parseFloat(netText) || 0;
             const received = parseFloat(document.getElementById('received-cash').value) || 0;
             const change = received - net;
             document.getElementById('change-amount').innerText = change > 0 ? change.toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
