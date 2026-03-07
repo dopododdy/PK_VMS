@@ -67,11 +67,6 @@
         .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px; display: block; font-weight: 700; }
         
         .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; border: 2px solid #ef4444 !important; }
-
-        /* History Details Styles */
-        .history-record-box { background: rgba(0,0,0,0.2); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px; }
-        .data-label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
-        .data-value { font-size: 1rem; color: #cbd5e1; }
     </style>
 </head>
 <body>
@@ -107,10 +102,6 @@
         
         let masterSpecies = [];
         let masterBreeds = [];
-
-        // ตัวแปรเก็บข้อมูลสำหรับใช้พิมพ์นัดหมาย
-        let currentPetIdForPrint = null;
-        let allMedicalRecordsForPet = [];
 
         // ฟังก์ชันช่วยจัดรูปแบบวันที่
         function formatThaiDate(dateString, format = 'long') {
@@ -185,20 +176,11 @@
             
             const pets = allAnimals.filter(a => a.owner_hn === hn);
             const phones = allPhones.filter(p => p.owner_hn === hn);
-            
-            // ดึงประวัติการรักษาของสัตว์ตัวแรกที่เจอเพื่อเตรียมไว้แสดง
-            if (pets.length > 0) {
-                currentPetIdForPrint = pets[0].id;
-                const { data: recs } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', currentPetIdForPrint).order('created_at', { ascending: false });
-                allMedicalRecordsForPet = recs || [];
-            }
 
             renderForm(owner, pets, phones);
         }
 
         function createNewForm() { 
-            currentPetIdForPrint = null;
-            allMedicalRecordsForPet = [];
             renderForm({ hn: 'AUTO', owner_name: '', address: '' }, [], []); 
         }
 
@@ -228,8 +210,6 @@
                         <button onclick="addNewPetRow()" class="w-full border-4 border-dashed border-white/5 py-6 rounded-3xl text-slate-500 hover:text-teal-400 transition-all font-black text-xl">+ เพิ่มสัตว์เลี้ยงรายการใหม่</button>
                     </div>
 
-                    ${pets.length > 0 ? renderHistorySection() : ''}
-
                     <button onclick="saveAllData()" class="w-full btn-base btn-teal py-6 text-3xl mt-10 shadow-2xl">💾 บันทึกข้อมูลทั้งหมด</button>
                 </div>`;
             initAllPickers();
@@ -249,7 +229,10 @@
                     <div class="flex justify-between items-center mb-8">
                         <h4 class="text-3xl font-black text-white">${headIcon} ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'}</h4>
                         <div class="flex gap-3">
-                            ${pet.id ? `<button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติการรักษา</button>` : ''}
+                            ${pet.id ? `
+                                <button onclick="printPetLabel('${pet.id}')" class="btn-base btn-gray">🖨️ พิมพ์ข้อมูลสัตว์</button>
+                                <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติการรักษา</button>
+                            ` : ''}
                             <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red">🗑️ ลบ</button>
                         </div>
                     </div>
@@ -278,84 +261,6 @@
                         <div class="col-span-12"><label class="label-text text-red-400 font-bold">🚨 ข้อควรระวัง / ประวัติแพ้ยา</label><textarea class="p_congenital input-box critical-box h-[80px]">${pet.congenital_disease || ''}</textarea></div>
                     </div>
                 </div>`;
-        }
-
-        function renderHistorySection() {
-            let historyHtml = '';
-            if (allMedicalRecordsForPet.length === 0) {
-                historyHtml = `<p class="text-gray-500 py-10 text-center">ยังไม่มีประวัติการรักษา</p>`;
-            } else {
-                historyHtml = allMedicalRecordsForPet.map(rec => {
-                    const dateStr = formatThaiDate(rec.created_at, 'long');
-                    const weightStr = rec.weight ? `${rec.weight} กก.` : '-';
-                    
-                    const labs = rec.medical_record_items.filter(i => i.item_type === 'Lab').map(i => i.item_name).join(', ') || '-';
-                    const txs = rec.medical_record_items.filter(i => i.item_type === 'Tx').map(i => i.item_name).join(', ') || '-';
-                    const rxs = rec.medical_record_items.filter(i => i.item_type === 'Rx').map(i => `${i.item_name} x ${Math.floor(i.quantity)}`).join(', ') || '-';
-                    
-                    let apptStr = '-';
-                    if(rec.appointment) {
-                        apptStr = formatThaiDate(rec.appointment, 'short');
-                        if(rec.appointment_note) apptStr += ` (${rec.appointment_note})`;
-                    }
-
-                    return `
-                        <div class="history-record-box shadow-xl">
-                            <div class="flex justify-between items-start mb-4 border-b border-white/10 pb-4">
-                                <div>
-                                    <span class="text-teal-400 font-black text-xl">${dateStr}</span>
-                                    <span class="text-slate-400 text-sm ml-3">น้ำหนัก: ${weightStr}</span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="data-label">ค่ารักษา</span>
-                                    <span class="text-yellow-400 font-black text-xl">฿${(rec.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 mb-4 border-b border-white/10 pb-4">
-                                <div><span class="data-label">CC (อาการสำคัญ)</span><div class="data-value">${rec.cc || '-'}</div></div>
-                                <div><span class="data-label">Dx (วินิจฉัย)</span><div class="data-value text-blue-300 font-bold">${rec.dx || '-'}</div></div>
-                                <div><span class="data-label">Hx (ประวัติ)</span><div class="data-value">${rec.hx || '-'}</div></div>
-                                <div><span class="data-label">PE (ตรวจร่างกาย)</span><div class="data-value">${rec.pe || '-'}</div></div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 border-b border-white/10 pb-4">
-                                <div><span class="data-label text-purple-400">🔬 Lab / หัตถการ</span><div class="data-value">${labs}</div></div>
-                                <div><span class="data-label text-pink-400">💉 Tx (ยาฉีด)</span><div class="data-value">${txs}</div></div>
-                                <div><span class="data-label text-emerald-400">💊 Rx (ยากลับบ้าน)</span><div class="data-value">${rxs}</div></div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><span class="data-label text-orange-300">📌 Plan (แผนการรักษา)</span><div class="data-value">${rec.plan || '-'}</div></div>
-                                <div><span class="data-label text-orange-400">📅 การนัดหมาย</span><div class="data-value font-bold">${apptStr}</div></div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            return `
-                <div class="mt-12 bg-slate-900/60 p-8 rounded-3xl border border-white/10">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-2xl font-black text-white flex items-center gap-3">
-                            ⏳ ประวัติการรักษา <span class="bg-white/10 text-base px-4 py-1 rounded-full">${allMedicalRecordsForPet.length}</span>
-                        </h3>
-                        ${currentPetIdForPrint ? `
-                        <div class="flex gap-3">
-                            <button onclick="printPetLabel('${currentPetIdForPrint}')" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-sm px-4">
-                                🪪 พิมพ์ข้อมูลประจำตัวสัตว์
-                            </button>
-                            <button onclick="printApptLabel('${currentPetIdForPrint}')" class="btn-base bg-orange-600 hover:bg-orange-500 shadow-lg text-sm px-4">
-                                📅 พิมพ์ใบนัดหมาย
-                            </button>
-                        </div>
-                        ` : ''}
-                    </div>
-                    <div class="space-y-4">
-                        ${historyHtml}
-                    </div>
-                </div>
-            `;
         }
 
         function initAllPickers() {
@@ -524,40 +429,6 @@
             } catch (e) { alert("Error: " + e.message); }
         }
 
-        async function printApptLabel(petId) {
-            try {
-                const pet = allAnimals.find(a => a.id === petId);
-                const owner = allOwners.find(o => o.hn === pet.owner_hn);
-                const phoneInfo = allPhones.find(p => p.owner_hn === pet.owner_hn && p.label === 'เบอร์หลัก');
-                
-                // หาประวัติการรักษาล่าสุดที่มีการลงวันนัดไว้
-                const latestRecWithAppt = allMedicalRecordsForPet.find(r => r.appointment || r.appointment_2);
-                if (!latestRecWithAppt) return alert("ไม่พบข้อมูลการนัดหมายในประวัติการรักษา");
-
-                const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single();
-                if (!template) return alert("ไม่พบ Template: sticker_appt");
-
-                const config = template.config;
-                const pw = config.width || 80, ph = config.height || 50;
-
-                const printData = {
-                    clinic_name: "PK-VMS Animal Clinic",
-                    owner_name: owner.owner_name || "-",
-                    owner_phone: phoneInfo ? phoneInfo.phone_number : '-',
-                    pet_name: pet.pet_name || "-",
-                    hn: pet.owner_hn || "-",
-                    appointment_date_1: formatThaiDate(latestRecWithAppt.appointment, 'long'),
-                    appointment_note_1: latestRecWithAppt.appointment_note || "-",
-                    appointment_date_2: latestRecWithAppt.appointment_2 ? formatThaiDate(latestRecWithAppt.appointment_2, 'long') : "-",
-                    appointment_note_2: latestRecWithAppt.appointment_note_2 || "-",
-                    date: formatThaiDate(new Date().toISOString(), 'short')
-                };
-
-                executeDynamicPrint(printData, config, pw, ph);
-            } catch (e) { alert("Error: " + e.message); }
-        }
-
-        // Shared Print Executor
         function executeDynamicPrint(printData, config, pw, ph) {
             const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
                 const availableWidthMm = pw - parseFloat(l.x);
