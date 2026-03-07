@@ -46,15 +46,25 @@
         /* Utility for print button */
         .btn-print { background-color: #2563eb !important; color: white !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important; }
         .btn-print:hover { background-color: #1d4ed8 !important; }
+
+        /* Home Button Style */
+        .btn-home { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; transition: 0.2s; }
+        .btn-home:hover { background: var(--teal-accent); color: var(--navy-dark); }
     </style>
 </head>
 <body class="flex">
 
     <div class="col-side flex flex-col p-5">
         <div class="mb-6">
-            <h2 class="txt-title flex items-center gap-2 mb-4">
-                <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS
-            </h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="txt-title flex items-center gap-2">
+                    <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS
+                </h2>
+                <button onclick="window.location.href='index.html'" class="btn-home text-gray-300" title="กลับหน้าหลัก">
+                    <i data-lucide="home" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
             <div class="relative">
                 <input type="text" id="main-search" class="search-input" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="filterPatients()">
                 <i data-lucide="search" class="absolute left-3 top-3 w-4 text-gray-500"></i>
@@ -146,7 +156,7 @@
     <script>
         lucide.createIcons();
         let allPatients = [], currentCart = [];
-        let activeRecordId = null; // เก็บ ID ของบิลที่กำลังเปิดอยู่
+        let activeRecordId = null; 
         let activePatient = null;
 
         window.onload = async () => {
@@ -230,7 +240,6 @@
             activeRecordId = recordId;
             const isPaid = status === 'paid';
             
-            // Toggle Button State
             const btnPay = document.getElementById('btn-pay');
             const btnText = document.getElementById('btn-text');
             const btnIcon = document.getElementById('btn-icon');
@@ -242,17 +251,16 @@
                 btnIcon.setAttribute('data-lucide', 'printer');
                 btnPay.classList.add('btn-print');
                 btnPay.classList.remove('bg-teal-500');
-                btnPay.onclick = () => printReceipt(recordId); // Switch to Print Function
+                btnPay.onclick = () => printReceipt(recordId);
             } else {
                 btnText.innerText = "ยืนยันการชำระเงิน";
                 btnIcon.setAttribute('data-lucide', 'check-circle');
                 btnPay.classList.remove('btn-print');
                 btnPay.classList.add('bg-teal-500');
-                btnPay.onclick = processPayment; // Switch to Pay Function
+                btnPay.onclick = processPayment; 
             }
             lucide.createIcons();
 
-            // Fetch Data
             const { data: record } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
 
@@ -270,11 +278,9 @@
                 </div>
             `).join('');
 
-            // UI Input limits based on state
             document.getElementById('input-discount').disabled = isPaid;
             document.getElementById('received-cash').disabled = isPaid;
 
-            // Load Values
             document.getElementById('sum-total').innerText = parseFloat(record.total_cost).toLocaleString();
             document.getElementById('input-discount').value = record.discount || 0;
             document.getElementById('net-total').innerText = parseFloat(record.net_amount).toLocaleString();
@@ -295,13 +301,11 @@
                 return alert("จำนวนเงินที่รับมาไม่เพียงพอ");
             }
 
-            // Generate Receipt No (e.g. INV20260307-XXXX)
             const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
             const randomPad = Math.floor(1000 + Math.random() * 9000);
             const receiptNo = `INV${dateStr}-${randomPad}`;
 
             try {
-                // Update Database
                 const { error } = await db.from('medical_records').update({
                     payment_status: 'paid',
                     receipt_no: receiptNo,
@@ -316,10 +320,8 @@
 
                 alert("ชำระเงินสำเร็จ! กำลังพิมพ์ใบเสร็จ...");
                 
-                // Print immediately after payment
                 printReceipt(activeRecordId);
                 
-                // Refresh History Panel
                 if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
                 
             } catch (error) {
@@ -328,89 +330,157 @@
             }
         }
 
-        // --- 5. PRINT THERMAL RECEIPT ---
+        // --- 5. PRINT THERMAL RECEIPT (Template based on set-printer) ---
         async function printReceipt(recordId) {
-            // Fetch detailed record with joins
             const { data: record } = await db.from('medical_records')
                 .select('*, animals(pet_name), owners(owner_name)')
                 .eq('id', recordId).single();
                 
             const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
 
-            // Open Hidden/Popup Window for Printing
             const printWindow = window.open('', '_blank', 'width=350,height=600');
             
+            // เตรียมข้อมูลรายการสินค้า (Item rows)
             let itemsHtml = items.map(i => `
-                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
-                    <div style="width: 70%;">${i.item_name} <br><small>x${i.quantity}</small></div>
-                    <div style="width: 30%; text-align: right;">${parseFloat(i.total_price).toLocaleString()}</div>
-                </div>
+                <tr class="item-row">
+                    <td class="item-name">${i.item_name} <br><span class="item-qty">x${i.quantity}</span></td>
+                    <td class="item-total">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                </tr>
             `).join('');
 
+            // โครงสร้าง HTML สำหรับ Thermal Printer (58mm / 80mm)
             printWindow.document.write(`
+                <!DOCTYPE html>
                 <html>
                 <head>
                     <title>Receipt - ${record.receipt_no}</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
                     <style>
-                        @page { margin: 0; }
-                        body { font-family: 'Sarabun', sans-serif; width: 80mm; padding: 10px; margin: 0 auto; color: #000; }
+                        /* Printer Setup Configuration */
+                        @page { margin: 0; size: auto; }
+                        body { 
+                            font-family: 'Sarabun', sans-serif; 
+                            width: 100%;
+                            max-width: 80mm; /* รองรับกระดาษ 80mm (แก้ไขเป็น 58mm ได้ถ้าจำเป็น) */
+                            padding: 10px 15px; 
+                            margin: 0 auto; 
+                            color: #000; 
+                            font-size: 13px;
+                            box-sizing: border-box;
+                        }
+                        
+                        /* Header Section */
                         .text-center { text-align: center; }
-                        .header { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-                        .divider { border-top: 1px dashed #000; margin: 10px 0; }
-                        .footer { font-size: 12px; margin-top: 20px; text-align: center; }
+                        .clinic-name { font-weight: 700; font-size: 18px; margin-bottom: 2px; }
+                        .receipt-type { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+                        .receipt-reprint { font-size: 12px; color: #555; }
+                        
+                        /* Structural Elements */
+                        .divider { border-top: 1px dashed #000; margin: 12px 0; }
+                        .divider-solid { border-top: 1px solid #000; margin: 12px 0; }
+                        
+                        /* Info Section */
+                        .info-grid { display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 12px; }
+                        .info-row { display: flex; justify-content: space-between; }
+                        .info-label { font-weight: 600; }
+                        
+                        /* Items Table */
+                        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                        th { text-align: left; font-size: 12px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+                        th.right { text-align: right; }
+                        td { padding: 4px 0; vertical-align: top; }
+                        .item-name { width: 75%; font-size: 13px; line-height: 1.2; }
+                        .item-qty { font-size: 11px; color: #333; }
+                        .item-total { width: 25%; text-align: right; font-size: 13px; }
+                        
+                        /* Summary Section */
+                        .summary-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px; }
+                        .summary-row.bold { font-weight: 700; font-size: 16px; margin: 5px 0; }
+                        
+                        /* Footer Section */
+                        .footer { margin-top: 20px; text-align: center; font-size: 12px; line-height: 1.4; }
+                        
+                        /* Utility for hiding print button on screen */
+                        @media print {
+                            .no-print { display: none; }
+                        }
                     </style>
                 </head>
                 <body>
                     <div class="text-center">
-                        <div class="header">PK-VMS CLINIC</div>
-                        <div style="font-size: 13px;">ใบเสร็จรับเงิน / Receipt</div>
-                        <div style="font-size: 12px; margin-top:5px;">(Reprint)</div>
+                        <div class="clinic-name">PK-VMS CLINIC</div>
+                        <div class="receipt-type">ใบเสร็จรับเงิน / Receipt</div>
+                        <div class="receipt-reprint">(Reprint)</div>
                     </div>
                     
                     <div class="divider"></div>
                     
-                    <div style="font-size: 12px; line-height: 1.6;">
-                        <div><strong>No:</strong> ${record.receipt_no || record.id.slice(0,8)}</div>
-                        <div><strong>Date:</strong> ${new Date(record.paid_at || record.created_at).toLocaleString('th-TH')}</div>
-                        <div><strong>HN:</strong> ${record.owner_hn}</div>
-                        <div><strong>Pet:</strong> ${record.animals?.pet_name || '-'}</div>
-                        <div><strong>Owner:</strong> ${record.owners?.owner_name || '-'}</div>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">เลขที่ (No):</span>
+                            <span>${record.receipt_no || record.id.slice(0,8)}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">วันที่ (Date):</span>
+                            <span>${new Date(record.paid_at || record.created_at).toLocaleString('th-TH')}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">รหัส (HN):</span>
+                            <span>${record.owner_hn}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">ชื่อสัตว์ (Pet):</span>
+                            <span>${record.animals?.pet_name || '-'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">เจ้าของ (Owner):</span>
+                            <span>${record.owners?.owner_name || '-'}</span>
+                        </div>
                     </div>
                     
                     <div class="divider"></div>
                     
-                    ${itemsHtml}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รายการ (Items)</th>
+                                <th class="right">รวม (Total)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                    
+                    <div class="divider-solid"></div>
+                    
+                    <div class="summary-row">
+                        <span>รวมเป็นเงิน:</span>
+                        <span>${parseFloat(record.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>ส่วนลด (Discount):</span>
+                        <span>-${parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="summary-row bold">
+                        <span>ยอดสุทธิ (Net Total):</span>
+                        <span>฿${parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
                     
                     <div class="divider"></div>
                     
-                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
-                        <span>รวมเงิน:</span>
-                        <span>${parseFloat(record.total_cost).toLocaleString()}</span>
+                    <div class="summary-row">
+                        <span>รับเงินสด (Cash):</span>
+                        <span>${parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
-                        <span>ส่วนลด:</span>
-                        <span>-${parseFloat(record.discount || 0).toLocaleString()}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-top: 8px;">
-                        <span>ยอดสุทธิ:</span>
-                        <span>฿${parseFloat(record.net_amount).toLocaleString()}</span>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <div style="font-size: 13px; display: flex; justify-content: space-between;">
-                        <span>รับเงินสด:</span>
-                        <span>${parseFloat(record.received_amount || 0).toLocaleString()}</span>
-                    </div>
-                    <div style="font-size: 13px; display: flex; justify-content: space-between;">
-                        <span>เงินทอน:</span>
-                        <span>${parseFloat(record.change_amount || 0).toLocaleString()}</span>
+                    <div class="summary-row">
+                        <span>เงินทอน (Change):</span>
+                        <span>${parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
 
                     <div class="footer">
-                        ขอบคุณที่ใช้บริการครับ/ค่ะ<br>
-                        PK-VMS Smart POS
+                        <strong>ขอบคุณที่ใช้บริการครับ/ค่ะ</strong><br>
+                        PK-VMS Smart POS System
                     </div>
                 </body>
                 </html>
