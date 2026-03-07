@@ -205,6 +205,7 @@
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
             
+            // หน้าจอ POS (UI) ยังใช้ i.item_name (ภาษาอังกฤษ) ตาม medrec.html
             document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
                 <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white">${i.item_name}</div></div>
@@ -240,17 +241,17 @@
             if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
         }
 
-        // --- DYNAMIC PRINT ENGINE (FIXED OVERLAP, VARIABLES & THAI NAMES) ---
+        // --- DYNAMIC PRINT ENGINE (THAI NAMES ONLY ON PRINT) ---
         async function printReceipt(recordId) {
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
-                
-                // ดึงรายชื่อยาภาษาไทย
+
+                // 1. ดึง Master ชื่อไทยจาก pharmacy เพื่อ Mapping ชื่อยา
                 const { data: pharmacyData } = await db.from('pharmacy').select('item_name, name_th');
                 const pharmacyMap = {};
-                pharmacyData.forEach(p => { if (p.name_th) pharmacyMap[p.item_name] = p.name_th; });
+                if (pharmacyData) pharmacyData.forEach(p => { if (p.name_th) pharmacyMap[p.item_name] = p.name_th; });
 
                 if (!template) return alert("กรุณาตั้งค่า Template ในหน้า Designer");
 
@@ -263,6 +264,7 @@
                     pet_name: record.animals?.pet_name || "-",
                     hn: record.owner_hn || "-",
                     receipt_no: record.receipt_no || record.id.slice(0,8),
+                    // แก้ไขตัวแปรเวลาและราคาส่วนลด
                     time: new Date(record.paid_at || record.created_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}),
                     total_price: parseFloat(record.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     discount_val: parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
@@ -270,7 +272,7 @@
                     received_amount: parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
-                    // รายการสินค้าพร้อม Mapping ภาษาไทย
+                    // รายการสินค้า: แสดงชื่อไทยเฉพาะยา (Rx/Injection) ถ้ามีในฐานข้อมูล
                     items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:'Sarabun';">
                         ${items.map(i => {
                             let displayName = i.item_name;
@@ -286,21 +288,26 @@
                 };
 
                 let pushOffset = 0;
+                // เรียงลำดับตาม Y ก่อนเริ่มไล่ Push เพื่อความแม่นยำ
                 const sortedLines = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
                 
                 const elements = sortedLines.map(l => {
                     const currentY = parseFloat(l.y) + pushOffset;
+                    
+                    // Squeeze Logic: คำนวณความกว้างที่เหลือจากพิกัด X
                     const availableWidthMm = pw - parseFloat(l.x) - 5;
                     const finalWidth = l.w ? l.w : availableWidthMm;
 
-                    let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; width:${finalWidth}mm; left:${l.x}mm; ${l.bold?'font-weight:bold;':''}`;
+                    let style = `top:${currentY}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     
+                    // หากพบรายการสินค้า ให้คำนวณระยะผลักสำหรับวัตถุที่อยู่ถัดไปด้านล่าง
                     if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 6;
 
                     let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
                     
+                    // แก้ไข: ทุกวัตถุต้องใช้ currentY เพื่อป้องกันการซ้อนทับ
                     if (l.type==='text') return `<div style="${style}">${content}</div>`;
                     if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
                     if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
