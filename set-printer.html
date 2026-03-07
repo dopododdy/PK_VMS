@@ -22,24 +22,23 @@
         .label-title { color: var(--teal); font-weight: 800; font-size: 0.9rem; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; border: 1px solid var(--border); }
 
-        /* แก้ไข Preview Area ให้ Scroll ได้เมื่อ Zoom */
+        /* แก้ไข Preview Area ให้ Scroll ได้สมบูรณ์เมื่อ Zoom */
         .preview-area { 
             background: #050b14; 
             border-radius: 20px; 
             border: 2px dashed rgba(255,255,255,0.1); 
-            overflow: auto; /* เปิด scroll */
-            display: flex; 
-            align-items: flex-start; /* เริ่มจากบนเพื่อให้เลื่อนลงได้ */
-            justify-content: center; 
+            overflow: auto; 
+            display: block; /* เปลี่ยนเป็น block เพื่อให้ scrollbar ทำงานร่วมกับ margin auto */
             position: relative;
-            padding: 100px; /* เพิ่มพื้นที่หายใจรอบๆ เวลาซูม */
+            padding: 50px; 
         }
         .canvas-wrapper { 
             background: #ffffff; 
             position: relative; 
-            transform-origin: top center; /* เปลี่ยนเป็น top center เพื่อให้เวลาซูมแล้วไม่ลอยหายไปข้างบน */
+            transform-origin: top center; 
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.7); 
             overflow: hidden;
+            margin: 0 auto; /* จัดกลาง */
             flex-shrink: 0;
         }
         
@@ -47,8 +46,8 @@
         .canvas-element:hover { outline: 1px dashed var(--teal); }
         .canvas-element.active { outline: 2px solid var(--teal) !important; background: rgba(20, 184, 17, 0.08); z-index: 100; }
         
-        /* Drag & Drop Visual */
-        .dragging { opacity: 0.4; border: 2px dashed var(--teal) !important; }
+        /* Drag & Drop Visual State */
+        .dragging { opacity: 0.5; transform: scale(0.98); border: 2px dashed var(--teal) !important; }
 
         .var-badge { background: rgba(20, 184, 17, 0.08); border: 1px solid rgba(20, 184, 17, 0.15); color: #4ade80; padding: 5px 12px; border-radius: 10px; font-size: 0.8rem; cursor: pointer; display: inline-block; margin: 4px; transition: 0.2s; font-family: monospace; }
         .var-badge:hover { background: var(--teal); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(20, 184, 17, 0.3); }
@@ -62,7 +61,7 @@
 
         .editor-group { background: rgba(0,0,0,0.2); border-radius: 15px; padding: 12px; border: 1px solid rgba(255,255,255,0.03); }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
     </style>
 </head>
 <body class="overflow-hidden">
@@ -257,7 +256,7 @@
             scrollToActive();
         }
 
-        // --- ระบบ Drag and Drop สลับตำแหน่ง ---
+        // --- ระบบ Drag and Drop สลับตำแหน่งในคอลัมน์ซ้าย ---
         function renderLinesList() {
             const container = document.getElementById('lines_container');
             container.innerHTML = currentConfig.lines.map((l, i) => `
@@ -269,7 +268,7 @@
                      ondragend="handleDragEnd()"
                      ondrop="handleDrop(${i})">
                     <div class="flex justify-between items-center mb-2" onclick="selectLine(${i})">
-                        <span class="font-black text-sm uppercase tracking-widest ${i === activeLineIndex ? 'text-teal-400' : 'text-gray-500'} flex items-center gap-2">
+                        <span class="font-black text-sm uppercase tracking-widest ${i === activeLineIndex ? 'text-teal-400' : 'text-gray-500'} flex items-center gap-2 pointer-events-none">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
                             ${l.type === 'rect' ? '🟧 Rectangle' : (l.type === 'image' ? '🖼️ Image' : '📝 Text')}
                         </span>
@@ -277,23 +276,25 @@
                              <button class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white w-8 h-8 rounded-full text-xs transition flex items-center justify-center" onclick="event.stopPropagation(); currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();">✕</button>
                         </div>
                     </div>
-                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="text-white font-bold opacity-60 truncate" onclick="selectLine(${i})">${l.type==='image' ? 'Image Component' : (l.type==='rect' ? 'สี่เหลี่ยมโค้งมน' : l.text)}</div>`}
+                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="text-white font-bold opacity-60 truncate pointer-events-none">${l.type==='image' ? 'Image Component' : (l.type==='rect' ? 'สี่เหลี่ยมโค้งมน' : l.text)}</div>`}
                 </div>
             `).join('');
         }
 
         function handleDragStart(index) {
             draggedIndex = index;
-            document.getElementById(`line-item-${index}`).classList.add('dragging');
+            setTimeout(() => {
+                const el = document.getElementById(`line-item-${index}`);
+                if (el) el.classList.add('dragging');
+            }, 0);
         }
 
-        function handleDragOver(e, index) {
-            e.preventDefault();
-        }
+        function handleDragOver(e, index) { e.preventDefault(); }
 
-        function handleDragEnd() {
-            draggedIndex = null;
-            renderLinesList();
+        function handleDragEnd() { 
+            const el = document.querySelector('.dragging');
+            if (el) el.classList.remove('dragging');
+            draggedIndex = null; 
         }
 
         function handleDrop(index) {
@@ -302,7 +303,7 @@
             const draggedLine = lines[draggedIndex];
             lines.splice(draggedIndex, 1);
             lines.splice(index, 0, draggedLine);
-            activeLineIndex = index; // ให้ตัวที่ย้ายยังถูกเลือกอยู่
+            activeLineIndex = index;
             renderLinesList();
             renderCanvas();
         }
@@ -409,7 +410,6 @@
             wrapper.style.height = (ph * px) + 'px';
 
             const canvasLines = currentConfig.lines.map((l, originalIndex) => ({...l, originalIndex}));
-            // จัดเรียงตาม Y สำหรับ Dynamic Push เท่านั้น
             const sortedLines = [...canvasLines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
             
             let pushOffset = 0;
@@ -417,16 +417,11 @@
             wrapper.innerHTML = sortedLines.map((l) => {
                 const currentY = parseFloat(l.y) + pushOffset;
                 const isActive = l.originalIndex === activeLineIndex;
-                
-                let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
-                
                 const availableWidthMm = pw - parseFloat(l.x) - 5; 
                 const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
-                style += `width:${boxWidthPx}px;`;
+                let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px;`;
 
-                if (l.text && l.text.includes("{{items_list}}")) {
-                    pushOffset += (mockItems.length - 1) * 6;
-                }
+                if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
 
                 const commonAttr = `class="canvas-element ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); selectLine(${l.originalIndex})"`;
 
@@ -460,16 +455,11 @@
             else if (e.key === 'ArrowLeft') { line.x = parseFloat(line.x) - step; moved = true; }
             else if (e.key === 'ArrowRight') { line.x = parseFloat(line.x) + step; moved = true; }
 
-            if (moved) {
-                e.preventDefault();
-                renderCanvas();
-                renderLinesList();
-            }
+            if (moved) { e.preventDefault(); renderCanvas(); renderLinesList(); }
         });
 
         function applyZoom() { 
             const zoom = document.getElementById('zoom_level').value / 100;
-            // ใช้ scale บน wrapper
             document.getElementById('canvas_wrapper').style.transform = `scale(${zoom})`; 
         }
         
@@ -482,7 +472,7 @@
             let pushOffset = 0;
             const printContent = sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
-                let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'};`;
+                let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; position:absolute; color:black; line-height:1.4; white-space:pre-wrap;`;
                 
                 const availableWidthMm = pw_val - parseFloat(l.x) - 5;
                 const boxWidthMm = (l.w ? l.w : availableWidthMm);
@@ -494,17 +484,48 @@
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
                     else style += `left:${l.x}mm;`;
-                    return `<div class="elem" style="${style}">${replaceVars(l.text, l.size)}</div>`;
+                    return `<div style="${style}">${replaceVars(l.text, l.size)}</div>`;
                 } else if (l.type === 'rect') {
-                    return `<div class="elem" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
+                    return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
                 } else if (l.type === 'image') {
-                    let iStyle = `top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                    if (l.align === 'center') iStyle = `top:${currentY}mm; left:50%; transform:translateX(-50%); width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                    return `<img src="${l.url}" class="elem" style="${iStyle}">`;
+                    let iStyle = `position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                    if (l.align === 'center') iStyle = `position:absolute; top:${currentY}mm; left:50%; transform:translateX(-50%); width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                    return `<img src="${l.url}" style="${iStyle}">`;
                 }
             }).join('');
 
-            win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body { margin: 0; padding: 0; background: white; font-family: 'Sarabun'; } .page { position: relative; width: ${pw_val}mm; height: auto; min-height: ${ph_val}mm; overflow: hidden; } .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; } @media print { @page { size: ${pw_val}mm auto; margin: 0; } }</style></head><body><div class="page">${printContent}</div><script>window.onload=function(){ setTimeout(()=> {window.print(); window.close();}, 500); };<\/script></body></html>`);
+            // --- ส่วนที่แก้ไข: ล้างขอบกระดาษในการพิมพ์จริง เพื่อแก้ขอบซ้ายที่กว้างเกินไป ---
+            win.document.write(`
+                <html>
+                <head>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); 
+                        html, body { margin: 0 !important; padding: 0 !important; background: white; font-family: 'Sarabun'; }
+                        .page { position: relative; width: ${pw_val}mm; height: auto; min-height: ${ph_val}mm; overflow: hidden; }
+                        .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; } 
+                        @media print { 
+                            @page { 
+                                size: ${pw_val}mm auto; 
+                                margin: 0 !important; 
+                            } 
+                            html, body { 
+                                width: ${pw_val}mm !important; 
+                                margin: 0 !important; 
+                                padding: 0 !important; 
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="page">${printContent}</div>
+                    <script>
+                        window.onload = function() { 
+                            setTimeout(() => { window.print(); window.close(); }, 600); 
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
             win.document.close();
         }
 
