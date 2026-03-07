@@ -59,9 +59,7 @@
                 <h2 class="txt-title flex items-center gap-2">
                     <i data-lucide="activity" class="text-teal-500 w-5"></i> PK-VMS POS
                 </h2>
-                <button onclick="window.location.href='index.html'" class="btn-home text-gray-300">
-                    <i data-lucide="home" class="w-5 h-5"></i>
-                </button>
+                <button onclick="window.location.href='index.html'" class="btn-home text-gray-300"><i data-lucide="home" class="w-5 h-5"></i></button>
             </div>
             <div class="relative">
                 <input type="text" id="main-search" class="search-input" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="filterPatients()">
@@ -184,7 +182,6 @@
             lucide.createIcons();
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
-            
             document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
                 <div class="grid grid-cols-12 p-4 items-center">
                     <div class="col-span-6"><div class="txt-body font-bold text-white">${i.item_name}</div></div>
@@ -192,7 +189,6 @@
                     <div class="col-span-2 text-right txt-body text-gray-400">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     <div class="col-span-2 text-right txt-body font-bold text-white">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                 </div>`).join('');
-
             document.getElementById('input-discount').disabled = isPaid;
             document.getElementById('received-cash').disabled = isPaid;
             document.getElementById('sum-total').innerText = parseFloat(rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -218,32 +214,27 @@
             if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
         }
 
-        // --- ฟังก์ชันล้างอักขระพิเศษเพื่อทำ Super Matching ---
+        // --- ล้างอักขระพิเศษเพื่อการจับคู่ที่แม่นยำ ---
         function superClean(str) {
             if (!str) return "";
-            // ลบทุกอย่างที่ไม่ใช่ตัวอักษรและตัวเลขออกทั้งหมด และทำเป็นตัวพิมพ์เล็ก
             return str.replace(/[^a-zA-Z0-9ก-๙]/g, "").toLowerCase();
         }
 
-        // --- DYNAMIC PRINT ENGINE (SUPER MATCHING VERSION) ---
+        // --- DYNAMIC PRINT ENGINE (SMART NAME MAPPING) ---
         async function printReceipt(recordId) {
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
 
-                // 1. ดึง Master ชื่อไทยจากทุกตาราง
+                // 1. ดึงชื่อไทยจาก Pharmacy และ Services
                 const { data: pharma } = await db.from('pharmacy').select('item_name, name_th');
                 const { data: servs } = await db.from('services').select('service_name, name_th');
 
-                // 2. สร้าง Master Map แบบ Super Clean (ล้างวงเล็บ ช่องว่าง และขีดออกทั้งหมด)
+                // 2. สร้าง Map กุญแจแบบ Clean (เน้นความแม่นยำ)
                 const masterThaiMap = {};
-                if (pharma) pharma.forEach(p => { 
-                    if (p.name_th) masterThaiMap[superClean(p.item_name)] = p.name_th; 
-                });
-                if (servs) servs.forEach(s => { 
-                    if (s.name_th) masterThaiMap[superClean(s.service_name)] = s.name_th; 
-                });
+                if (pharma) pharma.forEach(p => { if (p.name_th) masterThaiMap[superClean(p.item_name)] = p.name_th; });
+                if (servs) servs.forEach(s => { if (s.name_th) masterThaiMap[superClean(s.service_name)] = s.name_th; });
 
                 if (!template) return alert("กรุณาตั้งค่า Template ในหน้า Designer");
                 const config = template.config;
@@ -261,13 +252,27 @@
                     change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
                     date: new Date(record.paid_at || record.created_at).toLocaleDateString('th-TH'),
                     
-                    // รายการสินค้า: ค้นหาชื่อไทยด้วย Super Clean Key
+                    // --- รายการสินค้าพร้อม Logic แก้ปัญหาชื่อไม่ตรง ---
                     items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:'Sarabun';">
                         ${items.map(i => {
-                            const cleanKey = superClean(i.item_name);
-                            const thaiName = masterThaiMap[cleanKey] || i.item_name; // ถ้าหาไม่เจอจริงๆ ค่อยใช้ชื่อเดิม
+                            const itemClean = superClean(i.item_name);
+                            let foundThai = masterThaiMap[itemClean];
+
+                            // ถ้าหาไม่เจอเป๊ะๆ ให้ลองหาว่าชื่อรายการ "ขึ้นต้นด้วย" ชื่อในคลังหรือไม่ (แก้ปัญหา RV (1ml) vs RV)
+                            if (!foundThai) {
+                                // เรียงชื่อใน Master จากยาวไปสั้น เพื่อให้เจอตัวที่ตรงที่สุดก่อน
+                                const masterKeys = Object.keys(masterThaiMap).sort((a, b) => b.length - a.length);
+                                for (let key of masterKeys) {
+                                    if (itemClean.startsWith(key) && key.length >= 2) { 
+                                        foundThai = masterThaiMap[key];
+                                        break;
+                                    }
+                                }
+                            }
+
+                            const nameToShow = foundThai || i.item_name;
                             return `<tr>
-                                <td style="padding:1mm 0;">${thaiName} x ${i.quantity}</td>
+                                <td style="padding:1mm 0;">${nameToShow} x ${i.quantity}</td>
                                 <td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             </tr>`;
                         }).join('')}
@@ -289,7 +294,6 @@
                     if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
                     if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
                 }).join('');
-
                 const win = window.open('', '_blank', 'width=400');
                 win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body{margin:0; padding:0;} .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} @media print { @page { size: ${pw}mm auto; margin: 0; } }</style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
                 win.document.close();
