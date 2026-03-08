@@ -43,7 +43,6 @@
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* สไตล์ของ Summary Columns */
         .summary-col { font-size: 0.7rem; font-weight: 500; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .col-lab { color: #c084fc; }
         .col-tx { color: #f472b6; }
@@ -90,6 +89,8 @@
                     ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
                 </h3>
                 <div class="flex gap-3">
+                    <button onclick="goToPOS()" class="btn-base bg-blue-600 hover:bg-blue-500 shadow-lg text-xs">💰 คิดเงิน</button>
+                    
                     <button onclick="printBothLabels(animalId)" class="btn-base bg-emerald-600 hover:bg-emerald-500 shadow-lg text-xs">🖨️ ข้อมูลสัตว์ + นัดหมาย</button>
                     <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-xs">🪪 บัตรประจำตัวสัตว์</button>
                     <button onclick="printApptLabel(animalId)" class="btn-base bg-orange-600 hover:bg-orange-500 shadow-lg text-xs">📅 ใบนัดหมาย</button>
@@ -105,7 +106,7 @@
                     <div class="col-span-12 md:col-span-2"><label class="label-clinical text-yellow-400">น้ำหนัก (กก.)</label><input type="number" id="f_weight" class="input-box font-bold text-yellow-400 text-2xl" step="0.1" oninput="renderCatalog()"></div>
                     <div class="col-span-12 md:col-span-5"><label class="label-clinical">CC</label><textarea id="f_cc" class="input-box h-24" placeholder="อาการสำคัญ..."></textarea></div>
                     <div class="col-span-12 md:col-span-5"><label class="label-clinical">Hx</label><textarea id="f_hx" class="input-box h-24" placeholder="ประวัติย้อนหลัง..."></textarea></div>
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE</label><textarea id="f_pe" class="input-box h-32" placeholder="ตรวจร่างกาย..."></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE</label><textarea id="f_pe" class="input-box h-32" placeholder="ร่างกาย..."></textarea></div>
                     <div class="col-span-12 md:col-span-4">
                         <label class="label-clinical">🔬 Lab/หัตถการ</label>
                         <div id="list_lab_display" class="list-box overflow-y-auto max-h-40" onclick="openCatalog('lab')">คลิกเพื่อเลือก...</div>
@@ -172,7 +173,8 @@
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            return `${date.getDate()} ${format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()]} ${date.getFullYear() + 543}`;
+            const d = date.getDate(), m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()], y = date.getFullYear() + 543;
+            return `${d} ${m} ${y}`;
         }
 
         window.onload = async () => {
@@ -275,6 +277,12 @@
         }
 
         function toggleCollapse(id) { document.getElementById(`collapse-${id}`).classList.toggle('hidden'); }
+
+        // ✅ ฟังก์ชันปุ่มคิดเงิน (ส่งไปหน้า POS)
+        function goToPOS() {
+            if (!ownerHN) return alert("ไม่พบรหัสเจ้าของสัตว์");
+            window.location.href = `pos.html?hn=${ownerHN}`;
+        }
 
         function refillMeds(recordId) {
             const rec = records.find(r => r.id === recordId);
@@ -381,7 +389,7 @@
 
         async function saveMedicalRecord() {
             try {
-                const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, net_amount: parseFloat(document.getElementById('f_cost').value) || 0 };
+                const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, net_amount: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: 'pending' };
                 let currentRecordId = editingId;
                 if (editingId) { await db.from('medical_records').update(headerData).eq('id', editingId); await db.from('medical_record_items').delete().eq('record_id', editingId); }
                 else { const { data: record } = await db.from('medical_records').insert([headerData]).select().single(); currentRecordId = record.id; }
@@ -407,11 +415,13 @@
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
         function goBack() { location.href = 'animals.html'; }
         function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
+        
         function updateFormUI() {
             document.getElementById('list_lab_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Lab').map(i=>i.name), 'form_item');
             document.getElementById('list_tx_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Tx').map(i=>i.name), 'form_item');
             document.getElementById('list_rx_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Rx').map(i=> i.dose ? `${i.name} (${i.dose} ${i.unit} ${i.freq})` : i.name), 'form_item');
         }
+
         function removeItem(idx) {
             const filterType = currentCatalogType === 'rx' ? 'Rx' : currentCatalogType === 'tx' ? 'Tx' : 'Lab';
             const list = selectedItems.filter(i => i.type === filterType);
@@ -419,6 +429,7 @@
             if (originalIndex > -1) { document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) - selectedItems[originalIndex].price).toFixed(2); selectedItems.splice(originalIndex, 1); }
             updateFormUI(); updateModalUI();
         }
+
         function updateModalUI() {
             const filterType = currentCatalogType === 'rx' ? 'Rx' : currentCatalogType === 'tx' ? 'Tx' : 'Lab';
             const current = selectedItems.filter(i => i.type === filterType);
