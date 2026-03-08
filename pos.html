@@ -214,10 +214,6 @@
                         <div class="mt-2 text-sm text-gray-400 font-bold">จำนวน: <span id="sum-year-count" class="text-white">0</span> บิล</div>
                     </div>
                 </div>
-                
-                <div class="mt-8">
-                    <p class="text-center text-gray-500 text-sm">ข้อมูลถูกคำนวณจากบิลที่มีสถานะชำระเงินเรียบร้อยแล้ว (Paid)</p>
-                </div>
             </div>
             <div class="p-6 border-t border-white/10 bg-black/20 flex justify-end">
                 <button onclick="closeSummaryModal()" class="px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition">ปิดหน้าต่าง</button>
@@ -236,11 +232,36 @@
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            const d = date.getDate(), m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()], y = date.getFullYear() + 543;
-            return `${d} ${m} ${y}`;
+            return `${date.getDate()} ${format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()]} ${date.getFullYear() + 543}`;
         }
 
-        window.onload = async () => { await fetchPatients(); };
+        // ✅ แก้ไขฟังก์ชัน onload เพื่อเช็ค HN อัตโนมัติ
+        window.onload = async () => { 
+            await fetchPatients(); 
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const hnFromUrl = urlParams.get('hn');
+
+            if (hnFromUrl) {
+                // ค้นหาข้อมูลคนไข้ในลิสต์ที่โหลดมา
+                const patient = allPatients.find(p => p.owner_hn === hnFromUrl);
+                if (patient) {
+                    // กรองรายชื่อฝั่งซ้ายให้เหลือแค่คนนี้เพื่อความชัดเจน
+                    document.getElementById('main-search').value = hnFromUrl;
+                    filterPatients();
+                    
+                    // โหลดข้อมูลประวัติคนไข้ทันที
+                    await loadPatientHistory(patient.owner_hn, patient.pet_name, patient.owners?.owner_name);
+                    
+                    // ถ้ามีประวัติการรักษา (บิล) ให้เลือกบิลล่าสุดโดยอัตโนมัติ
+                    const historyContainer = document.getElementById('payment-history');
+                    const firstBill = historyContainer.querySelector('.glass-card');
+                    if (firstBill) {
+                        firstBill.click();
+                    }
+                }
+            }
+        };
 
         async function fetchPatients() {
             const { data } = await db.from('animals').select('pet_name, owner_hn, owners(owner_name)');
@@ -343,7 +364,6 @@
             currentCatType = type;
             document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
             document.getElementById(`tab-${type}`).classList.add('active');
-            
             let data = [];
             if (type === 'lab') {
                 const res = await db.from('services').select('*').in('category', ['Lab', 'หัตถการ']);
@@ -359,20 +379,16 @@
             renderCatalogItems();
         }
 
-        // ✅ แก้ไขฟังก์ชันนี้: เพิ่ม Logic คำนวณราคาตามน้ำหนักเพื่อแสดงผล
         function renderCatalogItems() {
             const weight = currentRecordData ? parseFloat(currentRecordData.weight) || 0 : 0;
             document.getElementById('catalog-grid').innerHTML = displayedCatalog.map(i => {
                 let displayPrice = parseFloat(i.price) || 0;
-                
-                // Tiered Pricing Logic (สำหรับ Tx และ Lab)
                 if (i.data && i.data.price_config && Array.isArray(i.data.price_config)) {
                     const tiers = i.data.price_config;
                     const matchedTier = tiers.find(t => weight <= t.max);
                     if (matchedTier) displayPrice = matchedTier.price;
                     else if (tiers.length > 0) displayPrice = tiers[tiers.length - 1].price;
                 }
-                
                 return `
                 <div class="glass-card flex flex-col justify-between h-32" onclick="addItemToDB('${i.type}', '${i.name}', ${JSON.stringify(i.data)})">
                     <div class="font-bold text-white text-sm line-clamp-2">${i.name}</div>
@@ -390,17 +406,14 @@
         async function addItemToDB(type, name, masterData) {
             let finalPrice = parseFloat(masterData.price || masterData.price_per_unit) || 0;
             const weight = parseFloat(currentRecordData.weight) || 0;
-
             if (masterData.price_config && Array.isArray(masterData.price_config)) {
                 const matchedTier = masterData.price_config.find(t => weight <= t.max);
                 if (matchedTier) finalPrice = matchedTier.price;
                 else if (masterData.price_config.length > 0) finalPrice = masterData.price_config[masterData.price_config.length - 1].price;
             }
-
             const { error } = await db.from('medical_record_items').insert([{
                 record_id: activeRecordId, item_type: type, item_name: name, quantity: 1, unit_price: finalPrice, total_price: finalPrice
             }]);
-            
             if (error) return alert("Error adding item: " + error.message);
             await syncTotalToDB();
             refreshCartDisplay(activeRecordId);
@@ -432,7 +445,6 @@
             const now = new Date();
             const yyyy = now.getFullYear() + 543, mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-            
             const { count } = await db.from('medical_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'paid').gte('paid_at', startOfDay);
             const receiptNo = `${yyyy}${mm}${dd}${activePatient.hn}${String((count || 0) + 1).padStart(2, '0')}`;
 
@@ -453,7 +465,7 @@
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
                 if (!template) return alert("กรุณาตั้งค่า Template");
-                const config = template.config, pw = config.width || 80, ph = config.height || 50;
+                const config = template.config, pw = config.width || 80;
                 
                 const printData = {
                     clinic_name: "PK-VMS Animal Clinic", owner_name: record.owners?.owner_name || "-",
