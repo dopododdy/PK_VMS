@@ -24,15 +24,15 @@
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; display: block; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
         
-        .history-record-box { background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden; }
-        .history-header { padding: 18px 25px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.2s; position: relative; }
+        .history-record-box { background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden; position: relative; }
+        .history-header { padding: 18px 25px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
         .history-header:hover { background: rgba(255,255,255,0.03); }
-        .history-content { padding: 0 25px 25px 25px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .history-content { padding: 0 25px 25px 25px; border-top: 1px solid rgba(255,255,255,0.05); position: relative; }
 
         .data-label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
         .data-value { font-size: 1rem; color: #cbd5e1; }
         
-        .btn-base { padding: 10px 18px; border-radius: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; font-size: 0.95rem; }
+        .btn-base { padding: 8px 16px; border-radius: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; font-size: 0.9rem; }
         .btn-teal { background-color: #0d9488 !important; }
         .btn-blue { background-color: #2563eb !important; }
         .btn-red { background-color: #dc2626 !important; }
@@ -42,19 +42,12 @@
         .view-hidden { display: none; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
-        .bullet-list { list-style: none; padding: 0; margin: 0; }
-        .bullet-list li { position: relative; padding-left: 20px; font-size: 1.1rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-        .bullet-list li::before { content: "•"; position: absolute; left: 0; color: var(--teal); font-weight: bold; }
         
-        .summary-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
-        .tag-lab { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-        .tag-tx { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
-        .tag-rx { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-        
-        .lab-table-container { overflow-x: auto; background: rgba(0,0,0,0.2); border-radius: 15px; border: 1px solid var(--border); }
-        .lab-table { width: 100%; border-collapse: collapse; }
-        .lab-table th { background: rgba(15, 23, 42, 0.8); padding: 10px; font-size: 0.7rem; color: #94a3b8; border: 1px solid var(--border); }
-        .lab-table td { padding: 10px; border: 1px solid var(--border); text-align: center; }
+        /* สไตล์ของ Summary Columns */
+        .summary-col { font-size: 0.7rem; font-weight: 500; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .col-lab { color: #c084fc; }
+        .col-tx { color: #f472b6; }
+        .col-rx { color: #34d399; }
 
         @media print { #main-ui, .modal-overlay { display: none !important; } }
     </style>
@@ -83,7 +76,7 @@
             <div class="section-card border-l-8 border-teal-500">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-2xl font-bold text-white flex items-center gap-2">🐾 ข้อมูลสัตว์</h3>
-                    <button onclick="showFormView()" class="btn-base btn-teal text-xl py-4 px-8 shadow-xl">+ เพิ่มประวัติการรักษา</button>
+                    <button onclick="showFormView()" class="btn-base btn-teal text-xl py-3 px-6 shadow-xl">+ เพิ่มประวัติการรักษา</button>
                 </div>
                 <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-6 md:col-span-2"><label class="label-text">ชื่อสัตว์</label><div id="v-pet-name" class="text-xl font-bold text-white">-</div></div>
@@ -97,9 +90,9 @@
                     ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
                 </h3>
                 <div class="flex gap-3">
-                    <button onclick="printBothLabels(animalId)" class="btn-base bg-emerald-600 hover:bg-emerald-500 shadow-lg text-sm px-4 py-2">🖨️ ข้อมูลสัตว์ + นัดหมาย</button>
-                    <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-sm px-4 py-2">🪪 บัตรประจำตัวสัตว์</button>
-                    <button onclick="printApptLabel(animalId)" class="btn-base bg-orange-600 hover:bg-orange-500 shadow-lg text-sm px-4 py-2">📅 ใบนัดหมาย</button>
+                    <button onclick="printBothLabels(animalId)" class="btn-base bg-emerald-600 hover:bg-emerald-500 shadow-lg text-xs">🖨️ ข้อมูลสัตว์ + นัดหมาย</button>
+                    <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-xs">🪪 บัตรประจำตัวสัตว์</button>
+                    <button onclick="printApptLabel(animalId)" class="btn-base bg-orange-600 hover:bg-orange-500 shadow-lg text-xs">📅 ใบนัดหมาย</button>
                 </div>
             </div>
             <div id="history-list" class="space-y-3"></div>
@@ -112,7 +105,7 @@
                     <div class="col-span-12 md:col-span-2"><label class="label-clinical text-yellow-400">น้ำหนัก (กก.)</label><input type="number" id="f_weight" class="input-box font-bold text-yellow-400 text-2xl" step="0.1" oninput="renderCatalog()"></div>
                     <div class="col-span-12 md:col-span-5"><label class="label-clinical">CC</label><textarea id="f_cc" class="input-box h-24" placeholder="อาการสำคัญ..."></textarea></div>
                     <div class="col-span-12 md:col-span-5"><label class="label-clinical">Hx</label><textarea id="f_hx" class="input-box h-24" placeholder="ประวัติย้อนหลัง..."></textarea></div>
-                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE</label><textarea id="f_pe" class="input-box h-32" placeholder="ร่างกาย..."></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE</label><textarea id="f_pe" class="input-box h-32" placeholder="ตรวจร่างกาย..."></textarea></div>
                     <div class="col-span-12 md:col-span-4">
                         <label class="label-clinical">🔬 Lab/หัตถการ</label>
                         <div id="list_lab_display" class="list-box overflow-y-auto max-h-40" onclick="openCatalog('lab')">คลิกเพื่อเลือก...</div>
@@ -179,8 +172,7 @@
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            const d = date.getDate(), m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()], y = date.getFullYear() + 543;
-            return `${d} ${m} ${y}`;
+            return `${date.getDate()} ${format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()]} ${date.getFullYear() + 543}`;
         }
 
         window.onload = async () => {
@@ -222,30 +214,29 @@
                 const txItems = rec.medical_record_items.filter(i => i.item_type === 'Tx');
                 const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
                 
-                const labSummary = labItems.map(i => i.item_name).join(', ') || '-';
-                const txSummary = txItems.map(i => i.item_name).join(', ') || '-';
-                const rxSummary = rxItems.map(i => i.item_name).join(', ') || '-';
+                const labText = labItems.map(i => i.item_name).join(', ');
+                const txText = txItems.map(i => i.item_name).join(', ');
+                const rxText = rxItems.map(i => i.item_name).join(', ');
 
                 return `
                 <div class="history-record-box shadow-xl">
                     <div class="history-header" onclick="toggleCollapse('${rec.id}')">
                         <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs">🔽</div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-3 mb-1">
-                                <span class="text-teal-400 font-black">${formatThaiDate(rec.created_at, 'short')}</span>
-                                <span class="text-slate-500 text-xs">${rec.weight} กก.</span>
-                            </div>
-                            <div class="flex flex-wrap gap-2 text-[10px]">
-                                <span class="summary-tag tag-lab">LAB: ${labSummary.substring(0, 30)}${labSummary.length > 30 ? '...' : ''}</span>
-                                <span class="summary-tag tag-tx">TX: ${txSummary.substring(0, 30)}${txSummary.length > 30 ? '...' : ''}</span>
-                                <span class="summary-tag tag-rx">RX: ${rxSummary.substring(0, 30)}${rxSummary.length > 30 ? '...' : ''}</span>
-                            </div>
+                        <div class="flex flex-col min-w-[120px]">
+                            <span class="text-teal-400 font-black text-sm">${formatThaiDate(rec.created_at, 'short')}</span>
+                            <span class="text-slate-500 text-[10px]">${rec.weight} กก. | ฿${(rec.total_cost || 0).toLocaleString()}</span>
                         </div>
                         
-                        <div class="flex gap-2">
-                            <button onclick="event.stopPropagation(); refillMeds('${rec.id}')" class="btn-base btn-amber text-[11px] px-3 py-1">💊 จ่ายยาเดิม</button>
-                            <button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-base btn-blue text-[11px] px-3 py-1">✏️ แก้ไข</button>
-                            <button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-base btn-red text-[11px] px-3 py-1">🗑️ ลบ</button>
+                        <div class="grid grid-cols-3 gap-4 flex-1">
+                            <div class="summary-col col-lab">${labText || ''}</div>
+                            <div class="summary-col col-tx">${txText || ''}</div>
+                            <div class="summary-col col-rx">${rxText || ''}</div>
+                        </div>
+                        
+                        <div class="flex gap-2 ml-4">
+                            <button onclick="event.stopPropagation(); refillMeds('${rec.id}')" class="btn-base btn-amber !py-1 !px-2 text-[10px]">💊 จ่ายยาเดิม</button>
+                            <button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-base btn-blue !py-1 !px-2 text-[10px]">✏️ แก้ไข</button>
+                            <button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-base btn-red !py-1 !px-2 text-[10px]">🗑️ ลบ</button>
                         </div>
                     </div>
 
@@ -261,16 +252,16 @@
                                     <span class="data-label text-purple-400">🔬 Lab</span>
                                     ${labItems.length > 0 ? `<button onclick="viewLabResults('${animalId}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">ผลเลือด</button>` : ''}
                                 </div>
-                                <div class="data-value text-sm">${labSummary}</div>
+                                <div class="data-value text-sm">${labText || '-'}</div>
                             </div>
-                            <div><span class="data-label text-pink-400">💉 Tx (ยาฉีด)</span><div class="data-value text-sm">${txSummary}</div></div>
+                            <div><span class="data-label text-pink-400">💉 Tx (ยาฉีด)</span><div class="data-value text-sm">${txText || '-'}</div></div>
                             <div>
                                 <div class="flex justify-between mb-2">
                                     <span class="data-label text-emerald-400">💊 Rx (ยากลับบ้าน)</span>
                                     <button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์</button>
                                 </div>
                                 <div class="data-value text-xs space-y-1">
-                                    ${rxItems.map(i => `<div class="flex gap-2"><input type="checkbox" class="rx-select-${rec.id}" value="${i.id}" checked><span>${i.item_name} x ${Math.floor(i.quantity)}</span></div>`).join('')}
+                                    ${rxItems.map(i => `<div class="flex gap-2"><input type="checkbox" class="rx-select-${rec.id}" value="${i.id}" checked><span>${i.item_name} x ${Math.floor(i.quantity)}</span></div>`).join('') || '-'}
                                 </div>
                             </div>
                         </div>
@@ -283,53 +274,21 @@
             }).join('');
         }
 
-        // ✅ ฟังก์ชันจ่ายยาเดิม
+        function toggleCollapse(id) { document.getElementById(`collapse-${id}`).classList.toggle('hidden'); }
+
         function refillMeds(recordId) {
             const rec = records.find(r => r.id === recordId);
             if (!rec) return;
-            
             const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
-            if (rxItems.length === 0) return alert("ไม่พบรายการยาในประวัตินี้");
-
-            if (confirm(`คัดลอกรายการยา (${rxItems.length} รายการ) ไปยังบันทึกใหม่?`)) {
-                addNewRecordFromRefill(rxItems);
+            if (rxItems.length === 0) return alert("ไม่พบรายการยา");
+            if (confirm(`คัดลอกยาเดิม (${rxItems.length} รายการ)?`)) {
+                editingId = null;
+                selectedItems = rxItems.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
+                ['cc','hx','pe','dx','plan','appointment','app_note','appointment_2','app_note_2'].forEach(f => { if(document.getElementById('f_'+f)) document.getElementById('f_'+f).value = ''; });
+                document.getElementById('f_cost').value = selectedItems.reduce((sum, i) => sum + i.price, 0).toFixed(2);
+                updateFormUI(); showFormView();
+                document.getElementById('form-title').innerText = "🏥 บันทึกการรักษา (จ่ายยาเดิม)";
             }
-        }
-
-        function addNewRecordFromRefill(rxItems) {
-            editingId = null;
-            selectedItems = rxItems.map(i => ({
-                type: i.item_type,
-                name: i.item_name,
-                price: parseFloat(i.total_price),
-                dose: i.dose_per_time,
-                unit: i.unit,
-                freq: i.frequency,
-                meal: i.meal_timing,
-                day_timing: i.day_timing,
-                days: i.duration_days,
-                qty: i.quantity,
-                unit_price: i.unit_price
-            }));
-            
-            // ล้างค่าฟิลด์ข้อความ
-            ['cc','hx','pe','dx','plan','appointment','app_note','appointment_2','app_note_2'].forEach(f => {
-                const el = document.getElementById('f_'+f);
-                if(el) el.value = '';
-            });
-
-            // คำนวณราคารวมใหม่
-            const newTotal = selectedItems.reduce((sum, i) => sum + i.price, 0);
-            document.getElementById('f_cost').value = newTotal.toFixed(2);
-            
-            updateFormUI();
-            showFormView();
-            document.getElementById('form-title').innerText = "🏥 บันทึกการรักษา (จ่ายยาเดิม)";
-        }
-
-        function toggleCollapse(id) {
-            const el = document.getElementById(`collapse-${id}`);
-            el.classList.toggle('hidden');
         }
 
         async function openCatalog(type) {
@@ -422,7 +381,7 @@
 
         async function saveMedicalRecord() {
             try {
-                const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, net_amount: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: 'pending' };
+                const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, net_amount: parseFloat(document.getElementById('f_cost').value) || 0 };
                 let currentRecordId = editingId;
                 if (editingId) { await db.from('medical_records').update(headerData).eq('id', editingId); await db.from('medical_record_items').delete().eq('record_id', editingId); }
                 else { const { data: record } = await db.from('medical_records').insert([headerData]).select().single(); currentRecordId = record.id; }
@@ -448,22 +407,18 @@
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
         function goBack() { location.href = 'animals.html'; }
         function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
-        
         function updateFormUI() {
             document.getElementById('list_lab_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Lab').map(i=>i.name), 'form_item');
             document.getElementById('list_tx_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Tx').map(i=>i.name), 'form_item');
             document.getElementById('list_rx_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Rx').map(i=> i.dose ? `${i.name} (${i.dose} ${i.unit} ${i.freq})` : i.name), 'form_item');
         }
-
         function removeItem(idx) {
             const filterType = currentCatalogType === 'rx' ? 'Rx' : currentCatalogType === 'tx' ? 'Tx' : 'Lab';
             const list = selectedItems.filter(i => i.type === filterType);
-            const target = list[idx];
-            const originalIndex = selectedItems.indexOf(target);
+            const originalIndex = selectedItems.indexOf(list[idx]);
             if (originalIndex > -1) { document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) - selectedItems[originalIndex].price).toFixed(2); selectedItems.splice(originalIndex, 1); }
             updateFormUI(); updateModalUI();
         }
-
         function updateModalUI() {
             const filterType = currentCatalogType === 'rx' ? 'Rx' : currentCatalogType === 'tx' ? 'Tx' : 'Lab';
             const current = selectedItems.filter(i => i.type === filterType);
@@ -491,7 +446,7 @@
         }
 
         async function printHistoryRx(recordId) {
-            const rec = records.find(r => r.id === recordId); if(!rec) return;
+            const rec = records.find(r => r.id === recordId);
             const ids = Array.from(document.querySelectorAll(`.rx-select-${recordId}:checked`)).map(cb => cb.value);
             const items = rec.medical_record_items.filter(i => ids.includes(i.id));
             if (items.length === 0) return alert("เลือกยา");
@@ -537,9 +492,7 @@
                 config.lines.forEach(l => {
                     let txt = l.text.replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || "");
                     let style = `top:${l.y*px}px; font-family:'Sarabun'; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'};`;
-                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
-                    else if (l.align === 'right') style += `right:${l.x*px}px; text-align:right;`;
-                    else style += `left:${l.x*px}px;`;
+                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`; else if (l.align === 'right') style += `right:${l.x*px}px; text-align:right;`; else style += `left:${l.x*px}px;`;
                     html += `<div class="elem" style="${style}">${txt}</div>`;
                 });
                 html += `</div>`;
