@@ -228,7 +228,7 @@
     <script>
         lucide.createIcons();
         let allPatients = [], activeRecordId = null, activePatient = null;
-        let currentRecordData = null; // เก็บข้อมูล Record ปัจจุบันรวมถึงน้ำหนัก
+        let currentRecordData = null; 
         let masterCatalog = [], displayedCatalog = [], currentCatType = 'rx';
 
         function formatThaiDate(dateString, format = 'long') {
@@ -236,9 +236,7 @@
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            const d = date.getDate();
-            const m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()];
-            const y = date.getFullYear() + 543;
+            const d = date.getDate(), m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()], y = date.getFullYear() + 543;
             return `${d} ${m} ${y}`;
         }
 
@@ -269,8 +267,6 @@
             activePatient = { hn, petName, ownerName };
             document.getElementById('display-pet-name').innerText = `คนไข้: ${petName}`;
             document.getElementById('display-owner-info').innerText = `HN: ${hn} | เจ้าของ: ${ownerName}`;
-            
-            // ล้างตะกร้าเมื่อเปลี่ยนตัวสัตว์
             document.getElementById('cart-items').innerHTML = "";
             document.getElementById('sum-total').innerText = "0.00";
             document.getElementById('net-total').innerText = "0.00";
@@ -279,14 +275,11 @@
             const { data } = await db.from('medical_records').select('*').eq('owner_hn', hn).order('created_at', { ascending: false });
             const container = document.getElementById('payment-history');
             if (!data || data.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-10 text-sm">ไม่พบประวัติ</p>`; return; }
-            container.innerHTML = data.map(r => {
-                const dateDisplay = formatThaiDate(r.created_at, 'short');
-                return `
+            container.innerHTML = data.map(r => `
                 <div class="glass-card border-l-4 ${r.payment_status === 'paid' ? 'border-l-teal-500' : 'border-l-amber-500'} mb-3" onclick="viewRecordDetail('${r.id}', '${r.payment_status}')">
-                    <div class="flex justify-between txt-label mb-2"><span class="text-[12px]">${dateDisplay}</span><span class="${r.payment_status === 'paid' ? 'text-teal-400' : 'text-amber-400'}">${r.payment_status.toUpperCase()}</span></div>
-                    <div class="flex justify-between items-center"><span class="text-white font-bold text-lg">฿${parseFloat(r.net_amount || r.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span><i data-lucide="chevron-right" class="w-5 h-5 text-gray-600"></i></div>
-                </div>`
-            }).join('');
+                    <div class="flex justify-between txt-label mb-2"><span class="text-[12px]">${formatThaiDate(r.created_at, 'short')}</span><span class="${r.payment_status === 'paid' ? 'text-teal-400' : 'text-amber-400'}">${r.payment_status.toUpperCase()}</span></div>
+                    <div class="flex justify-between items-center"><span class="text-white font-bold text-lg">฿${parseFloat(r.net_amount || r.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2})}</span><i data-lucide="chevron-right" class="w-5 h-5 text-gray-600"></i></div>
+                </div>`).join('');
             lucide.createIcons();
         }
 
@@ -294,7 +287,6 @@
             activeRecordId = recordId;
             const isPaid = status === 'paid';
             const btn = document.getElementById('btn-pay');
-            
             document.getElementById('view-mode-tag').classList.toggle('hidden', !isPaid);
             document.getElementById('btn-add-item').classList.toggle('hidden', isPaid);
 
@@ -317,9 +309,9 @@
 
             document.getElementById('input-discount').disabled = isPaid;
             document.getElementById('received-cash').disabled = isPaid;
-            document.getElementById('sum-total').innerText = parseFloat(rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('sum-total').innerText = parseFloat(rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('input-discount').value = rec.discount || 0;
-            document.getElementById('net-total').innerText = parseFloat(rec.net_amount || rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('net-total').innerText = parseFloat(rec.net_amount || rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('received-cash').value = isPaid ? rec.received_amount : "";
             calculateChange();
         }
@@ -333,15 +325,14 @@
                     </div>
                     <div class="col-span-5"><div class="txt-body font-bold text-white text-base">${i.item_name}</div></div>
                     <div class="col-span-2 text-center txt-body text-base">${i.quantity}</div>
-                    <div class="col-span-2 text-right txt-body text-gray-400 text-base">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div class="col-span-2 text-right txt-body font-bold text-white text-lg">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div class="col-span-2 text-right txt-body text-gray-400 text-base">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                    <div class="col-span-2 text-right txt-body font-bold text-white text-lg">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                 </div>`).join('');
             lucide.createIcons();
         }
 
-        // --- Catalog Logic (เพิ่มรายการ) ---
         async function openCatalog(type) {
-            if (!activeRecordId) return alert("กรุณาเลือกประวัติการรักษาก่อน");
+            if (!activeRecordId) return alert("เลือกประวัติก่อน");
             document.getElementById('catalog-modal').style.display = 'flex';
             switchCatalogTab(type);
         }
@@ -368,13 +359,26 @@
             renderCatalogItems();
         }
 
+        // ✅ แก้ไขฟังก์ชันนี้: เพิ่ม Logic คำนวณราคาตามน้ำหนักเพื่อแสดงผล
         function renderCatalogItems() {
-            document.getElementById('catalog-grid').innerHTML = displayedCatalog.map(i => `
+            const weight = currentRecordData ? parseFloat(currentRecordData.weight) || 0 : 0;
+            document.getElementById('catalog-grid').innerHTML = displayedCatalog.map(i => {
+                let displayPrice = parseFloat(i.price) || 0;
+                
+                // Tiered Pricing Logic (สำหรับ Tx และ Lab)
+                if (i.data && i.data.price_config && Array.isArray(i.data.price_config)) {
+                    const tiers = i.data.price_config;
+                    const matchedTier = tiers.find(t => weight <= t.max);
+                    if (matchedTier) displayPrice = matchedTier.price;
+                    else if (tiers.length > 0) displayPrice = tiers[tiers.length - 1].price;
+                }
+                
+                return `
                 <div class="glass-card flex flex-col justify-between h-32" onclick="addItemToDB('${i.type}', '${i.name}', ${JSON.stringify(i.data)})">
                     <div class="font-bold text-white text-sm line-clamp-2">${i.name}</div>
-                    <div class="text-teal-400 font-black text-right">฿${parseFloat(i.price || 0).toFixed(2)}</div>
-                </div>
-            `).join('');
+                    <div class="text-teal-400 font-black text-right">฿${displayPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                </div>`;
+            }).join('');
         }
 
         function filterCatalogItems() {
@@ -383,9 +387,7 @@
             renderCatalogItems();
         }
 
-        // --- Database Action Logic ---
         async function addItemToDB(type, name, masterData) {
-            // คำนวณราคาตามน้ำหนัก (Logic จาก medrec.html)
             let finalPrice = parseFloat(masterData.price || masterData.price_per_unit) || 0;
             const weight = parseFloat(currentRecordData.weight) || 0;
 
@@ -395,27 +397,19 @@
                 else if (masterData.price_config.length > 0) finalPrice = masterData.price_config[masterData.price_config.length - 1].price;
             }
 
-            const itemPayload = {
-                record_id: activeRecordId,
-                item_type: type,
-                item_name: name,
-                quantity: 1,
-                unit_price: finalPrice,
-                total_price: finalPrice
-            };
-
-            const { error } = await db.from('medical_record_items').insert([itemPayload]);
-            if (error) return alert("Error adding item: " + error.message);
+            const { error } = await db.from('medical_record_items').insert([{
+                record_id: activeRecordId, item_type: type, item_name: name, quantity: 1, unit_price: finalPrice, total_price: finalPrice
+            }]);
             
+            if (error) return alert("Error adding item: " + error.message);
             await syncTotalToDB();
             refreshCartDisplay(activeRecordId);
         }
 
         async function removeItemFromDB(itemId) {
-            if (!confirm("ลบรายการนี้?")) return;
+            if (!confirm("ลบรายการ?")) return;
             const { error } = await db.from('medical_record_items').delete().eq('id', itemId);
             if (error) return alert("Error removing item: " + error.message);
-            
             await syncTotalToDB();
             refreshCartDisplay(activeRecordId);
         }
@@ -424,16 +418,9 @@
             const { data: items } = await db.from('medical_record_items').select('total_price').eq('record_id', activeRecordId);
             const newTotal = (items || []).reduce((sum, i) => sum + parseFloat(i.total_price || 0), 0);
             const discount = parseFloat(document.getElementById('input-discount').value) || 0;
-            
-            const { error } = await db.from('medical_records').update({
-                total_cost: newTotal,
-                net_amount: newTotal - discount
-            }).eq('id', activeRecordId);
-
-            if (!error) {
-                document.getElementById('sum-total').innerText = newTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
-                calculateNet();
-            }
+            await db.from('medical_records').update({ total_cost: newTotal, net_amount: newTotal - discount }).eq('id', activeRecordId);
+            document.getElementById('sum-total').innerText = newTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            calculateNet();
         }
 
         async function processPayment() {
@@ -442,25 +429,12 @@
             const recvd = parseFloat(document.getElementById('received-cash').value) || 0;
             if (recvd < net) return alert("เงินรับมาไม่พอ");
 
-            const { data: rec } = await db.from('medical_records').select('owner_hn').eq('id', activeRecordId).single();
-            const hn = rec?.owner_hn || "000000";
-
             const now = new Date();
-            const yyyy = now.getFullYear() + 543; 
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const dd = String(now.getDate()).padStart(2, '0');
+            const yyyy = now.getFullYear() + 543, mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
             
-            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
-            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
-            
-            const { count } = await db.from('medical_records')
-                .select('*', { count: 'exact', head: true })
-                .eq('payment_status', 'paid')
-                .gte('paid_at', startOfDay)
-                .lte('paid_at', endOfDay);
-
-            const seq = String((count || 0) + 1).padStart(2, '0');
-            const receiptNo = `${yyyy}${mm}${dd}${hn}${seq}`;
+            const { count } = await db.from('medical_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'paid').gte('paid_at', startOfDay);
+            const receiptNo = `${yyyy}${mm}${dd}${activePatient.hn}${String((count || 0) + 1).padStart(2, '0')}`;
 
             const { error } = await db.from('medical_records').update({
                 payment_status: 'paid', receipt_no: receiptNo, discount: parseFloat(document.getElementById('input-discount').value),
@@ -470,12 +444,7 @@
             if (error) return alert(error.message);
             alert("ชำระเงินสำเร็จ!");
             printReceipt(activeRecordId);
-            if (activePatient) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
-        }
-
-        function superClean(str) {
-            if (!str) return "";
-            return str.replace(/[^a-zA-Z0-9ก-๙]/g, "").toLowerCase();
+            loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
         }
 
         async function printReceipt(recordId) {
@@ -483,87 +452,47 @@
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
-
-                const { data: pharma } = await db.from('pharmacy').select('item_name, name_th');
-                const { data: servs } = await db.from('services').select('service_name, name_th');
-                const masterThaiMap = {};
-                if (pharma) pharma.forEach(p => { if (p.name_th) masterThaiMap[superClean(p.item_name)] = p.name_th; });
-                if (servs) servs.forEach(s => { if (s.name_th) masterThaiMap[superClean(s.service_name)] = s.name_th; });
-
-                if (!template) return alert("กรุณาตั้งค่า Template ในหน้า Designer");
-                const config = template.config;
-                const pw = config.width || 80, ph = config.height || 50;
+                if (!template) return alert("กรุณาตั้งค่า Template");
+                const config = template.config, pw = config.width || 80, ph = config.height || 50;
                 
-                const itemListConfig = config.lines.find(l => l.text && l.text.includes("{{items_list}}"));
-                const tableFontSize = itemListConfig ? parseFloat(itemListConfig.size) : 12;
-
                 const printData = {
                     clinic_name: "PK-VMS Animal Clinic", owner_name: record.owners?.owner_name || "-",
                     pet_name: record.animals?.pet_name || "-", hn: record.owner_hn || "-",
-                    receipt_no: record.receipt_no || record.id.slice(0,8),
-                    time: new Date(record.paid_at || record.created_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}),
-                    total_price: parseFloat(record.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                    discount_val: parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                    net_total: parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                    received_amount: parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                    change_amount: parseFloat(record.change_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                    date: formatThaiDate(record.paid_at || record.created_at, 'long'),
-                    
-                    items_list: `<table style="width:100%; border-collapse:collapse; font-family:'Sarabun'; font-size:${tableFontSize}pt; line-height:1.3; color:black;">
-                        ${items.map(i => {
-                            const itemClean = superClean(i.item_name);
-                            let foundThai = masterThaiMap[itemClean];
-                            if (!foundThai) {
-                                const masterKeys = Object.keys(masterThaiMap).sort((a, b) => b.length - a.length);
-                                for (let key of masterKeys) {
-                                    if (itemClean.startsWith(key) && key.length >= 2) { foundThai = masterThaiMap[key]; break; }
-                                }
-                            }
-                            const nameToShow = foundThai || i.item_name;
-                            return `<tr>
-                                <td style="padding:3px 0; text-align:left; vertical-align:top;">${nameToShow} x ${Math.floor(i.quantity)}</td>
-                                <td style="padding:3px 0; text-align:right; vertical-align:top; white-space:nowrap;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            </tr>`;
-                        }).join('')}
-                    </table>`
+                    receipt_no: record.receipt_no, time: new Date(record.paid_at).toLocaleTimeString('th-TH'),
+                    total_price: parseFloat(record.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    discount_val: parseFloat(record.discount).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    net_total: parseFloat(record.net_amount).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    received_amount: parseFloat(record.received_amount).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    change_amount: parseFloat(record.change_amount).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    date: formatThaiDate(record.paid_at),
+                    items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt;">${items.map(i => `<tr><td>${i.item_name} x ${Math.floor(i.quantity)}</td><td align="right">${parseFloat(i.total_price).toLocaleString()}</td></tr>`).join('')}</table>`
                 };
 
                 let pushOffset = 0;
-                const sortedLines = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
-                const elements = sortedLines.map(l => {
-                    const currentY = parseFloat(l.y) + pushOffset;
-                    const availableWidthMm = pw - parseFloat(l.x);
-                    const finalWidth = l.w ? l.w : availableWidthMm;
-                    
-                    let style = `top:${currentY}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                    if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                    else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                    
-                    if (l.text && l.text.includes("{{items_list}}")) pushOffset += (items.length - 1) * 5.5; 
-                    
+                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
                     let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
-                    if (l.type==='text') return `<div style="${style}">${content}</div>`;
-                    if (l.type==='rect') return `<div style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
-                    if (l.type==='image') return `<img src="${l.url}" style="top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
+                    let style = `top:${parseFloat(l.y)+pushOffset}mm; left:${l.x}mm; width:${l.w||pw}mm; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
+                    if (l.text?.includes("{{items_list}}")) pushOffset += (items.length - 1) * 5; 
+                    return `<div style="${style}">${content}</div>`;
                 }).join('');
 
                 const win = window.open('', '_blank', 'width=400');
-                win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); body{margin:0; padding:0;} .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} @media print { @page { size: ${pw}mm auto; margin: 0; } }</style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
+                win.document.write(`<html><body style="margin:0; font-family:Sarabun;"><div style="position:relative; width:${pw}mm;">${elements}</div><script>window.onload=()=>{window.print();window.close();};<\/script></body></html>`);
                 win.document.close();
-            } catch (e) { alert("Error: " + e.message); }
+            } catch (e) { alert("Print Error: " + e.message); }
         }
 
         function calculateNet() {
             const sum = parseFloat(document.getElementById('sum-total').innerText.replace(/,/g, '')) || 0;
             const net = sum - (parseFloat(document.getElementById('input-discount').value) || 0);
-            document.getElementById('net-total').innerText = net.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('net-total').innerText = net.toLocaleString(undefined, {minimumFractionDigits: 2});
             calculateChange();
         }
 
         function calculateChange() {
             const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
             const recv = parseFloat(document.getElementById('received-cash').value) || 0;
-            document.getElementById('change-amount').innerText = (recv - net > 0 ? recv - net : 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('change-amount').innerText = (recv - net > 0 ? recv - net : 0).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
         function addCash(amt) {
@@ -572,12 +501,8 @@
             calculateChange();
         }
 
-        // --- ระบบสรุปยอดขาย ---
         async function openSummaryModal() {
             document.getElementById('summary-modal').style.display = 'flex';
-            document.getElementById('sum-day-amt').innerText = "...";
-            document.getElementById('sum-month-amt').innerText = "...";
-            document.getElementById('sum-year-amt').innerText = "...";
             const now = new Date();
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -594,9 +519,8 @@
         function closeSummaryModal() { document.getElementById('summary-modal').style.display = 'none'; }
 
         async function getAggregatedSales(startDate) {
-            const { data, error } = await db.from('medical_records').select('net_amount').eq('payment_status', 'paid').gte('paid_at', startDate);
-            if (error) return { total: 0, count: 0 };
-            let total = data ? data.reduce((sum, row) => sum + parseFloat(row.net_amount || 0), 0) : 0;
+            const { data } = await db.from('medical_records').select('net_amount').eq('payment_status', 'paid').gte('paid_at', startDate);
+            const total = data ? data.reduce((sum, row) => sum + parseFloat(row.net_amount || 0), 0) : 0;
             return { total, count: data ? data.length : 0 };
         }
     </script>
