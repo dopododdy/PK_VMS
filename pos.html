@@ -49,6 +49,17 @@
 
         .btn-home { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-home:hover { background: var(--teal-accent); color: var(--navy-dark); }
+
+        /* Modal Context Styles */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: #0f172a; border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+        .cat-tab { padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; border: 1px solid transparent; color: #64748b; }
+        .cat-tab.active { background: rgba(16, 185, 129, 0.1); color: var(--teal-accent); border-color: rgba(16, 185, 129, 0.3); }
+        .item-grid-box { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        
+        /* Remove Button */
+        .btn-remove { color: #ef4444; opacity: 0.3; transition: 0.2s; cursor: pointer; }
+        .btn-remove:hover { opacity: 1; transform: scale(1.2); }
     </style>
 </head>
 <body class="flex">
@@ -94,11 +105,12 @@
                 <h1 id="display-pet-name" class="txt-title text-3xl mb-1">รายการรอชำระเงิน</h1>
                 <p id="display-owner-info" class="txt-body text-gray-400 text-lg">กรุณาเลือกรายการจากคอลัมน์ซ้าย</p>
             </div>
-            <button class="glass-card px-6 py-3 txt-body font-bold text-teal-400 border-teal-500/30 hover:bg-teal-500/10">+ เพิ่มรายการ</button>
+            <button id="btn-add-item" onclick="openCatalog('rx')" class="hidden glass-card px-6 py-3 txt-body font-bold text-teal-400 border-teal-500/30 hover:bg-teal-500/10 transition-all">+ เพิ่มรายการ</button>
         </div>
         <div class="flex-1 glass-card p-0 overflow-hidden flex flex-col border-none bg-slate-900/40">
             <div class="grid grid-cols-12 p-5 border-b border-white/10 txt-label text-sm bg-black/20">
-                <div class="col-span-6">รายการ</div>
+                <div class="col-span-1 text-center"></div>
+                <div class="col-span-5">รายการ</div>
                 <div class="col-span-2 text-center">จำนวน</div>
                 <div class="col-span-2 text-right">หน่วยละ</div>
                 <div class="col-span-2 text-right">รวม</div>
@@ -140,6 +152,26 @@
         <button id="btn-pay" onclick="processPayment()" class="w-full h-20 bg-teal-500 rounded-xl text-navy-dark font-black text-xl hover:bg-teal-400 transition-all flex items-center justify-center gap-3 mt-4">
             <i data-lucide="check-circle" class="w-6 h-6" id="btn-icon"></i><span id="btn-text">ยืนยันการชำระเงิน</span>
         </button>
+    </div>
+
+    <div id="catalog-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="p-8 border-b border-white/10 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-3xl font-black flex items-center gap-3"><i data-lucide="plus-circle" class="text-teal-400"></i> เลือกรายการเพิ่มเติม</h3>
+                <button onclick="closeCatalog()" class="text-gray-400 hover:text-white transition-colors text-3xl">✕</button>
+            </div>
+            <div class="p-6 bg-black/20 flex gap-3 overflow-x-auto">
+                <div class="cat-tab active" id="tab-rx" onclick="switchCatalogTab('rx')">💊 ยา/สินค้า</div>
+                <div class="cat-tab" id="tab-tx" onclick="switchCatalogTab('tx')">💉 ยาฉีด</div>
+                <div class="cat-tab" id="tab-lab" onclick="switchCatalogTab('lab')">🔬 Lab/หัตถการ</div>
+            </div>
+            <div class="p-6 border-b border-white/10">
+                <input type="text" id="catalog-search" class="search-input" placeholder="ค้นหาชื่อรายการ..." oninput="filterCatalogItems()">
+            </div>
+            <div id="catalog-items-container" class="flex-1 overflow-y-auto p-8 custom-scroll">
+                <div id="catalog-grid" class="item-grid-box"></div>
+            </div>
+        </div>
     </div>
 
     <div id="summary-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex-col items-center justify-center p-6 backdrop-blur-sm">
@@ -196,18 +228,17 @@
     <script>
         lucide.createIcons();
         let allPatients = [], activeRecordId = null, activePatient = null;
+        let currentRecordData = null; // เก็บข้อมูล Record ปัจจุบันรวมถึงน้ำหนัก
+        let masterCatalog = [], displayedCatalog = [], currentCatType = 'rx';
 
-        // ฟังก์ชันช่วยจัดรูปแบบวันที่ภาษาไทย
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            
             const d = date.getDate();
             const m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()];
             const y = date.getFullYear() + 543;
-            
             return `${d} ${m} ${y}`;
         }
 
@@ -238,6 +269,13 @@
             activePatient = { hn, petName, ownerName };
             document.getElementById('display-pet-name').innerText = `คนไข้: ${petName}`;
             document.getElementById('display-owner-info').innerText = `HN: ${hn} | เจ้าของ: ${ownerName}`;
+            
+            // ล้างตะกร้าเมื่อเปลี่ยนตัวสัตว์
+            document.getElementById('cart-items').innerHTML = "";
+            document.getElementById('sum-total').innerText = "0.00";
+            document.getElementById('net-total').innerText = "0.00";
+            document.getElementById('btn-add-item').classList.add('hidden');
+
             const { data } = await db.from('medical_records').select('*').eq('owner_hn', hn).order('created_at', { ascending: false });
             const container = document.getElementById('payment-history');
             if (!data || data.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-10 text-sm">ไม่พบประวัติ</p>`; return; }
@@ -256,7 +294,10 @@
             activeRecordId = recordId;
             const isPaid = status === 'paid';
             const btn = document.getElementById('btn-pay');
+            
             document.getElementById('view-mode-tag').classList.toggle('hidden', !isPaid);
+            document.getElementById('btn-add-item').classList.toggle('hidden', isPaid);
+
             if (isPaid) {
                 document.getElementById('btn-text').innerText = "พิมพ์ใบเสร็จ (Reprint)";
                 document.getElementById('btn-icon').setAttribute('data-lucide', 'printer');
@@ -269,17 +310,11 @@
                 btn.onclick = processPayment;
             }
             lucide.createIcons();
+            
             const { data: rec } = await db.from('medical_records').select('*').eq('id', recordId).single();
-            const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
-            
-            document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
-                <div class="grid grid-cols-12 p-5 items-center">
-                    <div class="col-span-6"><div class="txt-body font-bold text-white text-base">${i.item_name}</div></div>
-                    <div class="col-span-2 text-center txt-body text-base">${i.quantity}</div>
-                    <div class="col-span-2 text-right txt-body text-gray-400 text-base">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div class="col-span-2 text-right txt-body font-bold text-white text-lg">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                </div>`).join('');
-            
+            currentRecordData = rec;
+            refreshCartDisplay(recordId, isPaid);
+
             document.getElementById('input-discount').disabled = isPaid;
             document.getElementById('received-cash').disabled = isPaid;
             document.getElementById('sum-total').innerText = parseFloat(rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -287,6 +322,118 @@
             document.getElementById('net-total').innerText = parseFloat(rec.net_amount || rec.total_cost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('received-cash').value = isPaid ? rec.received_amount : "";
             calculateChange();
+        }
+
+        async function refreshCartDisplay(recordId, isPaid = false) {
+            const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
+            document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
+                <div class="grid grid-cols-12 p-5 items-center group">
+                    <div class="col-span-1 text-center">
+                        ${!isPaid ? `<i data-lucide="trash-2" class="btn-remove" onclick="removeItemFromDB('${i.id}')"></i>` : ''}
+                    </div>
+                    <div class="col-span-5"><div class="txt-body font-bold text-white text-base">${i.item_name}</div></div>
+                    <div class="col-span-2 text-center txt-body text-base">${i.quantity}</div>
+                    <div class="col-span-2 text-right txt-body text-gray-400 text-base">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div class="col-span-2 text-right txt-body font-bold text-white text-lg">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                </div>`).join('');
+            lucide.createIcons();
+        }
+
+        // --- Catalog Logic (เพิ่มรายการ) ---
+        async function openCatalog(type) {
+            if (!activeRecordId) return alert("กรุณาเลือกประวัติการรักษาก่อน");
+            document.getElementById('catalog-modal').style.display = 'flex';
+            switchCatalogTab(type);
+        }
+
+        function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
+
+        async function switchCatalogTab(type) {
+            currentCatType = type;
+            document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${type}`).classList.add('active');
+            
+            let data = [];
+            if (type === 'lab') {
+                const res = await db.from('services').select('*').in('category', ['Lab', 'หัตถการ']);
+                data = (res.data || []).map(i => ({ id: i.id, name: i.service_name, price: i.price, type: 'Lab', data: i }));
+            } else if (type === 'tx') {
+                const res = await db.from('pharmacy').select('*').eq('category', 'Injection');
+                data = (res.data || []).map(i => ({ id: i.id, name: i.item_name, price: i.price_per_unit, type: 'Tx', data: i }));
+            } else {
+                const res = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']);
+                data = (res.data || []).map(i => ({ id: i.id, name: i.item_name, price: i.price_per_unit, type: 'Rx', data: i }));
+            }
+            masterCatalog = data; displayedCatalog = [...data];
+            renderCatalogItems();
+        }
+
+        function renderCatalogItems() {
+            document.getElementById('catalog-grid').innerHTML = displayedCatalog.map(i => `
+                <div class="glass-card flex flex-col justify-between h-32" onclick="addItemToDB('${i.type}', '${i.name}', ${JSON.stringify(i.data)})">
+                    <div class="font-bold text-white text-sm line-clamp-2">${i.name}</div>
+                    <div class="text-teal-400 font-black text-right">฿${parseFloat(i.price || 0).toFixed(2)}</div>
+                </div>
+            `).join('');
+        }
+
+        function filterCatalogItems() {
+            const q = document.getElementById('catalog-search').value.toLowerCase();
+            displayedCatalog = masterCatalog.filter(i => i.name.toLowerCase().includes(q));
+            renderCatalogItems();
+        }
+
+        // --- Database Action Logic ---
+        async function addItemToDB(type, name, masterData) {
+            // คำนวณราคาตามน้ำหนัก (Logic จาก medrec.html)
+            let finalPrice = parseFloat(masterData.price || masterData.price_per_unit) || 0;
+            const weight = parseFloat(currentRecordData.weight) || 0;
+
+            if (masterData.price_config && Array.isArray(masterData.price_config)) {
+                const matchedTier = masterData.price_config.find(t => weight <= t.max);
+                if (matchedTier) finalPrice = matchedTier.price;
+                else if (masterData.price_config.length > 0) finalPrice = masterData.price_config[masterData.price_config.length - 1].price;
+            }
+
+            const itemPayload = {
+                record_id: activeRecordId,
+                item_type: type,
+                item_name: name,
+                quantity: 1,
+                unit_price: finalPrice,
+                total_price: finalPrice
+            };
+
+            const { error } = await db.from('medical_record_items').insert([itemPayload]);
+            if (error) return alert("Error adding item: " + error.message);
+            
+            await syncTotalToDB();
+            refreshCartDisplay(activeRecordId);
+        }
+
+        async function removeItemFromDB(itemId) {
+            if (!confirm("ลบรายการนี้?")) return;
+            const { error } = await db.from('medical_record_items').delete().eq('id', itemId);
+            if (error) return alert("Error removing item: " + error.message);
+            
+            await syncTotalToDB();
+            refreshCartDisplay(activeRecordId);
+        }
+
+        async function syncTotalToDB() {
+            const { data: items } = await db.from('medical_record_items').select('total_price').eq('record_id', activeRecordId);
+            const newTotal = (items || []).reduce((sum, i) => sum + parseFloat(i.total_price || 0), 0);
+            const discount = parseFloat(document.getElementById('input-discount').value) || 0;
+            
+            const { error } = await db.from('medical_records').update({
+                total_cost: newTotal,
+                net_amount: newTotal - discount
+            }).eq('id', activeRecordId);
+
+            if (!error) {
+                document.getElementById('sum-total').innerText = newTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+                calculateNet();
+            }
         }
 
         async function processPayment() {
@@ -389,7 +536,6 @@
                     const finalWidth = l.w ? l.w : availableWidthMm;
                     
                     let style = `top:${currentY}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                    
                     if (l.align === 'center') style = `top:${currentY}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     else if (l.align === 'right') style = `top:${currentY}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
                     
@@ -426,62 +572,32 @@
             calculateChange();
         }
 
-        // --- ระบบสรุปยอดขาย (Sales Dashboard) ---
+        // --- ระบบสรุปยอดขาย ---
         async function openSummaryModal() {
             document.getElementById('summary-modal').style.display = 'flex';
-            
             document.getElementById('sum-day-amt').innerText = "...";
             document.getElementById('sum-month-amt').innerText = "...";
             document.getElementById('sum-year-amt').innerText = "...";
-
             const now = new Date();
-            
-            // คำนวณวันที่เริ่มต้นของ วัน, เดือน, ปี
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
             const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
-
-            // ดึงข้อมูลพร้อมกันทั้ง 3 ช่วงเวลา
-            const [daily, monthly, yearly] = await Promise.all([
-                getAggregatedSales(startOfDay),
-                getAggregatedSales(startOfMonth),
-                getAggregatedSales(startOfYear)
-            ]);
-
-            // อัปเดต UI
-            document.getElementById('sum-day-amt').innerText = daily.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const [daily, monthly, yearly] = await Promise.all([getAggregatedSales(startOfDay), getAggregatedSales(startOfMonth), getAggregatedSales(startOfYear)]);
+            document.getElementById('sum-day-amt').innerText = daily.total.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-day-count').innerText = daily.count;
-
-            document.getElementById('sum-month-amt').innerText = monthly.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('sum-month-amt').innerText = monthly.total.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-month-count').innerText = monthly.count;
-
-            document.getElementById('sum-year-amt').innerText = yearly.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('sum-year-amt').innerText = yearly.total.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-year-count').innerText = yearly.count;
         }
 
-        function closeSummaryModal() {
-            document.getElementById('summary-modal').style.display = 'none';
-        }
+        function closeSummaryModal() { document.getElementById('summary-modal').style.display = 'none'; }
 
         async function getAggregatedSales(startDate) {
-            const { data, error } = await db.from('medical_records')
-                .select('net_amount')
-                .eq('payment_status', 'paid')
-                .gte('paid_at', startDate);
-
-            if (error) {
-                console.error(error);
-                return { total: 0, count: 0 };
-            }
-
-            let total = 0;
-            let count = data ? data.length : 0;
-            
-            if (data && data.length > 0) {
-                total = data.reduce((sum, row) => sum + parseFloat(row.net_amount || 0), 0);
-            }
-            
-            return { total, count };
+            const { data, error } = await db.from('medical_records').select('net_amount').eq('payment_status', 'paid').gte('paid_at', startDate);
+            if (error) return { total: 0, count: 0 };
+            let total = data ? data.reduce((sum, row) => sum + parseFloat(row.net_amount || 0), 0) : 0;
+            return { total, count: data ? data.length : 0 };
         }
     </script>
 </body>
