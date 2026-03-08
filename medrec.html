@@ -24,7 +24,7 @@
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; display: block; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
         
-        /* History Details Styles (นำกลับมา) */
+        /* History Details Styles */
         .history-record-box { background: rgba(0,0,0,0.2); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px; }
         .data-label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
         .data-value { font-size: 1rem; color: #cbd5e1; }
@@ -177,7 +177,7 @@
             if (!dateString) return "-";
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-            const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const monthsLong = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
             const d = date.getDate();
             const m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()];
             const y = date.getFullYear() + 543;
@@ -196,7 +196,7 @@
             const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN);
             
             if (!pet || !owner) {
-                alert("❌ ไม่พบข้อมูลสัตว์เลี้ยงหรือเจ้าของในระบบ (ข้อมูลอาจถูกลบไปแล้ว หรือเปิดหน้าต่างค้างไว้)\\nระบบจะพากลับไปหน้าค้นหา");
+                alert("❌ ไม่พบข้อมูลสัตว์เลี้ยงหรือเจ้าของในระบบ (ข้อมูลอาจถูกลบไปแล้ว หรือเปิดหน้าต่างค้างไว้)\nระบบจะพากลับไปหน้าค้นหา");
                 window.location.href = 'animals.html';
                 return;
             }
@@ -221,7 +221,6 @@
             records = data || []; renderRecordsList();
         }
 
-        // นำการเรนเดอร์แบบจัดเต็ม (จาก animals.html) มาใส่กลับในฟังก์ชันนี้
         function renderRecordsList() {
             const list = document.getElementById('history-list');
             document.getElementById('record-count').innerText = records.length;
@@ -238,7 +237,6 @@
                 const labs = rec.medical_record_items.filter(i => i.item_type === 'Lab').map(i => i.item_name).join(', ') || '-';
                 const txs = rec.medical_record_items.filter(i => i.item_type === 'Tx').map(i => i.item_name).join(', ') || '-';
                 
-                // สำหรับ Rx ให้แสดงแบบมี Checkbox เพื่อพิมพ์ทีละรายการได้เหมือนเดิม
                 const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
                 let rxsHtml = '-';
                 if(rxItems.length > 0) {
@@ -380,8 +378,6 @@
             await executeDynamicPrint(printBatch, 'sticker_drug');
         }
 
-        // --- ฟังก์ชันสำหรับการพิมพ์ที่รวมสติ๊กเกอร์ ---
-        
         async function printBothLabels(petId) {
             try {
                 const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
@@ -391,7 +387,6 @@
 
                 if (!pet || !owner) return alert("ไม่พบข้อมูลสัตว์หรือเจ้าของ");
 
-                // ดึง Template ทั้งสองแบบ
                 const [tplPetRes, tplApptRes] = await Promise.all([
                     db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(),
                     db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()
@@ -399,7 +394,6 @@
 
                 if (!tplPetRes.data) return alert("ไม่พบ Template: sticker_pet_id");
                 
-                // ถ้าไม่มีข้อมูลนัดหมาย หรือไม่มี template นัดหมาย จะพิมพ์แค่บัตรประจำตัว
                 if (!latestRecWithAppt || !tplApptRes.data) {
                     if(!latestRecWithAppt) alert("ไม่พบข้อมูลนัดหมาย ระบบจะพิมพ์เฉพาะข้อมูลประจำตัวสัตว์");
                     return printPetLabel(petId);
@@ -433,7 +427,6 @@
                     date: formatThaiDate(new Date().toISOString(), 'short')
                 };
 
-                // ส่งไปพิมพ์รวมเป็นไฟล์เดียว
                 executeMultiTemplatePrint([
                     { config: tplPetRes.data.config, data: petData },
                     { config: tplApptRes.data.config, data: apptData }
@@ -449,7 +442,6 @@
                 const { data: phoneInfo } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).eq('label', 'เบอร์หลัก').maybeSingle();
                 
                 if (!pet || !owner) return alert("ไม่พบข้อมูลสัตว์หรือเจ้าของ");
-
                 const ownerPhone = phoneInfo ? phoneInfo.phone_number : '-';
 
                 const printData = {
@@ -549,6 +541,7 @@
         window.handleItemSelect = function(idx) {
             const item = displayedItems[idx];
             if (!item) return;
+
             if (item.type === 'Rx' && item.is_med) {
                 pendingItem = item;
                 document.getElementById('rx-calc-name').innerText = item.name;
@@ -572,6 +565,24 @@
                 }
                 document.getElementById('inj-modal').style.display = 'flex';
                 document.getElementById('inj-ml').value = 0.1;
+            } else if (item.type === 'Lab') {
+                // ✅ ส่วนที่แก้ไข: เพิ่ม Logic ตรวจสอบราคาตามช่วงน้ำหนักสำหรับ Lab
+                let finalPrice = parseFloat(item.price) || 0;
+                const weight = parseFloat(document.getElementById('f_weight').value) || 0;
+
+                // ตรวจสอบว่ามี price_config (Weight Tiers) หรือไม่
+                if (item.data && item.data.price_config && Array.isArray(item.data.price_config)) {
+                    const tiers = item.data.price_config;
+                    // หา Tier ที่น้ำหนักสัตว์น้อยกว่าหรือเท่ากับค่า max
+                    const matchedTier = tiers.find(t => weight <= t.max);
+                    if (matchedTier) {
+                        finalPrice = matchedTier.price;
+                    } else if (tiers.length > 0) {
+                        // ถ้าน้ำหนักเกินทุก Tier ให้ใช้ราคาของ Tier สุดท้าย
+                        finalPrice = tiers[tiers.length - 1].price;
+                    }
+                }
+                addItem('Lab', item.name, finalPrice);
             } else {
                 addItem(item.type, item.name, item.price);
             }
@@ -689,7 +700,6 @@
             document.getElementById('modal-session-list').innerHTML = current.map((i, idx) => `<span class="bg-teal-500 text-black px-3 py-1 rounded-lg text-sm font-bold cursor-pointer" onclick="removeItem(${idx})">✕ ${i.name}</span>`).join('');
         }
 
-        // --- Core Print Executor ---
         async function executeDynamicPrint(dataList, templateType) {
             const { data: t } = await db.from('print_templates').select('config').eq('template_type', templateType).single();
             if (!t) return alert("ไม่พบ Template: " + templateType);
@@ -727,7 +737,6 @@
             pw.document.write(html); pw.document.close();
         }
 
-        // --- Multi Template Print Executor (สำหรับพิมพ์ควบ 2 หน้าต่างใน 1 ไฟล์) ---
         function executeMultiTemplatePrint(jobs) {
             const px = 3.78; 
             const pw = window.open('', '_blank', 'width=400');
