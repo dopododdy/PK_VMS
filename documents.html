@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบเอกสารทางการแพทย์ | PK-VMS Pro</title>
+    <title>Document Center | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,25 +14,22 @@
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
-        .sidebar-container { width: 400px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-container { width: 380px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .owner-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
         .owner-card:hover { background: rgba(255,255,255,0.03); }
         .owner-card.active { background: rgba(20, 184, 166, 0.1); border-left: 4px solid var(--teal); }
 
+        .doc-tab { padding: 12px 20px; font-weight: 800; font-size: 0.85rem; cursor: pointer; border-radius: 12px; transition: 0.2s; color: #94a3b8; border: 1px solid transparent; }
+        .doc-tab:hover { background: rgba(255,255,255,0.05); }
+        .doc-tab.active { background: var(--teal); color: white; box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3); }
+
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; padding: 24px; border: 1px solid var(--border); }
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; }
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); }
 
-        .pet-checkbox-card { 
-            background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); 
-            border-radius: 16px; padding: 12px; cursor: pointer; transition: 0.2s;
-        }
-        .pet-checkbox-card:hover { border-color: var(--teal); }
-        .pet-checkbox-card.selected { background: rgba(20, 184, 166, 0.15); border-color: var(--teal); }
+        .pet-mini-card { background: rgba(15, 23, 42, 0.6); border: 2px solid transparent; border-radius: 16px; padding: 12px; cursor: pointer; transition: 0.2s; }
+        .pet-mini-card.selected { border-color: var(--teal); background: rgba(20, 184, 166, 0.1); }
 
-        /* Print Preview Style */
-        .preview-area { background: #fff; color: #000; padding: 20mm; min-height: 297mm; width: 210mm; margin: 0 auto; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
-        
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
     </style>
@@ -42,66 +39,54 @@
     <aside class="sidebar-container">
         <div class="p-6 border-b border-white/5">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-white">📂 ศูนย์เอกสาร</h2>
+                <h2 class="text-xl font-black text-white italic">PK-VMS <span class="text-teal-500">DOCS</span></h2>
                 <a href="index.html" class="p-2 hover:bg-white/10 rounded-lg transition"><i data-lucide="home"></i></a>
             </div>
             <div class="relative">
-                <i data-lucide="search" class="absolute left-3 top-3.5 w-4 h-4 text-gray-500"></i>
+                <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-gray-500"></i>
                 <input type="text" id="search-owner" class="input-box pl-10" placeholder="ค้นหา HN หรือชื่อเจ้าของ..." oninput="searchOwners()">
             </div>
         </div>
-        <div id="owner-list" class="flex-1 overflow-y-auto custom-scroll">
-            </div>
+        <div id="owner-list" class="flex-1 overflow-y-auto custom-scroll"></div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto bg-[#020617] flex flex-col relative custom-scroll">
+    <main class="flex-1 flex flex-col overflow-hidden">
         
-        <div id="no-selection" class="flex-1 flex flex-col items-center justify-center opacity-20">
-            <i data-lucide="file-text" class="w-32 h-32 mb-4"></i>
-            <h2 class="text-3xl font-bold">กรุณาเลือกเจ้าของสัตว์</h2>
-            <p>เพื่อเริ่มต้นการออกใบยินยอมหรือเอกสารทางการแพทย์</p>
-        </div>
+        <nav class="p-4 bg-navy-light/50 border-b border-white/5 flex gap-2 overflow-x-auto custom-scroll">
+            <div class="doc-tab active" data-type="consent" onclick="switchDocType('consent')">📋 ใบยินยอมผ่าตัด</div>
+            <div class="doc-tab" data-type="lab" onclick="switchDocType('lab')">🔬 รายงานผลแล็บ</div>
+            <div class="doc-tab" data-type="refer" onclick="switchDocType('refer')">🚑 ใบส่งตัว</div>
+            <div class="doc-tab" data-type="history" onclick="switchDocType('history')">📜 ประวัติการรักษา</div>
+            <div class="doc-tab" data-type="parcel" onclick="switchDocType('parcel')">📦 แปะหน้ากล่อง</div>
+        </nav>
 
-        <div id="doc-editor" class="hidden p-10 max-w-5xl mx-auto w-full space-y-8">
+        <div id="content-area" class="flex-1 overflow-y-auto p-10 custom-scroll">
             
-            <div class="flex justify-between items-end">
-                <div>
-                    <h1 class="text-4xl font-black text-white mb-2">ใบยินยอมทำวิสัญญีและผ่าตัด</h1>
-                    <p class="text-teal-500 font-bold" id="owner-display-name">Owner: -</p>
-                </div>
-                <button onclick="preparePrint()" class="bg-teal-600 hover:bg-teal-500 px-8 py-4 rounded-2xl font-black text-xl transition flex items-center gap-2 shadow-xl shadow-teal-900/20">
-                    <i data-lucide="printer"></i> พิมพ์เอกสาร
-                </button>
+            <div id="no-selection" class="h-full flex flex-col items-center justify-center opacity-20">
+                <i data-lucide="file-text" class="w-32 h-32 mb-4"></i>
+                <h2 class="text-3xl font-bold">กรุณาเลือกเจ้าของสัตว์</h2>
+                <p>เพื่อเริ่มต้นการจัดการเอกสาร</p>
             </div>
 
-            <div class="section-card">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-white">
-                    <i data-lucide="check-square" class="text-teal-500"></i> 1. เลือกสัตว์เลี้ยงที่เข้ารับการผ่าตัด
-                </h3>
-                <div id="pet-selection-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    </div>
-            </div>
-
-            <div class="section-card">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-white">
-                    <i data-lucide="edit-3" class="text-teal-500"></i> 2. รายละเอียดการทำหัตถการ
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="editor-container" class="hidden max-w-5xl mx-auto space-y-8">
+                <div class="flex justify-between items-end">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">ประเภทการผ่าตัด/หัตถการ</label>
-                        <input type="text" id="surgery-type" class="input-box" placeholder="เช่น ทำหมัน, ผ่าตัดนิ่ว, ขูดหินปูน">
+                        <h1 class="text-4xl font-black text-white" id="current-doc-title">ใบยินยอมผ่าตัด</h1>
+                        <p class="text-teal-500 font-bold mt-2" id="owner-display-name">-</p>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">ชื่อสัตวแพทย์ผู้ผ่าตัด</label>
-                        <input type="text" id="surgeon-name" class="input-box" placeholder="น.สพ. ...">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 mb-2 uppercase text-orange-400">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
-                        <textarea id="surgery-note" class="input-box min-h-[80px]" placeholder="เช่น ระบุตำแหน่งก้อนเนื้อ, ข้อควรระวังพิเศษ"></textarea>
-                    </div>
+                    <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-2xl font-black text-xl flex items-center gap-2 shadow-xl transition">
+                        <i data-lucide="printer"></i> พิมพ์เอกสาร
+                    </button>
                 </div>
-            </div>
 
+                <div id="pet-selection-section" class="section-card">
+                    <h3 class="text-sm font-bold text-gray-500 mb-4 uppercase tracking-widest">เลือกสัตว์เลี้ยง</h3>
+                    <div id="pet-list-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+                </div>
+
+                <div id="dynamic-form-area" class="space-y-6">
+                    </div>
+            </div>
         </div>
     </main>
 
@@ -109,84 +94,67 @@
         let currentOwner = null;
         let ownerPets = [];
         let selectedPetIds = new Set();
+        let activeDocType = 'consent';
 
         window.onload = async () => {
             lucide.createIcons();
-            
-            // ตรวจสอบ Query Params (hn=xxxx)
             const params = new URLSearchParams(window.location.search);
             const hn = params.get('hn');
-            if (hn) {
-                await selectOwner(hn);
-            }
+            if (hn) await selectOwner(hn);
             await fetchOwners();
         };
 
+        // --- Core Logic ---
         async function fetchOwners() {
-            const { data } = await db.from('owners').select('*').order('hn', { ascending: false }).limit(20);
+            const { data } = await db.from('owners').select('*').order('hn', { ascending: false }).limit(10);
             renderOwnerList(data);
         }
 
         async function searchOwners() {
             const term = document.getElementById('search-owner').value;
             if (term.length < 2) return;
-            const { data } = await db.from('owners')
-                .select('*')
-                .or(`owner_name.ilike.%${term}%,hn.ilike.%${term}%`)
-                .limit(20);
+            const { data } = await db.from('owners').select('*').or(`owner_name.ilike.%${term}%,hn.ilike.%${term}%`).limit(20);
             renderOwnerList(data);
         }
 
         function renderOwnerList(owners) {
             const container = document.getElementById('owner-list');
             container.innerHTML = owners.map(o => `
-                <div class="owner-card" onclick="selectOwner('${o.hn}')" id="owner-${o.hn}">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-black bg-slate-800 px-2 py-1 rounded text-blue-400">#${o.hn}</span>
-                    </div>
-                    <div class="text-white font-bold mt-2">${o.owner_name}</div>
-                    <div class="text-xs text-gray-500 truncate">${o.address || '-'}</div>
-                </div>
-            `).join('');
+                <div class="owner-card ${currentOwner?.hn === o.hn ? 'active' : ''}" onclick="selectOwner('${o.hn}')">
+                    <span class="text-[10px] font-bold bg-slate-800 text-blue-400 px-2 py-1 rounded">#${o.hn}</span>
+                    <div class="text-white font-bold mt-1">${o.owner_name}</div>
+                </div>`).join('');
         }
 
         async function selectOwner(hn) {
-            const { data: owner } = await db.from('owners').select('*').eq('hn', hn).single();
-            const { data: pets } = await db.from('animals').select('*').eq('owner_hn', hn);
-            
+            const [{ data: owner }, { data: pets }] = await Promise.all([
+                db.from('owners').select('*').eq('hn', hn).single(),
+                db.from('animals').select('*').eq('owner_hn', hn)
+            ]);
             currentOwner = owner;
             ownerPets = pets || [];
             selectedPetIds.clear();
-
-            // UI Update
-            document.querySelectorAll('.owner-card').forEach(c => c.classList.remove('active'));
-            const activeCard = document.getElementById(`owner-${hn}`);
-            if (activeCard) activeCard.classList.add('active');
-
+            
             document.getElementById('no-selection').classList.add('hidden');
-            document.getElementById('doc-editor').classList.remove('hidden');
-            document.getElementById('owner-display-name').innerText = `เจ้าของ: ${owner.owner_name} (HN: ${owner.hn})`;
-
-            renderPetSelection();
+            document.getElementById('editor-container').classList.remove('hidden');
+            document.getElementById('owner-display-name').innerText = `เจ้าของ: ${owner.owner_name} | ${owner.address || 'ไม่มีข้อมูลที่อยู่'}`;
+            
+            renderPetList();
+            switchDocType(activeDocType);
+            fetchOwners(); // Refresh sidebar active state
         }
 
-        function renderPetSelection() {
-            const container = document.getElementById('pet-selection-grid');
+        function renderPetList() {
+            const container = document.getElementById('pet-list-grid');
             container.innerHTML = ownerPets.map(p => `
-                <div class="pet-checkbox-card" onclick="togglePetSelection('${p.id}')" id="pet-card-${p.id}">
-                    <div class="flex items-center gap-3">
-                        <div class="text-2xl">${p.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
-                        <div class="min-w-0">
-                            <div class="text-white font-black truncate">${p.pet_name}</div>
-                            <div class="text-[10px] text-gray-500">${p.breed} (${p.gender})</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                <div class="pet-mini-card" id="p-card-${p.id}" onclick="togglePet('${p.id}')">
+                    <div class="text-xl">${p.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
+                    <div class="text-white font-bold truncate">${p.pet_name}</div>
+                </div>`).join('');
         }
 
-        function togglePetSelection(id) {
-            const card = document.getElementById(`pet-card-${id}`);
+        function togglePet(id) {
+            const card = document.getElementById(`p-card-${id}`);
             if (selectedPetIds.has(id)) {
                 selectedPetIds.delete(id);
                 card.classList.remove('selected');
@@ -196,112 +164,151 @@
             }
         }
 
-        async function preparePrint() {
-            if (selectedPetIds.size === 0) return alert("กรุณาเลือกสัตว์เลี้ยงอย่างน้อย 1 ตัว");
+        // --- Sub-Menu Switcher ---
+        function switchDocType(type) {
+            activeDocType = type;
+            document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-type="${type}"]`).classList.add('active');
             
-            const surgeryType = document.getElementById('surgery-type').value;
-            if (!surgeryType) return alert("กรุณาระบุประเภทการผ่าตัด");
+            const formArea = document.getElementById('dynamic-form-area');
+            const title = document.getElementById('current-doc-title');
 
-            // ดึงข้อมูลสัตว์ที่เลือก
-            const selectedPets = ownerPets.filter(p => selectedPetIds.has(p.id));
-            
-            // รายชื่อสัตว์ (รวมเป็นสตริงเดียวสำหรับพิมพ์)
-            const petNames = selectedPets.map(p => p.pet_name).join(', ');
-            const petDetails = selectedPets.map(p => `${p.pet_name} (${p.pet_type}/${p.breed})`).join('\n');
-
-            // ดึง Template จาก DB (ถ้ามี)
-            const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'anesthesia_consent').single();
-            
-            const printData = {
-                clinic_name: "PK-VMS Animal Clinic",
-                date: new Date().toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' }),
-                owner_name: currentOwner.owner_name,
-                owner_address: currentOwner.address || "-",
-                pet_names: petNames,
-                pet_details_block: petDetails,
-                surgery_type: surgeryType,
-                surgeon: document.getElementById('surgeon-name').value || "................................",
-                note: document.getElementById('surgery-note').value || "-"
+            const forms = {
+                consent: {
+                    title: "ใบยินยอมทำวิสัญญีและผ่าตัด",
+                    html: `
+                        <div class="section-card">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-gray-500 block mb-2">ประเภทการผ่าตัด</label><input type="text" id="f-surgery" class="input-box" placeholder="เช่น ทำหมัน, ผ่าตัดนิ่ว"></div>
+                                <div><label class="text-xs font-bold text-gray-500 block mb-2">สัตวแพทย์ผู้ผ่าตัด</label><input type="text" id="f-surgeon" class="input-box" placeholder="น.สพ. ..."></div>
+                                <div class="col-span-2"><label class="text-xs font-bold text-gray-500 block mb-2">หมายเหตุเพิ่มเติม</label><textarea id="f-note" class="input-box min-h-[80px]"></textarea></div>
+                            </div>
+                        </div>`
+                },
+                lab: {
+                    title: "รายงานผลตรวจทางห้องปฏิบัติการ",
+                    html: `
+                        <div class="section-card">
+                            <p class="text-gray-400 text-sm mb-4 italic">* ระบบจะดึงข้อมูลล่าสุดจาก Lab Room มาแสดงโดยอัตโนมัติ</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-gray-500 block mb-2">สัตวแพทย์ผู้อ่านผล</label><input type="text" id="f-lab-vet" class="input-box" placeholder="น.สพ. ..."></div>
+                                <div><label class="text-xs font-bold text-gray-500 block mb-2">หัวข้อรายงาน</label><input type="text" id="f-lab-title" class="input-box" value="รายงานผลตรวจเลือดและ Imaging"></div>
+                            </div>
+                        </div>`
+                },
+                refer: {
+                    title: "ใบส่งตัวสัตว์ป่วย (Referral Letter)",
+                    html: `
+                        <div class="section-card space-y-4">
+                            <div><label class="text-xs font-bold text-gray-500 block mb-2">ส่งตัวไปยัง (สถานพยาบาลปลายทาง)</label><input type="text" id="f-refer-to" class="input-box"></div>
+                            <div><label class="text-xs font-bold text-gray-500 block mb-2">ประวัติและอาการเบื้องต้น</label><textarea id="f-history" class="input-box min-h-[100px]"></textarea></div>
+                            <div><label class="text-xs font-bold text-gray-500 block mb-2">การรักษาที่ให้ไปแล้ว</label><textarea id="f-treatment" class="input-box min-h-[100px]"></textarea></div>
+                        </div>`
+                },
+                history: {
+                    title: "ใบสรุปประวัติการรักษา",
+                    html: `
+                        <div class="section-card">
+                            <label class="text-xs font-bold text-gray-500 block mb-2">ระบุช่วงวันที่ (ถ้าต้องการ)</label>
+                            <div class="flex gap-4">
+                                <input type="date" id="f-date-start" class="input-box">
+                                <input type="date" id="f-date-end" class="input-box">
+                            </div>
+                        </div>`
+                },
+                parcel: {
+                    title: "ใบปะหน้ากล่องพัสดุ",
+                    html: `
+                        <div class="section-card space-y-6">
+                            <div class="grid grid-cols-2 gap-6">
+                                <div class="bg-black/20 p-4 rounded-xl">
+                                    <h4 class="text-teal-500 font-bold mb-3 underline">ผู้ส่ง (Sender)</h4>
+                                    <p class="text-xs text-white">PK-VMS Animal Clinic</p>
+                                    <p class="text-[10px] text-gray-400 mt-1">123 ถ.สัตวแพทย์ แขวง/เขต... 10xxx <br> โทร: 02-xxx-xxxx</p>
+                                </div>
+                                <div class="bg-black/20 p-4 rounded-xl">
+                                    <h4 class="text-orange-500 font-bold mb-3 underline">ผู้รับ (Receiver)</h4>
+                                    <p class="text-xs text-white font-bold">${currentOwner?.owner_name}</p>
+                                    <p class="text-[10px] text-gray-400 mt-1">${currentOwner?.address || '-'}</p>
+                                    <p class="text-xs text-teal-400 mt-2 font-bold">โทร: (ดึงจากประวัติเบอร์โทร)</p>
+                                </div>
+                            </div>
+                            <input type="text" id="f-parcel-note" class="input-box" placeholder="ระบุสิ่งที่ส่ง (เช่น ยาลดอักเสบ, อาหารเฉพาะโรค)">
+                        </div>`
+                }
             };
 
-            generateConsentPDF(printData);
+            const selected = forms[type];
+            title.innerText = selected.title;
+            formArea.innerHTML = selected.html;
+            lucide.createIcons();
         }
 
-        function generateConsentPDF(data) {
+        // --- Printing Logic ---
+        async function printCurrentDoc() {
+            if (selectedPetIds.size === 0 && activeDocType !== 'parcel') return alert("กรุณาเลือกสัตว์เลี้ยง");
+            
+            const petNames = Array.from(selectedPetIds).map(id => ownerPets.find(p => p.id === id).pet_name).join(', ');
+            
+            // สร้างหน้าต่างพิมพ์
             const win = window.open('', '_blank');
             win.document.write(`
                 <html>
                 <head>
-                    <title>ใบยินยอมผ่าตัด - ${data.pet_names}</title>
+                    <title>${activeDocType} - ${petNames}</title>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-                        body { font-family: 'Sarabun', sans-serif; line-height: 1.6; padding: 20mm; color: #000; }
-                        .header { text-align: center; margin-bottom: 30px; }
-                        .title { font-size: 20pt; font-weight: bold; border-bottom: 2px solid #000; display: inline-block; margin-bottom: 10px; }
-                        .content-section { margin-bottom: 20px; text-align: justify; }
-                        .form-row { margin-bottom: 10px; }
-                        .label { font-weight: bold; }
-                        .underline { border-bottom: 1px dotted #000; padding: 0 10px; display: inline-block; min-width: 150px; }
-                        .signature-area { margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 50px; }
-                        .sig-box { text-align: center; }
-                        @media print { body { padding: 0; } .no-print { display: none; } }
+                        body { font-family: 'Sarabun', sans-serif; padding: 20mm; color: #000; font-size: 14pt; }
+                        .header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
+                        .title { font-size: 20pt; font-weight: bold; }
+                        .footer { margin-top: 50px; display: flex; justify-content: space-between; }
+                        .sig { text-align: center; width: 200px; border-top: 1px solid #000; margin-top: 60px; padding-top: 5px; }
+                        @media print { body { padding: 10mm; } }
                     </style>
                 </head>
                 <body>
                     <div class="header">
-                        <div class="title">หนังสือแสดงความยินยอมเพื่อรับการรักษาโดยการวางยาสลบและผ่าตัด</div>
-                        <div>${data.clinic_name}</div>
+                        <div class="title">${document.getElementById('current-doc-title').innerText}</div>
+                        <div>PK-VMS Animal Clinic | โทร 02-XXX-XXXX</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <b>วันที่:</b> ${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })} <br>
+                        <b>เจ้าของ:</b> ${currentOwner.owner_name} <br>
+                        <b>สัตว์เลี้ยง:</b> ${petNames || '-'}
                     </div>
 
-                    <div class="form-row">
-                        เขียนที่ ${data.clinic_name} วันที่ <span class="underline">${data.date}</span>
+                    <div style="min-height: 100mm; border: 1px solid #eee; padding: 15px;">
+                        ${generateDocBody()}
                     </div>
 
-                    <div class="content-section">
-                        ข้าพเจ้า <span class="underline">${data.owner_name}</span> อยู่บ้านเลขที่ <span class="underline">${data.owner_address}</span> 
-                        ซึ่งเป็นเจ้าของหรือผู้ดูแลสัตว์เลี้ยงดังรายนามต่อไปนี้:
-                        <div style="margin: 15px 0; font-weight: bold; padding-left: 20px; border-left: 3px solid #ccc;">
-                            ${data.pet_details_block.replace(/\n/g, '<br>')}
-                        </div>
+                    <div class="footer">
+                        <div class="sig">ลงชื่อเจ้าของสัตว์</div>
+                        <div class="sig">ลงชื่อสัตวแพทย์</div>
                     </div>
 
-                    <div class="content-section">
-                        มีความประสงค์ให้สัตวแพทย์ทำการ <span class="underline">${data.surgery_type}</span> 
-                        โดยมี <span class="underline">${data.surgeon}</span> เป็นสัตวแพทย์ผู้ควบคุมการรักษา 
-                        ข้าพเจ้ายินยอมให้สัตวแพทย์ทำการวางยาสลบและดำเนินการรักษาตามที่เห็นสมควร
-                    </div>
-
-                    <div class="content-section">
-                        <b>เงื่อนไขการรับทราบ:</b> ข้าพเจ้าได้รับทราบและเข้าใจดีว่า การวางยาสลบและการผ่าตัดมีความเสี่ยงที่อาจเกิดขึ้นได้ 
-                        รวมถึงภาวะแทรกซ้อนที่ไม่อาจคาดคิด แม้สัตวแพทย์จะปฏิบัติงานตามมาตรฐานวิชาชีพอย่างเต็มที่แล้วก็ตาม 
-                        หากเกิดเหตุสุดวิสัยอันนำมาซึ่งการสูญเสีย ข้าพเจ้าจะไม่ติดใจเอาความหรือเรียกร้องค่าเสียหายใดๆ กับทางคลินิกและสัตวแพทย์
-                    </div>
-
-                    <div class="form-row">
-                        <b>หมายเหตุเพิ่มเติม:</b> ${data.note}
-                    </div>
-
-                    <div class="signature-area">
-                        <div class="sig-box">
-                            <p>ลงชื่อ..........................................................</p>
-                            <p>( ${data.owner_name} )</p>
-                            <p>เจ้าของสัตว์/ผู้มีอำนาจตัดสินใจ</p>
-                        </div>
-                        <div class="sig-box">
-                            <p>ลงชื่อ..........................................................</p>
-                            <p>( ${data.surgeon} )</p>
-                            <p>สัตวแพทย์ผู้ทำการรักษา</p>
-                        </div>
-                    </div>
-
-                    <script>
-                        window.onload = () => {
-                            setTimeout(() => { window.print(); window.close(); }, 500);
-                        };
-                    <\/script>
+                    <script>window.onload = () => { setTimeout(()=> { window.print(); window.close(); }, 500); };<\/script>
                 </body>
                 </html>
             `);
+            win.document.close();
+        }
+
+        function generateDocBody() {
+            // ดึงข้อมูลจาก Form ปัจจุบันมาลงใน Body ของเอกสาร
+            if (activeDocType === 'consent') {
+                return `<p>ข้าพเจ้าขอยินยอมให้สัตวแพทย์ทำการ <b>${document.getElementById('f-surgery').value}</b> และทำวิสัญญีแก่สัตว์เลี้ยงของข้าพเจ้า...</p>`;
+            }
+            if (activeDocType === 'parcel') {
+                return `
+                <div style="border: 4px solid #000; padding: 30px; text-align: center;">
+                    <h1 style="font-size: 30pt;">ผู้รับ: ${currentOwner.owner_name}</h1>
+                    <p style="font-size: 20pt;">ที่อยู่: ${currentOwner.address}</p>
+                    <hr>
+                    <p>สิ่งที่ส่ง: ${document.getElementById('f-parcel-note').value}</p>
+                </div>`;
+            }
+            return `<p>รายละเอียดเอกสารประเภท ${activeDocType} กำลังดำเนินการ...</p>`;
         }
     </script>
 </body>
