@@ -22,6 +22,7 @@
         .owner-card.active { background: rgba(20, 184, 166, 0.1); border-left: 4px solid var(--teal); }
 
         .doc-tab { padding: 12px 20px; font-weight: 800; font-size: 0.85rem; cursor: pointer; border-radius: 12px; transition: 0.2s; color: #94a3b8; border: 1px solid transparent; white-space: nowrap; }
+        .doc-tab:hover { background: rgba(255,255,255,0.05); }
         .doc-tab.active { background: var(--teal); color: white; box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3); }
 
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; padding: 24px; border: 1px solid var(--border); }
@@ -43,7 +44,7 @@
     <aside class="sidebar-container">
         <div class="p-6 border-b border-white/5 bg-navy">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-white italic">PK-VMS <span class="text-teal-500">DOCS</span></h2>
+                <h2 class="text-xl font-black text-white italic text-teal-500">PK-VMS DOCS</h2>
                 <a href="index.html" class="p-2 hover:bg-white/10 rounded-lg transition text-gray-400"><i data-lucide="home"></i></a>
             </div>
             <div class="relative">
@@ -56,15 +57,16 @@
 
     <main class="flex-1 flex flex-col overflow-hidden">
         <nav class="p-4 bg-navy-light/50 border-b border-white/5 flex gap-2 overflow-x-auto custom-scroll">
-            <div class="doc-tab active" data-type="doc_consent_a5" onclick="switchDocType('doc_consent_a5')">📋 ใบยินยอมผ่าตัด (A5)</div>
+            <div class="doc-tab active" data-type="doc_consent" onclick="switchDocType('doc_consent')">📋 ใบยินยอมผ่าตัด</div>
+            <div class="doc-tab" data-type="doc_opd" onclick="switchDocType('doc_opd')">📄 บันทึก OPD</div>
             <div class="doc-tab" data-type="doc_rx_label" onclick="switchDocType('doc_rx_label')">💊 ฉลากยา</div>
-            <div class="doc-tab" data-type="doc_receipt_80mm" onclick="switchDocType('doc_receipt_80mm')">💰 ใบเสร็จรับเงิน</div>
+            <div class="doc-tab" data-type="doc_receipt" onclick="switchDocType('doc_receipt')">💰 ใบเสร็จรับเงิน</div>
         </nav>
 
         <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-[#020617]">
             <div id="no-selection" class="h-full flex flex-col items-center justify-center opacity-20">
                 <i data-lucide="file-text" class="w-32 h-32 mb-4"></i>
-                <h2 class="text-3xl font-bold uppercase tracking-widest">Select Owner</h2>
+                <h2 class="text-3xl font-bold uppercase tracking-widest">กรุณาเลือกเจ้าของสัตว์</h2>
             </div>
 
             <div id="editor-container" class="hidden max-w-4xl mx-auto space-y-8 pb-32">
@@ -89,10 +91,11 @@
     </main>
 
     <script>
+        // ✅ เปลี่ยนค่าเริ่มต้นเป็น doc_consent
         let currentOwner = null;
         let ownerPets = [];
         let selectedPetIds = new Set();
-        let activeDocType = 'doc_consent_a5';
+        let activeDocType = 'doc_consent'; 
         const VET_NAME = "ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
 
         window.onload = async () => { lucide.createIcons(); await fetchOwners(); };
@@ -147,7 +150,8 @@
             const card = document.getElementById(`p-card-${id}`);
             if (selectedPetIds.has(id)) { selectedPetIds.delete(id); card.classList.remove('selected'); }
             else { selectedPetIds.add(id); card.classList.add('selected'); }
-            if (activeDocType === 'doc_consent_a5') refreshSurgeryRows();
+            // ✅ ปรับเงื่อนไขการเรียกฟังก์ชัน
+            if (activeDocType === 'doc_consent') refreshSurgeryRows();
         }
 
         function switchDocType(type) {
@@ -155,31 +159,36 @@
             document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
             const form = document.getElementById('dynamic-form');
-            if (type === 'doc_consent_a5') {
-                form.innerHTML = `<div class="section-card space-y-6"><div id="surgery-rows" class="space-y-6"></div><input type="text" id="f-note" class="input-box font-bold text-teal-400" placeholder="หมายเหตุเพิ่มเติม..."></div>`;
+            const title = document.getElementById('doc-title');
+            
+            // ✅ ปรับ Logic การแสดงฟอร์ม
+            if (type === 'doc_consent') {
+                title.innerText = "ใบยินยอมผ่าตัด";
+                form.innerHTML = `<div class="section-card space-y-6"><div id="surgery-rows" class="space-y-6"></div><input type="text" id="f-note" class="input-box font-bold text-teal-400" placeholder="ระบุหมายเหตุความเสี่ยงเพิ่มเติม..."></div>`;
                 refreshSurgeryRows();
             } else {
-                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>กำลังรอ Template...</p></div>`;
+                title.innerText = "เอกสารทางการแพทย์";
+                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>Template สำหรับประเภทนี้ กำลังถูกดึงจากระบบ...</p></div>`;
             }
             lucide.createIcons();
         }
 
         function refreshSurgeryRows() {
             const container = document.getElementById('surgery-rows');
-            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยง...</p>'; return; }
+            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยงด้านบนเพื่อทำรายการ...</p>'; return; }
             let html = '';
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id === id);
                 html += `
                     <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
-                        <div class="text-white font-black">🐾 ${pet.pet_name}</div>
+                        <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type})</div>
                         <div class="flex flex-wrap gap-2">
-                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน'].map(opt => `
+                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน', 'ผ่าตัดเนื้องอก'].map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
                                     <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
                                 </label>`).join('')}
                         </div>
-                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400 font-bold" data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายการเพิ่มเติม...">
+                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400 font-bold" data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายละเอียดเพิ่มเติม...">
                     </div>`;
             });
             container.innerHTML = html;
@@ -195,18 +204,19 @@
         }
 
         // ==========================================
-        // PK-VMS PRINT ENGINE (V7 - A5 Landscape Fix)
+        // PK-VMS PRINT ENGINE (Standardized Version)
         // ==========================================
         
         async function printCurrentDoc() {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            
+            // ดึง Template ตาม activeDocType (ซึ่งตอนนี้เป็น doc_consent)
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
-            if (!template) return alert("❌ ไม่พบ Template");
+            if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
 
             const config = template.config;
-            // ✅ บังคับให้เป็น แนวนอน ถ้า pw > ph
-            const pw = parseFloat(config.width); 
-            const ph = parseFloat(config.height);
+            const pw = parseFloat(config.width) || 210; // Default A4
+            const ph = parseFloat(config.height) || 297;
 
             const surgeryInputs = document.querySelectorAll('.surgery-input');
             const petSurgeries = Array.from(surgeryInputs).map(i => ({
@@ -216,6 +226,7 @@
 
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic",
+                clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
                 owner_name: currentOwner.owner_name || "-",
                 owner_address: currentOwner.address || "-",
                 owner_phone: currentOwner.phone || "-",
@@ -234,10 +245,10 @@
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || 'black';
                 
-                let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.2; white-space:pre-wrap;`;
+                let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.4; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
+                if (l.italic) style += 'font-style:italic;';
                 
-                // ✅ แก้ไข Align ให้เต็มหน้ากระดาษตาม pw
                 if (l.align === 'center') {
                     style += `left:0; width:${pw}mm; text-align:center;`;
                 } else if (l.align === 'right') {
@@ -280,12 +291,8 @@
                             overflow: hidden; 
                         }
                         @media print {
-                            @page { 
-                                size: ${pw}mm ${ph}mm; 
-                                margin: 0 !important; 
-                            }
-                            html, body { width: ${pw}mm; height: ${ph}mm; }
-                            .page { width: ${pw}mm; height: ${ph}mm; }
+                            @page { size: ${pw}mm ${ph}mm; margin: 0 !important; }
+                            html, body, .page { width: ${pw}mm; height: ${ph}mm; }
                         }
                     </style>
                 </head>
