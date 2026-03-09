@@ -124,16 +124,18 @@
                 </div>`).join('');
         }
 
+        // ✅ แก้ไข: ดึงข้อมูลเบอร์โทรศัพท์จากตาราง owner_phones
         async function selectOwner(hn) {
-            const [{ data: owner }, { data: pets }] = await Promise.all([
+            const [{ data: owner }, { data: pets }, { data: phones }] = await Promise.all([
                 db.from('owners').select('*').eq('hn', hn).single(),
-                db.from('animals').select('*').eq('owner_hn', hn)
+                db.from('animals').select('*').eq('owner_hn', hn),
+                db.from('owner_phones').select('phone_number').eq('owner_hn', hn)
             ]);
-            
-            // Debug: ดูข้อมูลใน Console ว่าเบอร์โทรใช้ Column ชื่ออะไร
-            console.log("Owner Data:", owner);
 
+            // นำเบอร์โทรแรกที่เจอมาใส่ในตัวแปรหลัก
             currentOwner = owner;
+            currentOwner.phone = phones?.[0]?.phone_number || "-";
+            
             ownerPets = pets || [];
             selectedPetIds.clear();
             
@@ -197,7 +199,7 @@
                                     <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
                                 </label>`).join('')}
                         </div>
-                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400" 
+                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400 font-bold" 
                             data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายการหัตถการ...">
                     </div>`;
             });
@@ -213,14 +215,11 @@
             textbox.value = selectedValues.join(', ');
         }
 
-        // ==========================================
-        // PK-VMS PRINT ENGINE (V3 - Fix Phone & Area)
-        // ==========================================
-        
+        // ✅ ฟังก์ชันพิมพ์งานที่ปรับปรุงเรื่องเบอร์โทรและขนาดกระดาษ
         async function printCurrentDoc() {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
-            if (!template) return alert("❌ ไม่พบ Template");
+            if (!template) return alert("❌ ไม่พบ Template ในระบบ");
 
             const config = template.config;
             const pw = parseFloat(config.width) || 148;
@@ -228,16 +227,16 @@
 
             const surgeryInputs = document.querySelectorAll('.surgery-input');
             const petSurgeries = Array.from(surgeryInputs).map(i => ({
-                name: i.dataset.petName, // Fix: petName (CamelCase)
+                name: i.dataset.petName,
                 surgery: i.value || '-'
             }));
 
-            // ✅ Fix: Phone Mapping (รองรับทุกความเป็นไปได้)
+            // ✅ Mapping เบอร์โทรจาก phone ที่ดึงมาใหม่
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic",
                 owner_name: currentOwner.owner_name || "-",
-                owner_address: currentOwner.address || currentOwner.owner_address || "-",
-                owner_phone: currentOwner.phone || currentOwner.owner_phone || currentOwner.tel || currentOwner.mobile || "-",
+                owner_address: currentOwner.address || "-",
+                owner_phone: currentOwner.phone || "-",
                 hn: currentOwner.hn || "-",
                 vet_name: VET_NAME,
                 date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -253,14 +252,16 @@
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || 'black';
                 
+                // ✅ บังคับหน่วย mm ให้ชัดเจน
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.4; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
+                if (l.italic) style += 'font-style:italic;';
                 
                 const boxWidthMm = l.w || (pw - parseFloat(l.x));
                 style += `width:${boxWidthMm}mm;`;
                 
-                if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
-                else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
+                if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
+                else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
                 else style += `left:${l.x}mm;`;
 
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
@@ -269,14 +270,14 @@
                     return `
                     <div style="${style}">
                         <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt;">
-                            <tr style="border-bottom:1px solid ${textColor}; font-weight:bold;">
+                            <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
                                 <th style="text-align:left; padding:1mm; width:30%;">ชื่อสัตว์</th>
                                 <th style="text-align:left; padding:1mm;">หัตถการ/ผ่าตัด</th>
                             </tr>
                             ${petSurgeries.map(ps => `
-                                <tr style="border-bottom:0.5px dotted #ccc;">
-                                    <td style="padding:1mm; vertical-align:top;">${ps.name}</td>
-                                    <td style="padding:1mm; vertical-align:top;">${ps.surgery}</td>
+                                <tr style="border-bottom:0.5px dotted #999;">
+                                    <td style="padding:1.5mm 1mm; vertical-align:top;">${ps.name}</td>
+                                    <td style="padding:1.5mm 1mm; vertical-align:top;">${ps.surgery}</td>
                                 </tr>`).join('')}
                         </table>
                     </div>`;
@@ -306,19 +307,28 @@
                 <head>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
-                        * { box-sizing: border-box; }
-                        body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; }
-                        .page { position: relative; width: ${pw}mm; min-height: ${ph}mm; background: white; overflow: visible; }
+                        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+                        body { margin: 0; padding: 0; background: white; }
+                        /* ✅ บังคับขนาดหน้ากระดาษให้ตรงกับ Config */
+                        .page { 
+                            position: relative; 
+                            width: ${pw}mm; 
+                            height: ${ph}mm; 
+                            margin: 0; 
+                            padding: 0;
+                            background: white; 
+                            overflow: hidden;
+                        }
                         @media print {
                             @page { size: ${pw}mm ${ph}mm; margin: 0; }
-                            html, body { width: ${pw}mm; height: ${ph}mm; margin: 0; padding: 0; }
-                            .page { width: ${pw}mm; margin: 0; }
+                            html, body { width: ${pw}mm; height: ${ph}mm; }
+                            .page { width: ${pw}mm; height: ${ph}mm; }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="page">${printContent}</div>
-                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 700); };<\/script>
+                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 800); };<\/script>
                 </body>
                 </html>
             `);
