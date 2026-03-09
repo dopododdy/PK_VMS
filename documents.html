@@ -91,7 +91,6 @@
     </main>
 
     <script>
-        // ✅ เปลี่ยนค่าเริ่มต้นเป็น doc_consent
         let currentOwner = null;
         let ownerPets = [];
         let selectedPetIds = new Set();
@@ -150,7 +149,6 @@
             const card = document.getElementById(`p-card-${id}`);
             if (selectedPetIds.has(id)) { selectedPetIds.delete(id); card.classList.remove('selected'); }
             else { selectedPetIds.add(id); card.classList.add('selected'); }
-            // ✅ ปรับเงื่อนไขการเรียกฟังก์ชัน
             if (activeDocType === 'doc_consent') refreshSurgeryRows();
         }
 
@@ -161,7 +159,6 @@
             const form = document.getElementById('dynamic-form');
             const title = document.getElementById('doc-title');
             
-            // ✅ ปรับ Logic การแสดงฟอร์ม
             if (type === 'doc_consent') {
                 title.innerText = "ใบยินยอมผ่าตัด";
                 form.innerHTML = `<div class="section-card space-y-6"><div id="surgery-rows" class="space-y-6"></div><input type="text" id="f-note" class="input-box font-bold text-teal-400" placeholder="ระบุหมายเหตุความเสี่ยงเพิ่มเติม..."></div>`;
@@ -204,18 +201,17 @@
         }
 
         // ==========================================
-        // PK-VMS PRINT ENGINE (Standardized Version)
+        // PK-VMS PRINT ENGINE (Color & Design Fixed)
         // ==========================================
         
         async function printCurrentDoc() {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             
-            // ดึง Template ตาม activeDocType (ซึ่งตอนนี้เป็น doc_consent)
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
             if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
 
             const config = template.config;
-            const pw = parseFloat(config.width) || 210; // Default A4
+            const pw = parseFloat(config.width) || 210;
             const ph = parseFloat(config.height) || 297;
 
             const surgeryInputs = document.querySelectorAll('.surgery-input');
@@ -243,7 +239,7 @@
             const printContent = sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
                 const fontSizePt = l.size || 12;
-                const textColor = l.color || 'black';
+                const textColor = l.color || '#000000'; // ดึงสีจาก Config
                 
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.4; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
@@ -257,20 +253,30 @@
                     style += `left:${l.x}mm; width:${l.w || (pw - parseFloat(l.x))}mm; text-align:left;`;
                 }
 
+                // กรณีเป็นตารางรายการผ่าตัด
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
                     const rowHeightMm = 8;
                     pushOffset += (petSurgeries.length) * rowHeightMm;
-                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt;">
-                            <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;"><th style="text-align:left; padding:1mm; width:30%;">ชื่อสัตว์</th><th style="text-align:left; padding:1mm;">หัตถการ/ผ่าตัด</th></tr>
-                            ${petSurgeries.map(ps => `<tr style="border-bottom:0.5px dotted #999;"><td style="padding:2mm 1mm; vertical-align:top;">${ps.name}</td><td style="padding:2mm 1mm; vertical-align:top;">${ps.surgery}</td></tr>`).join('')}
-                        </table></div>`;
+                    return `<div style="${style}">
+                        <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt; color:${textColor};">
+                            <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
+                                <th style="text-align:left; padding:1.5mm 1mm; width:30%;">ชื่อสัตว์</th>
+                                <th style="text-align:left; padding:1.5mm 1mm;">รายการหัตถการ/ผ่าตัด</th>
+                            </tr>
+                            ${petSurgeries.map(ps => `
+                                <tr style="border-bottom:0.5px dotted ${textColor}80;">
+                                    <td style="padding:2.5mm 1mm; vertical-align:top;">${ps.name}</td>
+                                    <td style="padding:2.5mm 1mm; vertical-align:top;">${ps.surgery}</td>
+                                </tr>`).join('')}
+                        </table>
+                    </div>`;
                 }
 
                 if (l.type === 'text') {
                     const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match);
                     return `<div style="${style}">${content}</div>`;
                 }
-                if (l.type === 'rect') return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
+                if (l.type === 'rect') return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
                 if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${currentY}mm; left:${l.align==='center'?'50%':l.x+'mm'}; ${l.align==='center'?'transform:translateX(-50%);':''} width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
                 return '';
             }).join('');
@@ -281,8 +287,8 @@
                 <head>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
-                        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
-                        html, body { margin: 0 !important; padding: 0 !important; }
+                        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                        html, body { margin: 0 !important; padding: 0 !important; background: white; }
                         .page { 
                             position: relative; 
                             width: ${pw}mm; 
