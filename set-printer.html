@@ -28,7 +28,7 @@
             background: #ffffff; position: relative; transform-origin: top center; 
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.7); overflow: visible; margin: 0 auto; flex-shrink: 0;
         }
-        .canvas-element { position: absolute; cursor: pointer; user-select: none; color: #000; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; transition: outline 0.1s; }
+        .canvas-element { position: absolute; cursor: pointer; user-select: none; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; transition: outline 0.1s; }
         .canvas-element:hover { outline: 1px dashed var(--teal); }
         .canvas-element.active { outline: 2px solid var(--teal) !important; background: rgba(20, 184, 17, 0.08); z-index: 100; }
         
@@ -129,7 +129,6 @@
             { name: "วัคซีนป้องกันโรคพิษสุนัขบ้า", price: 80.00 }
         ];
 
-        // อัปเดต Data ให้ครอบคลุมทุกตัวแปร และปรับวันที่เป็นรูปแบบภาษาไทย
         const mockData = {
             clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
             phone: "081-999-8888", tax_id: "0123456789012", 
@@ -144,7 +143,6 @@
             appointment_date_2: "21 มี.ค. 2569", appointment_note_2: "ฉีดวัคซีนเข็มกระตุ้น"
         };
 
-        // แสดงผลตัวแปรด้านข้าง
         const varGroups = {
             "🏥 คลินิก": ["clinic_name", "clinic_address", "phone", "tax_id"],
             "🐾 สัตว์/เจ้าของ": ["owner_name", "owner_phone", "pet_name", "species", "sex", "hn", "weight", "breed", "owner_address"],
@@ -161,9 +159,9 @@
             I: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 20l4-16m-4 0h8M6 20h8" stroke-width="2"/></svg>`
         };
 
-        function replaceVars(text, fontSize) {
+        function replaceVars(text, fontSize, color) {
             if (text.includes("{{items_list}}")) {
-                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:black; line-height: 1;">
+                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:${color || 'black'}; line-height: 1;">
                     ${mockItems.map(item => `
                         <tr>
                             <td style="padding: 1px 0; text-align: left; vertical-align: top;">${item.name}</td>
@@ -203,7 +201,7 @@
 
         function addLine(type) {
             let newLine = { type, x: 5, y: 5 };
-            if (type === 'text') newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 12, bold: false, italic: false, align: "left" };
+            if (type === 'text') newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 12, color: "#000000", bold: false, italic: false, align: "left" };
             else if (type === 'rect') newLine = { ...newLine, w: 70, h: 5, radius: 0, align: 'left' };
             else if (type === 'image') newLine = { ...newLine, w: 20, h: 20, url: '', align: 'left' };
             currentConfig.lines.push(newLine); activeLineIndex = currentConfig.lines.length - 1;
@@ -248,8 +246,15 @@
             let fields = '';
             if (l.type === 'text') {
                 fields = `<div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
-                    <div class="grid grid-cols-2 gap-4"><div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option></select></div><div class="editor-group"><label class="label-title">ขนาด (pt)</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div></div>
-                    <div class="grid grid-cols-2 gap-4">${alignControl}<div class="editor-group space-y-2"><label class="label-title">สไตล์</label><div class="flex gap-2"><button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold});">${icons.B}</button><button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic});">${icons.I}</button></div></div></div>`;
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option></select></div>
+                        <div class="editor-group"><label class="label-title">ขนาด (pt)</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="editor-group"><label class="label-title">สีข้อความ</label><input type="color" class="input-control h-12" value="${l.color || '#000000'}" oninput="updateLine(${i},'color',this.value)"></div>
+                        <div class="editor-group space-y-2"><label class="label-title">สไตล์</label><div class="flex gap-2"><button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold});">${icons.B}</button><button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic});">${icons.I}</button></div></div>
+                    </div>
+                    ${alignControl}`;
             } else if (l.type === 'rect') {
                 fields = `<div class="grid grid-cols-2 gap-4"><div class="editor-group"><label class="label-title">ความกว้าง (mm)</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div><div class="editor-group"><label class="label-title">ความสูง (mm)</label><input type="number" class="input-control" value="${l.h}" step="0.1" oninput="updateLine(${i},'h',this.value)"></div></div>
                     <div class="grid grid-cols-2 gap-4">${alignControl}<div class="editor-group"><label class="label-title">มุมโค้ง (mm)</label><input type="number" class="input-control" value="${l.radius || 0}" oninput="updateLine(${i},'radius',this.value)"></div></div>`;
@@ -264,7 +269,7 @@
             const numericKeys = ['x', 'y', 'w', 'h', 'size', 'radius'];
             currentConfig.lines[i][k] = numericKeys.includes(k) ? parseFloat(v) : v;
             renderCanvas();
-            if (!numericKeys.includes(k) && k !== 'text') renderLinesList();
+            if (!numericKeys.includes(k) && k !== 'text' && k !== 'color') renderLinesList();
         }
 
         function handleImageUpload(event, index) {
@@ -285,7 +290,7 @@
                 const availableWidthMm = pw - parseFloat(l.x); 
                 const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
                 
-                let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px;`;
+                let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px; color:${l.color || '#000000'};`;
                 
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
                 
@@ -295,7 +300,7 @@
                     if (l.align === 'center') tStyle += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') tStyle += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
                     else tStyle += `left:${l.x*px}px; text-align:left;`;
-                    return `<div ${commonAttr} style="${tStyle}">${replaceVars(l.text, l.size)}</div>`;
+                    return `<div ${commonAttr} style="${tStyle}">${replaceVars(l.text, l.size, l.color)}</div>`;
                 } else if (l.type === 'rect') {
                     return `<div ${commonAttr} style="top:${currentY * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:transparent; border-radius:${(l.radius || 0) * px}px;"></div>`;
                 } else if (l.type === 'image') {
@@ -325,7 +330,7 @@
             let pushOffset = 0;
             const printContent = sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
-                let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; position:absolute; color:black; line-height:1.4; white-space:pre-wrap;`;
+                let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; position:absolute; color:${l.color || 'black'}; line-height:1.4; white-space:pre-wrap;`;
                 
                 const boxWidthMm = (l.w ? l.w : (pw_val - parseFloat(l.x))); 
                 style += `width:${boxWidthMm}mm;`;
@@ -335,7 +340,7 @@
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
                     else style += `left:${l.x}mm;`;
-                    return `<div style="${style}">${replaceVars(l.text, l.size)}</div>`;
+                    return `<div style="${style}">${replaceVars(l.text, l.size, l.color)}</div>`;
                 } else if (l.type === 'rect') {
                     return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
                 } else if (l.type === 'image') {
@@ -347,7 +352,7 @@
             win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); 
                 html, body { margin: 0 !important; padding: 0 !important; background: white; width: ${pw_val}mm; overflow: visible; }
                 .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; overflow: visible; }
-                .elem { position: absolute; color: black; line-height: 1.4; white-space: pre-wrap; } 
+                .elem { position: absolute; line-height: 1.4; white-space: pre-wrap; } 
                 @media print { @page { size: ${pw_val}mm auto; margin: 0 !important; } html, body { width: ${pw_val}mm !important; margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact; } .page { width: ${pw_val}mm !important; } }
             </style></head><body><div class="page">${printContent}</div><script>window.onload=function(){ setTimeout(() => { window.print(); window.close(); }, 600); };<\/script></body></html>`);
             win.document.close();
