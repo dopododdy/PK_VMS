@@ -49,7 +49,7 @@
     <div class="flex flex-col h-screen">
         <header class="p-5 border-b border-white/5 bg-navy-light flex items-center justify-between shadow-2xl z-30">
             <div class="flex items-center gap-6">
-                <a href="master_data.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
+                <a href="index.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">🏠</a>
                 <div>
                     <h1 class="text-2xl font-black text-white tracking-tight">🖨️ PK-VMS Template Designer</h1>
                     <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบ (Dynamic Items / Fixed Surgery)</p>
@@ -320,108 +320,10 @@
             
             let pushOffset = 0;
             wrapper.innerHTML = sortedLines.map((l) => {
-                // ✅ Logic สำคัญ: {{pet_surgery_list}} จะไม่บวก pushOffset ให้บรรทัดถัดไป
+                // ✅ Selective Offset: ดันเฉพาะรายการยาใบเสร็จ
                 const currentY = parseFloat(l.y) + pushOffset; 
                 const isActive = l.originalIndex === activeLineIndex;
                 const availableWidthMm = pw - parseFloat(l.x); 
                 const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
                 
-                let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px; color:${l.color || '#000000'};`;
-                
-                // ✅ จัดการ Offset เฉพาะ {{items_list}}
-                if (l.text && l.text.includes("{{items_list}}")) {
-                    pushOffset += (mockItems.length - 1) * 6;
-                }
-                
-                const commonAttr = `class="canvas-element ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); selectLine(${l.originalIndex})"`;
-                if (l.type === 'text') {
-                    let tStyle = style;
-                    if (l.align === 'center') tStyle += `left:0; width:100%; text-align:center;`;
-                    else if (l.align === 'right') tStyle += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
-                    else tStyle += `left:${l.x*px}px; text-align:left;`;
-                    return `<div ${commonAttr} style="${tStyle}">${replaceVars(l.text, l.size, l.color)}</div>`;
-                } else if (l.type === 'rect') {
-                    return `<div ${commonAttr} style="top:${currentY * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid #000; background:transparent; border-radius:${(l.radius || 0) * px}px;"></div>`;
-                } else if (l.type === 'image') {
-                    let iStyle = `top:${currentY * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
-                    if (l.align === 'center') iStyle = `top:${currentY * px}px; left:50%; transform:translateX(-50%); width:${l.w * px}px; height:${l.h * px}px; object-fit:contain;`;
-                    return `<img src="${l.url}" ${commonAttr} style="${iStyle}">`;
-                }
-            }).join('');
-        }
-
-        window.addEventListener('keydown', function(e) {
-            if (activeLineIndex === -1 || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-            const step = e.shiftKey ? 5 : 1; let moved = false; const line = currentConfig.lines[activeLineIndex];
-            if (e.key === 'ArrowUp') { line.y = parseFloat(line.y) - step; moved = true; }
-            else if (e.key === 'ArrowDown') { line.y = parseFloat(line.y) + step; moved = true; }
-            else if (e.key === 'ArrowLeft') { line.x = parseFloat(line.x) - step; moved = true; }
-            else if (e.key === 'ArrowRight') { line.x = parseFloat(line.x) + step; moved = true; }
-            if (moved) { e.preventDefault(); renderCanvas(); renderLinesList(); }
-        });
-
-        function applyZoom() { document.getElementById('canvas_wrapper').style.transform = `scale(${document.getElementById('zoom_level').value / 100})`; }
-        
-        function printTest() {
-            const sortedLines = [...currentConfig.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
-            const pw_val = document.getElementById('paper_w').value; 
-            const ph_val = document.getElementById('paper_h').value;
-            const win = window.open('', '_blank', 'width=1000,height=800');
-            
-            let pushOffset = 0;
-            const printContent = sortedLines.map(l => {
-                const currentY = parseFloat(l.y) + pushOffset;
-                const fontSizePt = l.size || 12;
-                const textColor = l.color || 'black';
-
-                let style = `position:absolute; top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${fontSizePt}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; color:${textColor}; line-height:1; white-space:pre-wrap;`;
-                
-                if (l.align === 'center') {
-                    style += `left:0; width:${pw_val}mm; text-align:center;`;
-                } else if (l.align === 'right') {
-                    style += `left:0; width:${pw_val}mm; text-align:right; padding-right:${l.x}mm;`;
-                } else {
-                    const boxWidthMm = (l.w ? l.w : (pw_val - parseFloat(l.x))); 
-                    style += `left:${l.x}mm; width:${boxWidthMm}mm; text-align:left;`;
-                }
-                
-                // ✅ items_list -> ดันบรรทัดล่าง
-                if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
-                // ✅ pet_surgery_list -> Fixed Position (ไม่บวก Offset)
-
-                if (l.type === 'text') {
-                    return `<div style="${style}">${replaceVars(l.text, l.size, l.color)}</div>`;
-                } else if (l.type === 'rect') {
-                    return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
-                } else if (l.type === 'image') {
-                    let iStyle = `position:absolute; top:${currentY}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                    if (l.align === 'center') iStyle += `left:50%; transform:translateX(-50%);`;
-                    else iStyle += `left:${l.x}mm;`;
-                    return `<img src="${l.url}" style="${iStyle}">`;
-                }
-            }).join('');
-
-            win.document.write(`<html><head>
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Kanit:wght@400;700&family=Prompt:wght@400;700&display=swap'); 
-                    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                    html, body { margin: 0 !important; padding: 0 !important; background: white; line-height: 1; }
-                    .page { position: relative; width: ${pw_val}mm; height: ${ph_val}mm; overflow: hidden; }
-                    @media print { 
-                        @page { size: ${pw_val}mm ${ph_val}mm; margin: 0 !important; } 
-                        html, body { width: ${pw_val}mm; height: ${ph_val}mm; }
-                        .page { width: ${pw_val}mm; height: ${ph_val}mm; }
-                    }
-                </style>
-            </head><body><div class="page">${printContent}</div><script>window.onload=function(){ setTimeout(() => { window.print(); window.close(); }, 700); };<\/script></body></html>`);
-            win.document.close();
-        }
-
-        window.onload = async () => {
-            await fetchAvailableTemplates();
-            const sideContainer = document.getElementById('var_sidebar_container');
-            sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `<div><div class="var-category-title" style="color:var(--teal); font-weight:800; font-size:0.8rem; margin-bottom:5px; margin-top:10px;">${group}</div><div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('Copy: {{${v}}}')">{{${v}}}</span>`).join('')}</div></div>`).join('');
-        };
-    </script>
-</body>
-</html>
+                let style = `top:${currentY
