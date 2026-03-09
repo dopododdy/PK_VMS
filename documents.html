@@ -165,7 +165,7 @@
                 refreshSurgeryRows();
             } else {
                 title.innerText = "เอกสารทางการแพทย์";
-                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>Template สำหรับประเภทนี้ กำลังถูกดึงจากระบบ...</p></div>`;
+                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>กำลังดึง Template สำหรับ "${type}"...</p></div>`;
             }
             lucide.createIcons();
         }
@@ -201,11 +201,11 @@
         }
 
         // ==========================================
-        // PK-VMS PRINT ENGINE (Compact Layout Fixed)
+        // PK-VMS PRINT ENGINE (Selective Offset)
         // ==========================================
         
         async function printCurrentDoc() {
-            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            if (selectedPetIds.size === 0 && activeDocType === 'doc_consent') return alert("❌ กรุณาเลือกสัตว์");
             
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
             if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
@@ -214,23 +214,31 @@
             const pw = parseFloat(config.width) || 210;
             const ph = parseFloat(config.height) || 297;
 
+            // ข้อมูลสำหรับ Surgery List
             const surgeryInputs = document.querySelectorAll('.surgery-input');
             const petSurgeries = Array.from(surgeryInputs).map(i => ({
                 name: i.dataset.petName,
                 surgery: i.value || '-'
             }));
 
+            // ข้อมูล Mock สำหรับ items_list (กรณีเป็นใบเสร็จ)
+            const mockItems = [
+                { name: "ตรวจรักษาทั่วไป", price: "500.00" },
+                { name: "ยาฆ่าเชื้อ Amoxy", price: "120.00" }
+            ];
+
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic",
                 clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
-                owner_name: currentOwner.owner_name || "-",
-                owner_address: currentOwner.owner_address || "-",
-                owner_phone: currentOwner.phone || "-",
-                hn: currentOwner.hn || "-",
+                owner_name: currentOwner?.owner_name || "-",
+                owner_address: currentOwner?.owner_address || "-",
+                owner_phone: currentOwner?.phone || "-",
+                hn: currentOwner?.hn || "-",
                 vet_name: VET_NAME,
                 date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
                 time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
                 note: document.getElementById('f-note')?.value || "-",
+                total_price: "620.00"
             };
 
             const sortedLines = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y));
@@ -253,33 +261,38 @@
                     style += `left:${l.x}mm; width:${l.w || (pw - parseFloat(l.x))}mm; text-align:left;`;
                 }
 
-                // กรณีตารางผ่าตัด (Compact Version)
-                if (l.text && l.text.includes("{{pet_surgery_list}}")) {
-                    const rowHeightMm = 6.5; // ลดระยะห่างการ Push ต่อแถว
-                    pushOffset += (petSurgeries.length) * rowHeightMm;
-                    
-                    const cbSize = "3.8mm"; // ลดขนาด Checkbox ลงนิดหน่อย
-                    const cb = `<div style="width:${cbSize}; height:${cbSize}; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
-
+                // --- กรณีใบเสร็จ ({{items_list}}) -> ยังคงใช้ pushOffset ---
+                if (l.text && l.text.includes("{{items_list}}")) {
+                    const rowHeightMm = 6;
+                    pushOffset += (mockItems.length - 1) * rowHeightMm; // บวก Offset เพื่อดันบรรทัดล่าง
                     return `<div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; margin-top:0; padding:0; font-size:${fontSizePt * 0.85}pt; color:${textColor}; line-height:1;">
-                            <thead>
-                                <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
-                                    <th style="text-align:left; padding:1.2mm 0.5mm; width:16.6%;">ชื่อสัตว์</th>
-                                    <th style="text-align:left; padding:1.2mm 0.5mm; width:50%;">รายการหัตถการ</th>
-                                    <th style="text-align:center; padding:1.2mm 0.5mm; width:16.7%;">ไม่ตรวจเลือด</th>
-                                    <th style="text-align:center; padding:1.2mm 0.5mm; width:16.7%;">ตรวจเลือด</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${petSurgeries.map(ps => `
-                                    <tr>
-                                        <td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.name}</td>
-                                        <td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.surgery}</td>
-                                        <td style="padding:0.8mm 0.5mm; vertical-align:middle; text-align:center;">${cb}</td>
-                                        <td style="padding:0.8mm 0.5mm; vertical-align:middle; text-align:center;">${cb}</td>
-                                    </tr>`).join('')}
-                            </tbody>
+                        <table style="width:100%; border-collapse:collapse; font-size:${fontSizePt}pt;">
+                            ${mockItems.map(item => `<tr><td style="padding:1mm 0;">${item.name}</td><td style="text-align:right;">${item.price}</td></tr>`).join('')}
+                        </table>
+                    </div>`;
+                }
+
+                // --- กรณีรายการผ่าตัด ({{pet_surgery_list}}) -> ไม่บวก pushOffset (Fixed) ---
+                if (l.text && l.text.includes("{{pet_surgery_list}}")) {
+                    const cbSize = "3.8mm";
+                    const cb = `<div style="width:${cbSize}; height:${cbSize}; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
+                    
+                    // สังเกตว่าไม่มีการบรรทัด pushOffset += ... ที่นี่
+                    return `<div style="${style}">
+                        <table style="width:100%; border-collapse:collapse; font-size:${fontSizePt * 0.85}pt; line-height:1;">
+                            <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
+                                <th style="text-align:left; padding:1.2mm 0.5mm; width:16.6%;">ชื่อสัตว์</th>
+                                <th style="text-align:left; padding:1.2mm 0.5mm; width:50%;">รายการหัตถการ</th>
+                                <th style="text-align:center; padding:1.2mm 0.5mm; width:16.7%;">ไม่ตรวจเลือด</th>
+                                <th style="text-align:center; padding:1.2mm 0.5mm; width:16.7%;">ตรวจเลือด</th>
+                            </tr>
+                            ${petSurgeries.map(ps => `
+                                <tr>
+                                    <td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.name}</td>
+                                    <td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.surgery}</td>
+                                    <td style="text-align:center; padding:0.8mm 0.5mm;">${cb}</td>
+                                    <td style="text-align:center; padding:0.8mm 0.5mm;">${cb}</td>
+                                </tr>`).join('')}
                         </table>
                     </div>`;
                 }
