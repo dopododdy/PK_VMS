@@ -102,7 +102,6 @@
         let ownerPets = [];
         let selectedPetIds = new Set();
         let activeDocType = 'consent';
-        // ข้อมูลสัตวแพทย์ที่กำหนดตายตัว
         const VET_NAME = "ผู้ช่วยศาสตราจารย์ น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
 
         window.onload = async () => {
@@ -210,13 +209,11 @@
                 container.innerHTML = '<p class="text-gray-500 italic">กรุณาเลือกสัตว์เลี้ยงจากรายการด้านบน...</p>';
                 return;
             }
-            
             let html = '';
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id === id);
                 const speciesIcon = pet.pet_type === 'สุนัข' ? '🐶' : '🐱';
                 const genderIcon = pet.gender.includes('ผู้') ? '♂️' : '♀️';
-
                 html += `
                     <div class="bg-white/5 p-5 rounded-2xl border border-white/5 space-y-4">
                         <div class="flex items-center gap-2">
@@ -224,7 +221,6 @@
                             <span class="text-xl font-bold text-white">${pet.pet_name}</span>
                             <span class="text-lg opacity-60">${genderIcon}</span>
                         </div>
-                        
                         <div class="flex flex-wrap gap-2">
                             ${['วางยาสลบ', 'ขูดหินปูน', 'ทำหมันผู้', 'ทำหมันเมีย', 'ฉีดวัคซีนรวมสุนัข (6 โรค)', 'ฉีดวัคซีนรวมแมว (รวมแมว + พิษสุนัขบ้า)', 'ฉีดยา Convenia'].map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
@@ -233,7 +229,6 @@
                                 </label>
                             `).join('')}
                         </div>
-
                         <input type="text" id="text-${pet.id}" class="input-box surgery-input" data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายการหัตถการ...">
                     </div>`;
             });
@@ -244,53 +239,109 @@
             const checks = document.querySelectorAll(`.p-opt-${petId}:checked`);
             const textbox = document.getElementById(`text-${petId}`);
             const selectedValues = Array.from(checks).map(c => c.value);
-            
             document.querySelectorAll(`[id^="label-${petId}"]`).forEach(l => l.classList.remove('active'));
             checks.forEach(c => c.parentElement.classList.add('active'));
-
             textbox.value = selectedValues.join(', ');
         }
 
-        function printCurrentDoc() {
-            if (selectedPetIds.size === 0) return alert("กรุณาเลือกสัตว์เลี้ยง");
+        // --- ระบบพิมพ์งานผ่าน Template จาก Database ---
+        
+        async function printCurrentDoc() {
+            if (selectedPetIds.size === 0) return alert("กรุณาเลือกสัตว์เลี้ยงอย่างน้อย 1 ตัว");
             
-            const win = window.open('', '_blank');
+            // 1. ดึง Template ที่ออกแบบไว้
+            const templateName = activeDocType === 'consent' ? 'doc_consent_a5' : 'general_doc';
+            const { data: template } = await db.from('print_templates').select('config').eq('template_type', templateName).single();
+            
+            if (!template) {
+                alert(`ไม่พบ Template ชื่อ "${templateName}" ในระบบ กรุณาไปตั้งค่าที่หน้า Printer Setup`);
+                return;
+            }
+
+            const config = template.config;
+            const pw = config.width || 148; // Default A5 Width
+            const ph = config.height || 210;
+
+            // 2. เตรียมข้อมูลรายชื่อสัตว์และหัตถการ ( pet_surgery_list )
+            const surgeryInputs = document.querySelectorAll('.surgery-input');
+            const petSurgeries = Array.from(surgeryInputs).map(i => ({
+                name: i.dataset.pet_name,
+                surgery: i.value || '-'
+            }));
+
+            // 3. ฟังก์ชันแทนที่ตัวแปร
+            const printData = {
+                clinic_name: "PK-VMS Animal Clinic",
+                owner_name: currentOwner.owner_name,
+                owner_address: currentOwner.address || "-",
+                hn: currentOwner.hn,
+                vet_name: VET_NAME,
+                date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
+                note: document.getElementById('f-note')?.value || "-",
+                pet_surgery_list: petSurgeries // เก็บเป็น Array เพื่อไปวาดตาราง
+            };
+
+            // 4. Render องค์ประกอบจาก Template
+            let pushOffset = 0;
+            const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
+                const currentY = parseFloat(l.y) + pushOffset;
+                let style = `top:${currentY}mm; left:${l.x}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; color:${l.color || 'black'}; line-height:1.4; white-space:pre-wrap; ${l.bold?'font-weight:bold;':''} ${l.italic?'font-style:italic;':''}`;
+                
+                const boxWidthMm = (l.w ? l.w : (pw - parseFloat(l.x))); 
+                style += `width:${boxWidthMm}mm;`;
+
+                if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
+                else if (l.align === 'right') style += `left:0; width:${pw - parseFloat(l.x)}mm; text-align:right;`;
+
+                // จัดการตัวแปรพิเศษ pet_surgery_list
+                if (l.text && l.text.includes("{{pet_surgery_list}}")) {
+                    const rowHeightMm = 8; // ประมาณการความสูงต่อแถว
+                    pushOffset += (petSurgeries.length) * rowHeightMm;
+                    
+                    const tableHtml = `
+                        <table style="width:100%; border-collapse:collapse; margin-top:5px; font-size:${l.size * 0.9}pt;">
+                            <tr style="border-bottom:1px solid black; font-weight:bold;">
+                                <th style="text-align:left; padding:2px;">ชื่อสัตว์เลี้ยง</th>
+                                <th style="text-align:left; padding:2px;">รายการหัตถการ/ผ่าตัด</th>
+                            </tr>
+                            ${petSurgeries.map(ps => `
+                                <tr style="border-bottom:0.5px dotted #999;">
+                                    <td style="padding:4px 2px; width:30%; vertical-align:top;">${ps.name}</td>
+                                    <td style="padding:4px 2px; vertical-align:top;">${ps.surgery}</td>
+                                </tr>`).join('')}
+                        </table>`;
+                    return `<div style="${style}">${tableHtml}</div>`;
+                }
+
+                // แทนที่ตัวแปรปกติ
+                let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
+                
+                if (l.type==='text') return `<div style="${style}">${content}</div>`;
+                if (l.type==='rect') return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
+                if (l.type==='image') return `<img src="${l.url}" style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
+            }).join('');
+
+            // 5. สั่งพิมพ์
+            const win = window.open('', '_blank', 'width=800,height=600');
             win.document.write(`
                 <html>
                 <head>
-                    <title>Print PK-VMS</title>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-                        body { font-family: 'Sarabun', sans-serif; padding: 20mm; color: #000; font-size: 14pt; line-height: 1.6; }
-                        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        table, th, td { border: 1px solid black; padding: 10px; text-align: left; }
-                        .sig-area { margin-top: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-                        .sig { text-align: center; border-top: 1px dotted #000; padding-top: 5px; margin-top: 40px; }
+                        body { margin: 0; padding: 0; background: white; }
+                        .page { position: relative; width: ${pw}mm; min-height: ${ph}mm; overflow: hidden; }
+                        @media print { 
+                            @page { size: ${pw}mm ${ph}mm; margin: 0; } 
+                            body { width: ${pw}mm; }
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
-                        <div style="font-size: 20pt; font-weight: bold;">ใบยินยอมทำวิสัญญีและผ่าตัด</div>
-                        <div>PK-VMS Animal Clinic</div>
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        วันที่: ${new Date().toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' })} <br>
-                        เจ้าของ: ${currentOwner.owner_name} (HN: ${currentOwner.hn})
-                    </div>
-                    <p>ข้าพเจ้ายินยอมให้สัตวแพทย์ทำวิสัญญีและหัตถการแก่สัตว์เลี้ยงตามรายการดังนี้:</p>
-                    <table>
-                        <tr style="background:#eee;"><th>ชื่อสัตว์เลี้ยง</th><th>รายการหัตถการ</th></tr>
-                        ${Array.from(document.querySelectorAll('.surgery-input')).map(i => `<tr><td>${i.dataset.pet_name}</td><td>${i.value || '-'}</td></tr>`).join('')}
-                    </table>
-                    <p>สัตวแพทย์ผู้รับผิดชอบ: <b>${VET_NAME}</b></p>
-                    <p><b>คำยืนยัน:</b> ข้าพเจ้าได้รับทราบและเข้าใจถึงความเสี่ยงของการวางยาสลบและการผ่าตัดเป็นอย่างดีแล้ว ข้าพเจ้าตกลงให้สัตวแพทย์ดำเนินการรักษาตามดุลยพินิจของสัตวแพทย์ หากเกิดเหตุสุดวิสัยอันมิอาจคาดการณ์ได้ ข้าพเจ้าจะไม่เรียกร้องความรับผิดชอบใดๆ จากทางคลินิกและสัตวแพทย์</p>
-                    <div class="sig-area">
-                        <div class="sig">ลงชื่อเจ้าของสัตว์/ผู้มีอำนาจ</div>
-                        <div class="sig">ลงชื่อสัตวแพทย์</div>
-                    </div>
-                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 500); };<\/script>
-                </body></html>`);
+                    <div class="page">${elements}</div>
+                    <script>window.onload=function(){ setTimeout(()=> { window.print(); window.close(); }, 600); };<\/script>
+                </body>
+                </html>
+            `);
             win.document.close();
         }
     </script>
