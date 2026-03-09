@@ -16,7 +16,6 @@
         * { font-family: "Sarabun", sans-serif; box-sizing: border-box; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
-        /* UI Styling */
         .sidebar-container { width: 380px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .owner-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
         .owner-card:hover { background: rgba(255,255,255,0.03); }
@@ -26,9 +25,8 @@
         .doc-tab.active { background: var(--teal); color: white; box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3); }
 
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; padding: 24px; border: 1px solid var(--border); }
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; }
-        .input-box:focus { border-color: var(--teal); }
-
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; }
+        
         .pet-mini-card { background: rgba(15, 23, 42, 0.6); border: 2px solid transparent; border-radius: 16px; padding: 12px; cursor: pointer; transition: 0.2s; text-align: center; }
         .pet-mini-card.selected { border-color: var(--teal); background: rgba(20, 184, 166, 0.1); }
 
@@ -42,7 +40,7 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <aside class="sidebar-container shadow-2xl">
+    <aside class="sidebar-container">
         <div class="p-6 border-b border-white/5 bg-navy">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-black text-white italic">PK-VMS <span class="text-teal-500">DOCS</span></h2>
@@ -75,7 +73,7 @@
                         <h1 class="text-4xl font-black text-white" id="doc-title">ใบยินยอมผ่าตัด</h1>
                         <p class="text-teal-500 font-bold mt-2 bg-teal-500/10 px-4 py-1 rounded-full inline-block" id="owner-info">-</p>
                     </div>
-                    <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all hover:scale-105 active:scale-95">
+                    <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
                         <i data-lucide="printer"></i> พิมพ์เอกสาร
                     </button>
                 </div>
@@ -97,12 +95,7 @@
         let activeDocType = 'doc_consent_a5';
         const VET_NAME = "ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
 
-        window.onload = async () => {
-            lucide.createIcons();
-            await fetchOwners();
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('hn')) await selectOwner(params.get('hn'));
-        };
+        window.onload = async () => { lucide.createIcons(); await fetchOwners(); };
 
         async function fetchOwners() {
             const { data } = await db.from('owners').select('*').order('hn', { ascending: false }).limit(20);
@@ -125,26 +118,20 @@
         }
 
         async function selectOwner(hn) {
-            // ดึงข้อมูล Owner, Pets, และ Phone
             const [{ data: owner }, { data: pets }, { data: phones }] = await Promise.all([
                 db.from('owners').select('*').eq('hn', hn).single(),
                 db.from('animals').select('*').eq('owner_hn', hn),
                 db.from('owner_phones').select('phone_number').eq('owner_hn', hn)
             ]);
-
             currentOwner = owner;
-            currentOwner.phone = (phones && phones.length > 0) ? phones[0].phone_number : "-";
+            currentOwner.phone = phones?.[0]?.phone_number || "-";
             ownerPets = pets || [];
             selectedPetIds.clear();
-            
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-container').classList.remove('hidden');
             document.getElementById('owner-info').innerText = `เจ้าของ: ${owner.owner_name} | HN: ${owner.hn}`;
-            
             renderPetList();
             switchDocType(activeDocType);
-            document.querySelectorAll('.owner-card').forEach(c => c.classList.remove('active'));
-            document.getElementById(`owner-${hn}`)?.classList.add('active');
         }
 
         function renderPetList() {
@@ -167,38 +154,32 @@
             activeDocType = type;
             document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
-            
             const form = document.getElementById('dynamic-form');
             if (type === 'doc_consent_a5') {
-                form.innerHTML = `
-                    <div class="section-card space-y-6">
-                        <div id="surgery-rows" class="space-y-6"></div>
-                        <input type="text" id="f-note" class="input-box font-bold text-teal-400" placeholder="หมายเหตุเพิ่มเติม...">
-                    </div>`;
+                form.innerHTML = `<div class="section-card space-y-6"><div id="surgery-rows" class="space-y-6"></div><input type="text" id="f-note" class="input-box font-bold text-teal-400" placeholder="หมายเหตุเพิ่มเติม..."></div>`;
                 refreshSurgeryRows();
             } else {
-                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>กรุณาตั้งค่า Template นี้ใน Printer Setup</p></div>`;
+                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>กำลังรอ Template...</p></div>`;
             }
             lucide.createIcons();
         }
 
         function refreshSurgeryRows() {
             const container = document.getElementById('surgery-rows');
-            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยงด้านบน...</p>'; return; }
+            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยง...</p>'; return; }
             let html = '';
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id === id);
                 html += `
                     <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
-                        <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.breed || pet.pet_type})</div>
+                        <div class="text-white font-black">🐾 ${pet.pet_name}</div>
                         <div class="flex flex-wrap gap-2">
-                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน', 'ตรวจเลือด'].map(opt => `
+                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน'].map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
                                     <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
                                 </label>`).join('')}
                         </div>
-                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400 font-bold" 
-                            data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายการเพิ่มเติม...">
+                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400 font-bold" data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายการเพิ่มเติม...">
                     </div>`;
             });
             container.innerHTML = html;
@@ -214,7 +195,7 @@
         }
 
         // ==========================================
-        // PK-VMS PRINT ENGINE (V5 - Full Scale Precision)
+        // PK-VMS PRINT ENGINE (V7 - A5 Landscape Fix)
         // ==========================================
         
         async function printCurrentDoc() {
@@ -223,8 +204,9 @@
             if (!template) return alert("❌ ไม่พบ Template");
 
             const config = template.config;
-            const pw = parseFloat(config.width) || 148;
-            const ph = parseFloat(config.height) || 210;
+            // ✅ บังคับให้เป็น แนวนอน ถ้า pw > ph
+            const pw = parseFloat(config.width); 
+            const ph = parseFloat(config.height);
 
             const surgeryInputs = document.querySelectorAll('.surgery-input');
             const petSurgeries = Array.from(surgeryInputs).map(i => ({
@@ -252,11 +234,10 @@
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || 'black';
                 
-                // ✅ แก้ไขสไตล์: บังคับให้ขยายเต็มความกว้างในกรณี Center/Right
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.2; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
-                if (l.italic) style += 'font-style:italic;';
                 
+                // ✅ แก้ไข Align ให้เต็มหน้ากระดาษตาม pw
                 if (l.align === 'center') {
                     style += `left:0; width:${pw}mm; text-align:center;`;
                 } else if (l.align === 'right') {
@@ -265,89 +246,52 @@
                     style += `left:${l.x}mm; width:${l.w || (pw - parseFloat(l.x))}mm; text-align:left;`;
                 }
 
-                // กรณีตารางหัตถการ
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
                     const rowHeightMm = 8;
                     pushOffset += (petSurgeries.length) * rowHeightMm;
-                    return `<div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; margin-top:1mm; font-size:${fontSizePt * 0.9}pt;">
-                            <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
-                                <th style="text-align:left; padding:1mm; width:30%;">ชื่อสัตว์</th>
-                                <th style="text-align:left; padding:1mm;">หัตถการ/ผ่าตัด</th>
-                            </tr>
-                            ${petSurgeries.map(ps => `
-                                <tr style="border-bottom:0.5px dotted #999;">
-                                    <td style="padding:1.5mm 1mm; vertical-align:top;">${ps.name}</td>
-                                    <td style="padding:1.5mm 1mm; vertical-align:top;">${ps.surgery}</td>
-                                </tr>`).join('')}
-                        </table>
-                    </div>`;
+                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt;">
+                            <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;"><th style="text-align:left; padding:1mm; width:30%;">ชื่อสัตว์</th><th style="text-align:left; padding:1mm;">หัตถการ/ผ่าตัด</th></tr>
+                            ${petSurgeries.map(ps => `<tr style="border-bottom:0.5px dotted #999;"><td style="padding:2mm 1mm; vertical-align:top;">${ps.name}</td><td style="padding:2mm 1mm; vertical-align:top;">${ps.surgery}</td></tr>`).join('')}
+                        </table></div>`;
                 }
 
                 if (l.type === 'text') {
                     const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match);
                     return `<div style="${style}">${content}</div>`;
                 }
-                
-                if (l.type === 'rect') {
-                    return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
-                }
-
-                if (l.type === 'image') {
-                    let iStyle = `position:absolute; top:${currentY}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                    if (l.align === 'center') iStyle += `left:50%; transform:translateX(-50%);`;
-                    else iStyle += `left:${l.x}mm;`;
-                    return `<img src="${l.url}" style="${iStyle}">`;
-                }
+                if (l.type === 'rect') return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
+                if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${currentY}mm; left:${l.align==='center'?'50%':l.x+'mm'}; ${l.align==='center'?'transform:translateX(-50%);':''} width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
                 return '';
             }).join('');
 
-            const win = window.open('', '_blank', 'width=1000,height=800');
+            const win = window.open('', '_blank');
             win.document.write(`
                 <html>
                 <head>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
-                        
-                        /* ✅ บังคับให้เบราว์เซอร์ลบ Margin ทั้งหมด และคำนวณขนาดแบบเป๊ะๆ */
                         * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
-                        html, body { 
-                            margin: 0 !important; 
-                            padding: 0 !important; 
-                            width: ${pw}mm !important; 
-                            height: ${ph}mm !important; 
-                        }
-                        
+                        html, body { margin: 0 !important; padding: 0 !important; }
                         .page { 
                             position: relative; 
-                            width: ${pw}mm !important; 
-                            height: ${ph}mm !important; 
+                            width: ${pw}mm; 
+                            height: ${ph}mm; 
                             background: white; 
-                            overflow: hidden;
+                            overflow: hidden; 
                         }
-
                         @media print {
                             @page { 
                                 size: ${pw}mm ${ph}mm; 
                                 margin: 0 !important; 
                             }
-                            html, body, .page { 
-                                width: ${pw}mm !important; 
-                                height: ${ph}mm !important; 
-                            }
+                            html, body { width: ${pw}mm; height: ${ph}mm; }
+                            .page { width: ${pw}mm; height: ${ph}mm; }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="page">${printContent}</div>
-                    <script>
-                        window.onload = () => {
-                            setTimeout(() => {
-                                window.print();
-                                window.close();
-                            }, 800);
-                        };
-                    <\/script>
+                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 800); };<\/script>
                 </body>
                 </html>
             `);
