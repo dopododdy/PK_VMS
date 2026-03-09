@@ -60,6 +60,9 @@
         .btn-gray { background-color: #475569 !important; } 
         .btn-gray:hover { background-color: #334155 !important; }
 
+        .btn-orange { background-color: #ea580c !important; }
+        .btn-orange:hover { background-color: #c2410c !important; }
+
         /* Form Controls */
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
@@ -103,12 +106,11 @@
         let masterSpecies = [];
         let masterBreeds = [];
 
-        // ฟังก์ชันช่วยจัดรูปแบบวันที่
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-            const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const monthsLong = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
             const d = date.getDate();
             const m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()];
             const y = date.getFullYear() + 543;
@@ -193,7 +195,10 @@
                             <h3 class="text-3xl font-black text-blue-400 flex items-center gap-3">👤 ข้อมูลเจ้าของสัตว์</h3>
                             <div class="flex gap-3">
                                 <button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตรประชาชน</button>
-                                ${owner.hn !== 'AUTO' ? `<button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>` : ''}
+                                ${owner.hn !== 'AUTO' ? `
+                                    <button onclick="goToConsent('${owner.hn}')" class="btn-base btn-orange shadow-lg">📋 ใบยินยอมผ่าตัด/วางยา</button>
+                                    <button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>
+                                ` : ''}
                             </div>
                         </div>
                         <div class="grid grid-cols-12 gap-6">
@@ -396,7 +401,14 @@
 
         function gotoMedicalRecord(petId, petName, hn) { window.location.href = `medrec.html?id=${petId}&name=${encodeURIComponent(petName)}&hn=${hn}`; }
 
-        // --- Print Functions ---
+        function goToConsent(hn) {
+            if (!hn || hn === 'AUTO') {
+                alert("⚠️ กรุณาบันทึกข้อมูลเจ้าของก่อนออกใบยินยอม");
+                return;
+            }
+            window.location.href = `documents.html?hn=${hn}&type=anesthesia_consent`;
+        }
+
         async function printPetLabel(petId) {
             try {
                 const pet = allAnimals.find(a => a.id === petId);
