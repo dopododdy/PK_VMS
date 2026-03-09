@@ -52,7 +52,7 @@
                 <a href="master_data.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
                 <div>
                     <h1 class="text-2xl font-black text-white tracking-tight">🖨️ PK-VMS Template Designer</h1>
-                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบ (Dynamic Push + Negative Offset)</p>
+                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบ (Dynamic Push + Color Support)</p>
                 </div>
             </div>
             <div class="flex gap-4">
@@ -124,9 +124,15 @@
         let activeLineIndex = -1;
         let draggedIndex = null;
         
+        // ข้อมูลจำลองสำหรับทดสอบ
         const mockItems = [
             { name: "ยาฆ่าเชื้อ อะม็อกซี่ (ชื่อภาษาไทย)", price: 150.00 },
             { name: "วัคซีนป้องกันโรคพิษสุนัขบ้า", price: 80.00 }
+        ];
+
+        const mockPetSurgeries = [
+            { pet_name: "โคล่า (🐶)", surgery: "ทำหมันผู้, วางยาสลบ" },
+            { pet_name: "กิ๊งก่อง (🐱)", surgery: "ขูดหินปูน, ฉีดยา Convenia" }
         ];
 
         const mockData = {
@@ -138,14 +144,14 @@
             frequency: "วันละ 2 ครั้ง", meal_timing: "หลังอาหาร", day_timing: "เช้า - เย็น", duration_days: "7", total_qty: "14 เม็ด",
             warning: "กินติดต่อกันจนหมดตามสัตวแพทย์สั่ง", receipt_no: "2569030769000101",
             total_price: "960.00", discount_val: "60.00", net_total: "900.00", received_amount: "1,000.00", change_amount: "100.00",
-            date: "7 มี.ค. 2569", time: "10:30",
-            appointment_date_1: "14 มี.ค. 2569", appointment_note_1: "ติดตามอาการแผลผ่าตัด",
-            appointment_date_2: "21 มี.ค. 2569", appointment_note_2: "ฉีดวัคซีนเข็มกระตุ้น"
+            date: "9 มี.ค. 2569", time: "15:00",
+            appointment_date_1: "16 มี.ค. 2569", appointment_note_1: "ติดตามอาการแผลผ่าตัด",
+            appointment_date_2: "23 มี.ค. 2569", appointment_note_2: "ฉีดวัคซีนเข็มกระตุ้น"
         };
 
         const varGroups = {
             "🏥 คลินิก": ["clinic_name", "clinic_address", "phone", "tax_id"],
-            "🐾 สัตว์/เจ้าของ": ["owner_name", "owner_phone", "pet_name", "species", "sex", "hn", "weight", "breed", "owner_address"],
+            "🐾 สัตว์/เจ้าของ": ["owner_name", "owner_phone", "pet_name", "species", "sex", "hn", "weight", "breed", "owner_address", "pet_surgery_list"],
             "💊 ข้อมูลยา": ["drug_name", "drug_name_th", "dose_per_time", "unit", "frequency", "meal_timing", "day_timing", "duration_days", "total_qty", "warning"],
             "💰 การเงิน": ["receipt_no", "items_list", "total_price", "discount_val", "net_total", "received_amount", "change_amount", "date", "time"],
             "📅 การนัดหมาย": ["appointment_date_1", "appointment_note_1", "appointment_date_2", "appointment_note_2"]
@@ -160,6 +166,7 @@
         };
 
         function replaceVars(text, fontSize, color) {
+            // รายการยา (บิล)
             if (text.includes("{{items_list}}")) {
                 return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:${color || 'black'}; line-height: 1;">
                     ${mockItems.map(item => `
@@ -169,13 +176,34 @@
                         </tr>`).join('')}
                 </table>`;
             }
+            // รายชื่อสัตว์และหัตถการ (ใบยินยอม)
+            if (text.includes("{{pet_surgery_list}}")) {
+                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:${color || 'black'}; line-height: 1.2; margin-top: 5px;">
+                    <tr style="border-bottom: 1px solid #ccc; font-weight: bold;">
+                        <th style="text-align: left; padding: 2px;">ชื่อสัตว์</th>
+                        <th style="text-align: left; padding: 2px;">รายการหัตถการ/ผ่าตัด</th>
+                    </tr>
+                    ${mockPetSurgeries.map(ps => `
+                        <tr style="border-bottom: 1px dotted #eee;">
+                            <td style="padding: 4px 2px; vertical-align: top;">${ps.pet_name}</td>
+                            <td style="padding: 4px 2px; vertical-align: top;">${ps.surgery}</td>
+                        </tr>`).join('')}
+                </table>`;
+            }
             return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
         }
 
         async function fetchAvailableTemplates() {
             const { data } = await db.from('print_templates').select('template_type').order('template_type');
             const select = document.getElementById('template_type');
-            if (data?.length > 0) { select.innerHTML = data.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join(''); loadTemplate(); }
+            if (data?.length > 0) { 
+                select.innerHTML = data.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join(''); 
+                // ตั้งค่าเริ่มต้นเป็น doc_consent_a5 ถ้ามีในรายการ
+                if (data.some(d => d.template_type === 'doc_consent_a5')) {
+                    select.value = 'doc_consent_a5';
+                }
+                loadTemplate(); 
+            }
         }
 
         async function loadTemplate() {
@@ -243,15 +271,18 @@
                 <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center');">${icons.C}</button>
                 <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right');">${icons.R}</button>
             </div></div>`;
+            
             let fields = '';
             if (l.type === 'text') {
-                fields = `<div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><input type="text" class="input-control" value="${l.text}" oninput="updateLine(${i},'text',this.value)"></div>
+                fields = `<div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><textarea class="input-control min-h-[60px]" oninput="updateLine(${i},'text',this.value)">${l.text}</textarea></div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="editor-group"><label class="label-title">ชนิดฟอนต์</label><select class="input-control text-sm" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option></select></div>
                         <div class="editor-group"><label class="label-title">ขนาด (pt)</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="editor-group"><label class="label-title">สีข้อความ</label><input type="color" class="input-control h-12" value="${l.color || '#000000'}" oninput="updateLine(${i},'color',this.value)"></div>
+                        <div class="editor-group"><label class="label-title">สีข้อความ</label>
+                            <input type="color" class="input-control h-[42px] p-1 cursor-pointer" value="${l.color || '#000000'}" oninput="updateLine(${i},'color',this.value)">
+                        </div>
                         <div class="editor-group space-y-2"><label class="label-title">สไตล์</label><div class="flex gap-2"><button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold});">${icons.B}</button><button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic});">${icons.I}</button></div></div>
                     </div>
                     ${alignControl}`;
@@ -292,7 +323,9 @@
                 
                 let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px; color:${l.color || '#000000'};`;
                 
+                // Dynamic Pushing Logic
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
+                if (l.text && l.text.includes("{{pet_surgery_list}}")) pushOffset += (mockPetSurgeries.length) * 8; // เผื่อความสูงตาราง
                 
                 const commonAttr = `class="canvas-element ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); selectLine(${l.originalIndex})"`;
                 if (l.type === 'text') {
@@ -336,6 +369,8 @@
                 style += `width:${boxWidthMm}mm;`;
                 
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
+                if (l.text && l.text.includes("{{pet_surgery_list}}")) pushOffset += (mockPetSurgeries.length) * 8;
+
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
