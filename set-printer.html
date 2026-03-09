@@ -52,7 +52,7 @@
                 <a href="master_data.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
                 <div>
                     <h1 class="text-2xl font-black text-white tracking-tight">🖨️ PK-VMS Template Designer</h1>
-                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบ (Dynamic Push + Color Support)</p>
+                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบ (A5 Landscape Support)</p>
                 </div>
             </div>
             <div class="flex gap-4">
@@ -76,11 +76,11 @@
                         </div>
                         <div class="col-span-3">
                             <label class="label-title">กว้าง (มม.)</label>
-                            <input type="number" id="paper_w" class="input-control text-center font-bold" value="80" onchange="renderCanvas()">
+                            <input type="number" id="paper_w" class="input-control text-center font-bold" value="210" onchange="renderCanvas()">
                         </div>
                         <div class="col-span-3">
                             <label class="label-title">สูง (มม.)</label>
-                            <input type="number" id="paper_h" class="input-control text-center font-bold" value="50" onchange="renderCanvas()">
+                            <input type="number" id="paper_h" class="input-control text-center font-bold" value="148" onchange="renderCanvas()">
                         </div>
                     </div>
                 </div>
@@ -120,11 +120,10 @@
     </div>
 
     <script>
-        let currentConfig = { width: 80, height: 50, lines: [] };
+        let currentConfig = { width: 210, height: 148, lines: [] };
         let activeLineIndex = -1;
         let draggedIndex = null;
         
-        // ข้อมูลจำลองสำหรับทดสอบ
         const mockItems = [
             { name: "ยาฆ่าเชื้อ อะม็อกซี่ (ชื่อภาษาไทย)", price: 150.00 },
             { name: "วัคซีนป้องกันโรคพิษสุนัขบ้า", price: 80.00 }
@@ -139,7 +138,7 @@
             clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
             phone: "081-999-8888", tax_id: "0123456789012", 
             owner_name: "คุณสมชาย ใจดี", owner_phone: "081-234-5678", pet_name: "โคล่า",
-            species: "สุนัข", sex: "ผู้ตอน", hn: "690001", weight: "12.5", breed: "ชิวาวา", owner_address: "456 ถ.มิตรภาพ จ.ขอนแก่น",
+            species: "สุนัข", sex: "ผู้ตอน", hn: "690001", weight: "12.5", breed: "ชิวาวา", owner_address: "194/90 ม.11 ต.หนองขาม อ.ศรีราชา จ.ชลบุรี",
             drug_name: "Amoxicillin 500mg", drug_name_th: "ยาฆ่าเชื้อ (อะม็อกซี่)", dose_per_time: "1", unit: "เม็ด",
             frequency: "วันละ 2 ครั้ง", meal_timing: "หลังอาหาร", day_timing: "เช้า - เย็น", duration_days: "7", total_qty: "14 เม็ด",
             warning: "กินติดต่อกันจนหมดตามสัตวแพทย์สั่ง", receipt_no: "2569030769000101",
@@ -166,7 +165,6 @@
         };
 
         function replaceVars(text, fontSize, color) {
-            // รายการยา (บิล)
             if (text.includes("{{items_list}}")) {
                 return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:${color || 'black'}; line-height: 1;">
                     ${mockItems.map(item => `
@@ -176,7 +174,6 @@
                         </tr>`).join('')}
                 </table>`;
             }
-            // รายชื่อสัตว์และหัตถการ (ใบยินยอม)
             if (text.includes("{{pet_surgery_list}}")) {
                 return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:${color || 'black'}; line-height: 1.2; margin-top: 5px;">
                     <tr style="border-bottom: 1px solid #ccc; font-weight: bold;">
@@ -198,7 +195,6 @@
             const select = document.getElementById('template_type');
             if (data?.length > 0) { 
                 select.innerHTML = data.map(t => `<option value="${t.template_type}">${t.template_type}</option>`).join(''); 
-                // ตั้งค่าเริ่มต้นเป็น doc_consent_a5 ถ้ามีในรายการ
                 if (data.some(d => d.template_type === 'doc_consent_a5')) {
                     select.value = 'doc_consent_a5';
                 }
@@ -212,8 +208,8 @@
             const { data } = await db.from('print_templates').select('config').eq('template_type', type).single();
             if (data) {
                 currentConfig = data.config;
-                document.getElementById('paper_w').value = currentConfig.width || 80;
-                document.getElementById('paper_h').value = currentConfig.height || 50;
+                document.getElementById('paper_w').value = currentConfig.width || 210;
+                document.getElementById('paper_h').value = currentConfig.height || 148;
                 activeLineIndex = -1; renderLinesList(); renderCanvas(); applyZoom();
             }
         }
@@ -317,15 +313,12 @@
             let pushOffset = 0;
             wrapper.innerHTML = sortedLines.map((l) => {
                 const currentY = parseFloat(l.y) + pushOffset; const isActive = l.originalIndex === activeLineIndex;
-                
                 const availableWidthMm = pw - parseFloat(l.x); 
                 const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
-                
                 let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px; color:${l.color || '#000000'};`;
                 
-                // Dynamic Pushing Logic
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
-                if (l.text && l.text.includes("{{pet_surgery_list}}")) pushOffset += (mockPetSurgeries.length) * 8; // เผื่อความสูงตาราง
+                if (l.text && l.text.includes("{{pet_surgery_list}}")) pushOffset += (mockPetSurgeries.length) * 8;
                 
                 const commonAttr = `class="canvas-element ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); selectLine(${l.originalIndex})"`;
                 if (l.type === 'text') {
@@ -358,38 +351,60 @@
         
         function printTest() {
             const sortedLines = [...currentConfig.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
-            const pw_val = document.getElementById('paper_w').value; const ph_val = document.getElementById('paper_h').value;
-            const win = window.open('', '_blank', 'width=800,height=600');
+            const pw_val = document.getElementById('paper_w').value; 
+            const ph_val = document.getElementById('paper_h').value;
+            const win = window.open('', '_blank', 'width=1000,height=800');
+            
             let pushOffset = 0;
             const printContent = sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
-                let style = `top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; position:absolute; color:${l.color || 'black'}; line-height:1.4; white-space:pre-wrap;`;
+                let style = `position:absolute; top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; color:${l.color || 'black'}; line-height:1.4; white-space:pre-wrap;`;
                 
-                const boxWidthMm = (l.w ? l.w : (pw_val - parseFloat(l.x))); 
-                style += `width:${boxWidthMm}mm;`;
+                if (l.align === 'center') {
+                    style += `left:0; width:${pw_val}mm; text-align:center;`;
+                } else if (l.align === 'right') {
+                    style += `left:0; width:${pw_val}mm; text-align:right; padding-right:${l.x}mm;`;
+                } else {
+                    const boxWidthMm = (l.w ? l.w : (pw_val - parseFloat(l.x))); 
+                    style += `left:${l.x}mm; width:${boxWidthMm}mm; text-align:left;`;
+                }
                 
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) pushOffset += (mockPetSurgeries.length) * 8;
 
                 if (l.type === 'text') {
-                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
-                    else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
-                    else style += `left:${l.x}mm;`;
                     return `<div style="${style}">${replaceVars(l.text, l.size, l.color)}</div>`;
                 } else if (l.type === 'rect') {
                     return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
                 } else if (l.type === 'image') {
-                    let iStyle = `position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
-                    if (l.align === 'center') iStyle = `position:absolute; top:${currentY}mm; left:50%; transform:translateX(-50%); width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                    let iStyle = `position:absolute; top:${currentY}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
+                    if (l.align === 'center') iStyle += `left:50%; transform:translateX(-50%);`;
+                    else iStyle += `left:${l.x}mm;`;
                     return `<img src="${l.url}" style="${iStyle}">`;
                 }
             }).join('');
-            win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); 
-                html, body { margin: 0 !important; padding: 0 !important; background: white; width: ${pw_val}mm; overflow: visible; }
-                .page { position: relative; width: ${pw_val}mm; min-height: ${ph_val}mm; overflow: visible; }
-                .elem { position: absolute; line-height: 1.4; white-space: pre-wrap; } 
-                @media print { @page { size: ${pw_val}mm auto; margin: 0 !important; } html, body { width: ${pw_val}mm !important; margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact; } .page { width: ${pw_val}mm !important; } }
-            </style></head><body><div class="page">${printContent}</div><script>window.onload=function(){ setTimeout(() => { window.print(); window.close(); }, 600); };<\/script></body></html>`);
+
+            win.document.write(`<html><head>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Kanit:wght@400;700&family=Prompt:wght@400;700&display=swap'); 
+                    * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+                    html, body { margin: 0 !important; padding: 0 !important; background: white; }
+                    .page { 
+                        position: relative; 
+                        width: ${pw_val}mm; 
+                        height: ${ph_val}mm; 
+                        overflow: hidden; 
+                    }
+                    @media print { 
+                        @page { 
+                            size: ${pw_val}mm ${ph_val}mm; 
+                            margin: 0 !important; 
+                        } 
+                        html, body { width: ${pw_val}mm; height: ${ph_val}mm; }
+                        .page { width: ${pw_val}mm; height: ${ph_val}mm; }
+                    }
+                </style>
+            </head><body><div class="page">${printContent}</div><script>window.onload=function(){ setTimeout(() => { window.print(); window.close(); }, 700); };<\/script></body></html>`);
             win.document.close();
         }
 
