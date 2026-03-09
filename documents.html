@@ -2,13 +2,16 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>ศูนย์เอกสารทางการแพทย์ | PK-VMS Pro</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Prompt:wght@300;400;600&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+
     <style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8a6; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif; }
@@ -36,9 +39,8 @@
             background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
             border-radius: 20px; font-size: 12px; cursor: pointer; transition: 0.2s; color: #94a3b8;
         }
-        .check-pill:hover { background: rgba(255,255,255,0.1); color: white; }
         .check-pill input { display: none; }
-        .check-pill.active { background: var(--teal); color: white; border-color: var(--teal); box-shadow: 0 4px 10px rgba(20, 184, 166, 0.2); }
+        .check-pill.active { background: var(--teal); color: white; border-color: var(--teal); }
 
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
@@ -46,45 +48,41 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <aside class="sidebar-container shadow-2xl z-10">
-        <div class="p-6 border-b border-white/5 bg-navy">
+    <aside class="sidebar-container">
+        <div class="p-6 border-b border-white/5">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-white italic tracking-tighter">PK-VMS <span class="text-teal-500 underline decoration-2">DOCS</span></h2>
-                <a href="master_data.html" class="p-2 hover:bg-white/10 rounded-lg transition text-gray-400"><i data-lucide="arrow-left"></i></a>
+                <h2 class="text-xl font-black text-white italic">PK-VMS <span class="text-teal-500">DOCS</span></h2>
+                <a href="index.html" class="p-2 hover:bg-white/10 rounded-lg transition text-gray-400"><i data-lucide="home"></i></a>
             </div>
             <div class="relative">
                 <i data-lucide="search" class="absolute left-3 top-3.5 w-4 h-4 text-gray-500"></i>
-                <input type="text" id="search-owner" class="input-box pl-10 h-11" placeholder="ค้นหา HN หรือชื่อเจ้าของ..." oninput="searchOwners()">
+                <input type="text" id="search-owner" class="input-box pl-10 h-11" placeholder="ค้นหา HN หรือชื่อ..." oninput="searchOwners()">
             </div>
         </div>
-        <div id="owner-list" class="flex-1 overflow-y-auto custom-scroll">
-            <div class="p-10 text-center opacity-30"><p class="text-sm">กำลังโหลดข้อมูล...</p></div>
-        </div>
+        <div id="owner-list" class="flex-1 overflow-y-auto custom-scroll"></div>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden relative">
-        <nav class="p-4 bg-navy-light/80 backdrop-blur-md border-b border-white/5 flex gap-2 overflow-x-auto custom-scroll z-10">
-            <div class="doc-tab active" data-type="doc_consent_a5" onclick="switchDocType('doc_consent_a5')">📋 ใบยินยอมผ่าตัด (A5)</div>
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <nav class="p-4 bg-navy-light/50 border-b border-white/5 flex gap-2 overflow-x-auto custom-scroll">
+            <div class="doc-tab active" data-type="doc_consent_a5" onclick="switchDocType('doc_consent_a5')">📋 ใบยินยอมผ่าตัด</div>
             <div class="doc-tab" data-type="doc_rx_label" onclick="switchDocType('doc_rx_label')">💊 ฉลากยา</div>
-            <div class="doc-tab" data-type="doc_receipt_80mm" onclick="switchDocType('doc_receipt_80mm')">💰 ใบเสร็จ (80mm)</div>
-            <div class="doc-tab" data-type="doc_appointment" onclick="switchDocType('doc_appointment')">📅 ใบนัดหมาย</div>
+            <div class="doc-tab" data-type="doc_receipt_80mm" onclick="switchDocType('doc_receipt_80mm')">💰 ใบเสร็จรับเงิน</div>
         </nav>
 
-        <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-gradient-to-b from-navy to-black">
+        <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-[#020617]">
             <div id="no-selection" class="h-full flex flex-col items-center justify-center opacity-20">
                 <i data-lucide="file-text" class="w-32 h-32 mb-4"></i>
-                <h2 class="text-3xl font-bold italic">SELECT OWNER TO BEGIN</h2>
+                <h2 class="text-3xl font-bold uppercase tracking-widest">Select Owner</h2>
             </div>
 
             <div id="editor-container" class="hidden max-w-4xl mx-auto space-y-8 pb-32">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                <div class="flex justify-between items-end">
                     <div>
-                        <span class="text-teal-500 font-black text-xs uppercase tracking-[0.3em]">Document Processor</span>
-                        <h1 class="text-4xl font-black text-white mt-1" id="doc-title">เอกสารทางการแพทย์</h1>
-                        <p class="text-gray-400 font-medium mt-2 bg-white/5 inline-block px-3 py-1 rounded-full border border-white/5" id="owner-info">-</p>
+                        <h1 class="text-4xl font-black text-white" id="doc-title">ใบยินยอมผ่าตัด</h1>
+                        <p class="text-teal-500 font-bold mt-2 bg-teal-500/10 px-4 py-1 rounded-full inline-block" id="owner-info">-</p>
                     </div>
-                    <button onclick="printCurrentDoc()" class="w-full md:w-auto bg-teal-600 hover:bg-teal-500 text-white px-12 py-5 rounded-2xl font-black text-xl flex items-center justify-center gap-3 shadow-2xl shadow-teal-900/20 transition-all hover:scale-105 active:scale-95">
-                        <i data-lucide="printer"></i> สั่งพิมพ์เอกสาร
+                    <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all hover:scale-105 active:scale-95">
+                        <i data-lucide="printer"></i> พิมพ์เอกสาร
                     </button>
                 </div>
 
@@ -93,8 +91,7 @@
                     <div id="pet-list-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
                 </div>
 
-                <div id="dynamic-form" class="space-y-6">
-                    </div>
+                <div id="dynamic-form" class="space-y-6"></div>
             </div>
         </div>
     </main>
@@ -131,11 +128,9 @@
             const container = document.getElementById('owner-list');
             container.innerHTML = owners.map(o => `
                 <div class="owner-card ${currentOwner?.hn === o.hn ? 'active' : ''}" onclick="selectOwner('${o.hn}')" id="owner-${o.hn}">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-black bg-slate-800 text-teal-400 px-2 py-0.5 rounded">HN ${o.hn}</span>
-                    </div>
-                    <div class="text-white font-bold mt-2 text-lg">${o.owner_name}</div>
-                    <div class="text-gray-500 text-xs mt-1 truncate">${o.address || 'ไม่ระบุที่อยู่'}</div>
+                    <span class="text-[10px] font-bold bg-slate-800 text-teal-400 px-2 py-1 rounded">HN: ${o.hn}</span>
+                    <div class="text-white font-bold mt-2">${o.owner_name}</div>
+                    <div class="text-gray-500 text-xs mt-1 truncate">${o.phone || o.owner_phone || '-'}</div>
                 </div>`).join('');
         }
 
@@ -151,7 +146,7 @@
             
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-container').classList.remove('hidden');
-            document.getElementById('owner-info').innerText = `👤 ${owner.owner_name} | 📍 ${owner.address || '-'}`;
+            document.getElementById('owner-info').innerText = `เจ้าของ: ${owner.owner_name} | HN: ${owner.hn}`;
             
             renderPetList();
             switchDocType(activeDocType);
@@ -163,9 +158,8 @@
             const container = document.getElementById('pet-list-grid');
             container.innerHTML = ownerPets.map(p => `
                 <div class="pet-mini-card" id="p-card-${p.id}" onclick="togglePet('${p.id}')">
-                    <div class="text-3xl mb-1">${p.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
+                    <div class="text-2xl mb-1">${p.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
                     <div class="text-white font-black truncate text-sm">${p.pet_name}</div>
-                    <div class="text-[10px] text-gray-500 font-bold">${p.breed || '-'}</div>
                 </div>`).join('');
         }
 
@@ -188,28 +182,22 @@
             if(activeTab) activeTab.classList.add('active');
             
             const form = document.getElementById('dynamic-form');
-            const title = document.getElementById('doc-title');
-            title.innerText = activeTab?.innerText || "เอกสาร";
-
             if (type === 'doc_consent_a5') {
                 form.innerHTML = `
                     <div class="section-card space-y-6">
                         <div class="flex justify-between items-center border-b border-white/5 pb-4">
-                            <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Step 2: รายละเอียดหัตถการ</h3>
-                            <div class="text-right">
-                                <span class="text-[9px] text-gray-500 uppercase block font-black">สัตวแพทย์ผู้รับผิดชอบ</span>
-                                <span class="text-teal-400 font-bold text-sm">${VET_NAME}</span>
-                            </div>
+                            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">รายการหัตถการ</h3>
+                            <span class="text-teal-400 font-bold text-sm">${VET_NAME}</span>
                         </div>
                         <div id="surgery-rows" class="space-y-6"></div>
                         <div class="pt-6 border-t border-white/5">
-                            <label class="text-[10px] font-black text-gray-500 mb-2 block uppercase">หมายเหตุเพิ่มเติม (รวม)</label>
-                            <textarea id="f-note" class="input-box min-h-[80px]" placeholder="ระบุหมายเหตุความเสี่ยง หรือข้อตกลงพิเศษ..."></textarea>
+                            <label class="text-[10px] font-bold text-gray-500 mb-2 block uppercase">หมายเหตุรวม (ความเสี่ยง/ข้อตกลง)</label>
+                            <input type="text" id="f-note" class="input-box" placeholder="ระบุหมายเหตุความเสี่ยงเพิ่มเติม...">
                         </div>
                     </div>`;
                 refreshSurgeryRows();
             } else {
-                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>ฟีเจอร์สำหรับเอกสารประเภทนี้กำลังอยู่ในการพัฒนา...</p></div>`;
+                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>Template สำหรับ ${type} กำลังเตรียมการ...</p></div>`;
             }
             lucide.createIcons();
         }
@@ -217,23 +205,20 @@
         function refreshSurgeryRows() {
             const container = document.getElementById('surgery-rows');
             if (selectedPetIds.size === 0) {
-                container.innerHTML = '<div class="py-10 text-center text-gray-500 italic text-sm">กรุณาเลือกสัตว์เลี้ยงจากรายการด้านบน...</div>';
+                container.innerHTML = '<div class="text-gray-500 italic text-sm">กรุณาเลือกสัตว์เลี้ยงด้านบน...</div>';
                 return;
             }
             let html = '';
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id === id);
                 html += `
-                    <div class="bg-white/5 p-6 rounded-3xl border border-white/5 hover:border-teal-500/30 transition-all space-y-4">
-                        <div class="flex items-center gap-3">
-                            <span class="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center text-xl">${pet.pet_type === 'สุนัข' ? '🐶' : '🐱'}</span>
-                            <div>
-                                <div class="text-white font-black">${pet.pet_name}</div>
-                                <div class="text-[10px] text-gray-500 uppercase">${pet.gender} | ${pet.breed}</div>
-                            </div>
+                    <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">${pet.pet_type === 'สุนัข' ? '🐶' : '🐱'}</span>
+                            <span class="text-white font-black">${pet.pet_name}</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            ${['วางยาสลบ', 'ขูดหินปูน', 'ทำหมันผู้', 'ทำหมันเมีย', 'ผ่าตัดเนื้องอก', 'X-Ray', 'ตรวจเลือด'].map(opt => `
+                            ${['วางยาสลบ', 'ขูดหินปูน', 'ทำหมันผู้', 'ทำหมันเมีย', 'ฉีดวัคซีน'].map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
                                     <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}">
                                     ${opt}
@@ -242,7 +227,7 @@
                         </div>
                         <input type="text" id="text-${pet.id}" class="input-box surgery-input font-bold text-teal-400" 
                             data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" 
-                            placeholder="รายการหัตถการเพิ่มเติม...">
+                            placeholder="รายการหัตถการ...">
                     </div>`;
             });
             container.innerHTML = html;
@@ -258,37 +243,33 @@
         }
 
         // ==========================================
-        // PK-VMS PRINT ENGINE (Logic เหมือนหน้า Designer)
+        // PK-VMS PRINT ENGINE (ฉบับแก้ไข Bug)
         // ==========================================
         
         async function printCurrentDoc() {
-            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์เลี้ยงอย่างน้อย 1 ตัว");
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์เลี้ยง");
             
-            // 1. ดึง Template Config จาก Database
-            const { data: template, error } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
-            
-            if (error || !template) {
-                return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}" กรุณาไปตั้งค่าที่หน้า Printer Setup ก่อนครับ`);
-            }
+            const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
+            if (!template) return alert("❌ ไม่พบ Template นี้ในระบบ");
 
             const config = template.config;
-            const paper_w = config.width || 148; // mm
-            const paper_h = config.height || 210; // mm
+            const pw = config.width || 148;
+            const ph = config.height || 210;
 
-            // 2. เตรียมข้อมูลสำหรับตาราง {{pet_surgery_list}}
+            // ✅ FIX 1: ดึงชื่อสัตว์เลี้ยง (dataset.petName)
             const surgeryInputs = document.querySelectorAll('.surgery-input');
             const petSurgeries = Array.from(surgeryInputs).map(i => ({
-                name: i.dataset.pet_name,
+                name: i.dataset.petName, // JS เปลี่ยน data-pet-name เป็น CamelCase อัตโนมัติ
                 surgery: i.value || '-'
             }));
 
-            // 3. Mapping ตัวแปรทั้งหมด
+            // ✅ FIX 2: ดึงเบอร์โทร (Map ทั้ง phone และ owner_phone)
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic",
                 clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
                 owner_name: currentOwner.owner_name,
                 owner_address: currentOwner.address || "-",
-                owner_phone: currentOwner.phone || "-",
+                owner_phone: currentOwner.owner_phone || currentOwner.phone || "-", // ดักไว้ทั้ง 2 ชื่อ column
                 hn: currentOwner.hn,
                 vet_name: VET_NAME,
                 date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -296,7 +277,7 @@
                 note: document.getElementById('f-note')?.value || "-",
             };
 
-            // 4. สร้าง HTML Elements แบบ Dynamic Push
+            // สร้าง HTML องค์ประกอบ
             const sortedLines = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y));
             let pushOffset = 0;
             
@@ -309,48 +290,42 @@
                 if (l.bold) style += 'font-weight:bold;';
                 if (l.italic) style += 'font-style:italic;';
 
-                // คำนวณความกว้างและการจัดแนว
-                const boxWidthMm = l.w || (paper_w - parseFloat(l.x));
+                const boxWidthMm = l.w || (pw - parseFloat(l.x));
                 style += `width:${boxWidthMm}mm;`;
                 
                 if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                 else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
                 else style += `left:${l.x}mm;`;
 
-                // กรณีเป็นตารางรายการ (Dynamic Push)
+                // กรณีตารางหัตถการ (Dynamic Push)
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
-                    const rowHeightMm = 8; // ระยะเผื่อต่อแถว
+                    const rowHeightMm = 8;
                     pushOffset += (petSurgeries.length) * rowHeightMm;
-                    
                     return `
                     <div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt; color:${textColor};">
+                        <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt;">
                             <tr style="border-bottom:1px solid ${textColor}; font-weight:bold;">
-                                <th style="text-align:left; padding:1mm;">ชื่อสัตว์</th>
-                                <th style="text-align:left; padding:1mm;">หัตถการ/ผ่าตัด</th>
+                                <th style="text-align:left; padding:1mm; width:30%;">ชื่อสัตว์</th>
+                                <th style="text-align:left; padding:1mm;">รายการหัตถการ/ผ่าตัด</th>
                             </tr>
                             ${petSurgeries.map(ps => `
                                 <tr style="border-bottom:0.5px dotted #ccc;">
-                                    <td style="padding:2mm 1mm; width:30%; vertical-align:top;">${ps.name}</td>
+                                    <td style="padding:2mm 1mm; vertical-align:top;">${ps.name}</td>
                                     <td style="padding:2mm 1mm; vertical-align:top;">${ps.surgery}</td>
-                                </tr>
-                            `).join('')}
+                                </tr>`).join('')}
                         </table>
                     </div>`;
                 }
 
-                // กรณีข้อความปกติ
                 if (l.type === 'text') {
-                    const textContent = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match);
-                    return `<div style="${style}">${textContent}</div>`;
+                    const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match);
+                    return `<div style="${style}">${content}</div>`;
                 }
                 
-                // กรณีสี่เหลี่ยม
                 if (l.type === 'rect') {
                     return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
                 }
 
-                // กรณีรูปภาพ
                 if (l.type === 'image') {
                     let iStyle = `position:absolute; top:${currentY}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
                     if (l.align === 'center') iStyle += `left:50%; transform:translateX(-50%);`;
@@ -360,41 +335,24 @@
                 return '';
             }).join('');
 
-            // 5. เปิดหน้าต่างพิมพ์
+            // เปิดหน้าต่างพิมพ์
             const win = window.open('', '_blank', 'width=900,height=700');
             win.document.write(`
                 <html>
                 <head>
-                    <title>PK-VMS Print Studio</title>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
-                        body { margin: 0; padding: 0; background: #eee; }
-                        .page { 
-                            position: relative; 
-                            width: ${paper_w}mm; 
-                            min-height: ${paper_h}mm; 
-                            background: white; 
-                            margin: 10px auto;
-                            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                        }
+                        body { margin: 0; padding: 0; background: white; }
+                        .page { position: relative; width: ${pw}mm; min-height: ${ph}mm; background: white; }
                         @media print {
-                            @page { size: ${paper_w}mm auto; margin: 0; }
-                            body { background: white; margin: 0; }
-                            .page { margin: 0; box-shadow: none; width: ${paper_w}mm; }
+                            @page { size: ${pw}mm ${ph}mm; margin: 0; }
+                            body { width: ${pw}mm; }
                         }
-                        table, th, td { border-color: inherit; }
                     </style>
                 </head>
                 <body>
                     <div class="page">${printContent}</div>
-                    <script>
-                        window.onload = () => {
-                            setTimeout(() => {
-                                window.print();
-                                window.close();
-                            }, 800);
-                        };
-                    <\/script>
+                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 800); };<\/script>
                 </body>
                 </html>
             `);
