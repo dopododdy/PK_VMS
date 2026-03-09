@@ -6,7 +6,6 @@
     <title>ศูนย์เอกสารทางการแพทย์ | PK-VMS Pro</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Prompt:wght@300;400;600&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
-    
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -14,7 +13,7 @@
 
     <style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8a6; --border: rgba(255, 255, 255, 0.1); }
-        * { font-family: "Sarabun", sans-serif; }
+        * { font-family: "Sarabun", sans-serif; box-sizing: border-box; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
         .sidebar-container { width: 380px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
@@ -28,19 +27,14 @@
 
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; padding: 24px; border: 1px solid var(--border); }
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; }
-        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        .input-box:focus { border-color: var(--teal); }
 
         .pet-mini-card { background: rgba(15, 23, 42, 0.6); border: 2px solid transparent; border-radius: 16px; padding: 12px; cursor: pointer; transition: 0.2s; text-align: center; }
-        .pet-mini-card:hover { border-color: rgba(20, 184, 166, 0.4); }
         .pet-mini-card.selected { border-color: var(--teal); background: rgba(20, 184, 166, 0.1); }
 
-        .check-pill { 
-            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; 
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 20px; font-size: 12px; cursor: pointer; transition: 0.2s; color: #94a3b8;
-        }
+        .check-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; font-size: 12px; cursor: pointer; }
         .check-pill input { display: none; }
-        .check-pill.active { background: var(--teal); color: white; border-color: var(--teal); }
+        .check-pill.active { background: var(--teal); color: white; }
 
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
@@ -64,7 +58,7 @@
 
     <main class="flex-1 flex flex-col overflow-hidden">
         <nav class="p-4 bg-navy-light/50 border-b border-white/5 flex gap-2 overflow-x-auto custom-scroll">
-            <div class="doc-tab active" data-type="doc_consent_a5" onclick="switchDocType('doc_consent_a5')">📋 ใบยินยอมผ่าตัด</div>
+            <div class="doc-tab active" data-type="doc_consent_a5" onclick="switchDocType('doc_consent_a5')">📋 ใบยินยอมผ่าตัด (A5)</div>
             <div class="doc-tab" data-type="doc_rx_label" onclick="switchDocType('doc_rx_label')">💊 ฉลากยา</div>
             <div class="doc-tab" data-type="doc_receipt_80mm" onclick="switchDocType('doc_receipt_80mm')">💰 ใบเสร็จรับเงิน</div>
         </nav>
@@ -81,12 +75,12 @@
                         <h1 class="text-4xl font-black text-white" id="doc-title">ใบยินยอมผ่าตัด</h1>
                         <p class="text-teal-500 font-bold mt-2 bg-teal-500/10 px-4 py-1 rounded-full inline-block" id="owner-info">-</p>
                     </div>
-                    <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all hover:scale-105 active:scale-95">
+                    <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
                         <i data-lucide="printer"></i> พิมพ์เอกสาร
                     </button>
                 </div>
 
-                <div class="section-card" id="pet-selector-card">
+                <div class="section-card">
                     <h3 class="text-[10px] font-black text-gray-500 mb-4 uppercase tracking-[0.2em]">Step 1: เลือกสัตว์เลี้ยง</h3>
                     <div id="pet-list-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
                 </div>
@@ -106,10 +100,8 @@
         window.onload = async () => {
             lucide.createIcons();
             await fetchOwners();
-            
             const params = new URLSearchParams(window.location.search);
-            const hn = params.get('hn');
-            if (hn) await selectOwner(hn);
+            if (params.get('hn')) await selectOwner(params.get('hn'));
         };
 
         async function fetchOwners() {
@@ -119,7 +111,6 @@
 
         async function searchOwners() {
             const term = document.getElementById('search-owner').value;
-            if (!term) return fetchOwners();
             const { data } = await db.from('owners').select('*').or(`owner_name.ilike.%${term}%,hn.ilike.%${term}%`).limit(20);
             renderOwnerList(data);
         }
@@ -130,7 +121,6 @@
                 <div class="owner-card ${currentOwner?.hn === o.hn ? 'active' : ''}" onclick="selectOwner('${o.hn}')" id="owner-${o.hn}">
                     <span class="text-[10px] font-bold bg-slate-800 text-teal-400 px-2 py-1 rounded">HN: ${o.hn}</span>
                     <div class="text-white font-bold mt-2">${o.owner_name}</div>
-                    <div class="text-gray-500 text-xs mt-1 truncate">${o.phone || o.owner_phone || '-'}</div>
                 </div>`).join('');
         }
 
@@ -140,6 +130,9 @@
                 db.from('animals').select('*').eq('owner_hn', hn)
             ]);
             
+            // Debug: ดูข้อมูลใน Console ว่าเบอร์โทรใช้ Column ชื่ออะไร
+            console.log("Owner Data:", owner);
+
             currentOwner = owner;
             ownerPets = pets || [];
             selectedPetIds.clear();
@@ -165,69 +158,47 @@
 
         function togglePet(id) {
             const card = document.getElementById(`p-card-${id}`);
-            if (selectedPetIds.has(id)) {
-                selectedPetIds.delete(id);
-                card.classList.remove('selected');
-            } else {
-                selectedPetIds.add(id);
-                card.classList.add('selected');
-            }
+            if (selectedPetIds.has(id)) { selectedPetIds.delete(id); card.classList.remove('selected'); }
+            else { selectedPetIds.add(id); card.classList.add('selected'); }
             if (activeDocType === 'doc_consent_a5') refreshSurgeryRows();
         }
 
         function switchDocType(type) {
             activeDocType = type;
             document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
-            const activeTab = document.querySelector(`[data-type="${type}"]`);
-            if(activeTab) activeTab.classList.add('active');
+            document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
             
             const form = document.getElementById('dynamic-form');
             if (type === 'doc_consent_a5') {
                 form.innerHTML = `
                     <div class="section-card space-y-6">
-                        <div class="flex justify-between items-center border-b border-white/5 pb-4">
-                            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">รายการหัตถการ</h3>
-                            <span class="text-teal-400 font-bold text-sm">${VET_NAME}</span>
-                        </div>
                         <div id="surgery-rows" class="space-y-6"></div>
-                        <div class="pt-6 border-t border-white/5">
-                            <label class="text-[10px] font-bold text-gray-500 mb-2 block uppercase">หมายเหตุรวม (ความเสี่ยง/ข้อตกลง)</label>
-                            <input type="text" id="f-note" class="input-box" placeholder="ระบุหมายเหตุความเสี่ยงเพิ่มเติม...">
-                        </div>
+                        <input type="text" id="f-note" class="input-box" placeholder="ระบุหมายเหตุรวม...">
                     </div>`;
                 refreshSurgeryRows();
             } else {
-                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>Template สำหรับ ${type} กำลังเตรียมการ...</p></div>`;
+                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>Template กำลังรอการตั้งค่า...</p></div>`;
             }
             lucide.createIcons();
         }
 
         function refreshSurgeryRows() {
             const container = document.getElementById('surgery-rows');
-            if (selectedPetIds.size === 0) {
-                container.innerHTML = '<div class="text-gray-500 italic text-sm">กรุณาเลือกสัตว์เลี้ยงด้านบน...</div>';
-                return;
-            }
+            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยงด้านบน...</p>'; return; }
             let html = '';
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id === id);
                 html += `
                     <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xl">${pet.pet_type === 'สุนัข' ? '🐶' : '🐱'}</span>
-                            <span class="text-white font-black">${pet.pet_name}</span>
-                        </div>
+                        <div class="text-white font-black">🐾 ${pet.pet_name}</div>
                         <div class="flex flex-wrap gap-2">
-                            ${['วางยาสลบ', 'ขูดหินปูน', 'ทำหมันผู้', 'ทำหมันเมีย', 'ฉีดวัคซีน'].map(opt => `
+                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน'].map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
-                                    <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}">
-                                    ${opt}
-                                </label>
-                            `).join('')}
+                                    <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
+                                </label>`).join('')}
                         </div>
-                        <input type="text" id="text-${pet.id}" class="input-box surgery-input font-bold text-teal-400" 
-                            data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" 
-                            placeholder="รายการหัตถการ...">
+                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400" 
+                            data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายการหัตถการ...">
                     </div>`;
             });
             container.innerHTML = html;
@@ -238,46 +209,42 @@
             const textbox = document.getElementById(`text-${petId}`);
             const selectedValues = Array.from(checks).map(c => c.value);
             document.querySelectorAll(`[id^="label-${petId}"]`).forEach(l => l.classList.remove('active'));
-            checks.forEach(c => c.parentElement.classList.add('active'));
+            checks.forEach(c => { c.parentElement.classList.add('active'); });
             textbox.value = selectedValues.join(', ');
         }
 
         // ==========================================
-        // PK-VMS PRINT ENGINE (ฉบับแก้ไข Bug)
+        // PK-VMS PRINT ENGINE (V3 - Fix Phone & Area)
         // ==========================================
         
         async function printCurrentDoc() {
-            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์เลี้ยง");
-            
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
-            if (!template) return alert("❌ ไม่พบ Template นี้ในระบบ");
+            if (!template) return alert("❌ ไม่พบ Template");
 
             const config = template.config;
-            const pw = config.width || 148;
-            const ph = config.height || 210;
+            const pw = parseFloat(config.width) || 148;
+            const ph = parseFloat(config.height) || 210;
 
-            // ✅ FIX 1: ดึงชื่อสัตว์เลี้ยง (dataset.petName)
             const surgeryInputs = document.querySelectorAll('.surgery-input');
             const petSurgeries = Array.from(surgeryInputs).map(i => ({
-                name: i.dataset.petName, // JS เปลี่ยน data-pet-name เป็น CamelCase อัตโนมัติ
+                name: i.dataset.petName, // Fix: petName (CamelCase)
                 surgery: i.value || '-'
             }));
 
-            // ✅ FIX 2: ดึงเบอร์โทร (Map ทั้ง phone และ owner_phone)
+            // ✅ Fix: Phone Mapping (รองรับทุกความเป็นไปได้)
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic",
-                clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
-                owner_name: currentOwner.owner_name,
-                owner_address: currentOwner.address || "-",
-                owner_phone: currentOwner.owner_phone || currentOwner.phone || "-", // ดักไว้ทั้ง 2 ชื่อ column
-                hn: currentOwner.hn,
+                owner_name: currentOwner.owner_name || "-",
+                owner_address: currentOwner.address || currentOwner.owner_address || "-",
+                owner_phone: currentOwner.phone || currentOwner.owner_phone || currentOwner.tel || currentOwner.mobile || "-",
+                hn: currentOwner.hn || "-",
                 vet_name: VET_NAME,
                 date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
                 time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
                 note: document.getElementById('f-note')?.value || "-",
             };
 
-            // สร้าง HTML องค์ประกอบ
             const sortedLines = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y));
             let pushOffset = 0;
             
@@ -288,8 +255,7 @@
                 
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.4; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
-                if (l.italic) style += 'font-style:italic;';
-
+                
                 const boxWidthMm = l.w || (pw - parseFloat(l.x));
                 style += `width:${boxWidthMm}mm;`;
                 
@@ -297,7 +263,6 @@
                 else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x}mm;`;
                 else style += `left:${l.x}mm;`;
 
-                // กรณีตารางหัตถการ (Dynamic Push)
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
                     const rowHeightMm = 8;
                     pushOffset += (petSurgeries.length) * rowHeightMm;
@@ -306,12 +271,12 @@
                         <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt;">
                             <tr style="border-bottom:1px solid ${textColor}; font-weight:bold;">
                                 <th style="text-align:left; padding:1mm; width:30%;">ชื่อสัตว์</th>
-                                <th style="text-align:left; padding:1mm;">รายการหัตถการ/ผ่าตัด</th>
+                                <th style="text-align:left; padding:1mm;">หัตถการ/ผ่าตัด</th>
                             </tr>
                             ${petSurgeries.map(ps => `
                                 <tr style="border-bottom:0.5px dotted #ccc;">
-                                    <td style="padding:2mm 1mm; vertical-align:top;">${ps.name}</td>
-                                    <td style="padding:2mm 1mm; vertical-align:top;">${ps.surgery}</td>
+                                    <td style="padding:1mm; vertical-align:top;">${ps.name}</td>
+                                    <td style="padding:1mm; vertical-align:top;">${ps.surgery}</td>
                                 </tr>`).join('')}
                         </table>
                     </div>`;
@@ -335,24 +300,25 @@
                 return '';
             }).join('');
 
-            // เปิดหน้าต่างพิมพ์
             const win = window.open('', '_blank', 'width=900,height=700');
             win.document.write(`
                 <html>
                 <head>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
-                        body { margin: 0; padding: 0; background: white; }
-                        .page { position: relative; width: ${pw}mm; min-height: ${ph}mm; background: white; }
+                        * { box-sizing: border-box; }
+                        body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; }
+                        .page { position: relative; width: ${pw}mm; min-height: ${ph}mm; background: white; overflow: visible; }
                         @media print {
                             @page { size: ${pw}mm ${ph}mm; margin: 0; }
-                            body { width: ${pw}mm; }
+                            html, body { width: ${pw}mm; height: ${ph}mm; margin: 0; padding: 0; }
+                            .page { width: ${pw}mm; margin: 0; }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="page">${printContent}</div>
-                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 800); };<\/script>
+                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 700); };<\/script>
                 </body>
                 </html>
             `);
