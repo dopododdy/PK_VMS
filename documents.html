@@ -16,20 +16,18 @@
         * { font-family: "Sarabun", sans-serif; box-sizing: border-box; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
+        /* Sidebar & UI Components */
         .sidebar-container { width: 380px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .owner-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
         .owner-card:hover { background: rgba(255,255,255,0.03); }
         .owner-card.active { background: rgba(20, 184, 166, 0.1); border-left: 4px solid var(--teal); }
 
         .doc-tab { padding: 12px 20px; font-weight: 800; font-size: 0.85rem; cursor: pointer; border-radius: 12px; transition: 0.2s; color: #94a3b8; border: 1px solid transparent; white-space: nowrap; }
-        .doc-tab:hover { background: rgba(255,255,255,0.05); }
         .doc-tab.active { background: var(--teal); color: white; box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3); }
 
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; padding: 24px; border: 1px solid var(--border); }
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; }
-        .input-box:focus { border-color: var(--teal); }
-
-        .pet-mini-card { background: rgba(15, 23, 42, 0.6); border: 2px solid transparent; border-radius: 16px; padding: 12px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; }
+        .pet-mini-card { background: rgba(15, 23, 42, 0.6); border: 2px solid transparent; border-radius: 16px; padding: 12px; cursor: pointer; text-align: center; }
         .pet-mini-card.selected { border-color: var(--teal); background: rgba(20, 184, 166, 0.1); }
 
         .check-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; font-size: 12px; cursor: pointer; }
@@ -124,17 +122,17 @@
                 </div>`).join('');
         }
 
-        // ✅ แก้ไข: ดึงข้อมูลเบอร์โทรศัพท์จากตาราง owner_phones
         async function selectOwner(hn) {
+            // ดึงข้อมูลทั้ง Owner, Pets และ Phones (จอยตารางเบอร์โทร)
             const [{ data: owner }, { data: pets }, { data: phones }] = await Promise.all([
                 db.from('owners').select('*').eq('hn', hn).single(),
                 db.from('animals').select('*').eq('owner_hn', hn),
                 db.from('owner_phones').select('phone_number').eq('owner_hn', hn)
             ]);
 
-            // นำเบอร์โทรแรกที่เจอมาใส่ในตัวแปรหลัก
             currentOwner = owner;
-            currentOwner.phone = phones?.[0]?.phone_number || "-";
+            // รวมเบอร์โทรเข้ากับ Object เจ้าของ
+            currentOwner.phone = (phones && phones.length > 0) ? phones[0].phone_number : "-";
             
             ownerPets = pets || [];
             selectedPetIds.clear();
@@ -175,32 +173,32 @@
                 form.innerHTML = `
                     <div class="section-card space-y-6">
                         <div id="surgery-rows" class="space-y-6"></div>
-                        <input type="text" id="f-note" class="input-box" placeholder="ระบุหมายเหตุรวม...">
+                        <input type="text" id="f-note" class="input-box font-bold text-teal-400" placeholder="ระบุหมายเหตุความเสี่ยงรวม...">
                     </div>`;
                 refreshSurgeryRows();
             } else {
-                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>Template กำลังรอการตั้งค่า...</p></div>`;
+                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>กำลังพัฒนา Template สำหรับประเภทนี้...</p></div>`;
             }
             lucide.createIcons();
         }
 
         function refreshSurgeryRows() {
             const container = document.getElementById('surgery-rows');
-            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยงด้านบน...</p>'; return; }
+            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">กรุณาเลือกสัตว์เลี้ยง...</p>'; return; }
             let html = '';
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id === id);
                 html += `
                     <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
-                        <div class="text-white font-black">🐾 ${pet.pet_name}</div>
+                        <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.breed || pet.pet_type})</div>
                         <div class="flex flex-wrap gap-2">
-                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน'].map(opt => `
+                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน', 'ตรวจเลือด', 'X-Ray'].map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
                                     <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
                                 </label>`).join('')}
                         </div>
                         <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400 font-bold" 
-                            data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายการหัตถการ...">
+                            data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายการหัตถการเพิ่มเติม...">
                     </div>`;
             });
             container.innerHTML = html;
@@ -215,9 +213,13 @@
             textbox.value = selectedValues.join(', ');
         }
 
-        // ✅ ฟังก์ชันพิมพ์งานที่ปรับปรุงเรื่องเบอร์โทรและขนาดกระดาษ
+        // ==========================================
+        // PK-VMS PRINT ENGINE (V4 - Full Page Fix)
+        // ==========================================
+        
         async function printCurrentDoc() {
-            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์อย่างน้อย 1 ตัว");
+            
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
             if (!template) return alert("❌ ไม่พบ Template ในระบบ");
 
@@ -231,7 +233,6 @@
                 surgery: i.value || '-'
             }));
 
-            // ✅ Mapping เบอร์โทรจาก phone ที่ดึงมาใหม่
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic",
                 owner_name: currentOwner.owner_name || "-",
@@ -252,32 +253,37 @@
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || 'black';
                 
-                // ✅ บังคับหน่วย mm ให้ชัดเจน
+                // สไตล์พื้นฐานขององค์ประกอบ
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.4; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
                 if (l.italic) style += 'font-style:italic;';
                 
+                // กำหนดความกว้างตามที่ออกแบบ (ถ้าเป็น align center/right จะใช้เต็มความกว้างกระดาษ)
                 const boxWidthMm = l.w || (pw - parseFloat(l.x));
-                style += `width:${boxWidthMm}mm;`;
                 
-                if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
-                else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
-                else style += `left:${l.x}mm;`;
+                if (l.align === 'center') {
+                    style += `left:0; width:${pw}mm; text-align:center;`;
+                } else if (l.align === 'right') {
+                    style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
+                } else {
+                    style += `left:${l.x}mm; width:${boxWidthMm}mm; text-align:left;`;
+                }
 
+                // กรณีตารางหัตถการ (Dynamic Push)
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
                     const rowHeightMm = 8;
                     pushOffset += (petSurgeries.length) * rowHeightMm;
                     return `
                     <div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt;">
+                        <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt; color:${textColor};">
                             <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
-                                <th style="text-align:left; padding:1mm; width:30%;">ชื่อสัตว์</th>
-                                <th style="text-align:left; padding:1mm;">หัตถการ/ผ่าตัด</th>
+                                <th style="text-align:left; padding:1.5mm 1mm; width:30%;">ชื่อสัตว์</th>
+                                <th style="text-align:left; padding:1.5mm 1mm;">รายการหัตถการ/ผ่าตัด</th>
                             </tr>
                             ${petSurgeries.map(ps => `
-                                <tr style="border-bottom:0.5px dotted #999;">
-                                    <td style="padding:1.5mm 1mm; vertical-align:top;">${ps.name}</td>
-                                    <td style="padding:1.5mm 1mm; vertical-align:top;">${ps.surgery}</td>
+                                <tr style="border-bottom:0.5px dotted #ccc;">
+                                    <td style="padding:2mm 1mm; vertical-align:top;">${ps.name}</td>
+                                    <td style="padding:2mm 1mm; vertical-align:top;">${ps.surgery}</td>
                                 </tr>`).join('')}
                         </table>
                     </div>`;
@@ -301,26 +307,31 @@
                 return '';
             }).join('');
 
-            const win = window.open('', '_blank', 'width=900,height=700');
+            const win = window.open('', '_blank', 'width=1000,height=800');
             win.document.write(`
                 <html>
                 <head>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
+                        
+                        /* ✅ ล้างระยะขอบ Browser ทั้งหมด */
                         * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
-                        body { margin: 0; padding: 0; background: white; }
-                        /* ✅ บังคับขนาดหน้ากระดาษให้ตรงกับ Config */
+                        html, body { margin: 0; padding: 0; background: white; width: ${pw}mm; height: ${ph}mm; }
+                        
+                        /* ✅ บังคับขนาด Container ให้เท่าขนาดกระดาษจริง */
                         .page { 
                             position: relative; 
                             width: ${pw}mm; 
                             height: ${ph}mm; 
-                            margin: 0; 
-                            padding: 0;
-                            background: white; 
                             overflow: hidden;
+                            background: white;
                         }
+
                         @media print {
-                            @page { size: ${pw}mm ${ph}mm; margin: 0; }
+                            @page { 
+                                size: ${pw}mm ${ph}mm; 
+                                margin: 0; 
+                            }
                             html, body { width: ${pw}mm; height: ${ph}mm; }
                             .page { width: ${pw}mm; height: ${ph}mm; }
                         }
@@ -328,7 +339,14 @@
                 </head>
                 <body>
                     <div class="page">${printContent}</div>
-                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 800); };<\/script>
+                    <script>
+                        window.onload = () => {
+                            setTimeout(() => {
+                                window.print();
+                                window.close();
+                            }, 800);
+                        };
+                    <\/script>
                 </body>
                 </html>
             `);
