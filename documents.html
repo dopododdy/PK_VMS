@@ -201,7 +201,7 @@
         }
 
         // ==========================================
-        // PK-VMS PRINT ENGINE (Advanced Logic)
+        // PK-VMS PRINT ENGINE (Compact Layout Fixed)
         // ==========================================
         
         async function printCurrentDoc() {
@@ -241,7 +241,7 @@
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || '#000000';
                 
-                let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.4; white-space:pre-wrap;`;
+                let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
                 if (l.italic) style += 'font-style:italic;';
                 
@@ -253,29 +253,31 @@
                     style += `left:${l.x}mm; width:${l.w || (pw - parseFloat(l.x))}mm; text-align:left;`;
                 }
 
-                // กรณีตารางผ่าตัด (4 Columns)
+                // กรณีตารางผ่าตัด (Compact Version)
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
-                    const rowHeightMm = 10;
+                    const rowHeightMm = 6.5; // ลดระยะห่างการ Push ต่อแถว
                     pushOffset += (petSurgeries.length) * rowHeightMm;
-                    const cb = `<div style="width:4.2mm; height:4.2mm; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
+                    
+                    const cbSize = "3.8mm"; // ลดขนาด Checkbox ลงนิดหน่อย
+                    const cb = `<div style="width:${cbSize}; height:${cbSize}; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
 
                     return `<div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; margin-top:0; font-size:${fontSizePt * 0.85}pt; color:${textColor};">
+                        <table style="width:100%; border-collapse:collapse; margin-top:0; padding:0; font-size:${fontSizePt * 0.85}pt; color:${textColor}; line-height:1;">
                             <thead>
                                 <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
-                                    <th style="text-align:left; padding:1mm; width:16.6%;">ชื่อสัตว์</th>
-                                    <th style="text-align:left; padding:1mm; width:50%;">รายการหัตถการ</th>
-                                    <th style="text-align:center; padding:1mm; width:16.7%;">ไม่ตรวจเลือด</th>
-                                    <th style="text-align:center; padding:1mm; width:16.7%;">ตรวจเลือด</th>
+                                    <th style="text-align:left; padding:1.2mm 0.5mm; width:16.6%;">ชื่อสัตว์</th>
+                                    <th style="text-align:left; padding:1.2mm 0.5mm; width:50%;">รายการหัตถการ</th>
+                                    <th style="text-align:center; padding:1.2mm 0.5mm; width:16.7%;">ไม่ตรวจเลือด</th>
+                                    <th style="text-align:center; padding:1.2mm 0.5mm; width:16.7%;">ตรวจเลือด</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${petSurgeries.map(ps => `
-                                    <tr style="border-bottom:0.5px dotted ${textColor}80;">
-                                        <td style="padding:2.5mm 1mm; vertical-align:top;">${ps.name}</td>
-                                        <td style="padding:2.5mm 1mm; vertical-align:top;">${ps.surgery}</td>
-                                        <td style="padding:2.5mm 1mm; vertical-align:middle; text-align:center;">${cb}</td>
-                                        <td style="padding:2.5mm 1mm; vertical-align:middle; text-align:center;">${cb}</td>
+                                    <tr>
+                                        <td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.name}</td>
+                                        <td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.surgery}</td>
+                                        <td style="padding:0.8mm 0.5mm; vertical-align:middle; text-align:center;">${cb}</td>
+                                        <td style="padding:0.8mm 0.5mm; vertical-align:middle; text-align:center;">${cb}</td>
                                     </tr>`).join('')}
                             </tbody>
                         </table>
@@ -298,7 +300,7 @@
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
                         * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        html, body { margin: 0 !important; padding: 0 !important; background: white; }
+                        html, body { margin: 0 !important; padding: 0 !important; background: white; line-height: 1; }
                         .page { position: relative; width: ${pw}mm; height: ${ph}mm; background: white; overflow: hidden; }
                         @media print {
                             @page { size: ${pw}mm ${ph}mm; margin: 0 !important; }
