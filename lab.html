@@ -3,27 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab Results & Trends | PK-VMS Pro</title>
+    <title>Lab & Imaging | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <style>
-        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255, 255, 255, 0.1); }
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8a6; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
-        .sidebar-container { width: 400px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-container { width: 350px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .pet-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: grid; grid-template-columns: 70px 1fr 40px; gap: 12px; transition: 0.2s; }
-        .pet-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
+        .pet-card:hover { background: rgba(255,255,255,0.02); }
+        .pet-card.active { background: rgba(20, 184, 166, 0.12); border-left: 4px solid var(--teal); }
         .hn-col { background: rgba(30, 41, 59, 1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; font-size: 0.85rem; }
 
-        .lab-tab { padding: 12px 24px; font-weight: 800; cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; opacity: 0.5; }
+        .lab-tab { padding: 16px 24px; font-weight: 800; cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; opacity: 0.5; font-size: 0.9rem; }
         .lab-tab.active { border-color: var(--teal); color: var(--teal); opacity: 1; }
 
-        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 25px; padding: 25px; border: 1px solid var(--border); }
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: white; width: 100%; outline: none; }
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 20px; padding: 20px; border: 1px solid var(--border); }
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
+        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
         /* Trend Table Styles */
         .trend-container { overflow-x: auto; border-radius: 15px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); }
@@ -49,56 +51,112 @@
     <aside class="sidebar-container">
         <div class="p-6 border-b border-white/5">
             <div class="flex justify-between items-center mb-5">
-                <h2 class="text-xl font-black text-white">🔬 Lab Room</h2>
-                <a href="index.html" class="p-2 hover:bg-white/10 rounded-lg transition"><i data-lucide="home"></i></a>
+                <h2 class="text-xl font-black text-white italic tracking-tighter">PK-VMS <span class="text-teal-500">LAB</span></h2>
+                <a href="index.html" class="p-2 hover:bg-white/10 rounded-lg transition"><i data-lucide="home" class="w-5 h-5"></i></a>
             </div>
-            <input type="text" id="search-box" class="input-box" placeholder="ค้นหา HN, ชื่อ..." oninput="fetchAnimals()">
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-gray-500"></i>
+                <input type="text" id="search-box" class="input-box pl-10" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="fetchAnimals()">
+            </div>
         </div>
-        <div id="animal-list" class="flex-1 overflow-y-auto custom-scroll p-2"></div>
+        <div id="animal-list" class="flex-1 overflow-y-auto custom-scroll p-2">
+            </div>
     </aside>
 
     <main class="flex-1 overflow-y-auto bg-[#020617] flex flex-col">
-        <div id="no-selection" class="flex-1 flex flex-col items-center justify-center opacity-10">
-            <i data-lucide="line-chart" class="w-32 h-32 mb-4"></i>
-            <h2 class="text-3xl font-bold">เลือกสัตว์เพื่อดูแนวโน้มผลแล็บ</h2>
+        <div id="no-selection" class="flex-1 flex flex-col items-center justify-center opacity-20">
+            <i data-lucide="microscope" class="w-32 h-32 mb-4 text-teal-500"></i>
+            <h2 class="text-3xl font-bold">เลือกสัตว์ป่วยเพื่อดำเนินการ</h2>
+            <p>Select a patient from the left to manage lab results</p>
         </div>
 
         <div id="lab-editor" class="hidden flex-1 flex flex-col overflow-hidden">
-            <div class="p-8 border-b border-white/5 flex justify-between items-center">
+            <div class="p-8 border-b border-white/5 flex justify-between items-end bg-gradient-to-r from-navy to-transparent">
                 <div>
-                    <h1 class="text-3xl font-black text-white" id="disp-name">-</h1>
-                    <p class="text-teal-400 font-bold" id="disp-hn">-</p>
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-6 py-3 rounded-xl font-bold transition flex items-center gap-2">
-                        <i data-lucide="save" class="w-5 h-5"></i> บันทึกผลตรวจชุดนี้
-                    </button>
+                    <div class="flex items-center gap-3 mb-1">
+                        <span id="pet-icon-large" class="text-3xl">🐶</span>
+                        <h1 class="text-4xl font-black text-white" id="disp-name">-</h1>
+                    </div>
+                    <p class="text-teal-400 font-bold text-lg" id="disp-hn">-</p>
                 </div>
             </div>
 
-            <div class="flex px-8 border-b border-white/5 bg-navy-light/20">
-                <div class="lab-tab active" onclick="switchTab('input', this)">➕ กรอกผลเลือดใหม่</div>
-                <div class="lab-tab" onclick="switchTab('trends', this)">📊 ติดตามแนวโน้ม (Trends)</div>
+            <div class="flex px-8 border-b border-white/5 bg-navy-light/40">
+                <div class="lab-tab active" id="tab-input" onclick="switchTab('input', this)">➕ ผลเลือด (Blood Lab)</div>
+                <div class="lab-tab" id="tab-imaging" onclick="switchTab('imaging', this)">📸 Imaging (X-ray/US)</div>
+                <div class="lab-tab" id="tab-trends" onclick="switchTab('trends', this)">📊 ติดตามแนวโน้ม (Trends)</div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-8 custom-scroll" id="content-area">
+                
                 <div id="view-input">
-                    <div class="section-card mb-8">
-                        <div class="grid grid-cols-12 gap-4 mb-4 text-xs font-black text-gray-500 uppercase tracking-widest">
-                            <div class="col-span-4">Parameter</div>
-                            <div class="col-span-4 text-center">Result (ผลที่ได้)</div>
-                            <div class="col-span-4">Reference Range</div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-black text-white">บันทึกผลเลือดใหม่</h3>
+                        <button onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-8 py-3 rounded-xl font-black transition flex items-center gap-2 shadow-lg shadow-teal-900/20">
+                            <i data-lucide="save"></i> บันทึกผลตรวจ
+                        </button>
+                    </div>
+                    <div class="section-card">
+                        <div class="grid grid-cols-12 gap-4 mb-4 text-[10px] font-black text-gray-500 uppercase tracking-widest px-3">
+                            <div class="col-span-4">Parameter Name</div>
+                            <div class="col-span-4 text-center">Result (Value)</div>
+                            <div class="col-span-4 text-right">Reference Range</div>
                         </div>
-                        <div id="parameters-container" class="space-y-2"></div>
+                        <div id="parameters-container" class="space-y-1">
+                            </div>
+                    </div>
+                </div>
+
+                <div id="view-imaging" class="hidden space-y-8">
+                    <div class="section-card border-t-4 border-teal-500">
+                        <h3 class="text-xl font-bold mb-6 flex items-center gap-2 text-white">
+                            <i data-lucide="plus-circle" class="text-teal-500"></i> New Imaging Entry
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">Modality</label>
+                                <select id="img-type" class="input-box">
+                                    <option value="Radiology (X-ray)">☢️ Radiology (X-ray)</option>
+                                    <option value="Ultrasound">🌊 Ultrasound</option>
+                                    <option value="Echocardiography">🫀 Echocardiography</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">Region / Study</label>
+                                <input type="text" id="img-region" class="input-box" placeholder="e.g. Thorax, Whole Abdomen, Pelvic">
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">Findings (รายละเอียด)</label>
+                                <textarea id="img-finding" class="input-box min-h-[150px]" placeholder="บรรยายสิ่งที่ตรวจพบจากภาพถ่ายรังสีหรืออัลตราซาวด์..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-2 uppercase text-teal-500">Impression (สรุปผล)</label>
+                                <textarea id="img-impression" class="input-box min-h-[80px]" placeholder="สรุปความเห็นของสัตวแพทย์..."></textarea>
+                            </div>
+                            <div class="flex justify-end">
+                                <button onclick="saveImaging()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-xl font-black transition flex items-center gap-2">
+                                    <i data-lucide="camera"></i> บันทึกข้อมูล Imaging
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h3 class="text-2xl font-black text-white flex items-center gap-3">
+                            <i data-lucide="history" class="text-gray-500"></i> Imaging History
+                        </h3>
+                        <div id="imaging-history-list" class="space-y-4">
+                            </div>
                     </div>
                 </div>
 
                 <div id="view-trends" class="hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-2xl font-black text-white flex items-center gap-2">
-                            <i data-lucide="history" class="text-teal-400"></i> ตารางเปรียบเทียบผลย้อนหลัง
+                            <i data-lucide="bar-chart-3" class="text-teal-400"></i> ตารางเปรียบเทียบผลเลือด
                         </h3>
-                        <p class="text-xs text-gray-500">* ข้อมูลจะถูกจัดกลุ่มตามเวลาที่บันทึก (รอบการตรวจ)</p>
                     </div>
                     <div class="trend-container custom-scroll">
                         <table class="trend-table" id="trend-table-el">
@@ -107,6 +165,7 @@
                         </table>
                     </div>
                 </div>
+
             </div>
         </div>
     </main>
@@ -115,6 +174,7 @@
         let masterParams = [];
         let currentAnimal = null;
         let labHistory = [];
+        let imagingHistory = [];
 
         window.onload = async () => {
             lucide.createIcons();
@@ -136,7 +196,7 @@
                 <div class="pet-card" onclick="selectAnimal('${a.id}')" id="pet-${a.id}">
                     <div class="hn-col">#${a.owner_hn}</div>
                     <div class="flex flex-col justify-center min-w-0">
-                        <span class="text-white font-bold truncate">${a.pet_name}</span>
+                        <span class="text-white font-black truncate">${a.pet_name}</span>
                         <span class="text-[10px] text-gray-500 truncate">${a.owners?.owner_name || '-'}</span>
                     </div>
                     <div class="text-lg flex items-center justify-center">${a.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
@@ -146,16 +206,30 @@
         async function selectAnimal(id) {
             const { data: a } = await db.from('animals').select('*').eq('id', id).single();
             currentAnimal = a;
+            
+            // UI Switch
             document.querySelectorAll('.pet-card').forEach(c => c.classList.remove('active'));
-            document.getElementById(`pet-${id}`).classList.add('active');
+            const selectedCard = document.getElementById(`pet-${id}`);
+            if (selectedCard) selectedCard.classList.add('active');
+            
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('lab-editor').classList.remove('hidden');
+            
+            // Header
             document.getElementById('disp-name').innerText = a.pet_name;
+            document.getElementById('pet-icon-large').innerText = a.pet_type === 'สุนัข' ? '🐶' : '🐱';
             document.getElementById('disp-hn').innerText = `HN: ${a.owner_hn} | ${a.pet_type} (${a.breed})`;
             
+            // Load Data
             renderInputForm();
             await fetchLabHistory(id);
+            await fetchImagingHistory(id);
+            
+            // Default Tab
+            switchTab('input', document.getElementById('tab-input'));
         }
+
+        // --- BLOOD LAB LOGIC ---
 
         function renderInputForm() {
             const container = document.getElementById('parameters-container');
@@ -165,99 +239,17 @@
                 const max = isDog ? p.dog_max : p.cat_max;
                 return `
                     <div class="grid grid-cols-12 gap-4 items-center p-3 border-b border-white/5 hover:bg-white/5 transition-all rounded-lg">
-                        <div class="col-span-4 font-bold text-slate-300">${p.parameter_name} <span class="text-[10px] opacity-40">${p.unit || ''}</span></div>
-                        <div class="col-span-4 text-center">
-                            <input type="number" step="0.001" class="input-box text-center lab-input" 
+                        <div class="col-span-4 font-bold text-slate-300">
+                            ${p.parameter_name} 
+                            <span class="text-[10px] text-gray-600 block">${p.unit || ''}</span>
+                        </div>
+                        <div class="col-span-4">
+                            <input type="number" step="0.01" class="input-box text-center lab-input font-black text-teal-400" 
                                 data-id="${p.id}" data-name="${p.parameter_name}" data-min="${min}" data-max="${max}" data-unit="${p.unit}">
                         </div>
-                        <div class="col-span-4 text-xs text-gray-500 font-mono">${min} - ${max}</div>
+                        <div class="col-span-4 text-right text-xs text-gray-500 font-mono">${min} - ${max}</div>
                     </div>`;
             }).join('');
-        }
-
-        async function fetchLabHistory(animalId) {
-            const { data } = await db.from('lab_results')
-                .select('*')
-                .eq('animal_id', animalId)
-                .order('created_at', { ascending: false });
-            labHistory = data || [];
-            renderTrendTable();
-        }
-
-        function renderTrendTable() {
-            const isDog = currentAnimal.pet_type === 'สุนัข';
-            const sessions = {};
-            labHistory.forEach(row => {
-                // ใช้ ISO string ของ created_at เป็น key เพื่อความแม่นยำในการรวมกลุ่มชุดเดียวกัน
-                const key = row.created_at; 
-                if (!sessions[key]) sessions[key] = {};
-                sessions[key][row.parameter_name] = row;
-            });
-
-            const sortedTimestamps = Object.keys(sessions).sort((a, b) => new Date(b) - new Date(a));
-            
-            // Header ตาราง
-            const headRow = document.getElementById('trend-head');
-            headRow.innerHTML = `<th class="trend-param-name text-center">Parameter<br><span class="font-normal text-gray-500">(Ref. Range)</span></th>` + sortedTimestamps.map(ts => {
-                const d = new Date(ts);
-                return `<th>
-                    <div class="btn-del-col" onclick="deleteSession('${ts}')" title="ลบคอลัมน์นี้">✕</div>
-                    <div class="text-white">${formatThaiDate(d)}</div>
-                    <div class="text-teal-400 text-[10px]">${d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</div>
-                </th>`;
-            }).join('');
-
-            // Body ตาราง
-            const body = document.getElementById('trend-body');
-            body.innerHTML = masterParams.map(pMaster => {
-                const paramName = pMaster.parameter_name;
-                const min = isDog ? pMaster.dog_min : pMaster.cat_min;
-                const max = isDog ? pMaster.dog_max : pMaster.cat_max;
-                
-                let rowHtml = `<td class="trend-param-name">
-                    ${paramName}
-                    <span class="block text-[10px] text-gray-500 font-normal">
-                        (${min}-${max}) ${pMaster.unit || ''}
-                    </span>
-                </td>`;
-                
-                sortedTimestamps.forEach((ts, idx) => {
-                    const result = sessions[ts][paramName];
-                    if (!result) {
-                        rowHtml += `<td class="text-gray-800 opacity-20">-</td>`;
-                    } else {
-                        // คำนวณแนวโน้ม
-                        let arrow = '';
-                        if (idx < sortedTimestamps.length - 1) {
-                            const prevSession = sessions[sortedTimestamps[idx+1]][paramName];
-                            if (prevSession) {
-                                if (result.test_value > prevSession.test_value) arrow = '<span class="trend-arrow text-orange-500">↑</span>';
-                                else if (result.test_value < prevSession.test_value) arrow = '<span class="trend-arrow text-blue-500">↓</span>';
-                            }
-                        }
-
-                        const val = result.test_value;
-                        const statusClass = (val > max) ? 'val-high' : (val < min) ? 'val-low' : 'val-normal';
-                        rowHtml += `<td class="${statusClass}">${val}${arrow}</td>`;
-                    }
-                });
-                return `<tr>${rowHtml}</tr>`;
-            }).join('');
-        }
-
-        async function deleteSession(timestamp) {
-            if (!confirm(`⚠️ ยืนยันการลบผลการตรวจรอบเวลา ${new Date(timestamp).toLocaleString('th-TH')} ?\nข้อมูลจะหายไปอย่างถาวร`)) return;
-
-            try {
-                const { error } = await db.from('lab_results')
-                    .delete()
-                    .eq('animal_id', currentAnimal.id)
-                    .eq('created_at', timestamp);
-                
-                if (error) throw error;
-                alert("🗑️ ลบผลการตรวจสำเร็จ");
-                await fetchLabHistory(currentAnimal.id);
-            } catch (err) { alert(err.message); }
         }
 
         async function saveLabResults() {
@@ -280,20 +272,177 @@
                 }
             });
 
-            if (results.length === 0) return alert("กรุณากรอกผลแล็บอย่างน้อย 1 รายการ");
+            if (results.length === 0) return alert("กรุณากรอกผลอย่างน้อย 1 รายการ");
             const { error } = await db.from('lab_results').insert(results);
             if (!error) {
-                alert("✅ บันทึกสำเร็จ");
+                alert("✅ บันทึกผลเลือดสำเร็จ");
                 document.querySelectorAll('.lab-input').forEach(i => i.value = '');
                 await fetchLabHistory(currentAnimal.id);
-            } else alert(error.message);
+                switchTab('trends', document.getElementById('tab-trends'));
+            }
         }
+
+        async function fetchLabHistory(animalId) {
+            const { data } = await db.from('lab_results').select('*').eq('animal_id', animalId).order('created_at', { ascending: false });
+            labHistory = data || [];
+            renderTrendTable();
+        }
+
+        function renderTrendTable() {
+            const isDog = currentAnimal.pet_type === 'สุนัข';
+            const sessions = {};
+            labHistory.forEach(row => {
+                const key = row.created_at; 
+                if (!sessions[key]) sessions[key] = {};
+                sessions[key][row.parameter_name] = row;
+            });
+
+            const sortedTimestamps = Object.keys(sessions).sort((a, b) => new Date(b) - new Date(a));
+            
+            // Header
+            const headRow = document.getElementById('trend-head');
+            headRow.innerHTML = `<th class="trend-param-name text-center">Parameter<br><span class="font-normal text-gray-500">(Ref. Range)</span></th>` + sortedTimestamps.map(ts => {
+                const d = new Date(ts);
+                return `<th>
+                    <div class="btn-del-col" onclick="deleteSession('${ts}')">✕</div>
+                    <div class="text-white">${formatThaiDate(d)}</div>
+                    <div class="text-teal-500 text-[10px]">${d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</div>
+                </th>`;
+            }).join('');
+
+            // Body
+            const body = document.getElementById('trend-body');
+            body.innerHTML = masterParams.map(pMaster => {
+                const paramName = pMaster.parameter_name;
+                const min = isDog ? pMaster.dog_min : pMaster.cat_min;
+                const max = isDog ? pMaster.dog_max : pMaster.cat_max;
+                
+                let rowHtml = `<td class="trend-param-name">${paramName} <span class="block text-[10px] text-gray-500 font-normal">(${min}-${max})</span></td>`;
+                
+                sortedTimestamps.forEach((ts, idx) => {
+                    const result = sessions[ts][paramName];
+                    if (!result) {
+                        rowHtml += `<td class="text-gray-800 opacity-20">-</td>`;
+                    } else {
+                        let arrow = '';
+                        if (idx < sortedTimestamps.length - 1) {
+                            const prev = sessions[sortedTimestamps[idx+1]][paramName];
+                            if (prev) {
+                                if (result.test_value > prev.test_value) arrow = '<span class="trend-arrow text-orange-500">↑</span>';
+                                else if (result.test_value < prev.test_value) arrow = '<span class="trend-arrow text-blue-500">↓</span>';
+                            }
+                        }
+                        const val = result.test_value;
+                        const statusClass = (val > max) ? 'val-high' : (val < min) ? 'val-low' : 'val-normal';
+                        rowHtml += `<td class="${statusClass}">${val}${arrow}</td>`;
+                    }
+                });
+                return `<tr>${rowHtml}</tr>`;
+            }).join('');
+        }
+
+        async function deleteSession(ts) {
+            if (confirm("ลบผลตรวจชุดนี้?")) {
+                await db.from('lab_results').delete().eq('animal_id', currentAnimal.id).eq('created_at', ts);
+                await fetchLabHistory(currentAnimal.id);
+            }
+        }
+
+        // --- IMAGING LOGIC ---
+
+        async function saveImaging() {
+            const payload = {
+                animal_id: currentAnimal.id,
+                exam_type: document.getElementById('img-type').value,
+                region: document.getElementById('img-region').value,
+                findings: document.getElementById('img-finding').value,
+                impression: document.getElementById('img-impression').value,
+                created_at: new Date().toISOString()
+            };
+
+            if (!payload.findings) return alert("กรุณาระบุรายละเอียดการตรวจ");
+
+            const { error } = await db.from('imaging_results').insert([payload]);
+            if (!error) {
+                alert("✅ บันทึกผล Imaging สำเร็จ");
+                document.getElementById('img-region').value = '';
+                document.getElementById('img-finding').value = '';
+                document.getElementById('img-impression').value = '';
+                await fetchImagingHistory(currentAnimal.id);
+            } else {
+                alert(error.message);
+            }
+        }
+
+        async function fetchImagingHistory(animalId) {
+            const { data } = await db.from('imaging_results')
+                .select('*')
+                .eq('animal_id', animalId)
+                .order('created_at', { ascending: false });
+            imagingHistory = data || [];
+            renderImagingList();
+        }
+
+        function renderImagingList() {
+            const container = document.getElementById('imaging-history-list');
+            if (imagingHistory.length === 0) {
+                container.innerHTML = `<div class="p-12 text-center text-gray-600 border-2 border-dashed border-white/5 rounded-3xl">ไม่พบประวัติ Imaging</div>`;
+                return;
+            }
+
+            container.innerHTML = imagingHistory.map(item => `
+                <div class="section-card border-l-4 border-teal-500 relative group">
+                    <button onclick="deleteImaging('${item.id}')" class="absolute top-4 right-4 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <span class="px-3 py-1 bg-teal-500/10 text-teal-500 text-[10px] rounded-full font-black uppercase tracking-tighter border border-teal-500/20">${item.exam_type}</span>
+                            <h4 class="text-2xl font-black text-white mt-2">${item.region || 'General Study'}</h4>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-white font-bold">${formatThaiDate(new Date(item.created_at))}</div>
+                            <div class="text-xs text-gray-500">${new Date(item.created_at).toLocaleTimeString('th-TH')}</div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-black/30 p-4 rounded-xl">
+                            <p class="text-[10px] font-black text-gray-500 mb-2 uppercase">Findings</p>
+                            <p class="text-gray-300 whitespace-pre-line leading-relaxed">${item.findings}</p>
+                        </div>
+                        ${item.impression ? `
+                        <div class="bg-teal-500/5 p-4 rounded-xl border border-teal-500/10">
+                            <p class="text-[10px] font-black text-teal-500 mb-2 uppercase">Impression</p>
+                            <p class="text-white italic font-bold">"${item.impression}"</p>
+                        </div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function deleteImaging(id) {
+            if (confirm("ลบผล Imaging นี้?")) {
+                await db.from('imaging_results').delete().eq('id', id);
+                await fetchImagingHistory(currentAnimal.id);
+            }
+        }
+
+        // --- UTILS ---
 
         function switchTab(tab, el) {
             document.querySelectorAll('.lab-tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
-            document.getElementById('view-input').classList.toggle('hidden', tab !== 'input');
-            document.getElementById('view-trends').classList.toggle('hidden', tab !== 'trends');
+            
+            document.getElementById('view-input').classList.add('hidden');
+            document.getElementById('view-trends').classList.add('hidden');
+            document.getElementById('view-imaging').classList.add('hidden');
+
+            if (tab === 'input') document.getElementById('view-input').classList.remove('hidden');
+            if (tab === 'trends') document.getElementById('view-trends').classList.remove('hidden');
+            if (tab === 'imaging') document.getElementById('view-imaging').classList.remove('hidden');
+            
+            lucide.createIcons();
         }
 
         function formatThaiDate(date) {
