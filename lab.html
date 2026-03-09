@@ -27,11 +27,12 @@
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
+        /* Trend Table & Scaling */
         .trend-container { overflow-x: auto; border-radius: 20px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); }
         .trend-table { width: 100%; border-collapse: collapse; min-width: 900px; }
         .trend-table th { background: rgba(15, 23, 42, 0.95); padding: 15px; border: 1px solid var(--border); font-size: 0.75rem; color: #94a3b8; }
         .trend-table td { padding: 14px; border: 1px solid var(--border); text-align: center; font-size: 1rem; }
-        .fixed-col { position: sticky; left: 0; background: #0f172a !important; z-index: 10; min-width: 200px; text-align: left !important; }
+        .fixed-col { position: sticky; left: 0; background: #0f172a !important; z-index: 10; min-width: 180px; text-align: left !important; }
 
         .v-high-severe { color: #ff0000; background: rgba(255, 0, 0, 0.25); font-weight: 900; }
         .v-high-mod { color: #ff4d4d; background: rgba(255, 77, 77, 0.15); font-weight: 800; }
@@ -65,14 +66,14 @@
     <main class="flex-1 overflow-y-auto bg-[#020617] flex flex-col">
         <div id="no-selection" class="flex-1 flex flex-col items-center justify-center opacity-20">
             <i data-lucide="microscope" class="w-32 h-32 mb-4 text-teal-500"></i>
-            <h2 class="text-3xl font-bold">SELECT PATIENT</h2>
+            <h2 class="text-3xl font-bold uppercase tracking-widest">Select Patient</h2>
         </div>
 
         <div id="lab-editor" class="hidden flex-1 flex flex-col overflow-hidden">
             <div class="p-8 border-b border-white/5 bg-navy-mid/50">
                 <div class="flex items-center gap-4 mb-1">
                     <span id="pet-icon-large" class="text-4xl">🐶</span>
-                    <h1 class="text-4xl font-black text-white tracking-tighter" id="disp-name">-</h1>
+                    <h1 class="text-4xl font-black text-white" id="disp-name">-</h1>
                 </div>
                 <p class="text-teal-400 font-bold text-lg" id="disp-hn">-</p>
             </div>
@@ -81,7 +82,7 @@
                 <div class="lab-tab active" id="tab-input" onclick="switchTab('input', this)">➕ ผลเลือด (Input)</div>
                 <div class="lab-tab" id="tab-imaging" onclick="switchTab('imaging', this)">📸 Imaging (X-ray/US)</div>
                 <div class="lab-tab" id="tab-echo" onclick="switchTab('echo', this)">💓 Echocardiography</div>
-                <div class="lab-tab" id="tab-trends" onclick="switchTab('trends', this)">📊 Trends</div>
+                <div class="lab-tab" id="tab-trends" onclick="switchTab('trends', this)">📊 Trends Tracking</div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-8 custom-scroll" id="content-area">
@@ -105,20 +106,27 @@
                     <div class="section-card border-t-4 border-teal-500 bg-navy-mid/40">
                         <h3 class="text-xl font-black mb-6 flex items-center gap-2 text-white"><i data-lucide="plus-circle" class="text-teal-500"></i> New Imaging Entry</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                            <div><label class="echo-label">Modality</label><select id="img-type" class="input-box"><option>Radiology (X-ray)</option><option>Ultrasound</option></select></div>
-                            <div class="md:col-span-2"><label class="echo-label">Region</label><input type="text" id="img-region" class="input-box" placeholder="e.g. Thorax"></div>
+                            <div><label class="echo-label">Modality</label>
+                                <select id="img-type" class="input-box"><option>Radiology (X-ray)</option><option>Ultrasound</option></select>
+                            </div>
+                            <div class="md:col-span-2"><label class="echo-label">Region / Study</label><input type="text" id="img-region" class="input-box" placeholder="e.g. Thorax, Whole Abdomen"></div>
                         </div>
-                        <textarea id="img-finding" class="input-box min-h-[120px] mb-4" placeholder="Findings..."></textarea>
-                        <textarea id="img-impression" class="input-box min-h-[60px] mb-4" placeholder="Impression..."></textarea>
-                        <div class="flex justify-end"><button onclick="saveImaging()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-xl font-black">Save Imaging</button></div>
+                        <div class="space-y-4">
+                            <div><label class="echo-label">Findings</label><textarea id="img-finding" class="input-box min-h-[120px]" placeholder="รายละเอียดที่ตรวจพบ..."></textarea></div>
+                            <div><label class="echo-label text-teal-500">Impression</label><textarea id="img-impression" class="input-box min-h-[60px]" placeholder="สรุปผล..."></textarea></div>
+                            <div class="flex justify-end pt-4"><button onclick="saveImaging()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-xl font-black">Save Imaging Record</button></div>
+                        </div>
                     </div>
-                    <div id="imaging-history-list" class="space-y-4"></div>
+                    <div class="space-y-4">
+                        <h3 class="text-xl font-black text-white flex items-center gap-3"><i data-lucide="history" class="text-gray-500"></i> Imaging History</h3>
+                        <div id="imaging-history-list" class="space-y-4"></div>
+                    </div>
                 </div>
 
                 <div id="view-echo" class="hidden space-y-6 pb-20">
                     <div class="flex justify-between items-center">
-                        <h3 class="text-2xl font-black text-white italic">Echocardiography Report</h3>
-                        <button onclick="saveEchoResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-3 rounded-xl font-black">💾 บันทึกข้อมูล</button>
+                        <h3 class="text-2xl font-black text-white italic">Echocardiography Data</h3>
+                        <button onclick="saveEchoResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-3 rounded-xl font-black transition">💾 บันทึกผล Echo</button>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -127,7 +135,6 @@
                                 <div class="grid grid-cols-2 gap-4 mb-8">
                                     <div><label class="echo-label">BW (kg)</label><input type="number" step="0.1" id="ec-bw" class="input-box border-orange-500/30 text-orange-400 font-black" oninput="runEchoCalc()"></div>
                                 </div>
-                                
                                 <p class="text-[10px] font-black text-teal-500 mb-4 uppercase tracking-widest">Dimensions (2D/M-Mode)</p>
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
                                     <div><label class="echo-label">IVSd (cm)</label><input type="number" step="0.01" id="ec-ivsd" class="input-box ec-in" oninput="runEchoCalc()"></div>
@@ -137,28 +144,27 @@
                                     <div><label class="echo-label">IVSs (cm)</label><input type="number" step="0.01" id="ec-ivss" class="input-box ec-in" oninput="runEchoCalc()"></div>
                                     <div><label class="echo-label">LVIDs (cm)</label><input type="number" step="0.01" id="ec-lvids" class="input-box ec-in" oninput="runEchoCalc()"></div>
                                     <div><label class="echo-label">PWs (cm)</label><input type="number" step="0.01" id="ec-pws" class="input-box ec-in" oninput="runEchoCalc()"></div>
-                                    <div><label class="echo-label">Ao (cm)</label><input type="number" step="0.01" id="ec-ao" class="input-box ec-in" oninput="runEchoCalc()"></div>
+                                    <div><label class="echo-label text-teal-500 font-black">Ao (cm)</label><input type="number" step="0.01" id="ec-ao" class="input-box ec-in" oninput="runEchoCalc()"></div>
                                 </div>
-
-                                <p class="text-[10px] font-black text-blue-400 mb-4 uppercase tracking-widest">Doppler & Inflow (cm/s)</p>
+                                <p class="text-[10px] font-black text-blue-400 mb-4 uppercase tracking-widest">Doppler & Inflow Velocities (cm/s)</p>
                                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                     <div><label class="echo-label">Mitral E</label><input type="number" id="ec-me" class="input-box ec-in"></div>
                                     <div><label class="echo-label">Mitral A</label><input type="number" id="ec-ma" class="input-box ec-in"></div>
                                     <div><label class="echo-label">LVOT</label><input type="number" id="ec-lvot" class="input-box ec-in"></div>
-                                    <div><label class="echo-label">RVOT</label><input type="number" id="ec-rvot" class="input-box ec-in"></div>
+                                    <div><label class="echo-label text-orange-400">RVOT</label><input type="number" id="ec-rvot" class="input-box ec-in"></div>
                                     <div><label class="echo-label">Tricuspid E</label><input type="number" id="ec-te" class="input-box ec-in"></div>
                                     <div><label class="echo-label">Tricuspid A</label><input type="number" id="ec-ta" class="input-box ec-in"></div>
                                 </div>
                             </div>
                             <div class="section-card">
-                                <label class="echo-label text-teal-500">Note: เพิ่มเติม</label>
-                                <textarea id="ec-note" class="input-box min-h-[100px]" placeholder="รายละเอียดทางคลินิก..."></textarea>
+                                <label class="echo-label text-teal-500">Impression / Notes</label>
+                                <textarea id="ec-note" class="input-box min-h-[100px]" placeholder="ระบุการวินิจฉัยและแผนการรักษา..."></textarea>
                             </div>
                         </div>
 
                         <div class="lg:col-span-4 space-y-4">
                             <div class="section-card bg-black/40 border-teal-500/30">
-                                <h4 class="text-xs font-black text-white uppercase mb-4 tracking-widest text-teal-500">Echo Results</h4>
+                                <h4 class="text-xs font-black text-white uppercase mb-4 tracking-widest text-teal-500">Echo Calculation</h4>
                                 <div class="space-y-4">
                                     <div class="flex justify-between items-center"><span class="text-xs text-gray-400">LA/Ao Ratio (< 1.6)</span><span id="res-laao" class="font-mono font-black">-</span></div>
                                     <div class="flex justify-between items-center"><span class="text-xs text-gray-400">FS % (25 - 45%)</span><span id="res-fs" class="font-mono font-black">-</span></div>
@@ -170,12 +176,16 @@
                                     <div class="flex justify-between text-xs"><span class="text-gray-500">n-LVIDs (0.71-1.26)</span><span id="res-nlvids" class="font-black">-</span></div>
                                 </div>
                             </div>
+                            <div class="space-y-3">
+                                <h4 class="text-[10px] font-black text-gray-500 uppercase tracking-widest">💓 Echo History</h4>
+                                <div id="echo-history-list" class="space-y-2"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="view-trends" class="hidden">
-                    <div class="flex justify-between items-center mb-6"><h3 class="text-2xl font-black text-white">Lab Trends</h3></div>
+                    <div class="flex justify-between items-center mb-6"><h3 class="text-2xl font-black text-white">Comparative Lab Trends</h3></div>
                     <div class="trend-container custom-scroll">
                         <table class="trend-table"><thead id="trend-head"></thead><tbody id="trend-body"></tbody></table>
                     </div>
@@ -229,17 +239,15 @@
             }).join('');
         }
 
+        // --- ECHO LOGIC ---
         function runEchoCalc() {
             const bw = parseFloat(document.getElementById('ec-bw').value) || 0;
             const lvidd = parseFloat(document.getElementById('ec-lvidd').value) || 0, lvids = parseFloat(document.getElementById('ec-lvids').value) || 0;
             const ivsd = parseFloat(document.getElementById('ec-ivsd').value) || 0, pwd = parseFloat(document.getElementById('ec-pwd').value) || 0;
-            const ivss = parseFloat(document.getElementById('ec-ivss').value) || 0, pws = parseFloat(document.getElementById('ec-pws').value) || 0;
             const la = parseFloat(document.getElementById('ec-la').value) || 0, ao = parseFloat(document.getElementById('ec-ao').value) || 0;
 
             const fs = lvidd > 0 ? ((lvidd - lvids) / lvidd) * 100 : 0;
             const laao = ao > 0 ? la / ao : 0;
-            
-            // Teichholz Method for EF%
             const edv = (7 / (2.4 + lvidd)) * Math.pow(lvidd, 3);
             const esv = (7 / (2.4 + lvids)) * Math.pow(lvids, 3);
             const ef = edv > 0 ? ((edv - esv) / edv) * 100 : 0;
@@ -258,30 +266,32 @@
             calcNorm(pwd, 0.232, 0.32, 0.54, 'res-npwd');
             calcNorm(lvids, 0.315, 0.71, 1.26, 'res-nlvids');
 
-            document.getElementById('res-laao').innerText = laao.toFixed(2);
-            document.getElementById('res-laao').className = 'font-mono font-black ' + (laao >= 1.6 ? 'text-red-500' : 'text-white');
+            const laaoEl = document.getElementById('res-laao');
+            laaoEl.innerText = laao.toFixed(2);
+            laaoEl.className = 'font-mono font-black ' + (laao >= 1.6 ? 'text-red-500' : 'text-white');
             document.getElementById('res-fs').innerText = fs.toFixed(1) + ' %';
-            document.getElementById('res-fs').className = 'font-mono font-black ' + (fs < 25 ? 'text-blue-400' : (fs > 45 ? 'text-red-500' : 'text-white'));
             document.getElementById('res-ef').innerText = ef.toFixed(1) + ' %';
         }
 
         async function saveEchoResults() {
             const data = {};
             document.querySelectorAll('.ec-in, #ec-bw').forEach(i => data[i.id.replace('ec-', '')] = parseFloat(i.value) || 0);
-            const payload = { animal_id: currentAnimal.id, exam_type: 'Echocardiography', findings: JSON.stringify(data), impression: document.getElementById('ec-note').value, created_at: new Date().toISOString() };
+            const payload = { animal_id: currentAnimal.id, exam_type: 'Echocardiography', findings: data, impression: document.getElementById('ec-note').value, created_at: new Date().toISOString() };
             const { error } = await db.from('imaging_results').insert([payload]);
-            if (!error) { alert("บันทึกสำเร็จ"); fetchImagingHistory(currentAnimal.id); }
+            if (!error) { alert("บันทึก Echo สำเร็จ"); await fetchImagingHistory(currentAnimal.id); }
         }
 
+        function loadEchoRecord(item) {
+            const f = item.findings;
+            Object.keys(f).forEach(k => { const el = document.getElementById('ec-' + k); if(el) el.value = f[k]; });
+            document.getElementById('ec-note').value = item.impression;
+            runEchoCalc();
+        }
+
+        // --- TRENDS & IMAGING LOGIC ---
         function getScaleClass(val, min, max) {
-            if (val > max) {
-                const diff = (val - max) / max;
-                return diff > 0.5 ? 'v-high-severe' : (diff > 0.2 ? 'v-high-mod' : 'v-high-mild');
-            }
-            if (val < min) {
-                const diff = (min - val) / min;
-                return diff > 0.5 ? 'v-low-severe' : (diff > 0.2 ? 'v-low-mod' : 'v-low-mild');
-            }
+            if (val > max) return ((val - max) / max) > 0.5 ? 'v-high-severe' : (((val - max) / max) > 0.2 ? 'v-high-mod' : 'v-high-mild');
+            if (val < min) return ((min - val) / min) > 0.5 ? 'v-low-severe' : (((min - val) / min) > 0.2 ? 'v-low-mod' : 'v-low-mild');
             return 'v-normal';
         }
 
@@ -291,20 +301,30 @@
             const isDog = currentAnimal.pet_type === 'สุนัข';
             const sessions = {}; labHistory.forEach(r => { if(!sessions[r.created_at]) sessions[r.created_at] = {}; sessions[r.created_at][r.parameter_name] = r; });
             const sortedTs = Object.keys(sessions).sort((a,b) => new Date(b) - new Date(a));
-            document.getElementById('trend-head').innerHTML = `<tr><th class="fixed-col">Parameter (Unit)</th><th class="text-gray-500">Ref. Range</th>${sortedTs.map(ts => `<th><button onclick="deleteSession('${ts}')" class="text-gray-600 hover:text-red-500 mb-1">✕</button><br><span class="text-white">${formatThaiDate(new Date(ts))}</span></th>`).join('')}</tr>`;
+            document.getElementById('trend-head').innerHTML = `<tr><th class="fixed-col">Parameter</th><th class="text-gray-500">Ref.</th>${sortedTs.map(ts => `<th><button onclick="deleteSession('${ts}')" class="text-gray-600 hover:text-red-500">✕</button><br><span class="text-white">${formatThaiDate(new Date(ts))}</span></th>`).join('')}</tr>`;
             document.getElementById('trend-body').innerHTML = masterParams.map(p => {
                 const min = isDog ? p.dog_min : p.cat_min, max = isDog ? p.dog_max : p.cat_max;
-                let html = `<td class="fixed-col font-bold text-slate-300 text-sm">${p.parameter_name} <span class="text-[9px] text-gray-600">${p.unit || ''}</span></td><td class="text-gray-600 font-mono text-xs">${min}-${max}</td>`;
+                let html = `<td class="fixed-col font-bold text-slate-300 text-sm">${p.parameter_name}</td><td class="text-gray-600 font-mono text-[10px]">${min}-${max}</td>`;
                 sortedTs.forEach(ts => { const res = sessions[ts][p.parameter_name]; const val = res ? res.test_value : '-'; html += `<td class="${res ? getScaleClass(val, min, max) : ''}">${val}</td>`; });
                 return `<tr>${html}</tr>`;
             }).join('');
         }
 
-        async function fetchImagingHistory(id) { const { data } = await db.from('imaging_results').select('*').eq('animal_id', id).order('created_at', { ascending: false }); imagingHistory = data || []; renderImagingList(); }
+        async function fetchImagingHistory(id) { const { data } = await db.from('imaging_results').select('*').eq('animal_id', id).order('created_at', { ascending: false }); imagingHistory = data || []; renderImagingLists(); }
 
-        function renderImagingList() {
-            const container = document.getElementById('imaging-history-list');
-            container.innerHTML = imagingHistory.map(item => `<div class="section-card border-l-4 border-teal-500 relative group"><button onclick="deleteImaging('${item.id}')" class="absolute top-6 right-6 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"><i data-lucide="trash-2" class="w-5 h-5"></i></button><div class="flex justify-between mb-4"><div><span class="px-3 py-1 bg-teal-500/10 text-teal-500 text-[10px] rounded-full font-black uppercase tracking-tighter border border-teal-500/20">${item.exam_type}</span><h4 class="text-2xl font-black text-white mt-2">${item.region || 'Study'}</h4></div><div class="text-right text-xs text-gray-500">${formatThaiDate(new Date(item.created_at))}</div></div><p class="text-gray-300 text-sm whitespace-pre-line leading-relaxed mb-4">${item.findings}</p><p class="text-teal-400 font-bold italic">Impression: "${item.impression}"</p></div>`).join('');
+        function renderImagingLists() {
+            const imgList = document.getElementById('imaging-history-list');
+            const echoList = document.getElementById('echo-history-list');
+            const imgs = imagingHistory.filter(i => i.exam_type !== 'Echocardiography');
+            const echos = imagingHistory.filter(i => i.exam_type === 'Echocardiography');
+
+            imgList.innerHTML = imgs.map(item => `<div class="section-card border-l-4 border-teal-500 relative group"><button onclick="deleteImaging('${item.id}')" class="absolute top-6 right-6 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"><i data-lucide="trash-2" class="w-5 h-5"></i></button><div class="flex justify-between mb-4"><div><span class="px-3 py-1 bg-teal-500/10 text-teal-500 text-[10px] rounded-full font-black uppercase tracking-tighter border border-teal-500/20">${item.exam_type}</span><h4 class="text-2xl font-black text-white mt-2">${item.region || 'Study'}</h4></div><div class="text-right text-xs text-gray-500">${formatThaiDate(new Date(item.created_at))}</div></div><p class="text-gray-300 text-sm whitespace-pre-line leading-relaxed mb-4">${item.findings}</p><p class="text-teal-400 font-bold italic">"${item.impression}"</p></div>`).join('');
+            
+            echoList.innerHTML = echos.map(item => `
+                <div class="p-3 bg-white/5 border border-white/5 rounded-xl cursor-pointer hover:bg-teal-500/10 transition flex justify-between items-center" onclick="loadEchoRecord(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                    <div><div class="text-white font-bold text-sm">${formatThaiDate(new Date(item.created_at))}</div><div class="text-[10px] text-gray-500 uppercase">Weight: ${item.findings.bw} kg</div></div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-teal-500"></i>
+                </div>`).join('');
             lucide.createIcons();
         }
 
@@ -314,7 +334,7 @@
             if (!error) { alert("บันทึก Imaging สำเร็จ"); fetchImagingHistory(currentAnimal.id); }
         }
 
-        async function deleteImaging(id) { if (confirm("ลบผล Imaging นี้?")) { await db.from('imaging_results').delete().eq('id', id); fetchImagingHistory(currentAnimal.id); } }
+        async function deleteImaging(id) { if (confirm("ลบประวัตินี้?")) { await db.from('imaging_results').delete().eq('id', id); fetchImagingHistory(currentAnimal.id); } }
         async function saveLabResults() {
             const results = []; const ts = new Date().toISOString();
             document.querySelectorAll('.lab-input').forEach(i => { if (i.value) results.push({ animal_id: currentAnimal.id, parameter_id: i.dataset.id, parameter_name: i.dataset.name, test_value: parseFloat(i.value), unit: i.dataset.unit, created_at: ts }); });
