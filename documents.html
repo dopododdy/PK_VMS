@@ -201,7 +201,7 @@
         }
 
         // ==========================================
-        // PK-VMS PRINT ENGINE (Color & Design Fixed)
+        // PK-VMS PRINT ENGINE (4-Column Table)
         // ==========================================
         
         async function printCurrentDoc() {
@@ -239,7 +239,7 @@
             const printContent = sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
                 const fontSizePt = l.size || 12;
-                const textColor = l.color || '#000000'; // ดึงสีจาก Config
+                const textColor = l.color || '#000000'; 
                 
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.4; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
@@ -253,20 +253,30 @@
                     style += `left:${l.x}mm; width:${l.w || (pw - parseFloat(l.x))}mm; text-align:left;`;
                 }
 
-                // กรณีเป็นตารางรายการผ่าตัด
+                // ==========================================
+                // CUSTOM 4-COLUMN SURGERY LIST
+                // ==========================================
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
-                    const rowHeightMm = 8;
+                    const rowHeightMm = 10;
                     pushOffset += (petSurgeries.length) * rowHeightMm;
+                    
+                    // สร้างสไตล์ของกล่อง Checkbox
+                    const checkboxBox = `<div style="width:4.5mm; height:4.5mm; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
+
                     return `<div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.9}pt; color:${textColor};">
+                        <table style="width:100%; border-collapse:collapse; margin-top:2mm; font-size:${fontSizePt * 0.85}pt; color:${textColor};">
                             <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
-                                <th style="text-align:left; padding:1.5mm 1mm; width:30%;">ชื่อสัตว์</th>
-                                <th style="text-align:left; padding:1.5mm 1mm;">รายการหัตถการ/ผ่าตัด</th>
+                                <th style="text-align:left; padding:2mm 1mm; width:16.6%;">ชื่อสัตว์</th>
+                                <th style="text-align:left; padding:2mm 1mm; width:50%;">รายการหัตถการ</th>
+                                <th style="text-align:center; padding:2mm 1mm; width:16.7%;">ไม่ตรวจเลือด</th>
+                                <th style="text-align:center; padding:2mm 1mm; width:16.7%;">ตรวจเลือด</th>
                             </tr>
                             ${petSurgeries.map(ps => `
                                 <tr style="border-bottom:0.5px dotted ${textColor}80;">
-                                    <td style="padding:2.5mm 1mm; vertical-align:top;">${ps.name}</td>
-                                    <td style="padding:2.5mm 1mm; vertical-align:top;">${ps.surgery}</td>
+                                    <td style="padding:3mm 1mm; vertical-align:top;">${ps.name}</td>
+                                    <td style="padding:3mm 1mm; vertical-align:top;">${ps.surgery}</td>
+                                    <td style="padding:3mm 1mm; vertical-align:middle; text-align:center;">${checkboxBox}</td>
+                                    <td style="padding:3mm 1mm; vertical-align:middle; text-align:center;">${checkboxBox}</td>
                                 </tr>`).join('')}
                         </table>
                     </div>`;
@@ -289,13 +299,7 @@
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
                         * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                         html, body { margin: 0 !important; padding: 0 !important; background: white; }
-                        .page { 
-                            position: relative; 
-                            width: ${pw}mm; 
-                            height: ${ph}mm; 
-                            background: white; 
-                            overflow: hidden; 
-                        }
+                        .page { position: relative; width: ${pw}mm; height: ${ph}mm; background: white; overflow: hidden; }
                         @media print {
                             @page { size: ${pw}mm ${ph}mm; margin: 0 !important; }
                             html, body, .page { width: ${pw}mm; height: ${ph}mm; }
