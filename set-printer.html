@@ -28,7 +28,7 @@
             background: #ffffff; position: relative; transform-origin: top center; 
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.7); overflow: visible; margin: 0 auto; flex-shrink: 0;
         }
-        .canvas-element { position: absolute; cursor: pointer; user-select: none; line-height: 1.4; box-sizing: border-box; white-space: pre-wrap; transition: outline 0.1s; }
+        .canvas-element { position: absolute; cursor: pointer; user-select: none; line-height: 1.1; box-sizing: border-box; white-space: pre-wrap; transition: outline 0.1s; }
         .canvas-element:hover { outline: 1px dashed var(--teal); }
         .canvas-element.active { outline: 2px solid var(--teal) !important; background: rgba(20, 184, 17, 0.08); z-index: 100; }
         
@@ -52,7 +52,7 @@
                 <a href="master_data.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-xl transition">⬅️</a>
                 <div>
                     <h1 class="text-2xl font-black text-white tracking-tight">🖨️ PK-VMS Template Designer</h1>
-                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบ (A5 Landscape Support)</p>
+                    <p class="text-gray-500 text-xs uppercase font-bold tracking-widest">ออกแบบ (Dynamic Items / Fixed Surgery)</p>
                 </div>
             </div>
             <div class="flex gap-4">
@@ -165,8 +165,9 @@
         };
 
         function replaceVars(text, fontSize, color) {
+            const textColor = color || '#000000';
             if (text.includes("{{items_list}}")) {
-                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:${color || 'black'}; line-height: 1;">
+                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:${textColor}; line-height: 1.1;">
                     ${mockItems.map(item => `
                         <tr>
                             <td style="padding: 1px 0; text-align: left; vertical-align: top;">${item.name}</td>
@@ -175,15 +176,20 @@
                 </table>`;
             }
             if (text.includes("{{pet_surgery_list}}")) {
-                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.9}pt; color:${color || 'black'}; line-height: 1.2; margin-top: 5px;">
-                    <tr style="border-bottom: 1px solid #ccc; font-weight: bold;">
-                        <th style="text-align: left; padding: 2px;">ชื่อสัตว์</th>
-                        <th style="text-align: left; padding: 2px;">รายการหัตถการ/ผ่าตัด</th>
+                const cb = `<div style="width:3.8mm; height:3.8mm; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
+                return `<table style="width: 100%; border-collapse:collapse; font-family:'Sarabun'; font-size: ${fontSize * 0.85}pt; color:${textColor}; line-height: 1; margin-top: 0;">
+                    <tr style="border-bottom: 1.5px solid ${textColor}; font-weight: bold;">
+                        <th style="text-align: left; padding: 1mm 0.5mm; width:16.6%;">ชื่อสัตว์</th>
+                        <th style="text-align: left; padding: 1mm 0.5mm; width:50%;">รายการหัตถการ</th>
+                        <th style="text-align: center; padding: 1mm 0.5mm; width:16.7%;">ไม่ตรวจเลือด</th>
+                        <th style="text-align: center; padding: 1mm 0.5mm; width:16.7%;">ตรวจเลือด</th>
                     </tr>
                     ${mockPetSurgeries.map(ps => `
-                        <tr style="border-bottom: 1px dotted #eee;">
-                            <td style="padding: 4px 2px; vertical-align: top;">${ps.pet_name}</td>
-                            <td style="padding: 4px 2px; vertical-align: top;">${ps.surgery}</td>
+                        <tr>
+                            <td style="padding: 0.8mm 0.5mm; vertical-align: top;">${ps.pet_name}</td>
+                            <td style="padding: 0.8mm 0.5mm; vertical-align: top;">${ps.surgery}</td>
+                            <td style="padding: 0.8mm 0.5mm; text-align:center; vertical-align:middle;">${cb}</td>
+                            <td style="padding: 0.8mm 0.5mm; text-align:center; vertical-align:middle;">${cb}</td>
                         </tr>`).join('')}
                 </table>`;
             }
@@ -308,17 +314,24 @@
             const wrapper = document.getElementById('canvas_wrapper'); const px = 3.78; 
             const pw = document.getElementById('paper_w').value; const ph = document.getElementById('paper_h').value;
             wrapper.style.width = (pw * px) + 'px'; wrapper.style.height = (ph * px) + 'px';
+            
             const canvasLines = currentConfig.lines.map((l, originalIndex) => ({...l, originalIndex}));
             const sortedLines = [...canvasLines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y));
+            
             let pushOffset = 0;
             wrapper.innerHTML = sortedLines.map((l) => {
-                const currentY = parseFloat(l.y) + pushOffset; const isActive = l.originalIndex === activeLineIndex;
+                // ✅ Logic สำคัญ: {{pet_surgery_list}} จะไม่บวก pushOffset ให้บรรทัดถัดไป
+                const currentY = parseFloat(l.y) + pushOffset; 
+                const isActive = l.originalIndex === activeLineIndex;
                 const availableWidthMm = pw - parseFloat(l.x); 
                 const boxWidthPx = (l.w ? l.w : availableWidthMm) * px;
+                
                 let style = `top:${currentY * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; width:${boxWidthPx}px; color:${l.color || '#000000'};`;
                 
-                if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
-                if (l.text && l.text.includes("{{pet_surgery_list}}")) pushOffset += (mockPetSurgeries.length) * 8;
+                // ✅ จัดการ Offset เฉพาะ {{items_list}}
+                if (l.text && l.text.includes("{{items_list}}")) {
+                    pushOffset += (mockItems.length - 1) * 6;
+                }
                 
                 const commonAttr = `class="canvas-element ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); selectLine(${l.originalIndex})"`;
                 if (l.type === 'text') {
@@ -358,7 +371,10 @@
             let pushOffset = 0;
             const printContent = sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
-                let style = `position:absolute; top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; color:${l.color || 'black'}; line-height:1.4; white-space:pre-wrap;`;
+                const fontSizePt = l.size || 12;
+                const textColor = l.color || 'black';
+
+                let style = `position:absolute; top:${currentY}mm; font-family:${l.font || 'Sarabun'}; font-size:${fontSizePt}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; color:${textColor}; line-height:1; white-space:pre-wrap;`;
                 
                 if (l.align === 'center') {
                     style += `left:0; width:${pw_val}mm; text-align:center;`;
@@ -369,13 +385,14 @@
                     style += `left:${l.x}mm; width:${boxWidthMm}mm; text-align:left;`;
                 }
                 
+                // ✅ items_list -> ดันบรรทัดล่าง
                 if (l.text && l.text.includes("{{items_list}}")) pushOffset += (mockItems.length - 1) * 6;
-                if (l.text && l.text.includes("{{pet_surgery_list}}")) pushOffset += (mockPetSurgeries.length) * 8;
+                // ✅ pet_surgery_list -> Fixed Position (ไม่บวก Offset)
 
                 if (l.type === 'text') {
                     return `<div style="${style}">${replaceVars(l.text, l.size, l.color)}</div>`;
                 } else if (l.type === 'rect') {
-                    return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; border-radius:${l.radius || 0}mm;"></div>`;
+                    return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
                 } else if (l.type === 'image') {
                     let iStyle = `position:absolute; top:${currentY}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;`;
                     if (l.align === 'center') iStyle += `left:50%; transform:translateX(-50%);`;
@@ -387,19 +404,11 @@
             win.document.write(`<html><head>
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Kanit:wght@400;700&family=Prompt:wght@400;700&display=swap'); 
-                    * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
-                    html, body { margin: 0 !important; padding: 0 !important; background: white; }
-                    .page { 
-                        position: relative; 
-                        width: ${pw_val}mm; 
-                        height: ${ph_val}mm; 
-                        overflow: hidden; 
-                    }
+                    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    html, body { margin: 0 !important; padding: 0 !important; background: white; line-height: 1; }
+                    .page { position: relative; width: ${pw_val}mm; height: ${ph_val}mm; overflow: hidden; }
                     @media print { 
-                        @page { 
-                            size: ${pw_val}mm ${ph_val}mm; 
-                            margin: 0 !important; 
-                        } 
+                        @page { size: ${pw_val}mm ${ph_val}mm; margin: 0 !important; } 
                         html, body { width: ${pw_val}mm; height: ${ph_val}mm; }
                         .page { width: ${pw_val}mm; height: ${ph_val}mm; }
                     }
