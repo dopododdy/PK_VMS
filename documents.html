@@ -58,9 +58,7 @@
     <main class="flex-1 flex flex-col overflow-hidden">
         <nav class="p-4 bg-navy-light/50 border-b border-white/5 flex gap-2 overflow-x-auto custom-scroll">
             <div class="doc-tab active" data-type="doc_consent" onclick="switchDocType('doc_consent')">📋 ใบยินยอมผ่าตัด</div>
-            <div class="doc-tab" data-type="doc_opd" onclick="switchDocType('doc_opd')">📄 บันทึก OPD</div>
-            <div class="doc-tab" data-type="doc_rx_label" onclick="switchDocType('doc_rx_label')">💊 ฉลากยา</div>
-            <div class="doc-tab" data-type="doc_receipt" onclick="switchDocType('doc_receipt')">💰 ใบเสร็จรับเงิน</div>
+            <div class="doc-tab" data-type="doc_lab" onclick="switchDocType('doc_lab')">🔬 รายงานผล Lab</div>
         </nav>
 
         <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-[#020617]">
@@ -150,6 +148,7 @@
             if (selectedPetIds.has(id)) { selectedPetIds.delete(id); card.classList.remove('selected'); }
             else { selectedPetIds.add(id); card.classList.add('selected'); }
             if (activeDocType === 'doc_consent') refreshSurgeryRows();
+            if (activeDocType === 'doc_lab') refreshLabPicker();
         }
 
         function switchDocType(type) {
@@ -163,9 +162,10 @@
                 title.innerText = "ใบยินยอมผ่าตัด";
                 form.innerHTML = `<div class="section-card space-y-6"><div id="surgery-rows" class="space-y-6"></div><input type="text" id="f-note" class="input-box font-bold text-teal-400" placeholder="ระบุหมายเหตุความเสี่ยงเพิ่มเติม..."></div>`;
                 refreshSurgeryRows();
-            } else {
-                title.innerText = "เอกสารทางการแพทย์";
-                form.innerHTML = `<div class="section-card text-center py-20 opacity-50"><p>กำลังดึง Template สำหรับ "${type}"...</p></div>`;
+            } else if (type === 'doc_lab') {
+                title.innerText = "รายงานผลทางห้องปฏิบัติการ";
+                form.innerHTML = `<div class="section-card space-y-6"><div id="lab-session-list" class="space-y-4"></div></div>`;
+                refreshLabPicker();
             }
             lucide.createIcons();
         }
@@ -200,12 +200,57 @@
             textbox.value = selectedValues.join(', ');
         }
 
+        async function refreshLabPicker() {
+            const container = document.getElementById('lab-session-list');
+            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">กรุณาเลือกสัตว์เพื่อดึงประวัติผลตรวจ...</p>'; return; }
+            
+            container.innerHTML = '<p class="text-gray-500 animate-pulse">กำลังโหลดข้อมูลล่าสุด...</p>';
+            
+            const ids = Array.from(selectedPetIds);
+            const [{data: bloods}, {data: images}] = await Promise.all([
+                db.from('lab_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(20),
+                db.from('imaging_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(20)
+            ]);
+
+            let html = '<h4 class="text-xs font-bold text-teal-500 uppercase tracking-widest mb-2">เลือกข้อมูลที่ต้องการรวมในรายงาน</h4>';
+            
+            // กลุ่มผลเลือด (Group by created_at)
+            const sessions = {};
+            bloods.forEach(b => { if(!sessions[b.created_at]) sessions[b.created_at] = []; sessions[b.created_at].push(b); });
+            
+            Object.keys(sessions).forEach(ts => {
+                const date = new Date(ts).toLocaleString('th-TH');
+                html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition">
+                    <input type="checkbox" class="lab-pick-input w-5 h-5 rounded accent-teal-500" value="${ts}" data-type="blood">
+                    <div>
+                        <div class="text-white font-bold">🩸 ผลเลือด (Blood Results)</div>
+                        <div class="text-xs text-gray-500">${date}</div>
+                    </div>
+                </label>`;
+            });
+
+            // กลุ่ม Imaging/Echo
+            images.forEach(img => {
+                const date = new Date(img.created_at).toLocaleString('th-TH');
+                html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition">
+                    <input type="checkbox" class="img-pick-input w-5 h-5 rounded accent-teal-500" value="${img.id}" data-type="imaging">
+                    <div>
+                        <div class="text-white font-bold">${img.exam_type === 'Echocardiography' ? '💓 Echocardiography' : '📸 Imaging: ' + img.region}</div>
+                        <div class="text-xs text-gray-500">${date}</div>
+                    </div>
+                </label>`;
+            });
+
+            if(bloods.length === 0 && images.length === 0) html = '<p class="text-gray-600 italic py-10 text-center">ไม่พบประวัติผลตรวจของสัตว์ที่เลือก</p>';
+            container.innerHTML = html;
+        }
+
         // ==========================================
-        // PK-VMS PRINT ENGINE (Selective Offset)
+        // PK-VMS PRINT ENGINE (Full Lab Integrated)
         // ==========================================
         
         async function printCurrentDoc() {
-            if (selectedPetIds.size === 0 && activeDocType === 'doc_consent') return alert("❌ กรุณาเลือกสัตว์");
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
             if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
@@ -214,32 +259,33 @@
             const pw = parseFloat(config.width) || 210;
             const ph = parseFloat(config.height) || 297;
 
-            // ข้อมูลสำหรับ Surgery List
-            const surgeryInputs = document.querySelectorAll('.surgery-input');
-            const petSurgeries = Array.from(surgeryInputs).map(i => ({
-                name: i.dataset.petName,
-                surgery: i.value || '-'
-            }));
-
-            // ข้อมูล Mock สำหรับ items_list (กรณีเป็นใบเสร็จ)
-            const mockItems = [
-                { name: "ตรวจรักษาทั่วไป", price: "500.00" },
-                { name: "ยาฆ่าเชื้อ Amoxy", price: "120.00" }
-            ];
-
+            // ดึงข้อมูลสำหรับแทนที่ในตาราง
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic",
                 clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
                 owner_name: currentOwner?.owner_name || "-",
-                owner_address: currentOwner?.owner_address || "-",
+                owner_address: currentOwner?.address || "-",
                 owner_phone: currentOwner?.phone || "-",
                 hn: currentOwner?.hn || "-",
                 vet_name: VET_NAME,
                 date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
                 time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
                 note: document.getElementById('f-note')?.value || "-",
-                total_price: "620.00"
             };
+
+            // เตรียมข้อมูล Lab หากเป็น doc_lab
+            let pickedLabData = { bloods: [], imaging: [] };
+            if (activeDocType === 'doc_lab') {
+                const bloodTs = Array.from(document.querySelectorAll('.lab-pick-input:checked')).map(i => i.value);
+                const imgIds = Array.from(document.querySelectorAll('.img-pick-input:checked')).map(i => i.value);
+                
+                const [{data: b_res}, {data: i_res}] = await Promise.all([
+                    db.from('lab_results').select('*').in('created_at', bloodTs),
+                    db.from('imaging_results').select('*').in('id', imgIds)
+                ]);
+                pickedLabData.bloods = b_res || [];
+                pickedLabData.imaging = i_res || [];
+            }
 
             const sortedLines = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y));
             let pushOffset = 0;
@@ -261,39 +307,64 @@
                     style += `left:${l.x}mm; width:${l.w || (pw - parseFloat(l.x))}mm; text-align:left;`;
                 }
 
-                // --- กรณีใบเสร็จ ({{items_list}}) -> ยังคงใช้ pushOffset ---
-                if (l.text && l.text.includes("{{items_list}}")) {
+                // --- 📋 ตารางรายการผ่าตัด (Fixed Position) ---
+                if (l.text && l.text.includes("{{pet_surgery_list}}")) {
+                    const surgeryInputs = document.querySelectorAll('.surgery-input');
+                    const petSurgeries = Array.from(surgeryInputs).map(i => ({ name: i.dataset.petName, surgery: i.value || '-' }));
+                    const cb = `<div style="width:3.8mm; height:3.8mm; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
+                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; font-size:${fontSizePt * 0.85}pt;">
+                        <tr style="border-bottom:1.2px solid ${textColor}; font-weight:bold;"><th style="text-align:left; padding:1mm 0.5mm; width:16.6%;">ชื่อสัตว์</th><th style="text-align:left; padding:1mm 0.5mm; width:50%;">รายการหัตถการ</th><th style="text-align:center; width:16.7%;">ไม่ตรวจเลือด</th><th style="text-align:center; width:16.7%;">ตรวจเลือด</th></tr>
+                        ${petSurgeries.map(ps => `<tr><td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.name}</td><td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.surgery}</td><td style="text-align:center;">${cb}</td><td style="text-align:center;">${cb}</td></tr>`).join('')}
+                    </table></div>`;
+                }
+
+                // --- 🔬 ตารางผลเลือด (Dynamic) ---
+                if (l.text && l.text.includes("{{lab_table}}")) {
+                    if (pickedLabData.bloods.length === 0) return '';
                     const rowHeightMm = 6;
-                    pushOffset += (mockItems.length - 1) * rowHeightMm; // บวก Offset เพื่อดันบรรทัดล่าง
+                    pushOffset += (pickedLabData.bloods.length) * rowHeightMm;
                     return `<div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; font-size:${fontSizePt}pt;">
-                            ${mockItems.map(item => `<tr><td style="padding:1mm 0;">${item.name}</td><td style="text-align:right;">${item.price}</td></tr>`).join('')}
+                        <table style="width:100%; border-collapse:collapse; font-size:${fontSizePt * 0.9}pt;">
+                            <tr style="border-bottom:1px solid black; font-weight:bold;"><th style="text-align:left;">Parameter</th><th style="text-align:center;">Value</th><th style="text-align:right;">Unit</th></tr>
+                            ${pickedLabData.bloods.map(b => `<tr><td style="padding:1mm 0;">${b.parameter_name}</td><td style="text-align:center; font-weight:bold;">${b.test_value}</td><td style="text-align:right;">${b.unit || ''}</td></tr>`).join('')}
                         </table>
                     </div>`;
                 }
 
-                // --- กรณีรายการผ่าตัด ({{pet_surgery_list}}) -> ไม่บวก pushOffset (Fixed) ---
-                if (l.text && l.text.includes("{{pet_surgery_list}}")) {
-                    const cbSize = "3.8mm";
-                    const cb = `<div style="width:${cbSize}; height:${cbSize}; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
-                    
-                    // สังเกตว่าไม่มีการบรรทัด pushOffset += ... ที่นี่
+                // --- 💓 ตาราง Echocardiography (Dynamic) ---
+                if (l.text && l.text.includes("{{echo_table}}")) {
+                    const echo = pickedLabData.imaging.find(i => i.exam_type === 'Echocardiography');
+                    if (!echo) return '';
+                    const f = echo.findings;
+                    const items = [
+                        {n: 'LA/Ao Ratio', v: (f.la / f.ao).toFixed(2), r: '< 1.6'},
+                        {n: 'FS %', v: (((f.lvidd - f.lvids)/f.lvidd)*100).toFixed(1) + '%', r: '25-45%'},
+                        {n: 'n-LVIDd', v: (f.lvidd / Math.pow(f.bw, 0.294)).toFixed(2), r: '1.27-1.85'}
+                    ];
+                    pushOffset += (items.length * 6) + 10;
                     return `<div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; font-size:${fontSizePt * 0.85}pt; line-height:1;">
-                            <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
-                                <th style="text-align:left; padding:1.2mm 0.5mm; width:16.6%;">ชื่อสัตว์</th>
-                                <th style="text-align:left; padding:1.2mm 0.5mm; width:50%;">รายการหัตถการ</th>
-                                <th style="text-align:center; padding:1.2mm 0.5mm; width:16.7%;">ไม่ตรวจเลือด</th>
-                                <th style="text-align:center; padding:1.2mm 0.5mm; width:16.7%;">ตรวจเลือด</th>
-                            </tr>
-                            ${petSurgeries.map(ps => `
-                                <tr>
-                                    <td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.name}</td>
-                                    <td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.surgery}</td>
-                                    <td style="text-align:center; padding:0.8mm 0.5mm;">${cb}</td>
-                                    <td style="text-align:center; padding:0.8mm 0.5mm;">${cb}</td>
-                                </tr>`).join('')}
+                        <div style="font-weight:bold; margin-bottom:2mm;">Echocardiography Measurements (BW: ${f.bw} kg)</div>
+                        <table style="width:100%; border-collapse:collapse; font-size:${fontSizePt * 0.9}pt;">
+                            <tr style="background:#eee;"><td>Parameter</td><td>Result</td><td>Ref. Range</td></tr>
+                            ${items.map(it => `<tr><td>${it.n}</td><td style="font-weight:bold;">${it.v}</td><td>${it.r}</td></tr>`).join('')}
                         </table>
+                        <div style="margin-top:2mm; font-style:italic;">Impression: ${echo.impression}</div>
+                    </div>`;
+                }
+
+                // --- 📸 รายละเอียด Imaging (Dynamic) ---
+                if (l.text && l.text.includes("{{imaging_details}}")) {
+                    const imgs = pickedLabData.imaging.filter(i => i.exam_type !== 'Echocardiography');
+                    if (imgs.length === 0) return '';
+                    pushOffset += (imgs.length * 20);
+                    return `<div style="${style}">
+                        ${imgs.map(img => `
+                            <div style="margin-bottom:5mm; border-bottom:0.5px solid #ccc; padding-bottom:2mm;">
+                                <div style="font-weight:bold; color:#333;">${img.exam_type}: ${img.region}</div>
+                                <div style="font-size:0.9em;">Findings: ${img.findings}</div>
+                                <div style="font-weight:bold; font-size:0.9em;">Impression: ${img.impression}</div>
+                            </div>
+                        `).join('')}
                     </div>`;
                 }
 
@@ -313,7 +384,7 @@
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
                         * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        html, body { margin: 0 !important; padding: 0 !important; background: white; line-height: 1; }
+                        html, body { margin: 0 !important; padding: 0 !important; background: white; line-height: 1.2; }
                         .page { position: relative; width: ${pw}mm; height: ${ph}mm; background: white; overflow: hidden; }
                         @media print {
                             @page { size: ${pw}mm ${ph}mm; margin: 0 !important; }
@@ -323,7 +394,7 @@
                 </head>
                 <body>
                     <div class="page">${printContent}</div>
-                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 800); };<\/script>
+                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 1000); };<\/script>
                 </body>
                 </html>
             `);
