@@ -50,16 +50,12 @@
 
         .btn-teal { background-color: #0d9488 !important; } 
         .btn-teal:hover { background-color: #0f766e !important; }
-
         .btn-blue { background-color: #2563eb !important; } 
         .btn-blue:hover { background-color: #1d4ed8 !important; }
-
         .btn-red { background-color: #dc2626 !important; } 
         .btn-red:hover { background-color: #b91c1c !important; }
-        
         .btn-gray { background-color: #475569 !important; } 
         .btn-gray:hover { background-color: #334155 !important; }
-
         .btn-orange { background-color: #ea580c !important; }
         .btn-orange:hover { background-color: #c2410c !important; }
 
@@ -70,6 +66,8 @@
         .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px; display: block; font-weight: 700; }
         
         .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; border: 2px solid #ef4444 !important; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -85,7 +83,7 @@
             <div id="owner-list" class="flex-1 overflow-y-auto px-2 pb-10 custom-scroll"></div>
             <div class="p-5">
                 <button onclick="createNewForm()" class="w-full btn-base btn-teal py-4 text-xl shadow-lg">
-                    + ลงทะเบียนสัตว์ใหม่
+                    + ลงทะเบียนเจ้าของใหม่
                 </button>
             </div>
         </aside>
@@ -93,7 +91,7 @@
         <main class="flex-1 overflow-y-auto p-12 bg-[#020617] custom-scroll" id="form-view">
             <div class="h-full flex flex-col items-center justify-center opacity-10">
                 <div class="text-9xl mb-4">📋</div>
-                <h3 class="text-3xl font-bold">เลือกรายการสัตว์จากแถบด้านซ้าย</h3>
+                <h3 class="text-3xl font-bold">เลือกรายการเจ้าของจากแถบด้านซ้ายเพื่อเพิ่มสัตว์เลี้ยง</h3>
             </div>
         </main>
     </div>
@@ -102,7 +100,6 @@
         let allAnimals = []; 
         let allOwners = []; 
         let allPhones = [];
-        
         let masterSpecies = [];
         let masterBreeds = [];
 
@@ -165,7 +162,6 @@
                         </div>
                         <div class="flex items-center justify-end gap-1 text-2xl pr-2">
                             <span>${typeIcon}</span>
-                            <span class="text-lg opacity-80">${genderIcon}</span>
                         </div>
                     </div>`;
             }).join('');
@@ -192,9 +188,9 @@
                 <div class="max-w-5xl mx-auto pb-32">
                     <div class="bg-slate-800/40 p-10 rounded-[40px] border border-white/5 mb-8 shadow-2xl">
                         <div class="flex justify-between items-center mb-8">
-                            <h3 class="text-3xl font-black text-blue-400 flex items-center gap-3">👤 ข้อมูลเจ้าของสัตว์</h3>
+                            <h3 class="text-3xl font-black text-blue-400 flex items-center gap-3">👤 ข้อมูลเจ้าของสัตว์ (HN: ${owner.hn})</h3>
                             <div class="flex gap-3">
-                                <button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตรประชาชน</button>
+                                ${owner.hn === 'AUTO' ? '<button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตรประชาชน</button>' : ''}
                                 ${owner.hn !== 'AUTO' ? `
                                     <button onclick="goToConsent('${owner.hn}')" class="btn-base btn-orange shadow-lg">📋 ใบยินยอมผ่าตัด/วางยา</button>
                                     <button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>
@@ -211,8 +207,10 @@
                     </div>
 
                     <div id="pets-container" class="space-y-8">
-                        ${pets.length ? pets.map(p => petRowHtml(p)).join('') : petRowHtml({})}
-                        <button onclick="addNewPetRow()" class="w-full border-4 border-dashed border-white/5 py-6 rounded-3xl text-slate-500 hover:text-teal-400 transition-all font-black text-xl">+ เพิ่มสัตว์เลี้ยงรายการใหม่</button>
+                        ${pets.map(p => petRowHtml(p)).join('')}
+                        <button onclick="addNewPetRow()" class="w-full border-4 border-dashed border-white/5 py-6 rounded-3xl text-slate-500 hover:text-teal-400 transition-all font-black text-xl shadow-inner">
+                            + เพิ่มสัตว์เลี้ยงตัวใหม่ให้เจ้าของนี้
+                        </button>
                     </div>
 
                     <button onclick="saveAllData()" class="w-full btn-base btn-teal py-6 text-3xl mt-10 shadow-2xl">💾 บันทึกข้อมูลทั้งหมด</button>
@@ -235,8 +233,8 @@
                         <h4 class="text-3xl font-black text-white">${headIcon} ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'}</h4>
                         <div class="flex gap-3">
                             ${pet.id ? `
-                                <button onclick="printPetLabel('${pet.id}')" class="btn-base btn-gray">🖨️ พิมพ์ข้อมูลสัตว์</button>
-                                <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติการรักษา</button>
+                                <button onclick="printPetLabel('${pet.id}')" class="btn-base btn-gray">🖨️ Label</button>
+                                <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติ</button>
                             ` : ''}
                             <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red">🗑️ ลบ</button>
                         </div>
@@ -326,9 +324,12 @@
         function addNewPetRow() {
             const div = document.createElement('div');
             div.innerHTML = petRowHtml({});
+            // เพิ่มลงไปก่อนปุ่มกด "เพิ่มสัตว์เลี้ยงตัวใหม่"
             document.getElementById('pets-container').insertBefore(div.firstElementChild, document.querySelector('button[onclick="addNewPetRow()"]'));
             initAllPickers();
-            updateBreedOptions(div.querySelector('.p_type'));
+            // อัปเดตสายพันธุ์เบื้องต้น
+            const newTypeSelect = div.querySelector('.p_type');
+            updateBreedOptions(newTypeSelect);
         }
 
         async function readSmartCard() {
@@ -348,18 +349,24 @@
             const p1 = document.getElementById('f_phone1').value.trim();
             if (!name || !p1) return alert("❌ กรุณากรอกชื่อและเบอร์โทร");
             let hn = document.getElementById('f_hn').value;
+            
             if (hn === "AUTO") {
                 const hns = allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
                 hn = (Math.max(...hns, 690000) + 1).toString().padStart(6, '0');
             }
+            
             try {
+                // 1. บันทึกเจ้าของ
                 await db.from('owners').upsert({ hn, owner_name: name, address: document.getElementById('f_address').value, updated_at: new Date() });
+                
+                // 2. บันทึกเบอร์โทร
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
                 const pList = [{ owner_hn: hn, phone_number: p1, label: 'เบอร์หลัก' }];
                 const p2 = document.getElementById('f_phone2').value.trim();
                 if(p2) pList.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
                 await db.from('owner_phones').insert(pList);
                 
+                // 3. บันทึกสัตว์เลี้ยงทุึกรายการที่ปรากฏในฟอร์ม
                 const petNodes = document.querySelectorAll('.zone-pet');
                 for (const node of petNodes) {
                     const petName = node.querySelector('.p_name').value;
@@ -377,7 +384,8 @@
                         updated_at: new Date()
                     });
                 }
-                alert("✅ บันทึกสำเร็จ");
+                
+                alert("✅ บันทึกข้อมูลสำเร็จ");
                 await loadData();
                 editOwner(hn);
             } catch (err) { alert(err.message); }
@@ -389,7 +397,7 @@
             await db.from('animals').delete().eq('owner_hn', hn);
             await db.from('owners').delete().eq('hn', hn);
             await loadData();
-            document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><h3>เลือกรายการสัตว์</h3></div>`;
+            document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><h3>เลือกรายการเจ้าของ</h3></div>`;
         }
 
         async function deletePetRecord(petId, petName) {
@@ -399,73 +407,8 @@
             editOwner(document.getElementById('f_hn').value);
         }
 
-        function gotoMedicalRecord(petId, petName, hn) { window.location.href = `medrec.html?id=${petId}&name=${encodeURIComponent(petName)}&hn=${hn}`; }
-
-        function goToConsent(hn) {
-            if (!hn || hn === 'AUTO') {
-                alert("⚠️ กรุณาบันทึกข้อมูลเจ้าของก่อนออกใบยินยอม");
-                return;
-            }
-            window.location.href = `documents.html?hn=${hn}&type=anesthesia_consent`;
-        }
-
-        async function printPetLabel(petId) {
-            try {
-                const pet = allAnimals.find(a => a.id === petId);
-                const owner = allOwners.find(o => o.hn === pet.owner_hn);
-                const phoneInfo = allPhones.find(p => p.owner_hn === pet.owner_hn && p.label === 'เบอร์หลัก');
-                const ownerPhone = phoneInfo ? phoneInfo.phone_number : '-';
-
-                if (!pet || !owner) return alert("ไม่พบข้อมูลสัตว์หรือเจ้าของ");
-
-                const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single();
-                if (!template) return alert("ไม่พบ Template: sticker_pet_id");
-
-                const config = template.config;
-                const pw = config.width || 80, ph = config.height || 50;
-
-                const printData = {
-                    clinic_name: "PK-VMS Animal Clinic",
-                    owner_name: owner.owner_name || "-",
-                    owner_phone: ownerPhone,
-                    pet_name: pet.pet_name || "-",
-                    hn: pet.owner_hn || "-",
-                    species: pet.pet_type || "-",
-                    breed: pet.breed || "-",
-                    sex: pet.gender || "-",
-                    weight: (pet.weight || 0).toFixed(2),
-                    date: formatThaiDate(new Date().toISOString(), 'long')
-                };
-
-                executeDynamicPrint(printData, config, pw, ph);
-            } catch (e) { alert("Error: " + e.message); }
-        }
-
-        function executeDynamicPrint(printData, config, pw, ph) {
-            const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
-                const availableWidthMm = pw - parseFloat(l.x);
-                const finalWidth = l.w ? l.w : availableWidthMm;
-                
-                let style = `top:${l.y}mm; left:${l.x}mm; width:${finalWidth}mm; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                if (l.align === 'center') style = `top:${l.y}mm; left:0; width:${pw}mm; text-align:center; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                else if (l.align === 'right') style = `top:${l.y}mm; left:0; width:${pw - parseFloat(l.x)}mm; text-align:right; font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                
-                let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
-                
-                if (l.type==='text') return `<div style="${style}">${content}</div>`;
-                if (l.type==='rect') return `<div style="top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid black; position:absolute; border-radius:${l.radius || 0}mm;"></div>`;
-                if (l.type==='image') return `<img src="${l.url}" style="top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; position:absolute; object-fit:contain;">`;
-            }).join('');
-
-            const win = window.open('', '_blank', 'width=400');
-            win.document.write(`<html><head><style>
-                @import url('https://fonts.googleapis.com/css2?family=Sarabun&display=swap'); 
-                body{margin:0; padding:0;} 
-                .page{position:relative; width:${pw}mm; min-height:${ph}mm; font-family:Sarabun;} 
-                @media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }
-            </style></head><body><div class="page">${elements}</div><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></body></html>`);
-            win.document.close();
-        }
+        function goToConsent(hn) { window.location.href = `documents.html?hn=${hn}&type=anesthesia_consent`; }
+        function gotoMedicalRecord(id, name, hn) { window.location.href = `medrec.html?id=${id}&name=${encodeURIComponent(name)}&hn=${hn}`; }
 
         window.onload = async () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
