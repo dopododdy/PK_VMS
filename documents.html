@@ -102,6 +102,8 @@
         let ownerPets = [];
         let selectedPetIds = new Set();
         let activeDocType = 'consent';
+        // ข้อมูลสัตวแพทย์ที่กำหนดตายตัว
+        const VET_NAME = "ผู้ช่วยศาสตราจารย์ น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
 
         window.onload = async () => {
             lucide.createIcons();
@@ -183,10 +185,15 @@
                 title.innerText = "ใบยินยอมทำวิสัญญีและผ่าตัด";
                 form.innerHTML = `
                     <div class="section-card space-y-6">
-                        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest">รายการผ่าตัดรายตัว</h3>
+                        <div class="flex justify-between items-center border-b border-white/5 pb-4">
+                            <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest">รายการผ่าตัดรายตัว</h3>
+                            <div class="text-right">
+                                <span class="text-[10px] text-gray-500 uppercase block">สัตวแพทย์ผู้รับผิดชอบ</span>
+                                <span class="text-teal-400 font-bold">${VET_NAME}</span>
+                            </div>
+                        </div>
                         <div id="surgery-rows" class="space-y-6"></div>
-                        <div class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/5">
-                            <div><label class="text-xs text-gray-500 mb-2 block">ชื่อสัตวแพทย์</label><input type="text" id="f-vet" class="input-box" placeholder="น.สพ. ..."></div>
+                        <div class="grid grid-cols-1 gap-4 mt-6 pt-6 border-t border-white/5">
                             <div><label class="text-xs text-gray-500 mb-2 block">หมายเหตุรวม</label><input type="text" id="f-note" class="input-box"></div>
                         </div>
                     </div>`;
@@ -238,7 +245,6 @@
             const textbox = document.getElementById(`text-${petId}`);
             const selectedValues = Array.from(checks).map(c => c.value);
             
-            // UI Visual Update
             document.querySelectorAll(`[id^="label-${petId}"]`).forEach(l => l.classList.remove('active'));
             checks.forEach(c => c.parentElement.classList.add('active'));
 
@@ -277,7 +283,7 @@
                         <tr style="background:#eee;"><th>ชื่อสัตว์เลี้ยง</th><th>รายการหัตถการ</th></tr>
                         ${Array.from(document.querySelectorAll('.surgery-input')).map(i => `<tr><td>${i.dataset.pet_name}</td><td>${i.value || '-'}</td></tr>`).join('')}
                     </table>
-                    <p>สัตวแพทย์ผู้รับผิดชอบ: ${document.getElementById('f-vet').value || '....................'}</p>
+                    <p>สัตวแพทย์ผู้รับผิดชอบ: <b>${VET_NAME}</b></p>
                     <p><b>คำยืนยัน:</b> ข้าพเจ้าได้รับทราบและเข้าใจถึงความเสี่ยงของการวางยาสลบและการผ่าตัดเป็นอย่างดีแล้ว ข้าพเจ้าตกลงให้สัตวแพทย์ดำเนินการรักษาตามดุลยพินิจของสัตวแพทย์ หากเกิดเหตุสุดวิสัยอันมิอาจคาดการณ์ได้ ข้าพเจ้าจะไม่เรียกร้องความรับผิดชอบใดๆ จากทางคลินิกและสัตวแพทย์</p>
                     <div class="sig-area">
                         <div class="sig">ลงชื่อเจ้าของสัตว์/ผู้มีอำนาจ</div>
