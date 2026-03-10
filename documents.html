@@ -280,11 +280,12 @@
             const ph = parseFloat(config.height) || 297;
             const dataMap = { clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000", owner_name: currentOwner?.owner_name || "-", owner_address: currentOwner?.address || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-", vet_name: VET_NAME, date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), note: document.getElementById('f-note')?.value || "-", };
 
-            // ✅ พิมพ์ตามตำแหน่งคงที่ (Fixed Position) ไม่มีการดันวัตถุ
+            // ✅ พิมพ์ตามตำแหน่งคงที่ (Fixed Position) โดยสมบูรณ์
             const printContent = config.lines.map(l => {
-                const currentY = parseFloat(l.y); // ใช้พิกัด Y ตรงๆ จาก Designer
+                const currentY = parseFloat(l.y); // ❌ ไม่มีการบวก pushOffset
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || '#000000';
+                
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.2; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
                 
@@ -292,7 +293,7 @@
                 else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
                 else style += `left:${l.x}mm; width:${l.w || (pw - l.x)}mm; text-align:left;`;
 
-                // จัดการตารางหัตถการ (Inherit Font/Color)
+                // จัดการตารางหัตถการ (Fix ตำแหน่งเดิม)
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
                     const surgeryInputs = document.querySelectorAll('.surgery-input');
                     const petSurgeries = Array.from(surgeryInputs).map(i => ({ name: i.dataset.petName, surgery: i.value || '-' }));
@@ -302,14 +303,14 @@
                         <table style="width:100%; border-collapse:collapse; margin-top:1mm; font-size:inherit; color:inherit;">
                             <thead>
                                 <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
-                                    <th style="text-align:left; padding:1mm 0; width:25%;">สัตว์</th>
-                                    <th style="text-align:left; padding:1mm 0; width:45%;">หัตถการ</th>
-                                    <th style="text-align:center; padding:1mm 0; width:15%;">ไม่ตรวจ</th>
-                                    <th style="text-align:center; padding:1mm 0; width:15%;">ตรวจ</th>
+                                    <th style="text-align:left; padding:1.2mm 0; width:25%;">สัตว์</th>
+                                    <th style="text-align:left; padding:1.2mm 0; width:45%;">หัตถการ</th>
+                                    <th style="text-align:center; padding:1.2mm 0; width:15%;">ไม่ตรวจ</th>
+                                    <th style="text-align:center; padding:1.2mm 0; width:15%;">ตรวจ</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${petSurgeries.map(ps => `<tr style="border-bottom:0.5px solid ${textColor}44; height:9mm;">
+                                ${petSurgeries.map(ps => `<tr style="border-bottom:0.5px solid ${textColor}44; height:8.5mm;">
                                     <td>${ps.name}</td><td>${ps.surgery}</td>
                                     <td style="text-align:center;">${cb}</td>
                                     <td style="text-align:center;">${cb}</td>
@@ -319,18 +320,12 @@
                     </div>`;
                 }
 
-                // จัดการตาราง Lab (Inherit Font/Color)
-                if (l.text && l.text.includes("{{lab_table}}")) {
-                    // ดึง Lab Data ที่เลือกไว้มาแสดง (Logic การดึง data อยู่ในส่วน Lab Picker)
-                    return `<div style="${style}">[Lab Results Table]</div>`;
-                }
-
                 if (l.type === 'text') {
                     const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match);
                     return `<div style="${style}">${content}</div>`;
                 }
                 if (l.type === 'rect') return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
-                if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${currentY}mm; left:${l.align==='center'?'50%':l.x+'mm'}; ${l.align==='center'?'transform:translateX(-50%);':''} width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
+                if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
                 return '';
             }).join('');
 
