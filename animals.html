@@ -354,57 +354,72 @@
         function goToConsent(hn) { window.location.href = `documents.html?hn=${hn}&type=anesthesia_consent`; }
         function gotoMedicalRecord(id, name, hn) { window.location.href = `medrec.html?id=${id}&name=${encodeURIComponent(name)}&hn=${hn}`; }
 
-        // ฟังก์ชันแก้ไขกรณีพิมพ์ Label ไม่ได้
+        // ✅ ฟังก์ชันพิมพ์ Label โดยดึงรูปแบบจาก Template Designer ในฐานข้อมูล
         async function printPetLabel(petId) {
             const pet = allAnimals.find(a => String(a.id) === String(petId));
             const owner = allOwners.find(o => o.hn === pet.owner_hn);
             if (!pet) return alert("ไม่พบข้อมูลสัตว์");
 
             try {
-                // ดึงไฟล์ set-printer.html มาอ่าน template sticker_pet_id
-                const response = await fetch('set-printer.html');
-                const htmlText = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlText, 'text/html');
-                const template = doc.getElementById('sticker_pet_id');
+                // 1. ดึง Config จาก DB (ชื่อ Template: sticker_pet_id)
+                const { data: dbTemplate } = await db.from('print_templates')
+                    .select('config').eq('template_type', 'sticker_pet_id').single();
 
-                if (!template) return alert("❌ ไม่พบ Template 'sticker_pet_id' ในไฟล์ set-printer.html");
+                if (!dbTemplate) return alert("❌ ไม่พบ Template 'sticker_pet_id' ในระบบ Designer");
 
-                // Mapping ข้อมูลลงใน placeholder
-                let content = template.innerHTML;
-                content = content.replace(/{{pet_name}}/g, pet.pet_name || '-');
-                content = content.replace(/{{owner_hn}}/g, pet.owner_hn || '-');
-                content = content.replace(/{{owner_name}}/g, owner?.owner_name || '-');
-                content = content.replace(/{{breed}}/g, pet.breed || '-');
-                content = content.replace(/{{gender}}/g, pet.gender || '-');
+                const config = dbTemplate.config;
+                const pw = config.width || 80;
+                const ph = config.height || 45;
 
-                // สร้าง iframe ลับเพื่อสั่งพิมพ์
+                // 2. ข้อมูลสำหรับพิมพ์
+                const printData = {
+                    pet_name: pet.pet_name,
+                    hn: pet.owner_hn,
+                    owner_name: owner?.owner_name || '-',
+                    species: pet.pet_type,
+                    sex: pet.gender,
+                    weight: pet.weight,
+                    breed: pet.breed,
+                    date: new Date().toLocaleDateString('th-TH'),
+                    time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                };
+
+                // 3. สร้าง HTML ตามพิกัด Designer
+                const printContent = config.lines.map(l => {
+                    const val = (l.text || "").replace(/\{\{(.*?)\}\}/g, (match, key) => printData[key.trim()] || match);
+                    const fontSizePt = l.size || 12;
+                    const textColor = l.color || '#000000';
+                    let style = `position:absolute; top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${fontSizePt}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; color:${textColor}; line-height:1.1; white-space:pre-wrap;`;
+
+                    if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
+                    else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
+                    else style += `left:${l.x}mm; width:${l.w ? l.w + 'mm' : 'auto'}; text-align:left;`;
+
+                    if (l.type === 'text') return `<div style="${style}">${val}</div>`;
+                    if (l.type === 'rect') return `<div style="position:absolute; top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
+                    if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
+                    return '';
+                }).join('');
+
+                // 4. สั่งพิมพ์
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
                 document.body.appendChild(iframe);
-                
                 const pri = iframe.contentWindow;
                 pri.document.open();
                 pri.document.write(`
                     <html>
                         <head>
-                            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
-                            <style>
-                                body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; }
-                                @media print { @page { margin: 0; } }
-                            </style>
+                            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Kanit&family=Prompt&display=swap" rel="stylesheet">
+                            <style>body { margin: 0; padding: 0; } .page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; } @media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style>
                         </head>
-                        <body>${content}</body>
+                        <body><div class="page">${printContent}</div></body>
                     </html>
                 `);
                 pri.document.close();
+                setTimeout(() => { pri.focus(); pri.print(); document.body.removeChild(iframe); }, 700);
 
-                setTimeout(() => {
-                    pri.focus();
-                    pri.print();
-                    document.body.removeChild(iframe);
-                }, 500);
-            } catch (err) { alert("เกิดข้อผิดพลาดในการโหลด Template: " + err.message); }
+            } catch (err) { alert("Error: " + err.message); }
         }
 
         window.onload = async () => {
