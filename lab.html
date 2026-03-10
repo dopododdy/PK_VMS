@@ -217,9 +217,36 @@
         let masterParams = [], currentAnimal = null, labHistory = [], imagingHistory = [];
         let currentAgeYears = 0;
 
+        // ✅ ลำดับที่ถูกต้องจากตารางอ้างอิง IDEXX
+        const PARAM_ORDER = [
+            // CBC
+            'RBC', 'HCT', 'HGB', 'MCV', 'MCH', 'MCHC', 'RDW', 'RETIC', 'RETIC (Abs)', 
+            'WBC', 'NEU', 'BAND', 'LYMPH', 'MONO', 'EOS', 'BASO', 'nRBC', 'PLT', 'MPV', 'PDW', 'PCT',
+            // Chemistry
+            'GLU', 'BUN', 'CREA', 'SDMA', 'BUN/CREA', 'PHOS', 'CA', 'TP', 'ALB', 'GLOB', 'ALB/GLOB', 
+            'ALT', 'AST', 'ALKP', 'GGT', 'TBIL', 'CHOL', 'AMYL', 'LIPA', 
+            'NA', 'K', 'NA/K', 'CL', 'OsmC', 'LDH', 'CK', 'URIC', 'TRIG', 'Mg'
+        ];
+
         window.onload = async () => { lucide.createIcons(); await fetchMasterParams(); await fetchAnimals(); };
 
-        async function fetchMasterParams() { const { data } = await db.from('mas_lab_parameters').select('*').order('parameter_name'); masterParams = data || []; }
+        async function fetchMasterParams() { 
+            // ❌ ไม่ใช้ .order() จาก database เพื่อป้องกันการเรียงตามตัวอักษร
+            const { data } = await db.from('mas_lab_parameters').select('*'); 
+            
+            let fetchedData = data || [];
+            
+            // ✅ จัดเรียงตามลำดับใน Array ด้านบนแทน (ถ้ามีพารามิเตอร์แปลกปลอมจะโดนเด้งไปอยู่ล่างสุด)
+            fetchedData.sort((a, b) => {
+                let indexA = PARAM_ORDER.indexOf(a.parameter_name);
+                let indexB = PARAM_ORDER.indexOf(b.parameter_name);
+                if (indexA === -1) indexA = 999;
+                if (indexB === -1) indexB = 999;
+                return indexA - indexB;
+            });
+
+            masterParams = fetchedData; 
+        }
 
         async function fetchAnimals() {
             const term = document.getElementById('search-box').value.toLowerCase();
