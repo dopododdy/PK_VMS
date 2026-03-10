@@ -95,7 +95,7 @@
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
             const date = new Date(dateString);
-            const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค. strings"];
             const monthsLong = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
             const d = date.getDate();
             const m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()];
@@ -168,7 +168,7 @@
                             <div class="flex gap-3">
                                 <button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตรประชาชน</button>
                                 ${owner.hn !== 'AUTO' ? `
-                                    <button onclick="goToConsent('${owner.hn}')" class="btn-base btn-orange shadow-lg">📋 ใบยินยอมผ่าตัด/วางยา</button>
+                                    <button onclick="goToConsent('${owner.hn}')" class="btn-base btn-orange shadow-lg">📋 ใบยินยอมรวม</button>
                                     <button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>
                                 ` : ''}
                             </div>
@@ -204,6 +204,7 @@
                         <div class="flex gap-3">
                             ${pet.id ? `
                                 <button onclick="printPetLabel('${pet.id}')" class="btn-base btn-gray">🖨️ Label</button>
+                                <button onclick="goToConsent('${pet.owner_hn}', '${pet.id}')" class="btn-base btn-orange">📋 ใบยินยอม</button>
                                 <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติ</button>
                             ` : ''}
                             <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red">🗑️ ลบ</button>
@@ -351,27 +352,29 @@
             editOwner(document.getElementById('f_hn').value);
         }
 
-        function goToConsent(hn) { window.location.href = `documents.html?hn=${hn}&type=anesthesia_consent`; }
+        // ✅ แก้ไขฟังก์ชัน goToConsent ให้รองรับการส่ง ID สัตว์
+        function goToConsent(hn, petId = '') { 
+            // type=doc_consent เพื่อให้ตรงกับเงื่อนไขในหน้า documents.html
+            window.location.href = `documents.html?hn=${hn}&type=doc_consent&id=${petId}`; 
+        }
+
         function gotoMedicalRecord(id, name, hn) { window.location.href = `medrec.html?id=${id}&name=${encodeURIComponent(name)}&hn=${hn}`; }
 
-        // ✅ ฟังก์ชันพิมพ์ Label โดยดึงรูปแบบจาก Template Designer ในฐานข้อมูล
         async function printPetLabel(petId) {
             const pet = allAnimals.find(a => String(a.id) === String(petId));
             const owner = allOwners.find(o => o.hn === pet.owner_hn);
             if (!pet) return alert("ไม่พบข้อมูลสัตว์");
 
             try {
-                // 1. ดึง Config จาก DB (ชื่อ Template: sticker_pet_id)
                 const { data: dbTemplate } = await db.from('print_templates')
                     .select('config').eq('template_type', 'sticker_pet_id').single();
 
-                if (!dbTemplate) return alert("❌ ไม่พบ Template 'sticker_pet_id' ในระบบ Designer");
+                if (!dbTemplate) return alert("❌ ไม่พบ Template 'sticker_pet_id'");
 
                 const config = dbTemplate.config;
                 const pw = config.width || 80;
                 const ph = config.height || 45;
 
-                // 2. ข้อมูลสำหรับพิมพ์
                 const printData = {
                     pet_name: pet.pet_name,
                     hn: pet.owner_hn,
@@ -384,12 +387,11 @@
                     time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
                 };
 
-                // 3. สร้าง HTML ตามพิกัด Designer
                 const printContent = config.lines.map(l => {
                     const val = (l.text || "").replace(/\{\{(.*?)\}\}/g, (match, key) => printData[key.trim()] || match);
                     const fontSizePt = l.size || 12;
                     const textColor = l.color || '#000000';
-                    let style = `position:absolute; top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${fontSizePt}pt; font-weight:${l.bold ? 'bold' : 'normal'}; font-style:${l.italic ? 'italic' : 'normal'}; color:${textColor}; line-height:1.1; white-space:pre-wrap;`;
+                    let style = `position:absolute; top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${fontSizePt}pt; font-weight:${l.bold ? 'bold' : 'normal'}; color:${textColor}; line-height:1.1; white-space:pre-wrap;`;
 
                     if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
@@ -401,21 +403,12 @@
                     return '';
                 }).join('');
 
-                // 4. สั่งพิมพ์
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
                 document.body.appendChild(iframe);
                 const pri = iframe.contentWindow;
                 pri.document.open();
-                pri.document.write(`
-                    <html>
-                        <head>
-                            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&family=Kanit&family=Prompt&display=swap" rel="stylesheet">
-                            <style>body { margin: 0; padding: 0; } .page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; } @media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style>
-                        </head>
-                        <body><div class="page">${printContent}</div></body>
-                    </html>
-                `);
+                pri.document.write(`<html><head><style>body { margin: 0; padding: 0; } .page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }</style></head><body><div class="page">${printContent}</div></body></html>`);
                 pri.document.close();
                 setTimeout(() => { pri.focus(); pri.print(); document.body.removeChild(iframe); }, 700);
 
