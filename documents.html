@@ -95,7 +95,6 @@
         let activeDocType = 'doc_consent'; 
         const VET_NAME = "ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
 
-        // รายการหัตถการทั้งหมด
         const COMMON_PROCEDURES = [
             'วางยาสลบ', 'ทำหมันเมีย', 'ตอน (เพศผู้)', 
             'ฉีดวัคซีนรวม - แมว', 'ฉีดวัคซีนรวม - สุนัข', 
@@ -110,6 +109,7 @@
             const petId = urlParams.get('id');
 
             if (hn) {
+                // Auto-search logic
                 document.getElementById('search-owner').value = hn;
                 await searchOwners(); 
                 if (type) activeDocType = type;
@@ -210,17 +210,11 @@
                 const pet = ownerPets.find(p => p.id.toString() === id.toString());
                 if (!pet) return;
 
-                // ✅ กรองรายการหัตถการตาม เพศ และ ชนิด
                 const filteredOptions = COMMON_PROCEDURES.filter(opt => {
-                    // กรองตามเพศ
                     if (pet.gender.includes('เมีย') && opt.includes('ตอน (เพศผู้)')) return false;
-                    if (pet.gender === 'ผู้' && opt.includes('ทำหมันเมีย')) return false;
-                    if (pet.gender === 'ผู้ตอน' && opt.includes('ทำหมันเมีย')) return false;
-
-                    // กรองตามชนิด
+                    if ((pet.gender === 'ผู้' || pet.gender === 'ผู้ตอน') && opt.includes('ทำหมันเมีย')) return false;
                     if (pet.pet_type === 'แมว' && opt.includes('สุนัข')) return false;
                     if (pet.pet_type === 'สุนัข' && opt.includes('แมว')) return false;
-
                     return true;
                 });
 
@@ -280,44 +274,63 @@
         async function printCurrentDoc() {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
-            if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}" ในระบบ Designer`);
+            if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
+            
             const config = template.config;
             const pw = parseFloat(config.width) || 210;
             const ph = parseFloat(config.height) || 297;
             const dataMap = { clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000", owner_name: currentOwner?.owner_name || "-", owner_address: currentOwner?.address || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-", vet_name: VET_NAME, date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), note: document.getElementById('f-note')?.value || "-", };
-            let pickedLabData = { bloods: [], imaging: [] };
-            if (activeDocType === 'doc_lab') {
-                const bloodTs = Array.from(document.querySelectorAll('.lab-pick-input:checked')).map(i => i.value);
-                const imgIds = Array.from(document.querySelectorAll('.img-pick-input:checked')).map(i => i.value);
-                const [{data: b_res}, {data: i_res}] = await Promise.all([ db.from('lab_results').select('*').in('created_at', bloodTs), db.from('imaging_results').select('*').in('id', imgIds) ]);
-                pickedLabData.bloods = b_res || []; pickedLabData.imaging = i_res || [];
-            }
+
             const sortedLines = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y));
             let pushOffset = 0;
+
             const printContent = sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || '#000000';
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.2; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
+                
                 if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
                 else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
                 else style += `left:${l.x}mm; width:${l.w || (pw - l.x)}mm; text-align:left;`;
+
+                // ✅ จัดการตารางหัตถการให้ตรงตาม Template
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
                     const surgeryInputs = document.querySelectorAll('.surgery-input');
                     const petSurgeries = Array.from(surgeryInputs).map(i => ({ name: i.dataset.petName, surgery: i.value || '-' }));
                     const cb = `<div style="width:3.8mm; height:3.8mm; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
-                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; margin-top:1mm;"><tr style="border-bottom:1.2px solid black; font-weight:bold;"><th style="text-align:left; width:25%;">สัตว์</th><th style="text-align:left; width:45%;">หัตถการ</th><th style="text-align:center; width:15%;">ไม่ตรวจเลือด</th><th style="text-align:center; width:15%;">ตรวจเลือด</th></tr>${petSurgeries.map(ps => `<tr style="border-bottom:0.5px solid #eee; height:8mm;"><td>${ps.name}</td><td>${ps.surgery}</td><td style="text-align:center;">${cb}</td><td style="text-align:center;">${cb}</td></tr>`).join('')}</table></div>`;
+                    
+                    return `<div style="${style}">
+                        <table style="width:100%; border-collapse:collapse; margin-top:1mm; font-size:inherit; color:inherit;">
+                            <thead>
+                                <tr style="border-bottom:1.5px solid ${textColor}; font-weight:bold;">
+                                    <th style="text-align:left; padding:1.5mm 0; width:25%;">สัตว์</th>
+                                    <th style="text-align:left; padding:1.5mm 0; width:45%;">หัตถการ</th>
+                                    <th style="text-align:center; padding:1.5mm 0; width:15%;">ไม่ตรวจเลือด</th>
+                                    <th style="text-align:center; padding:1.5mm 0; width:15%;">ตรวจเลือด</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${petSurgeries.map(ps => `<tr style="border-bottom:0.5px solid ${textColor}44; height:9mm;">
+                                    <td>${ps.name}</td><td>${ps.surgery}</td>
+                                    <td style="text-align:center;">${cb}</td>
+                                    <td style="text-align:center;">${cb}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>`;
                 }
-                if (l.text && l.text.includes("{{lab_table}}") && pickedLabData.bloods.length > 0) {
-                    pushOffset += (pickedLabData.bloods.length * 6);
-                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse;"><tr style="border-bottom:1px solid black; font-weight:bold;"><td>รายการ</td><td style="text-align:center;">ผล</td><td>ค่าอ้างอิง</td></tr>${pickedLabData.bloods.map(b => `<tr><td>${b.parameter_name}</td><td style="text-align:center; font-weight:bold;">${b.test_value}</td><td>${b.ref_range || ''} ${b.unit || ''}</td></tr>`).join('')}</table></div>`;
+
+                if (l.type === 'text') {
+                    const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match);
+                    return `<div style="${style}">${content}</div>`;
                 }
-                if (l.type === 'text') { const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match); return `<div style="${style}">${content}</div>`; }
                 if (l.type === 'rect') return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
                 if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${currentY}mm; left:${l.align==='center'?'50%':l.x+'mm'}; ${l.align==='center'?'transform:translateX(-50%);':''} width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
                 return '';
             }).join('');
+
             const win = window.open('', '_blank');
             win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');body { margin: 0; padding: 0; background: white; }.page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }@media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style></head><body><div class="page">${printContent}</div><script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body></html>`);
             win.document.close();
