@@ -82,23 +82,38 @@
                 <div class="lab-tab active" id="tab-input" onclick="switchTab('input', this)">➕ ผลเลือด (Input)</div>
                 <div class="lab-tab" id="tab-imaging" onclick="switchTab('imaging', this)">📸 Imaging (X-ray/US)</div>
                 <div class="lab-tab" id="tab-echo" onclick="switchTab('echo', this)">💓 Echocardiography</div>
-                <div class="lab-tab" id="tab-trends" onclick="switchTab('trends', this)">📊 Trends Tracking</div>
+                <div class="lab-tab" id="tab-trends" onclick="switchTab('trends', this)">📊 Comparative Trends</div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-8 custom-scroll" id="content-area">
                 
                 <div id="view-input">
                     <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-2xl font-black text-white">บันทึกผลเลือดใหม่</h3>
-                        <button onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-2xl font-black transition flex items-center gap-3">
+                        <div>
+                            <h3 class="text-2xl font-black text-white">บันทึกผลเลือดใหม่</h3>
+                            <p class="text-teal-500 font-bold text-sm mt-1" id="disp-ref-mode">-</p>
+                        </div>
+                        <button onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-2xl font-black transition flex items-center gap-3 shadow-lg">
                             <i data-lucide="save"></i> บันทึกผลเลือด
                         </button>
                     </div>
-                    <div class="section-card">
-                        <div class="grid grid-cols-4 gap-6 mb-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] px-4">
-                            <div>Parameter Name</div><div>Unit</div><div>Reference Range</div><div class="text-center">Result Value</div>
+                    
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                        <div class="section-card border-l-[8px] border-teal-500">
+                            <h4 class="text-xl font-black text-white mb-6">CBC</h4>
+                            <div class="grid grid-cols-4 gap-4 mb-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] px-2">
+                                <div>Parameter</div><div>Unit</div><div>Ref.</div><div class="text-center">Result</div>
+                            </div>
+                            <div id="cbc-container" class="space-y-1"></div>
                         </div>
-                        <div id="parameters-container" class="space-y-1"></div>
+
+                        <div class="section-card border-l-[8px] border-blue-500">
+                            <h4 class="text-xl font-black text-white mb-6">Chemistry & Electrolytes</h4>
+                            <div class="grid grid-cols-4 gap-4 mb-4 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] px-2">
+                                <div>Parameter</div><div>Unit</div><div>Ref.</div><div class="text-center">Result</div>
+                            </div>
+                            <div id="chem-container" class="space-y-1"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -114,7 +129,7 @@
                         <div class="space-y-4">
                             <div><label class="echo-label">Findings</label><textarea id="img-finding" class="input-box min-h-[120px]" placeholder="รายละเอียดที่ตรวจพบ..."></textarea></div>
                             <div><label class="echo-label text-teal-500">Impression</label><textarea id="img-impression" class="input-box min-h-[60px]" placeholder="สรุปผล..."></textarea></div>
-                            <div class="flex justify-end pt-4"><button onclick="saveImaging()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-xl font-black">Save Imaging Record</button></div>
+                            <div class="flex justify-end pt-4"><button onclick="saveImaging()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-xl font-black shadow-lg">Save Imaging Record</button></div>
                         </div>
                     </div>
                     <div class="space-y-4">
@@ -126,7 +141,7 @@
                 <div id="view-echo" class="hidden space-y-6 pb-20">
                     <div class="flex justify-between items-center">
                         <h3 class="text-2xl font-black text-white italic">Echocardiography Data</h3>
-                        <button onclick="saveEchoResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-3 rounded-xl font-black transition">💾 บันทึกผล Echo</button>
+                        <button onclick="saveEchoResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-3 rounded-xl font-black transition shadow-lg">💾 บันทึกผล Echo</button>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -185,7 +200,10 @@
                 </div>
 
                 <div id="view-trends" class="hidden">
-                    <div class="flex justify-between items-center mb-6"><h3 class="text-2xl font-black text-white">Comparative Lab Trends</h3></div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-black text-white">Comparative Lab Trends</h3>
+                        <p class="text-gray-400 text-sm">การไฮไลท์สีอ้างอิงจากอายุของสัตว์ ณ วันที่เจาะเลือด (ย้อนหลัง)</p>
+                    </div>
                     <div class="trend-container custom-scroll">
                         <table class="trend-table"><thead id="trend-head"></thead><tbody id="trend-body"></tbody></table>
                     </div>
@@ -197,6 +215,7 @@
 
     <script>
         let masterParams = [], currentAnimal = null, labHistory = [], imagingHistory = [];
+        let currentAgeYears = 0;
 
         window.onload = async () => { lucide.createIcons(); await fetchMasterParams(); await fetchAnimals(); };
 
@@ -214,32 +233,125 @@
                 </div>`).join('');
         }
 
+        // ✅ ฟังก์ชันคำนวณอายุและหาคอลัมน์ Reference ที่ถูกต้อง
+        function getAgeReferenceMode(birthDateStr, targetDateStr = null) {
+            let isDog = currentAnimal.pet_type === 'สุนัข';
+            let ageY = 0;
+            
+            if (birthDateStr) {
+                const birth = new Date(birthDateStr);
+                const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
+                ageY = (targetDate - birth) / (1000 * 60 * 60 * 24 * 365.25);
+            } else {
+                ageY = 2; // ถ้าไม่มีวันเกิด ถือว่าเป็น Adult อัตโนมัติ
+            }
+
+            let mode = 2; // Default = Adult
+            let modeName = '';
+            
+            if (isDog) {
+                if (ageY < 1) { mode = 1; modeName = '🐶 Puppy (< 1 ปี)'; }
+                else if (ageY > 7) { mode = 3; modeName = '🐶 Senior (> 7 ปี)'; }
+                else { mode = 2; modeName = '🐶 Adult (1 - 7 ปี)'; }
+            } else {
+                if (ageY < 1) { mode = 1; modeName = '🐱 Kitten (< 1 ปี)'; }
+                else if (ageY > 10) { mode = 3; modeName = '🐱 Senior (> 10 ปี)'; }
+                else { mode = 2; modeName = '🐱 Adult (1 - 10 ปี)'; }
+            }
+            
+            return { mode, modeName, isDog };
+        }
+
+        // ✅ ฟังก์ชันดึงค่า Min/Max จาก Master ตามโหมดอายุ
+        function getRefRange(param, mode, isDog) {
+            const prefix = isDog ? `dog_${mode}` : `cat_${mode}`;
+            return {
+                min: param[`${prefix}_min`],
+                max: param[`${prefix}_max`]
+            };
+        }
+
         async function selectAnimal(id) {
             const { data: a } = await db.from('animals').select('*').eq('id', id).single();
             currentAnimal = a;
+            
             document.querySelectorAll('.pet-card').forEach(c => c.classList.remove('active'));
             document.getElementById(`pet-${id}`)?.classList.add('active');
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('lab-editor').classList.remove('hidden');
+            
             document.getElementById('disp-name').innerText = a.pet_name;
             document.getElementById('disp-hn').innerText = `HN: ${a.owner_hn} | ${a.pet_type} (${a.breed})`;
             document.getElementById('ec-bw').value = a.weight || '';
-            renderInputForm(); await fetchLabHistory(id); await fetchImagingHistory(id); switchTab('input', document.getElementById('tab-input'));
+
+            renderInputForm(); 
+            await fetchLabHistory(id); 
+            await fetchImagingHistory(id); 
+            switchTab('input', document.getElementById('tab-input'));
         }
 
         function renderInputForm() {
-            const isDog = currentAnimal.pet_type === 'สุนัข';
-            document.getElementById('parameters-container').innerHTML = masterParams.map(p => {
-                const min = isDog ? p.dog_min : p.cat_min, max = isDog ? p.dog_max : p.cat_max;
-                return `<div class="grid grid-cols-4 gap-6 items-center p-4 border-b border-white/5 hover:bg-white/5 transition-all text-sm">
-                    <div class="font-bold text-slate-300">${p.parameter_name}</div><div class="text-gray-500">${p.unit || '-'}</div>
-                    <div class="text-gray-500 font-mono text-xs italic">${min} - ${max}</div>
-                    <div><input type="number" step="0.01" class="input-box text-center lab-input font-bold text-teal-400" data-id="${p.id}" data-name="${p.parameter_name}" data-min="${min}" data-max="${max}" data-unit="${p.unit}"></div>
-                </div>`;
+            const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
+            document.getElementById('disp-ref-mode').innerText = `อ้างอิงช่วงอายุ: ${refInfo.modeName}`;
+
+            let htmlCbc = '', htmlChem = '';
+
+            masterParams.forEach(p => {
+                const { min, max } = getRefRange(p, refInfo.mode, refInfo.isDog);
+                const displayRef = (min !== null && max !== null) ? `${min} - ${max}` : '-';
+                
+                const row = `
+                    <div class="grid grid-cols-4 gap-4 items-center p-3 border-b border-white/5 hover:bg-white/5 transition-all text-sm">
+                        <div class="font-bold text-slate-300 pl-2">${p.parameter_name}</div>
+                        <div class="text-gray-500 text-xs">${p.unit || '-'}</div>
+                        <div class="text-gray-500 font-mono text-xs italic">${displayRef}</div>
+                        <div><input type="number" step="0.01" class="input-box text-center lab-input font-bold text-teal-400 h-9" 
+                            data-id="${p.id}" data-name="${p.parameter_name}" data-min="${min}" data-max="${max}" data-unit="${p.unit}"></div>
+                    </div>`;
+
+                if (p.category === 'CBC') htmlCbc += row;
+                else htmlChem += row;
+            });
+
+            document.getElementById('cbc-container').innerHTML = htmlCbc;
+            document.getElementById('chem-container').innerHTML = htmlChem;
+        }
+
+        // --- TRENDS LOGIC (คำนวณอายุย้อนหลังตามวันที่เจาะเลือด) ---
+        function getScaleClass(val, min, max) {
+            if (min === null || max === null) return 'v-normal';
+            if (val > max) return ((val - max) / max) > 0.5 ? 'v-high-severe' : (((val - max) / max) > 0.2 ? 'v-high-mod' : 'v-high-mild');
+            if (val < min) return ((min - val) / min) > 0.5 ? 'v-low-severe' : (((min - val) / min) > 0.2 ? 'v-low-mod' : 'v-low-mild');
+            return 'v-normal';
+        }
+
+        async function fetchLabHistory(id) { const { data } = await db.from('lab_results').select('*').eq('animal_id', id).order('created_at', { ascending: false }); labHistory = data || []; renderTrendTable(); }
+
+        function renderTrendTable() {
+            const sessions = {}; 
+            labHistory.forEach(r => { if(!sessions[r.created_at]) sessions[r.created_at] = {}; sessions[r.created_at][r.parameter_name] = r; });
+            const sortedTs = Object.keys(sessions).sort((a,b) => new Date(b) - new Date(a));
+            
+            document.getElementById('trend-head').innerHTML = `<tr><th class="fixed-col">Parameter</th>${sortedTs.map(ts => `<th><button onclick="deleteSession('${ts}')" class="text-gray-600 hover:text-red-500 text-xs mb-1">✕ Del</button><br><span class="text-white">${formatThaiDate(new Date(ts))}</span></th>`).join('')}</tr>`;
+            
+            document.getElementById('trend-body').innerHTML = masterParams.map(p => {
+                let html = `<td class="fixed-col font-bold text-slate-300 text-sm pl-4">${p.parameter_name} <span class="text-[10px] text-gray-500 font-normal ml-2">${p.unit || ''}</span></td>`;
+                
+                sortedTs.forEach(ts => { 
+                    const res = sessions[ts][p.parameter_name]; 
+                    const val = res ? res.test_value : '-'; 
+                    
+                    // คำนวณหา Ref Min/Max ย้อนหลังตามอายุ ณ วันที่เจาะเลือด
+                    const refInfo = getAgeReferenceMode(currentAnimal.birth_date, ts);
+                    const { min, max } = getRefRange(p, refInfo.mode, refInfo.isDog);
+
+                    html += `<td class="${res ? getScaleClass(val, min, max) : ''}">${val} <br><span class="text-[9px] text-gray-600 font-mono">${min!==null ? `(${min}-${max})` : ''}</span></td>`; 
+                });
+                return `<tr class="border-b border-white/5 hover:bg-white/5">${html}</tr>`;
             }).join('');
         }
 
-        // --- ECHO LOGIC ---
+        // --- IMAGING & ECHO (คงเดิม) ---
         function runEchoCalc() {
             const bw = parseFloat(document.getElementById('ec-bw').value) || 0;
             const lvidd = parseFloat(document.getElementById('ec-lvidd').value) || 0, lvids = parseFloat(document.getElementById('ec-lvids').value) || 0;
@@ -288,28 +400,6 @@
             runEchoCalc();
         }
 
-        // --- TRENDS & IMAGING LOGIC ---
-        function getScaleClass(val, min, max) {
-            if (val > max) return ((val - max) / max) > 0.5 ? 'v-high-severe' : (((val - max) / max) > 0.2 ? 'v-high-mod' : 'v-high-mild');
-            if (val < min) return ((min - val) / min) > 0.5 ? 'v-low-severe' : (((min - val) / min) > 0.2 ? 'v-low-mod' : 'v-low-mild');
-            return 'v-normal';
-        }
-
-        async function fetchLabHistory(id) { const { data } = await db.from('lab_results').select('*').eq('animal_id', id).order('created_at', { ascending: false }); labHistory = data || []; renderTrendTable(); }
-
-        function renderTrendTable() {
-            const isDog = currentAnimal.pet_type === 'สุนัข';
-            const sessions = {}; labHistory.forEach(r => { if(!sessions[r.created_at]) sessions[r.created_at] = {}; sessions[r.created_at][r.parameter_name] = r; });
-            const sortedTs = Object.keys(sessions).sort((a,b) => new Date(b) - new Date(a));
-            document.getElementById('trend-head').innerHTML = `<tr><th class="fixed-col">Parameter</th><th class="text-gray-500">Ref.</th>${sortedTs.map(ts => `<th><button onclick="deleteSession('${ts}')" class="text-gray-600 hover:text-red-500">✕</button><br><span class="text-white">${formatThaiDate(new Date(ts))}</span></th>`).join('')}</tr>`;
-            document.getElementById('trend-body').innerHTML = masterParams.map(p => {
-                const min = isDog ? p.dog_min : p.cat_min, max = isDog ? p.dog_max : p.cat_max;
-                let html = `<td class="fixed-col font-bold text-slate-300 text-sm">${p.parameter_name}</td><td class="text-gray-600 font-mono text-[10px]">${min}-${max}</td>`;
-                sortedTs.forEach(ts => { const res = sessions[ts][p.parameter_name]; const val = res ? res.test_value : '-'; html += `<td class="${res ? getScaleClass(val, min, max) : ''}">${val}</td>`; });
-                return `<tr>${html}</tr>`;
-            }).join('');
-        }
-
         async function fetchImagingHistory(id) { const { data } = await db.from('imaging_results').select('*').eq('animal_id', id).order('created_at', { ascending: false }); imagingHistory = data || []; renderImagingLists(); }
 
         function renderImagingLists() {
@@ -335,12 +425,13 @@
         }
 
         async function deleteImaging(id) { if (confirm("ลบประวัตินี้?")) { await db.from('imaging_results').delete().eq('id', id); fetchImagingHistory(currentAnimal.id); } }
+        
         async function saveLabResults() {
             const results = []; const ts = new Date().toISOString();
             document.querySelectorAll('.lab-input').forEach(i => { if (i.value) results.push({ animal_id: currentAnimal.id, parameter_id: i.dataset.id, parameter_name: i.dataset.name, test_value: parseFloat(i.value), unit: i.dataset.unit, created_at: ts }); });
             if (results.length === 0) return alert("กรุณากรอกข้อมูล");
             const { error } = await db.from('lab_results').insert(results);
-            if (!error) { alert("บันทึกสำเร็จ"); fetchLabHistory(currentAnimal.id); switchTab('trends', document.getElementById('tab-trends')); }
+            if (!error) { alert("บันทึกสำเร็จ"); fetchLabHistory(currentAnimal.id); switchTab('trends', document.getElementById('tab-trends')); document.querySelectorAll('.lab-input').forEach(i => i.value = ''); }
         }
 
         async function deleteSession(ts) { if (confirm("ลบผลเลือดชุดนี้ทิ้งอย่างถาวร?")) { await db.from('lab_results').delete().eq('animal_id', currentAnimal.id).eq('created_at', ts); fetchLabHistory(currentAnimal.id); } }
