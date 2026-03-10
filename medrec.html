@@ -201,9 +201,17 @@
             }
         }
 
-        async function fetchRecords() {
-            const { data } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', animalId).order('created_at', { ascending: false });
-            records = data || []; renderRecordsList();
+async function fetchRecords() {
+            const { data, error } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', animalId).order('created_at', { ascending: false });
+            
+            // เพิ่มตัวเช็ค Error ถ้าโหลดข้อมูลไม่สำเร็จให้เด้งแจ้งเตือน
+            if (error) {
+                console.error("โหลดประวัติไม่สำเร็จ:", error);
+                alert("⚠️ โหลดประวัติไม่สำเร็จ: " + error.message + "\n(ลองกดปุ่ม Reload schema cache ใน Supabase)");
+            }
+            
+            records = data || []; 
+            renderRecordsList();
         }
 
         function renderRecordsList() {
