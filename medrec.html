@@ -387,9 +387,70 @@
 
         function confirmRxCalc() { addItem('Rx', pendingItem.name, parseFloat(document.getElementById('rx-final-price-val').value), { dose: document.getElementById('rx-tabs-display').innerText.split(' ')[0], unit: pendingItem.data.unit || 'เม็ด', freq: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`, meal: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value, days: parseInt(document.getElementById('rx-days').value), qty: pendingItem.calculatedQty, drug_name_th: pendingItem.data.name_th, warning: pendingItem.data.side_effects }); document.getElementById('rx-calc-modal').style.display = 'none'; }
 
+// ฟังก์ชันพิมพ์สติ๊กเกอร์ยาจากหน้าต่าง Modal ตอนคำนวณยา
+        async function printCurrentRx() {
+            if (!pendingItem) return alert("ไม่พบข้อมูลยา");
+            const tabsVal = parseFloat(document.getElementById('rx-tabs-val').value) || 0;
+            const freqVal = parseFloat(document.getElementById('rx-freq').value) || 1;
+            const daysVal = parseInt(document.getElementById('rx-days').value) || 1;
+            const qty = Math.ceil(tabsVal * freqVal * daysVal);
+            
+            const doseText = document.getElementById('rx-tabs-display').innerText.split(' ')[0];
+            const freqText = document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`;
+            
+            const rxData = {
+                clinic_name: "PK-VMS Clinic",
+                pet_name: document.getElementById('v-pet-name').innerText,
+                owner_name: document.getElementById('info-owner-name').innerText,
+                species: petType,
+                hn: ownerHN,
+                drug_name: pendingItem.name,
+                drug_name_th: pendingItem.data.name_th || "",
+                warning: pendingItem.data.side_effects || "",
+                dose_per_time: doseText,
+                unit: pendingItem.data.unit || 'เม็ด',
+                frequency: freqText,
+                meal_timing: document.getElementById('rx-meal-timing').value,
+                day_timing: document.getElementById('rx-day-timing').value,
+                duration_days: daysVal,
+                total_qty: `${qty} ${pendingItem.data.unit || 'เม็ด'}`,
+                date: new Date().toLocaleDateString('th-TH')
+            };
+            await executeDynamicPrint([rxData], 'sticker_drug');
+        }
+
+        // ฟังก์ชันพิมพ์สติ๊กเกอร์ยาจากปุ่มที่ช่อง Rx
+        async function printAllRx() {
+            const rxItems = selectedItems.filter(i => i.type === 'Rx');
+            if (rxItems.length === 0) return alert("กรุณาเลือกยาในช่อง Rx ก่อนกดพิมพ์");
+            const batch = rxItems.map(i => {
+                return {
+                    clinic_name: "PK-VMS Clinic",
+                    pet_name: document.getElementById('v-pet-name').innerText,
+                    owner_name: document.getElementById('info-owner-name').innerText,
+                    species: petType,
+                    hn: ownerHN,
+                    drug_name: i.name,
+                    drug_name_th: i.drug_name_th || "",
+                    warning: i.warning || "",
+                    dose_per_time: i.dose,
+                    unit: i.unit,
+                    frequency: i.freq,
+                    meal_timing: i.meal,
+                    day_timing: i.day_timing,
+                    duration_days: i.days,
+                    total_qty: `${i.qty} ${i.unit}`,
+                    date: new Date().toLocaleDateString('th-TH')
+                };
+            });
+            await executeDynamicPrint(batch, 'sticker_drug');
+        }
+
+
+        
         async function saveMedicalRecord() {
             try {
-                const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, net_amount: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: 'pending' };
+           const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: 'pending' };
                 let currentRecordId = editingId;
                 if (editingId) { await db.from('medical_records').update(headerData).eq('id', editingId); await db.from('medical_record_items').delete().eq('record_id', editingId); }
                 else { const { data: record } = await db.from('medical_records').insert([headerData]).select().single(); currentRecordId = record.id; }
