@@ -95,7 +95,7 @@
         let activeDocType = 'doc_consent'; 
         const VET_NAME = "ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
 
-        // รายการหัตถการพื้นฐาน
+        // รายการหัตถการทั้งหมด
         const COMMON_PROCEDURES = [
             'วางยาสลบ', 'ทำหมันเมีย', 'ตอน (เพศผู้)', 
             'ฉีดวัคซีนรวม - แมว', 'ฉีดวัคซีนรวม - สุนัข', 
@@ -104,17 +104,18 @@
 
         window.onload = async () => { 
             lucide.createIcons(); 
-            await fetchOwners(); 
-
-            // ตรวจสอบ Parameter จาก URL (HN, Type และ ID สัตว์)
             const urlParams = new URLSearchParams(window.location.search);
             const hn = urlParams.get('hn');
             const type = urlParams.get('type');
-            const petId = urlParams.get('id'); // รับ ID สัตว์จากหน้า animals.html
+            const petId = urlParams.get('id');
 
             if (hn) {
+                document.getElementById('search-owner').value = hn;
+                await searchOwners(); 
                 if (type) activeDocType = type;
                 await selectOwner(hn, petId);
+            } else {
+                await fetchOwners(); 
             }
         };
 
@@ -127,6 +128,7 @@
             const term = document.getElementById('search-owner').value;
             const { data } = await db.from('owners').select('*').or(`owner_name.ilike.%${term}%,hn.ilike.%${term}%`).limit(20);
             renderOwnerList(data);
+            return data;
         }
 
         function renderOwnerList(owners) {
@@ -144,26 +146,18 @@
                 db.from('animals').select('*').eq('owner_hn', hn),
                 db.from('owner_phones').select('phone_number').eq('owner_hn', hn)
             ]);
-
             if (!owner) return;
-
             currentOwner = owner;
             currentOwner.phone = phones?.[0]?.phone_number || "-";
             ownerPets = pets || [];
-            
             selectedPetIds.clear();
-            // ถ้ามีการส่ง ID สัตว์มาจาก URL ให้เลือกสัตว์ตัวนั้นทันที
-            if (targetPetId) {
-                selectedPetIds.add(targetPetId.toString());
-            }
+            if (targetPetId) selectedPetIds.add(targetPetId.toString());
 
             document.querySelectorAll('.owner-card').forEach(el => el.classList.remove('active'));
             document.getElementById(`owner-${hn}`)?.classList.add('active');
-
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-container').classList.remove('hidden');
             document.getElementById('owner-info').innerText = `เจ้าของ: ${owner.owner_name} | HN: ${owner.hn}`;
-            
             renderPetList();
             switchDocType(activeDocType);
         }
@@ -180,14 +174,8 @@
 
         function togglePet(id) {
             const card = document.getElementById(`p-card-${id}`);
-            if (selectedPetIds.has(id.toString())) { 
-                selectedPetIds.delete(id.toString()); 
-                card.classList.remove('selected'); 
-            } else { 
-                selectedPetIds.add(id.toString()); 
-                card.classList.add('selected'); 
-            }
-            
+            if (selectedPetIds.has(id.toString())) { selectedPetIds.delete(id.toString()); card.classList.remove('selected'); }
+            else { selectedPetIds.add(id.toString()); card.classList.add('selected'); }
             if (activeDocType === 'doc_consent') refreshSurgeryRows();
             if (activeDocType === 'doc_lab') refreshLabPicker();
         }
@@ -196,20 +184,11 @@
             activeDocType = type;
             document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
-            
             const form = document.getElementById('dynamic-form');
             const title = document.getElementById('doc-title');
-            
             if (type === 'doc_consent') {
                 title.innerText = "ใบยินยอมผ่าตัด/วางยาสลบ";
-                form.innerHTML = `
-                    <div class="section-card space-y-6">
-                        <div id="surgery-rows" class="space-y-6"></div>
-                        <div class="pt-4 border-t border-white/5">
-                            <label class="text-[10px] font-black text-gray-500 uppercase">หมายเหตุความเสี่ยงเพิ่มเติม</label>
-                            <input type="text" id="f-note" class="input-box font-bold text-teal-400 mt-2" placeholder="เช่น สัตว์มีภาวะโรคหัวใจ, อายุมาก...">
-                        </div>
-                    </div>`;
+                form.innerHTML = `<div class="section-card space-y-6"><div id="surgery-rows" class="space-y-6"></div><div class="pt-4 border-t border-white/5"><label class="text-[10px] font-black text-gray-500 uppercase">หมายเหตุความเสี่ยงเพิ่มเติม</label><input type="text" id="f-note" class="input-box font-bold text-teal-400 mt-2" placeholder="เช่น สัตว์มีภาวะโรคหัวใจ, อายุมาก..."></div></div>`;
                 refreshSurgeryRows();
             } else if (type === 'doc_lab') {
                 title.innerText = "รายงานผลทางห้องปฏิบัติการ";
@@ -230,11 +209,26 @@
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id.toString() === id.toString());
                 if (!pet) return;
+
+                // ✅ กรองรายการหัตถการตาม เพศ และ ชนิด
+                const filteredOptions = COMMON_PROCEDURES.filter(opt => {
+                    // กรองตามเพศ
+                    if (pet.gender.includes('เมีย') && opt.includes('ตอน (เพศผู้)')) return false;
+                    if (pet.gender === 'ผู้' && opt.includes('ทำหมันเมีย')) return false;
+                    if (pet.gender === 'ผู้ตอน' && opt.includes('ทำหมันเมีย')) return false;
+
+                    // กรองตามชนิด
+                    if (pet.pet_type === 'แมว' && opt.includes('สุนัข')) return false;
+                    if (pet.pet_type === 'สุนัข' && opt.includes('แมว')) return false;
+
+                    return true;
+                });
+
                 html += `
                     <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
-                        <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type})</div>
+                        <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type} / ${pet.gender})</div>
                         <div class="flex flex-wrap gap-2">
-                            ${COMMON_PROCEDURES.map(opt => `
+                            ${filteredOptions.map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
                                     <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
                                 </label>`).join('')}
@@ -254,138 +248,78 @@
             const checks = document.querySelectorAll(`.p-opt-${petId}:checked`);
             const textbox = document.getElementById(`text-${petId}`);
             const selectedValues = Array.from(checks).map(c => c.value);
-            
             document.querySelectorAll(`[id^="label-${petId}"]`).forEach(l => l.classList.remove('active'));
             checks.forEach(c => c.parentElement.classList.add('active'));
             textbox.value = selectedValues.join(', ');
         }
 
-        // --- ฟังก์ชัน Lab และ Print (คงเดิมจากเวอร์ชันคุณแต่เพิ่มการจัดการ Template) ---
         async function refreshLabPicker() {
             const container = document.getElementById('lab-session-list');
             if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">กรุณาเลือกสัตว์เพื่อดึงประวัติผลตรวจ...</p>'; return; }
             container.innerHTML = '<p class="text-gray-500 animate-pulse">กำลังโหลดข้อมูลล่าสุด...</p>';
-            
             const ids = Array.from(selectedPetIds);
             const [{data: bloods}, {data: images}] = await Promise.all([
                 db.from('lab_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(15),
-                db.from('imaging_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(15)
+                db.from('imaging_results').select('*').in('id', ids).order('created_at', {ascending: false}).limit(15)
             ]);
-
             let html = '<h4 class="text-xs font-bold text-teal-500 uppercase mb-2">เลือกข้อมูลที่ต้องการรวมในรายงาน</h4>';
-            
             const sessions = {};
             bloods.forEach(b => { if(!sessions[b.created_at]) sessions[b.created_at] = []; sessions[b.created_at].push(b); });
             Object.keys(sessions).forEach(ts => {
                 const date = new Date(ts).toLocaleString('th-TH');
-                html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition">
-                    <input type="checkbox" class="lab-pick-input w-5 h-5 accent-teal-500" value="${ts}" data-type="blood">
-                    <div>
-                        <div class="text-white font-bold">🩸 ผลเลือด (Blood Results)</div>
-                        <div class="text-xs text-gray-500">${date}</div>
-                    </div>
-                </label>`;
+                html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition"><input type="checkbox" class="lab-pick-input w-5 h-5 accent-teal-500" value="${ts}" data-type="blood"><div><div class="text-white font-bold">🩸 ผลเลือด (Blood Results)</div><div class="text-xs text-gray-500">${date}</div></div></label>`;
             });
-
             images.forEach(img => {
                 const date = new Date(img.created_at).toLocaleString('th-TH');
-                html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition">
-                    <input type="checkbox" class="img-pick-input w-5 h-5 accent-teal-500" value="${img.id}" data-type="imaging">
-                    <div>
-                        <div class="text-white font-bold">${img.exam_type === 'Echocardiography' ? '💓 Echocardiography' : '📸 Imaging: ' + img.region}</div>
-                        <div class="text-xs text-gray-500">${date}</div>
-                    </div>
-                </label>`;
+                html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition"><input type="checkbox" class="img-pick-input w-5 h-5 accent-teal-500" value="${img.id}" data-type="imaging"><div><div class="text-white font-bold">${img.exam_type === 'Echocardiography' ? '💓 Echocardiography' : '📸 Imaging: ' + img.region}</div><div class="text-xs text-gray-500">${date}</div></div></label>`;
             });
-
             if(!bloods.length && !images.length) html = '<p class="text-gray-600 italic py-10 text-center">ไม่พบประวัติผลตรวจของสัตว์ที่เลือก</p>';
             container.innerHTML = html;
         }
 
         async function printCurrentDoc() {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
-            
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
-            if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}" ในระบบ`);
-
+            if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}" ในระบบ Designer`);
             const config = template.config;
             const pw = parseFloat(config.width) || 210;
             const ph = parseFloat(config.height) || 297;
-
-            const dataMap = {
-                clinic_name: "PK-VMS Animal Clinic",
-                clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
-                owner_name: currentOwner?.owner_name || "-",
-                owner_address: currentOwner?.address || "-",
-                owner_phone: currentOwner?.phone || "-",
-                hn: currentOwner?.hn || "-",
-                vet_name: VET_NAME,
-                date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
-                time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-                note: document.getElementById('f-note')?.value || "-",
-            };
-
+            const dataMap = { clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000", owner_name: currentOwner?.owner_name || "-", owner_address: currentOwner?.address || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-", vet_name: VET_NAME, date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), note: document.getElementById('f-note')?.value || "-", };
             let pickedLabData = { bloods: [], imaging: [] };
             if (activeDocType === 'doc_lab') {
                 const bloodTs = Array.from(document.querySelectorAll('.lab-pick-input:checked')).map(i => i.value);
                 const imgIds = Array.from(document.querySelectorAll('.img-pick-input:checked')).map(i => i.value);
-                const [{data: b_res}, {data: i_res}] = await Promise.all([
-                    db.from('lab_results').select('*').in('created_at', bloodTs),
-                    db.from('imaging_results').select('*').in('id', imgIds)
-                ]);
-                pickedLabData.bloods = b_res || [];
-                pickedLabData.imaging = i_res || [];
+                const [{data: b_res}, {data: i_res}] = await Promise.all([ db.from('lab_results').select('*').in('created_at', bloodTs), db.from('imaging_results').select('*').in('id', imgIds) ]);
+                pickedLabData.bloods = b_res || []; pickedLabData.imaging = i_res || [];
             }
-
             const sortedLines = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y));
             let pushOffset = 0;
-            
             const printContent = sortedLines.map(l => {
                 const currentY = parseFloat(l.y) + pushOffset;
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || '#000000';
                 let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.2; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
-                
                 if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
                 else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
                 else style += `left:${l.x}mm; width:${l.w || (pw - l.x)}mm; text-align:left;`;
-
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
                     const surgeryInputs = document.querySelectorAll('.surgery-input');
                     const petSurgeries = Array.from(surgeryInputs).map(i => ({ name: i.dataset.petName, surgery: i.value || '-' }));
                     const cb = `<div style="width:3.8mm; height:3.8mm; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
-                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; margin-top:1mm;">
-                        <tr style="border-bottom:1.2px solid black; font-weight:bold;"><th style="text-align:left; width:25%;">สัตว์</th><th style="text-align:left; width:45%;">หัตถการ</th><th style="text-align:center; width:15%;">ไม่ตรวจเลือด</th><th style="text-align:center; width:15%;">ตรวจเลือด</th></tr>
-                        ${petSurgeries.map(ps => `<tr style="border-bottom:0.5px solid #eee; height:8mm;"><td>${ps.name}</td><td>${ps.surgery}</td><td style="text-align:center;">${cb}</td><td style="text-align:center;">${cb}</td></tr>`).join('')}
-                    </table></div>`;
+                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; margin-top:1mm;"><tr style="border-bottom:1.2px solid black; font-weight:bold;"><th style="text-align:left; width:25%;">สัตว์</th><th style="text-align:left; width:45%;">หัตถการ</th><th style="text-align:center; width:15%;">ไม่ตรวจเลือด</th><th style="text-align:center; width:15%;">ตรวจเลือด</th></tr>${petSurgeries.map(ps => `<tr style="border-bottom:0.5px solid #eee; height:8mm;"><td>${ps.name}</td><td>${ps.surgery}</td><td style="text-align:center;">${cb}</td><td style="text-align:center;">${cb}</td></tr>`).join('')}</table></div>`;
                 }
-
                 if (l.text && l.text.includes("{{lab_table}}") && pickedLabData.bloods.length > 0) {
                     pushOffset += (pickedLabData.bloods.length * 6);
-                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse;">
-                        <tr style="border-bottom:1px solid black; font-weight:bold;"><td>รายการ</td><td style="text-align:center;">ผล</td><td>ค่าอ้างอิง</td></tr>
-                        ${pickedLabData.bloods.map(b => `<tr><td>${b.parameter_name}</td><td style="text-align:center; font-weight:bold;">${b.test_value}</td><td>${b.ref_range || ''} ${b.unit || ''}</td></tr>`).join('')}
-                    </table></div>`;
+                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse;"><tr style="border-bottom:1px solid black; font-weight:bold;"><td>รายการ</td><td style="text-align:center;">ผล</td><td>ค่าอ้างอิง</td></tr>${pickedLabData.bloods.map(b => `<tr><td>${b.parameter_name}</td><td style="text-align:center; font-weight:bold;">${b.test_value}</td><td>${b.ref_range || ''} ${b.unit || ''}</td></tr>`).join('')}</table></div>`;
                 }
-
-                if (l.type === 'text') {
-                    const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match);
-                    return `<div style="${style}">${content}</div>`;
-                }
+                if (l.type === 'text') { const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match); return `<div style="${style}">${content}</div>`; }
                 if (l.type === 'rect') return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
                 if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${currentY}mm; left:${l.align==='center'?'50%':l.x+'mm'}; ${l.align==='center'?'transform:translateX(-50%);':''} width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
                 return '';
             }).join('');
-
             const win = window.open('', '_blank');
-            win.document.write(`<html><head><style>
-                @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-                body { margin: 0; padding: 0; background: white; }
-                .page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }
-                @media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }
-            </style></head><body><div class="page">${printContent}</div>
-            <script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body></html>`);
+            win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');body { margin: 0; padding: 0; background: white; }.page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }@media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style></head><body><div class="page">${printContent}</div><script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body></html>`);
             win.document.close();
         }
     </script>
