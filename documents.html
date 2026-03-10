@@ -95,7 +95,20 @@
         let activeDocType = 'doc_consent'; 
         const VET_NAME = "ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
 
-        window.onload = async () => { lucide.createIcons(); await fetchOwners(); };
+        window.onload = async () => { 
+            lucide.createIcons(); 
+            await fetchOwners(); 
+
+            // ตรวจสอบ Parameter จาก URL (HN และ Type)
+            const urlParams = new URLSearchParams(window.location.search);
+            const hn = urlParams.get('hn');
+            const type = urlParams.get('type');
+
+            if (hn) {
+                if (type) activeDocType = type;
+                await selectOwner(hn);
+            }
+        };
 
         async function fetchOwners() {
             const { data } = await db.from('owners').select('*').order('hn', { ascending: false }).limit(20);
@@ -118,18 +131,29 @@
         }
 
         async function selectOwner(hn) {
+            // ดึงข้อมูลเจ้าของ, สัตว์, และเบอร์โทร
             const [{ data: owner }, { data: pets }, { data: phones }] = await Promise.all([
                 db.from('owners').select('*').eq('hn', hn).single(),
                 db.from('animals').select('*').eq('owner_hn', hn),
                 db.from('owner_phones').select('phone_number').eq('owner_hn', hn)
             ]);
+
+            if (!owner) return;
+
             currentOwner = owner;
             currentOwner.phone = phones?.[0]?.phone_number || "-";
             ownerPets = pets || [];
             selectedPetIds.clear();
+
+            // ไฮไลท์การเลือกใน Sidebar
+            document.querySelectorAll('.owner-card').forEach(el => el.classList.remove('active'));
+            document.getElementById(`owner-${hn}`)?.classList.add('active');
+
+            // แสดง Editor
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-container').classList.remove('hidden');
             document.getElementById('owner-info').innerText = `เจ้าของ: ${owner.owner_name} | HN: ${owner.hn}`;
+            
             renderPetList();
             switchDocType(activeDocType);
         }
@@ -145,8 +169,13 @@
 
         function togglePet(id) {
             const card = document.getElementById(`p-card-${id}`);
-            if (selectedPetIds.has(id)) { selectedPetIds.delete(id); card.classList.remove('selected'); }
-            else { selectedPetIds.add(id); card.classList.add('selected'); }
+            if (selectedPetIds.has(id)) { 
+                selectedPetIds.delete(id); 
+                card.classList.remove('selected'); 
+            } else { 
+                selectedPetIds.add(id); 
+                card.classList.add('selected'); 
+            }
             if (activeDocType === 'doc_consent') refreshSurgeryRows();
             if (activeDocType === 'doc_lab') refreshLabPicker();
         }
@@ -155,12 +184,20 @@
             activeDocType = type;
             document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
+            
             const form = document.getElementById('dynamic-form');
             const title = document.getElementById('doc-title');
             
             if (type === 'doc_consent') {
-                title.innerText = "ใบยินยอมผ่าตัด";
-                form.innerHTML = `<div class="section-card space-y-6"><div id="surgery-rows" class="space-y-6"></div><input type="text" id="f-note" class="input-box font-bold text-teal-400" placeholder="ระบุหมายเหตุความเสี่ยงเพิ่มเติม..."></div>`;
+                title.innerText = "ใบยินยอมผ่าตัด/วางยาสลบ";
+                form.innerHTML = `
+                    <div class="section-card space-y-6">
+                        <div id="surgery-rows" class="space-y-6"></div>
+                        <div class="pt-4 border-t border-white/5">
+                            <label class="text-[10px] font-black text-gray-500 uppercase">หมายเหตุความเสี่ยงเพิ่มเติม</label>
+                            <input type="text" id="f-note" class="input-box font-bold text-teal-400 mt-2" placeholder="เช่น สัตว์มีภาวะโรคหัวใจ, อายุมาก...">
+                        </div>
+                    </div>`;
                 refreshSurgeryRows();
             } else if (type === 'doc_lab') {
                 title.innerText = "รายงานผลทางห้องปฏิบัติการ";
@@ -172,7 +209,7 @@
 
         function refreshSurgeryRows() {
             const container = document.getElementById('surgery-rows');
-            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยงด้านบนเพื่อทำรายการ...</p>'; return; }
+            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยงด้านบนเพื่อระบุรายการผ่าตัด...</p>'; return; }
             let html = '';
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id === id);
@@ -180,12 +217,13 @@
                     <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
                         <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type})</div>
                         <div class="flex flex-wrap gap-2">
-                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน', 'ผ่าตัดเนื้องอก'].map(opt => `
+                            ${['วางยาสลบ', 'ทำหมัน', 'ขูดหินปูน', 'ผ่าตัดเนื้องอก', 'ผ่าตัดหน้าท้อง'].map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
                                     <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
                                 </label>`).join('')}
                         </div>
-                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400 font-bold" data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายละเอียดเพิ่มเติม...">
+                        <input type="text" id="text-${pet.id}" class="input-box surgery-input text-teal-400 font-bold" 
+                            data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="รายละเอียดการผ่าตัด...">
                     </div>`;
             });
             container.innerHTML = html;
@@ -208,20 +246,19 @@
             
             const ids = Array.from(selectedPetIds);
             const [{data: bloods}, {data: images}] = await Promise.all([
-                db.from('lab_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(20),
-                db.from('imaging_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(20)
+                db.from('lab_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(15),
+                db.from('imaging_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(15)
             ]);
 
-            let html = '<h4 class="text-xs font-bold text-teal-500 uppercase tracking-widest mb-2">เลือกข้อมูลที่ต้องการรวมในรายงาน</h4>';
+            let html = '<h4 class="text-xs font-bold text-teal-500 uppercase mb-2">เลือกข้อมูลที่ต้องการรวมในรายงาน</h4>';
             
-            // กลุ่มผลเลือด (Group by created_at)
+            // กลุ่มผลเลือด
             const sessions = {};
             bloods.forEach(b => { if(!sessions[b.created_at]) sessions[b.created_at] = []; sessions[b.created_at].push(b); });
-            
             Object.keys(sessions).forEach(ts => {
                 const date = new Date(ts).toLocaleString('th-TH');
                 html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition">
-                    <input type="checkbox" class="lab-pick-input w-5 h-5 rounded accent-teal-500" value="${ts}" data-type="blood">
+                    <input type="checkbox" class="lab-pick-input w-5 h-5 accent-teal-500" value="${ts}" data-type="blood">
                     <div>
                         <div class="text-white font-bold">🩸 ผลเลือด (Blood Results)</div>
                         <div class="text-xs text-gray-500">${date}</div>
@@ -229,11 +266,11 @@
                 </label>`;
             });
 
-            // กลุ่ม Imaging/Echo
+            // Imaging
             images.forEach(img => {
                 const date = new Date(img.created_at).toLocaleString('th-TH');
                 html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition">
-                    <input type="checkbox" class="img-pick-input w-5 h-5 rounded accent-teal-500" value="${img.id}" data-type="imaging">
+                    <input type="checkbox" class="img-pick-input w-5 h-5 accent-teal-500" value="${img.id}" data-type="imaging">
                     <div>
                         <div class="text-white font-bold">${img.exam_type === 'Echocardiography' ? '💓 Echocardiography' : '📸 Imaging: ' + img.region}</div>
                         <div class="text-xs text-gray-500">${date}</div>
@@ -241,14 +278,10 @@
                 </label>`;
             });
 
-            if(bloods.length === 0 && images.length === 0) html = '<p class="text-gray-600 italic py-10 text-center">ไม่พบประวัติผลตรวจของสัตว์ที่เลือก</p>';
+            if(!bloods.length && !images.length) html = '<p class="text-gray-600 italic py-10 text-center">ไม่พบประวัติผลตรวจของสัตว์ที่เลือก</p>';
             container.innerHTML = html;
         }
 
-        // ==========================================
-        // PK-VMS PRINT ENGINE (Full Lab Integrated)
-        // ==========================================
-        
         async function printCurrentDoc() {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             
@@ -259,7 +292,6 @@
             const pw = parseFloat(config.width) || 210;
             const ph = parseFloat(config.height) || 297;
 
-            // ดึงข้อมูลสำหรับแทนที่ในตาราง
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic",
                 clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
@@ -273,12 +305,11 @@
                 note: document.getElementById('f-note')?.value || "-",
             };
 
-            // เตรียมข้อมูล Lab หากเป็น doc_lab
+            // ดึงข้อมูล Lab สำหรับ doc_lab
             let pickedLabData = { bloods: [], imaging: [] };
             if (activeDocType === 'doc_lab') {
                 const bloodTs = Array.from(document.querySelectorAll('.lab-pick-input:checked')).map(i => i.value);
                 const imgIds = Array.from(document.querySelectorAll('.img-pick-input:checked')).map(i => i.value);
-                
                 const [{data: b_res}, {data: i_res}] = await Promise.all([
                     db.from('lab_results').select('*').in('created_at', bloodTs),
                     db.from('imaging_results').select('*').in('id', imgIds)
@@ -294,78 +325,31 @@
                 const currentY = parseFloat(l.y) + pushOffset;
                 const fontSizePt = l.size || 12;
                 const textColor = l.color || '#000000';
-                
-                let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1; white-space:pre-wrap;`;
+                let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.2; white-space:pre-wrap;`;
                 if (l.bold) style += 'font-weight:bold;';
-                if (l.italic) style += 'font-style:italic;';
                 
-                if (l.align === 'center') {
-                    style += `left:0; width:${pw}mm; text-align:center;`;
-                } else if (l.align === 'right') {
-                    style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
-                } else {
-                    style += `left:${l.x}mm; width:${l.w || (pw - parseFloat(l.x))}mm; text-align:left;`;
-                }
+                if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
+                else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
+                else style += `left:${l.x}mm; width:${l.w || (pw - l.x)}mm; text-align:left;`;
 
-                // --- 📋 ตารางรายการผ่าตัด (Fixed Position) ---
+                // จัดการตารางรายการผ่าตัด
                 if (l.text && l.text.includes("{{pet_surgery_list}}")) {
                     const surgeryInputs = document.querySelectorAll('.surgery-input');
                     const petSurgeries = Array.from(surgeryInputs).map(i => ({ name: i.dataset.petName, surgery: i.value || '-' }));
                     const cb = `<div style="width:3.8mm; height:3.8mm; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
-                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; font-size:${fontSizePt * 0.85}pt;">
-                        <tr style="border-bottom:1.2px solid ${textColor}; font-weight:bold;"><th style="text-align:left; padding:1mm 0.5mm; width:16.6%;">ชื่อสัตว์</th><th style="text-align:left; padding:1mm 0.5mm; width:50%;">รายการหัตถการ</th><th style="text-align:center; width:16.7%;">ไม่ตรวจเลือด</th><th style="text-align:center; width:16.7%;">ตรวจเลือด</th></tr>
-                        ${petSurgeries.map(ps => `<tr><td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.name}</td><td style="padding:0.8mm 0.5mm; vertical-align:top;">${ps.surgery}</td><td style="text-align:center;">${cb}</td><td style="text-align:center;">${cb}</td></tr>`).join('')}
+                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; margin-top:1mm;">
+                        <tr style="border-bottom:1.2px solid black; font-weight:bold;"><th style="text-align:left; width:20%;">สัตว์</th><th style="text-align:left; width:45%;">รายการ</th><th style="text-align:center; width:17.5%;">ไม่ตรวจเลือด</th><th style="text-align:center; width:17.5%;">ตรวจเลือด</th></tr>
+                        ${petSurgeries.map(ps => `<tr style="border-bottom:0.5px solid #eee;"><td>${ps.name}</td><td>${ps.surgery}</td><td style="text-align:center;">${cb}</td><td style="text-align:center;">${cb}</td></tr>`).join('')}
                     </table></div>`;
                 }
 
-                // --- 🔬 ตารางผลเลือด (Dynamic) ---
-                if (l.text && l.text.includes("{{lab_table}}")) {
-                    if (pickedLabData.bloods.length === 0) return '';
-                    const rowHeightMm = 6;
-                    pushOffset += (pickedLabData.bloods.length) * rowHeightMm;
-                    return `<div style="${style}">
-                        <table style="width:100%; border-collapse:collapse; font-size:${fontSizePt * 0.9}pt;">
-                            <tr style="border-bottom:1px solid black; font-weight:bold;"><th style="text-align:left;">Parameter</th><th style="text-align:center;">Value</th><th style="text-align:right;">Unit</th></tr>
-                            ${pickedLabData.bloods.map(b => `<tr><td style="padding:1mm 0;">${b.parameter_name}</td><td style="text-align:center; font-weight:bold;">${b.test_value}</td><td style="text-align:right;">${b.unit || ''}</td></tr>`).join('')}
-                        </table>
-                    </div>`;
-                }
-
-                // --- 💓 ตาราง Echocardiography (Dynamic) ---
-                if (l.text && l.text.includes("{{echo_table}}")) {
-                    const echo = pickedLabData.imaging.find(i => i.exam_type === 'Echocardiography');
-                    if (!echo) return '';
-                    const f = echo.findings;
-                    const items = [
-                        {n: 'LA/Ao Ratio', v: (f.la / f.ao).toFixed(2), r: '< 1.6'},
-                        {n: 'FS %', v: (((f.lvidd - f.lvids)/f.lvidd)*100).toFixed(1) + '%', r: '25-45%'},
-                        {n: 'n-LVIDd', v: (f.lvidd / Math.pow(f.bw, 0.294)).toFixed(2), r: '1.27-1.85'}
-                    ];
-                    pushOffset += (items.length * 6) + 10;
-                    return `<div style="${style}">
-                        <div style="font-weight:bold; margin-bottom:2mm;">Echocardiography Measurements (BW: ${f.bw} kg)</div>
-                        <table style="width:100%; border-collapse:collapse; font-size:${fontSizePt * 0.9}pt;">
-                            <tr style="background:#eee;"><td>Parameter</td><td>Result</td><td>Ref. Range</td></tr>
-                            ${items.map(it => `<tr><td>${it.n}</td><td style="font-weight:bold;">${it.v}</td><td>${it.r}</td></tr>`).join('')}
-                        </table>
-                        <div style="margin-top:2mm; font-style:italic;">Impression: ${echo.impression}</div>
-                    </div>`;
-                }
-
-                // --- 📸 รายละเอียด Imaging (Dynamic) ---
-                if (l.text && l.text.includes("{{imaging_details}}")) {
-                    const imgs = pickedLabData.imaging.filter(i => i.exam_type !== 'Echocardiography');
-                    if (imgs.length === 0) return '';
-                    pushOffset += (imgs.length * 20);
-                    return `<div style="${style}">
-                        ${imgs.map(img => `
-                            <div style="margin-bottom:5mm; border-bottom:0.5px solid #ccc; padding-bottom:2mm;">
-                                <div style="font-weight:bold; color:#333;">${img.exam_type}: ${img.region}</div>
-                                <div style="font-size:0.9em;">Findings: ${img.findings}</div>
-                                <div style="font-weight:bold; font-size:0.9em;">Impression: ${img.impression}</div>
-                            </div>
-                        `).join('')}
-                    </div>`;
+                // จัดการตาราง Lab
+                if (l.text && l.text.includes("{{lab_table}}") && pickedLabData.bloods.length > 0) {
+                    pushOffset += (pickedLabData.bloods.length * 6);
+                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse;">
+                        <tr style="border-bottom:1px solid black; font-weight:bold;"><td>รายการ</td><td style="text-align:center;">ผล</td><td>ค่าอ้างอิง</td></tr>
+                        ${pickedLabData.bloods.map(b => `<tr><td>${b.parameter_name}</td><td style="text-align:center; font-weight:bold;">${b.test_value}</td><td>${b.ref_range || ''} ${b.unit || ''}</td></tr>`).join('')}
+                    </table></div>`;
                 }
 
                 if (l.type === 'text') {
@@ -378,26 +362,13 @@
             }).join('');
 
             const win = window.open('', '_blank');
-            win.document.write(`
-                <html>
-                <head>
-                    <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Kanit&family=Prompt&family=Sarabun:wght@400;700&display=swap');
-                        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        html, body { margin: 0 !important; padding: 0 !important; background: white; line-height: 1.2; }
-                        .page { position: relative; width: ${pw}mm; height: ${ph}mm; background: white; overflow: hidden; }
-                        @media print {
-                            @page { size: ${pw}mm ${ph}mm; margin: 0 !important; }
-                            html, body, .page { width: ${pw}mm; height: ${ph}mm; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="page">${printContent}</div>
-                    <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 1000); };<\/script>
-                </body>
-                </html>
-            `);
+            win.document.write(`<html><head><style>
+                @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+                body { margin: 0; padding: 0; background: white; }
+                .page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }
+                @media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }
+            </style></head><body><div class="page">${printContent}</div>
+            <script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body></html>`);
             win.document.close();
         }
     </script>
