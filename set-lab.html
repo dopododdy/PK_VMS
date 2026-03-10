@@ -35,6 +35,9 @@
         
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .tab-btn { padding: 10px 20px; font-weight: 800; border-radius: 10px; transition: 0.2s; color: #94a3b8; }
+        .tab-btn.active { background: var(--teal); color: white; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -45,6 +48,12 @@
                 <h2 class="text-2xl font-black text-white">ผลเลือด Master</h2>
                 <a href="index.html" class="text-3xl opacity-60 hover:opacity-100 transition-all">🏠</a>
             </div>
+            
+            <div class="flex bg-black/30 p-1 rounded-xl mb-4">
+                <button onclick="switchTab('CBC')" id="tab-CBC" class="tab-btn flex-1 active">CBC</button>
+                <button onclick="switchTab('Chem')" id="tab-Chem" class="tab-btn flex-1">Chemistry</button>
+            </div>
+
             <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อ Parameter..." oninput="renderList()">
         </div>
         <div id="param-list" class="flex-1 overflow-y-auto custom-scroll p-2"></div>
@@ -58,7 +67,7 @@
     <main class="flex-1 overflow-y-auto p-12 bg-[#020617] custom-scroll">
         <div class="max-w-4xl mx-auto">
             <div class="flex justify-between items-center mb-10">
-                <h1 class="text-4xl font-black text-white">🔬 ตั้งค่าพารามิเตอร์ห้องแล็บ</h1>
+                <h1 class="text-4xl font-black text-white">🔬 ตั้งค่าพารามิเตอร์ <span id="display-tab-name" class="text-teal-400">CBC</span></h1>
             </div>
 
             <div class="section-card border-l-[12px] border-teal-500 shadow-2xl">
@@ -74,15 +83,17 @@
                         <label class="label-text">หน่วย (Unit)</label>
                         <select id="f_unit_select" class="input-box mb-2" onchange="handleUnitChange()">
                             <option value="">-- ไม่มีหน่วย --</option>
-                            <option value="10^3/µL">10^3/µL</option>
-                            <option value="10^6/µL">10^6/µL</option>
-                            <option value="g/dL">g/dL</option>
-                            <option value="mg/dL">mg/dL</option>
-                            <option value="mmol/L">mmol/L</option>
-                            <option value="µmol/L">µmol/L</option>
-                            <option value="U/L">U/L</option>
+                            <option value="10^9/L">10^9/L</option>
+                            <option value="10^12/L">10^12/L</option>
                             <option value="fL">fL</option>
                             <option value="pg">pg</option>
+                            <option value="g/L">g/L</option>
+                            <option value="ml/L">ml/L</option>
+                            <option value="g/dL">g/dL</option>
+                            <option value="U/L">U/L</option>
+                            <option value="mg/dL">mg/dL</option>
+                            <option value="mmol/L">mmol/L</option>
+                            <option value="umol/L">umol/L</option>
                             <option value="%">%</option>
                             <option value="CUSTOM">อื่นๆ (ระบุเอง)</option>
                         </select>
@@ -127,12 +138,13 @@
                 </div>
             </div>
             
-            <p class="text-gray-500 text-sm text-center">ค่า Reference Range ที่ตั้งไว้นี้ จะถูกนำไปแสดงเป็นแถบเขียว-แดงในหน้าบันทึกผลเลือด (lab.html) เพื่อตรวจสอบความผิดปกติโดยอัตโนมัติ</p>
+            <p class="text-gray-500 text-sm text-center">ค่าที่ตั้งไว้นี้จะถูกนำไปตรวจสอบความผิดปกติอัตโนมัติในหน้าบันทึกผลแล็บ</p>
         </div>
     </main>
 
     <script>
         let allParams = [];
+        let currentActiveTab = 'CBC'; // Default tab
 
         window.onload = async () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
@@ -145,10 +157,25 @@
             renderList();
         }
 
+        function switchTab(tab) {
+            currentActiveTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById('display-tab-name').innerText = tab === 'CBC' ? 'CBC' : 'Chemistry';
+            resetForm();
+            renderList();
+        }
+
         function renderList() {
             const term = document.getElementById('search-box').value.toLowerCase();
             const container = document.getElementById('param-list');
-            const filtered = allParams.filter(p => p.parameter_name.toLowerCase().includes(term));
+            
+            // กรองตาม Tab และ Search Term
+            const filtered = allParams.filter(p => {
+                const matchTab = p.category === currentActiveTab;
+                const matchSearch = p.parameter_name.toLowerCase().includes(term);
+                return matchTab && matchSearch;
+            });
 
             container.innerHTML = filtered.map(p => `
                 <div class="param-card" onclick="editParam('${p.id}')" id="param-${p.id}">
@@ -198,8 +225,8 @@
             document.getElementById('f_id').value = p.id;
             document.getElementById('f_name').value = p.parameter_name;
             
-            // จัดการหน่วย (Standard vs Custom)
-            const stdUnits = ['10^3/µL', '10^6/µL', 'g/dL', 'mg/dL', 'mmol/L', 'µmol/L', 'U/L', 'fL', 'pg', '%'];
+            // จัดการหน่วย
+            const stdUnits = ['10^9/L', '10^12/L', 'fL', 'pg', 'g/L', 'ml/L', 'g/dL', 'U/L', 'mg/dL', 'mmol/L', 'umol/L', '%'];
             if (stdUnits.includes(p.unit)) {
                 document.getElementById('f_unit_select').value = p.unit;
             } else if (p.unit) {
@@ -226,6 +253,7 @@
 
             const payload = {
                 parameter_name: name,
+                category: currentActiveTab, // บันทึก CBC หรือ Chem
                 unit: unit,
                 dog_min: parseFloat(document.getElementById('f_dog_min').value) || 0,
                 dog_max: parseFloat(document.getElementById('f_dog_max').value) || 0,
@@ -249,7 +277,7 @@
         async function deleteData() {
             const id = document.getElementById('f_id').value;
             const name = document.getElementById('f_name').value;
-            if (!id || !confirm(`⚠️ ยืนยันการลบ "${name}"?\nค่านี้จะไม่สามารถนำไปใช้งานได้ในอนาคต`)) return;
+            if (!id || !confirm(`⚠️ ยืนยันการลบ "${name}"?`)) return;
 
             try {
                 await db.from('mas_lab_parameters').delete().eq('id', id);
