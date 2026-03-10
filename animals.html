@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เวชระเบียนสัตว์ | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -156,28 +157,36 @@
             renderForm(owner, pets, phones);
         }
 
-        function createNewForm() { renderForm({ hn: 'AUTO', owner_name: '', address: '' }, [], []); }
+        function createNewForm() { renderForm({ hn: '', owner_name: '', address: '' }, [], []); }
 
         function renderForm(owner, pets, phones = []) {
             const formView = document.getElementById('form-view');
+            const isNew = owner.hn === '';
             formView.innerHTML = `
                 <div class="max-w-5xl mx-auto pb-32">
                     <div class="bg-slate-800/40 p-10 rounded-[40px] border border-white/5 mb-8 shadow-2xl">
                         <div class="flex justify-between items-center mb-8">
                             <h3 class="text-3xl font-black text-blue-400 flex items-center gap-3">👤 ข้อมูลเจ้าของสัตว์</h3>
                             <div class="flex gap-3">
-                                <button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตรประชาชน</button>
-                                ${owner.hn !== 'AUTO' ? `
+                                <button onclick="readSmartCard()" class="btn-base btn-blue">
+                                    <i data-lucide="id-card" class="w-5 h-5"></i> อ่านบัตรประชาชน
+                                </button>
+                                ${!isNew ? `
                                     <button onclick="goToConsent('${owner.hn}')" class="btn-base btn-orange shadow-lg">📋 ใบยินยอมรวม</button>
                                     <button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>
                                 ` : ''}
                             </div>
                         </div>
                         <div class="grid grid-cols-12 gap-6">
-                            <div class="col-span-2"><label class="label-text">HN</label><input type="text" id="f_hn" class="input-box font-black text-blue-400 text-center text-xl" value="${owner.hn}" readonly></div>
-                            <div class="col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name || ''}"></div>
-                            <div class="col-span-3"><label class="label-text">เบอร์โทรศัพท์หลัก</label><input type="tel" id="f_phone1" class="input-box text-teal-400 font-bold" value="${phones.find(p=>p.label==='เบอร์หลัก')?.phone_number || ''}"></div>
-                            <div class="col-span-3"><label class="label-text">เบอร์โทรศัพท์สำรอง</label><input type="tel" id="f_phone2" class="input-box" value="${phones.find(p=>p.label==='เบอร์สำรอง')?.phone_number || ''}"></div>
+                            <div class="col-span-3">
+                                <label class="label-text">HN <span class="text-[10px] text-gray-500">(เว้นว่างเพื่อ Auto)</span></label>
+                                <input type="text" id="f_hn" class="input-box font-black text-blue-400 text-xl" 
+                                       value="${owner.hn}" 
+                                       placeholder="สร้างให้อัตโนมัติ" 
+                                       ${!isNew ? 'readonly' : ''}> </div>
+                            <div class="col-span-5"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name || ''}"></div>
+                            <div class="col-span-2"><label class="label-text">เบอร์โทรศัพท์หลัก</label><input type="tel" id="f_phone1" class="input-box text-teal-400 font-bold" value="${phones.find(p=>p.label==='เบอร์หลัก')?.phone_number || ''}"></div>
+                            <div class="col-span-2"><label class="label-text">เบอร์โทรศัพท์สำรอง</label><input type="tel" id="f_phone2" class="input-box" value="${phones.find(p=>p.label==='เบอร์สำรอง')?.phone_number || ''}"></div>
                             <div class="col-span-12"><label class="label-text">ที่อยู่ปัจจุบัน</label><input type="text" id="f_address" class="input-box" value="${owner.address || ''}"></div>
                         </div>
                     </div>
@@ -189,6 +198,8 @@
 
                     <button onclick="saveAllData()" class="w-full btn-base btn-teal py-6 text-3xl mt-10 shadow-2xl">💾 บันทึกข้อมูลทั้งหมด</button>
                 </div>`;
+            
+            lucide.createIcons(); // วาด Icon ใหม่
             initAllPickers();
             document.querySelectorAll('.zone-pet').forEach(el => updateBreedOptions(el.querySelector('.p_type')));
         }
@@ -310,12 +321,16 @@
         async function saveAllData() {
             const name = document.getElementById('f_owner_name').value.trim();
             const p1 = document.getElementById('f_phone1').value.trim();
-            if (!name || !p1) return alert("❌ กรุณากรอกชื่อและเบอร์โทร");
-            let hn = document.getElementById('f_hn').value;
-            if (hn === "AUTO") {
+            if (!name || !p1) return alert("❌ กรุณากรอกชื่อและเบอร์โทรหลัก");
+            
+            let hn = document.getElementById('f_hn').value.trim();
+            
+            // กรณีสร้างใหม่และไม่ได้กรอก HN ให้รัน Auto
+            if (!hn) {
                 const hns = allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
                 hn = (Math.max(...hns, 690000) + 1).toString().padStart(6, '0');
             }
+
             try {
                 await db.from('owners').upsert({ hn, owner_name: name, address: document.getElementById('f_address').value, updated_at: new Date() });
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
@@ -323,6 +338,7 @@
                 const p2 = document.getElementById('f_phone2').value.trim();
                 if(p2) pList.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
                 await db.from('owner_phones').insert(pList);
+                
                 const petNodes = document.querySelectorAll('.zone-pet');
                 for (const node of petNodes) {
                     const petName = node.querySelector('.p_name').value;
@@ -352,7 +368,6 @@
             editOwner(document.getElementById('f_hn').value);
         }
 
-        // ✅ แก้ไข: เปลี่ยน type เป็น doc_consent เพื่อให้ตรงกับฐานข้อมูล และรับ petId
         function goToConsent(hn, petId = '') { 
             window.location.href = `documents.html?hn=${hn}&type=doc_consent&id=${petId}`; 
         }
@@ -415,6 +430,7 @@
         }
 
         window.onload = async () => {
+            lucide.createIcons();
             if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
             await loadData();
         };
