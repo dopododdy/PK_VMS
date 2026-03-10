@@ -1,423 +1,327 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เวชระเบียนสัตว์ | PK-VMS Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ศูนย์เอกสารทางการแพทย์ | PK-VMS Pro</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Prompt:wght@300;400;600&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
 
     <style>
-        :root { --navy: #0b1929; --navy-light: #112240; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
-        * { font-family: "Sarabun", sans-serif !important; }
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8a6; --border: rgba(255, 255, 255, 0.1); }
+        * { font-family: "Sarabun", sans-serif; box-sizing: border-box; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
-        .sidebar-container { position: relative; width: 480px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .pet-card { 
-            padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
-            display: grid; grid-template-columns: 85px 1fr 100px; gap: 12px; align-items: stretch; transition: 0.2s;
-        }
-        .pet-card:hover { background: rgba(255,255,255,0.07); }
-        .pet-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
-        
-        .pet-main-name { color: #fff; font-weight: 800; font-size: 1.1rem; line-height: 1.2; }
-        .hn-col { background: rgba(30, 41, 59, 1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; font-size: 1.1rem; border: 1px solid rgba(255,255,255,0.1); }
-        .owner-subtext { color: #94a3b8; font-size: 0.85rem; }
-        .phone-badge { color: var(--teal); font-weight: 700; font-size: 0.85rem; }
+        .sidebar-container { width: 380px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .owner-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
+        .owner-card:hover { background: rgba(255,255,255,0.03); }
+        .owner-card.active { background: rgba(20, 184, 166, 0.1); border-left: 4px solid var(--teal); }
 
-        .btn-base {
-            padding: 10px 20px; border-radius: 12px; font-weight: 800;
-            display: inline-flex; align-items: center; justify-content: center;
-            gap: 8px; transition: all 0.2s; border: none; cursor: pointer; color: white !important;
-        }
-        .btn-base:active { transform: scale(0.95); }
-        .btn-teal { background-color: #0d9488 !important; } 
-        .btn-teal:hover { background-color: #0f766e !important; }
-        .btn-blue { background-color: #2563eb !important; } 
-        .btn-blue:hover { background-color: #1d4ed8 !important; }
-        .btn-red { background-color: #dc2626 !important; } 
-        .btn-red:hover { background-color: #b91c1c !important; }
-        .btn-gray { background-color: #475569 !important; } 
-        .btn-gray:hover { background-color: #334155 !important; }
-        .btn-orange { background-color: #ea580c !important; }
-        .btn-orange:hover { background-color: #c2410c !important; }
+        .doc-tab { padding: 12px 20px; font-weight: 800; font-size: 0.85rem; cursor: pointer; border-radius: 12px; transition: 0.2s; color: #94a3b8; border: 1px solid transparent; white-space: nowrap; }
+        .doc-tab:hover { background: rgba(255,255,255,0.05); }
+        .doc-tab.active { background: var(--teal); color: white; box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3); }
 
-        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; }
-        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
-        .zone-pet { background: rgba(30, 41, 59, 0.4); border-radius: 25px; padding: 25px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
-        .label-text { color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px; display: block; font-weight: 700; }
-        .critical-box { background: #7f1d1d !important; color: #ffffff !important; font-weight: 800; border: 2px solid #ef4444 !important; }
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; padding: 24px; border: 1px solid var(--border); }
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; }
         
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .pet-mini-card { background: rgba(15, 23, 42, 0.6); border: 2px solid transparent; border-radius: 16px; padding: 12px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .pet-mini-card.selected { border-color: var(--teal); background: rgba(20, 184, 166, 0.1); }
+
+        .check-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; font-size: 12px; cursor: pointer; transition: 0.2s; }
+        .check-pill input { display: none; }
+        .check-pill.active { background: var(--teal); color: white; border-color: var(--teal); }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
     </style>
 </head>
-<body>
-    <div class="flex h-screen overflow-hidden">
-        <aside class="sidebar-container">
-            <div class="p-6 flex-shrink-0 border-b border-white/5">
-                <div class="flex justify-between items-center mb-5">
-                    <h2 class="text-2xl font-black text-white">เวชระเบียนสัตว์</h2>
-                    <a href="index.html" class="text-3xl opacity-60 hover:opacity-100 transition-all">🏠</a>
-                </div>
-                <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อสัตว์, HN, เจ้าของ..." oninput="renderSidebar()">
-            </div>
-            <div id="owner-list" class="flex-1 overflow-y-auto px-2 pb-10 custom-scroll"></div>
-            <div class="p-5">
-                <button onclick="createNewForm()" class="w-full btn-base btn-teal py-4 text-xl shadow-lg">
-                    + ลงทะเบียนเจ้าของใหม่
-                </button>
-            </div>
-        </aside>
+<body class="flex h-screen overflow-hidden">
 
-        <main class="flex-1 overflow-y-auto p-12 bg-[#020617] custom-scroll" id="form-view">
-            <div class="h-full flex flex-col items-center justify-center opacity-10">
-                <div class="text-9xl mb-4">📋</div>
-                <h3 class="text-3xl font-bold">เลือกรายการเจ้าของเพื่อดูข้อมูลหรือเพิ่มสัตว์ใหม่</h3>
+    <aside class="sidebar-container">
+        <div class="p-6 border-b border-white/5 bg-navy">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-black text-white italic text-teal-500">PK-VMS DOCS</h2>
+                <a href="index.html" class="p-2 hover:bg-white/10 rounded-lg transition text-gray-400"><i data-lucide="home"></i></a>
             </div>
-        </main>
-    </div>
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-3.5 w-4 h-4 text-gray-500"></i>
+                <input type="text" id="search-owner" class="input-box pl-10 h-11" placeholder="ค้นหา HN หรือชื่อ..." oninput="searchOwners()">
+            </div>
+        </div>
+        <div id="owner-list" class="flex-1 overflow-y-auto custom-scroll"></div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <nav class="p-4 bg-navy-light/50 border-b border-white/5 flex gap-2 overflow-x-auto custom-scroll">
+            <div class="doc-tab active" data-type="doc_consent" onclick="switchDocType('doc_consent')">📋 ใบยินยอมหัตถการ</div>
+            <div class="doc-tab" data-type="doc_lab" onclick="switchDocType('doc_lab')">🔬 รายงานผล Lab</div>
+        </nav>
+
+        <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-[#020617]">
+            <div id="no-selection" class="h-full flex flex-col items-center justify-center opacity-20">
+                <i data-lucide="file-text" class="w-32 h-32 mb-4"></i>
+                <h2 class="text-3xl font-bold uppercase tracking-widest">กรุณาเลือกเจ้าของสัตว์</h2>
+            </div>
+
+            <div id="editor-container" class="hidden max-w-4xl mx-auto space-y-8 pb-32">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h1 class="text-4xl font-black text-white" id="doc-title">ใบยินยอมผ่าตัด/วางยาสลบ</h1>
+                        <p class="text-teal-500 font-bold mt-2 bg-teal-500/10 px-4 py-1 rounded-full inline-block" id="owner-info">-</p>
+                    </div>
+                    <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
+                        <i data-lucide="printer"></i> พิมพ์เอกสาร
+                    </button>
+                </div>
+
+                <div class="section-card">
+                    <h3 class="text-[10px] font-black text-gray-500 mb-4 uppercase tracking-[0.2em]">Step 1: เลือกสัตว์เลี้ยง</h3>
+                    <div id="pet-list-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+                </div>
+
+                <div id="dynamic-form" class="space-y-6"></div>
+            </div>
+        </div>
+    </main>
 
     <script>
-        let allAnimals = []; 
-        let allOwners = []; 
-        let allPhones = [];
-        let masterSpecies = [];
-        let masterBreeds = [];
+        let currentOwner = null;
+        let ownerPets = [];
+        let selectedPetIds = new Set();
+        let activeDocType = 'doc_consent'; 
+        const VET_NAME = "ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
 
-        function formatThaiDate(dateString, format = 'long') {
-            if (!dateString) return "-";
-            const date = new Date(dateString);
-            const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-            const monthsLong = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            const d = date.getDate();
-            const m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()];
-            const y = date.getFullYear() + 543;
-            return `${d} ${m} ${y}`;
+        // รายการหัตถการทั้งหมด
+        const COMMON_PROCEDURES = [
+            'วางยาสลบ', 'ทำหมันเมีย', 'ตอน (เพศผู้)', 
+            'ฉีดวัคซีนรวม - แมว', 'ฉีดวัคซีนรวม - สุนัข', 
+            'ฉีดยา Convenia', 'ขูดหินปูน', 'ผ่าตัดเนื้องอก', 'ผ่าตัดหน้าท้อง'
+        ];
+
+        window.onload = async () => { 
+            lucide.createIcons(); 
+            const urlParams = new URLSearchParams(window.location.search);
+            const hn = urlParams.get('hn');
+            const type = urlParams.get('type');
+            const petId = urlParams.get('id');
+
+            if (hn) {
+                document.getElementById('search-owner').value = hn;
+                await searchOwners(); 
+                if (type) activeDocType = type;
+                await selectOwner(hn, petId);
+            } else {
+                await fetchOwners(); 
+            }
+        };
+
+        async function fetchOwners() {
+            const { data } = await db.from('owners').select('*').order('hn', { ascending: false }).limit(20);
+            renderOwnerList(data);
         }
 
-        async function loadData() {
-            const [resO, resA, resP, resSpecies, resBreeds] = await Promise.all([
-                db.from('owners').select('*'),
-                db.from('animals').select('*'),
-                db.from('owner_phones').select('*'),
-                db.from('mas_species').select('*').order('name'),
-                db.from('mas_breeds').select('*').order('name')
-            ]);
-            allOwners = resO.data || [];
-            allAnimals = resA.data || [];
-            allPhones = resP.data || [];
-            masterSpecies = resSpecies.data || [];
-            masterBreeds = resBreeds.data || [];
-            renderSidebar();
+        async function searchOwners() {
+            const term = document.getElementById('search-owner').value;
+            const { data } = await db.from('owners').select('*').or(`owner_name.ilike.%${term}%,hn.ilike.%${term}%`).limit(20);
+            renderOwnerList(data);
+            return data;
         }
 
-        function renderSidebar() {
-            const term = document.getElementById('search-box').value.toLowerCase();
+        function renderOwnerList(owners) {
             const container = document.getElementById('owner-list');
-            const sorted = [...allAnimals].sort((a, b) => parseInt(b.owner_hn) - parseInt(a.owner_hn));
-            const filtered = sorted.filter(pet => {
-                const owner = allOwners.find(o => o.hn === pet.owner_hn);
-                return pet.pet_name.toLowerCase().includes(term) || pet.owner_hn.includes(term) || owner?.owner_name.toLowerCase().includes(term);
-            });
+            container.innerHTML = owners.map(o => `
+                <div class="owner-card ${currentOwner?.hn === o.hn ? 'active' : ''}" onclick="selectOwner('${o.hn}')" id="owner-${o.hn}">
+                    <span class="text-[10px] font-bold bg-slate-800 text-teal-400 px-2 py-1 rounded">HN: ${o.hn}</span>
+                    <div class="text-white font-bold mt-2">${o.owner_name}</div>
+                </div>`).join('');
+        }
 
-            container.innerHTML = filtered.map(pet => {
-                const owner = allOwners.find(o => o.hn === pet.owner_hn);
-                const p1 = allPhones.find(p => p.owner_hn === pet.owner_hn && p.label === 'เบอร์หลัก')?.phone_number || '-';
-                const typeIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
-                return `
-                    <div class="pet-card" onclick="editOwner('${pet.owner_hn}')" id="pet-${pet.id}">
-                        <div class="hn-col">#${pet.owner_hn}</div>
-                        <div class="flex flex-col justify-center min-w-0 px-2">
-                            <span class="pet-main-name truncate">${pet.pet_name}</span>
-                            <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
-                            <span class="phone-badge">📞 ${p1}</span>
+        async function selectOwner(hn, targetPetId = null) {
+            const [{ data: owner }, { data: pets }, { data: phones }] = await Promise.all([
+                db.from('owners').select('*').eq('hn', hn).single(),
+                db.from('animals').select('*').eq('owner_hn', hn),
+                db.from('owner_phones').select('phone_number').eq('owner_hn', hn)
+            ]);
+            if (!owner) return;
+            currentOwner = owner;
+            currentOwner.phone = phones?.[0]?.phone_number || "-";
+            ownerPets = pets || [];
+            selectedPetIds.clear();
+            if (targetPetId) selectedPetIds.add(targetPetId.toString());
+
+            document.querySelectorAll('.owner-card').forEach(el => el.classList.remove('active'));
+            document.getElementById(`owner-${hn}`)?.classList.add('active');
+            document.getElementById('no-selection').classList.add('hidden');
+            document.getElementById('editor-container').classList.remove('hidden');
+            document.getElementById('owner-info').innerText = `เจ้าของ: ${owner.owner_name} | HN: ${owner.hn}`;
+            renderPetList();
+            switchDocType(activeDocType);
+        }
+
+        function renderPetList() {
+            const container = document.getElementById('pet-list-grid');
+            container.innerHTML = ownerPets.map(p => `
+                <div class="pet-mini-card ${selectedPetIds.has(p.id.toString()) ? 'selected' : ''}" 
+                     id="p-card-${p.id}" onclick="togglePet('${p.id}')">
+                    <div class="text-2xl mb-1">${p.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
+                    <div class="text-white font-black truncate text-sm">${p.pet_name}</div>
+                </div>`).join('');
+        }
+
+        function togglePet(id) {
+            const card = document.getElementById(`p-card-${id}`);
+            if (selectedPetIds.has(id.toString())) { selectedPetIds.delete(id.toString()); card.classList.remove('selected'); }
+            else { selectedPetIds.add(id.toString()); card.classList.add('selected'); }
+            if (activeDocType === 'doc_consent') refreshSurgeryRows();
+            if (activeDocType === 'doc_lab') refreshLabPicker();
+        }
+
+        function switchDocType(type) {
+            activeDocType = type;
+            document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
+            const form = document.getElementById('dynamic-form');
+            const title = document.getElementById('doc-title');
+            if (type === 'doc_consent') {
+                title.innerText = "ใบยินยอมผ่าตัด/วางยาสลบ";
+                form.innerHTML = `<div class="section-card space-y-6"><div id="surgery-rows" class="space-y-6"></div><div class="pt-4 border-t border-white/5"><label class="text-[10px] font-black text-gray-500 uppercase">หมายเหตุความเสี่ยงเพิ่มเติม</label><input type="text" id="f-note" class="input-box font-bold text-teal-400 mt-2" placeholder="เช่น สัตว์มีภาวะโรคหัวใจ, อายุมาก..."></div></div>`;
+                refreshSurgeryRows();
+            } else if (type === 'doc_lab') {
+                title.innerText = "รายงานผลทางห้องปฏิบัติการ";
+                form.innerHTML = `<div class="section-card space-y-6"><div id="lab-session-list" class="space-y-4"></div></div>`;
+                refreshLabPicker();
+            }
+            lucide.createIcons();
+        }
+
+        function refreshSurgeryRows() {
+            const container = document.getElementById('surgery-rows');
+            if (selectedPetIds.size === 0) { 
+                container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยงด้านบนเพื่อระบุรายการหัตถการ...</p>'; 
+                return; 
+            }
+            
+            let html = '';
+            selectedPetIds.forEach(id => {
+                const pet = ownerPets.find(p => p.id.toString() === id.toString());
+                if (!pet) return;
+
+                // ✅ กรองรายการหัตถการตาม เพศ และ ชนิด
+                const filteredOptions = COMMON_PROCEDURES.filter(opt => {
+                    // กรองตามเพศ
+                    if (pet.gender.includes('เมีย') && opt.includes('ตอน (เพศผู้)')) return false;
+                    if (pet.gender === 'ผู้' && opt.includes('ทำหมันเมีย')) return false;
+                    if (pet.gender === 'ผู้ตอน' && opt.includes('ทำหมันเมีย')) return false;
+
+                    // กรองตามชนิด
+                    if (pet.pet_type === 'แมว' && opt.includes('สุนัข')) return false;
+                    if (pet.pet_type === 'สุนัข' && opt.includes('แมว')) return false;
+
+                    return true;
+                });
+
+                html += `
+                    <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
+                        <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type} / ${pet.gender})</div>
+                        <div class="flex flex-wrap gap-2">
+                            ${filteredOptions.map(opt => `
+                                <label class="check-pill" id="label-${pet.id}-${opt}">
+                                    <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
+                                </label>`).join('')}
                         </div>
-                        <div class="flex items-center justify-end gap-1 text-2xl pr-2">
-                            <span>${typeIcon}</span>
+                        <div class="relative">
+                            <i data-lucide="edit-3" class="absolute left-3 top-3 w-4 h-4 text-gray-500"></i>
+                            <input type="text" id="text-${pet.id}" class="input-box pl-10 surgery-input text-teal-400 font-bold" 
+                                data-pet-id="${pet.id}" data-pet-name="${pet.pet_name}" placeholder="ระบุรายละเอียดเพิ่มเติม...">
                         </div>
                     </div>`;
-            }).join('');
-        }
-
-        async function editOwner(hn) {
-            document.querySelectorAll('.pet-card').forEach(el => el.classList.remove('active'));
-            const owner = allOwners.find(o => o.hn === hn);
-            if (!owner) return createNewForm();
-            const pets = allAnimals.filter(a => a.owner_hn === hn);
-            const phones = allPhones.filter(p => p.owner_hn === hn);
-            renderForm(owner, pets, phones);
-        }
-
-        function createNewForm() { renderForm({ hn: 'AUTO', owner_name: '', address: '' }, [], []); }
-
-        function renderForm(owner, pets, phones = []) {
-            const formView = document.getElementById('form-view');
-            formView.innerHTML = `
-                <div class="max-w-5xl mx-auto pb-32">
-                    <div class="bg-slate-800/40 p-10 rounded-[40px] border border-white/5 mb-8 shadow-2xl">
-                        <div class="flex justify-between items-center mb-8">
-                            <h3 class="text-3xl font-black text-blue-400 flex items-center gap-3">👤 ข้อมูลเจ้าของสัตว์</h3>
-                            <div class="flex gap-3">
-                                <button onclick="readSmartCard()" class="btn-base btn-blue">🪪 อ่านบัตรประชาชน</button>
-                                ${owner.hn !== 'AUTO' ? `
-                                    <button onclick="goToConsent('${owner.hn}')" class="btn-base btn-orange shadow-lg">📋 ใบยินยอมรวม</button>
-                                    <button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>
-                                ` : ''}
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-12 gap-6">
-                            <div class="col-span-2"><label class="label-text">HN</label><input type="text" id="f_hn" class="input-box font-black text-blue-400 text-center text-xl" value="${owner.hn}" readonly></div>
-                            <div class="col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name || ''}"></div>
-                            <div class="col-span-3"><label class="label-text">เบอร์โทรศัพท์หลัก</label><input type="tel" id="f_phone1" class="input-box text-teal-400 font-bold" value="${phones.find(p=>p.label==='เบอร์หลัก')?.phone_number || ''}"></div>
-                            <div class="col-span-3"><label class="label-text">เบอร์โทรศัพท์สำรอง</label><input type="tel" id="f_phone2" class="input-box" value="${phones.find(p=>p.label==='เบอร์สำรอง')?.phone_number || ''}"></div>
-                            <div class="col-span-12"><label class="label-text">ที่อยู่ปัจจุบัน</label><input type="text" id="f_address" class="input-box" value="${owner.address || ''}"></div>
-                        </div>
-                    </div>
-
-                    <div id="pets-container" class="space-y-8">
-                        ${pets.map(p => petRowHtml(p)).join('')}
-                        <button onclick="addNewPetRow()" class="w-full border-4 border-dashed border-white/5 py-6 rounded-3xl text-slate-500 hover:text-teal-400 transition-all font-black text-xl">+ เพิ่มสัตว์เลี้ยงรายการใหม่ให้เจ้าของนี้</button>
-                    </div>
-
-                    <button onclick="saveAllData()" class="w-full btn-base btn-teal py-6 text-3xl mt-10 shadow-2xl">💾 บันทึกข้อมูลทั้งหมด</button>
-                </div>`;
-            initAllPickers();
-            document.querySelectorAll('.zone-pet').forEach(el => updateBreedOptions(el.querySelector('.p_type')));
-        }
-
-        function petRowHtml(pet) {
-            const ageInfo = getAgeDetail(pet.birth_date);
-            const headIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
-            const speciesOptions = masterSpecies.map(s => `<option value="${s.name}" data-id="${s.id}" ${pet.pet_type === s.name ? 'selected' : ''}>${s.name}</option>`).join('');
-            return `
-                <div class="zone-pet border-l-[12px] border-teal-500 shadow-2xl" data-pet-id="${pet.id || ''}">
-                    <div class="flex justify-between items-center mb-8">
-                        <h4 class="text-3xl font-black text-white">${headIcon} ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'}</h4>
-                        <div class="flex gap-3">
-                            ${pet.id ? `
-                                <button onclick="printPetLabel('${pet.id}')" class="btn-base btn-gray">🖨️ Label</button>
-                                <button onclick="goToConsent('${pet.owner_hn}', '${pet.id}')" class="btn-base btn-orange">📋 ใบยินยอม</button>
-                                <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติ</button>
-                            ` : ''}
-                            <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red">🗑️ ลบ</button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-12 gap-5">
-                        <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-black text-xl" value="${pet.pet_name || ''}"></div>
-                        <div class="col-span-2"><label class="label-text">ชนิด</label>
-                            <select class="p_type input-box" onchange="updateBreedOptions(this)">
-                                <option value="">-- เลือกชนิด --</option>${speciesOptions}
-                            </select>
-                        </div>
-                        <div class="col-span-3"><label class="label-text">สายพันธุ์</label><select class="p_breed input-box" data-val="${pet.breed || ''}"></select></div>
-                        <div class="col-span-2"><label class="label-text">เพศ</label>
-                            <select class="p_gender input-box">
-                                <option value="เมีย" ${pet.gender==='เมีย'?'selected':''}>♀️ เมีย</option>
-                                <option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>♂️ ผู้</option>
-                                <option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>✂️♂️ ผู้ตอน</option>
-                                <option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>✂️♀️ เมียหมัน</option>
-                            </select>
-                        </div>
-                        <div class="col-span-2"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="p_weight input-box text-center text-yellow-400 font-black text-xl" value="${pet.weight || ''}"></div>
-                        <div class="col-span-4"><label class="label-text">วดป. เกิด</label><input type="text" class="p_dob input-box datepicker-thai" value="${pet.birth_date || ''}" placeholder="เลือกวันที่..."></div>
-                        <div class="col-span-2"><label class="label-text">อายุ (ปี)</label><input type="number" class="p_age_years input-box text-center font-bold" value="${ageInfo.y}" oninput="syncFromAge(this)"></div>
-                        <div class="col-span-2"><label class="label-text">อายุ (เดือน)</label><input type="number" class="p_age_months input-box text-center font-bold" value="${ageInfo.m}" oninput="syncFromAge(this)"></div>
-                        <div class="col-span-4"><label class="label-text">เลขไมโครชิพ</label><input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}"></div>
-                        <div class="col-span-12"><label class="label-text text-red-400 font-bold">🚨 ข้อควรระวัง / ประวัติแพ้ยา</label><textarea class="p_congenital input-box critical-box h-[80px]">${pet.congenital_disease || ''}</textarea></div>
-                    </div>
-                </div>`;
-        }
-
-        function initAllPickers() {
-            flatpickr(".datepicker-thai", {
-                locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y",
-                onReady: (selectedDates, dateStr, instance) => {
-                    const altInp = instance.altInput;
-                    if (dateStr) {
-                        const yearBE = new Date(dateStr).getFullYear() + 543;
-                        altInp.value = altInp.value.replace(new Date(dateStr).getFullYear(), yearBE);
-                    }
-                },
-                onChange: (selectedDates, dateStr, instance) => {
-                    const row = instance.element.closest('.zone-pet');
-                    const age = getAgeDetail(dateStr);
-                    row.querySelector('.p_age_years').value = age.y;
-                    row.querySelector('.p_age_months').value = age.m;
-                    const yearBE = new Date(dateStr).getFullYear() + 543;
-                    instance.altInput.value = instance.altInput.value.replace(new Date(dateStr).getFullYear(), yearBE);
-                }
             });
+            container.innerHTML = html;
+            lucide.createIcons();
         }
 
-        function syncFromAge(el) {
-            const row = el.closest('.zone-pet');
-            const years = parseInt(row.querySelector('.p_age_years').value) || 0;
-            const months = parseInt(row.querySelector('.p_age_months').value) || 0;
-            const d = new Date(); d.setFullYear(d.getFullYear() - years); d.setMonth(d.getMonth() - months);
-            const dateStr = d.toISOString().split('T')[0];
-            const picker = row.querySelector('.datepicker-thai')._flatpickr;
-            picker.setDate(dateStr, true);
+        function syncSurgeryText(petId) {
+            const checks = document.querySelectorAll(`.p-opt-${petId}:checked`);
+            const textbox = document.getElementById(`text-${petId}`);
+            const selectedValues = Array.from(checks).map(c => c.value);
+            document.querySelectorAll(`[id^="label-${petId}"]`).forEach(l => l.classList.remove('active'));
+            checks.forEach(c => c.parentElement.classList.add('active'));
+            textbox.value = selectedValues.join(', ');
         }
 
-        function getAgeDetail(dob) {
-            if (!dob) return { y: 0, m: 0 };
-            const birth = new Date(dob); const now = new Date();
-            let years = now.getFullYear() - birth.getFullYear();
-            let months = now.getMonth() - birth.getMonth();
-            if (months < 0) { years--; months += 12; }
-            return { y: years, m: months };
+        async function refreshLabPicker() {
+            const container = document.getElementById('lab-session-list');
+            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">กรุณาเลือกสัตว์เพื่อดึงประวัติผลตรวจ...</p>'; return; }
+            container.innerHTML = '<p class="text-gray-500 animate-pulse">กำลังโหลดข้อมูลล่าสุด...</p>';
+            const ids = Array.from(selectedPetIds);
+            const [{data: bloods}, {data: images}] = await Promise.all([
+                db.from('lab_results').select('*').in('animal_id', ids).order('created_at', {ascending: false}).limit(15),
+                db.from('imaging_results').select('*').in('id', ids).order('created_at', {ascending: false}).limit(15)
+            ]);
+            let html = '<h4 class="text-xs font-bold text-teal-500 uppercase mb-2">เลือกข้อมูลที่ต้องการรวมในรายงาน</h4>';
+            const sessions = {};
+            bloods.forEach(b => { if(!sessions[b.created_at]) sessions[b.created_at] = []; sessions[b.created_at].push(b); });
+            Object.keys(sessions).forEach(ts => {
+                const date = new Date(ts).toLocaleString('th-TH');
+                html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition"><input type="checkbox" class="lab-pick-input w-5 h-5 accent-teal-500" value="${ts}" data-type="blood"><div><div class="text-white font-bold">🩸 ผลเลือด (Blood Results)</div><div class="text-xs text-gray-500">${date}</div></div></label>`;
+            });
+            images.forEach(img => {
+                const date = new Date(img.created_at).toLocaleString('th-TH');
+                html += `<label class="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 cursor-pointer hover:bg-teal-500/5 transition"><input type="checkbox" class="img-pick-input w-5 h-5 accent-teal-500" value="${img.id}" data-type="imaging"><div><div class="text-white font-bold">${img.exam_type === 'Echocardiography' ? '💓 Echocardiography' : '📸 Imaging: ' + img.region}</div><div class="text-xs text-gray-500">${date}</div></div></label>`;
+            });
+            if(!bloods.length && !images.length) html = '<p class="text-gray-600 italic py-10 text-center">ไม่พบประวัติผลตรวจของสัตว์ที่เลือก</p>';
+            container.innerHTML = html;
         }
 
-        function updateBreedOptions(typeSelectEl) {
-            if (!typeSelectEl) return;
-            const row = typeSelectEl.closest('.zone-pet');
-            const breedSelect = row.querySelector('.p_breed');
-            const savedVal = breedSelect.getAttribute('data-val');
-            const selectedOption = typeSelectEl.options[typeSelectEl.selectedIndex];
-            const speciesId = selectedOption ? selectedOption.getAttribute('data-id') : null;
-            let filteredBreeds = speciesId ? masterBreeds.filter(b => b.species_id === speciesId) : [];
-            breedSelect.innerHTML = '<option value="">-- เลือกสายพันธุ์ --</option>' + filteredBreeds.map(b => `<option value="${b.name}" ${b.name === savedVal ? 'selected' : ''}>${b.name}</option>`).join('');
-        }
-
-        function addNewPetRow() {
-            const div = document.createElement('div');
-            div.innerHTML = petRowHtml({});
-            document.getElementById('pets-container').insertBefore(div.firstElementChild, document.querySelector('button[onclick="addNewPetRow()"]'));
-            initAllPickers();
-            updateBreedOptions(div.querySelector('.p_type'));
-        }
-
-        async function readSmartCard() {
-            try {
-                const res = await fetch('http://127.0.0.1:8080/read');
-                const result = await res.json();
-                if (result.status === "success") {
-                    const p = result.data;
-                    document.getElementById("f_owner_name").value = p.prefix + p.firstname + " " + p.lastname;
-                    document.getElementById("f_address").value = p.address;
-                }
-            } catch (e) { alert("❌ โปรดเปิดโปรแกรม Agent บัตรประชาชน"); }
-        }
-
-        async function saveAllData() {
-            const name = document.getElementById('f_owner_name').value.trim();
-            const p1 = document.getElementById('f_phone1').value.trim();
-            if (!name || !p1) return alert("❌ กรุณากรอกชื่อและเบอร์โทร");
-            let hn = document.getElementById('f_hn').value;
-            if (hn === "AUTO") {
-                const hns = allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
-                hn = (Math.max(...hns, 690000) + 1).toString().padStart(6, '0');
+        async function printCurrentDoc() {
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
+            if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}" ในระบบ Designer`);
+            const config = template.config;
+            const pw = parseFloat(config.width) || 210;
+            const ph = parseFloat(config.height) || 297;
+            const dataMap = { clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000", owner_name: currentOwner?.owner_name || "-", owner_address: currentOwner?.address || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-", vet_name: VET_NAME, date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), note: document.getElementById('f-note')?.value || "-", };
+            let pickedLabData = { bloods: [], imaging: [] };
+            if (activeDocType === 'doc_lab') {
+                const bloodTs = Array.from(document.querySelectorAll('.lab-pick-input:checked')).map(i => i.value);
+                const imgIds = Array.from(document.querySelectorAll('.img-pick-input:checked')).map(i => i.value);
+                const [{data: b_res}, {data: i_res}] = await Promise.all([ db.from('lab_results').select('*').in('created_at', bloodTs), db.from('imaging_results').select('*').in('id', imgIds) ]);
+                pickedLabData.bloods = b_res || []; pickedLabData.imaging = i_res || [];
             }
-            try {
-                await db.from('owners').upsert({ hn, owner_name: name, address: document.getElementById('f_address').value, updated_at: new Date() });
-                await db.from('owner_phones').delete().eq('owner_hn', hn);
-                const pList = [{ owner_hn: hn, phone_number: p1, label: 'เบอร์หลัก' }];
-                const p2 = document.getElementById('f_phone2').value.trim();
-                if(p2) pList.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
-                await db.from('owner_phones').insert(pList);
-                const petNodes = document.querySelectorAll('.zone-pet');
-                for (const node of petNodes) {
-                    const petName = node.querySelector('.p_name').value;
-                    if (!petName) continue;
-                    await db.from('animals').upsert({
-                        id: node.getAttribute('data-pet-id') || undefined,
-                        owner_hn: hn, pet_name: petName, pet_type: node.querySelector('.p_type').value || 'อื่นๆ',
-                        breed: node.querySelector('.p_breed').value, gender: node.querySelector('.p_gender').value,
-                        weight: parseFloat(node.querySelector('.p_weight').value) || 0, birth_date: node.querySelector('.datepicker-thai').value || null,
-                        microchip_number: node.querySelector('.p_microchip').value, congenital_disease: node.querySelector('.p_congenital').value, updated_at: new Date()
-                    });
+            const sortedLines = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y));
+            let pushOffset = 0;
+            const printContent = sortedLines.map(l => {
+                const currentY = parseFloat(l.y) + pushOffset;
+                const fontSizePt = l.size || 12;
+                const textColor = l.color || '#000000';
+                let style = `position:absolute; top:${currentY}mm; font-family:'${l.font || 'Sarabun'}'; font-size:${fontSizePt}pt; color:${textColor}; line-height:1.2; white-space:pre-wrap;`;
+                if (l.bold) style += 'font-weight:bold;';
+                if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
+                else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
+                else style += `left:${l.x}mm; width:${l.w || (pw - l.x)}mm; text-align:left;`;
+                if (l.text && l.text.includes("{{pet_surgery_list}}")) {
+                    const surgeryInputs = document.querySelectorAll('.surgery-input');
+                    const petSurgeries = Array.from(surgeryInputs).map(i => ({ name: i.dataset.petName, surgery: i.value || '-' }));
+                    const cb = `<div style="width:3.8mm; height:3.8mm; border:1px solid ${textColor}; display:inline-block; vertical-align:middle;"></div>`;
+                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse; margin-top:1mm;"><tr style="border-bottom:1.2px solid black; font-weight:bold;"><th style="text-align:left; width:25%;">สัตว์</th><th style="text-align:left; width:45%;">หัตถการ</th><th style="text-align:center; width:15%;">ไม่ตรวจเลือด</th><th style="text-align:center; width:15%;">ตรวจเลือด</th></tr>${petSurgeries.map(ps => `<tr style="border-bottom:0.5px solid #eee; height:8mm;"><td>${ps.name}</td><td>${ps.surgery}</td><td style="text-align:center;">${cb}</td><td style="text-align:center;">${cb}</td></tr>`).join('')}</table></div>`;
                 }
-                alert("✅ บันทึกสำเร็จ"); await loadData(); editOwner(hn);
-            } catch (err) { alert(err.message); }
+                if (l.text && l.text.includes("{{lab_table}}") && pickedLabData.bloods.length > 0) {
+                    pushOffset += (pickedLabData.bloods.length * 6);
+                    return `<div style="${style}"><table style="width:100%; border-collapse:collapse;"><tr style="border-bottom:1px solid black; font-weight:bold;"><td>รายการ</td><td style="text-align:center;">ผล</td><td>ค่าอ้างอิง</td></tr>${pickedLabData.bloods.map(b => `<tr><td>${b.parameter_name}</td><td style="text-align:center; font-weight:bold;">${b.test_value}</td><td>${b.ref_range || ''} ${b.unit || ''}</td></tr>`).join('')}</table></div>`;
+                }
+                if (l.type === 'text') { const content = l.text.replace(/\{\{(.*?)\}\}/g, (match, key) => dataMap[key.trim()] || match); return `<div style="${style}">${content}</div>`; }
+                if (l.type === 'rect') return `<div style="position:absolute; top:${currentY}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
+                if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${currentY}mm; left:${l.align==='center'?'50%':l.x+'mm'}; ${l.align==='center'?'transform:translateX(-50%);':''} width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
+                return '';
+            }).join('');
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');body { margin: 0; padding: 0; background: white; }.page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }@media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style></head><body><div class="page">${printContent}</div><script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body></html>`);
+            win.document.close();
         }
-
-        async function deleteOwner(hn, name) {
-            if (!confirm(`⚠️ ยืนยันการลบเจ้าของ: ${name}?\nข้อมูลสัตว์ทั้งหมดจะหายไป`)) return;
-            await db.from('owner_phones').delete().eq('owner_hn', hn); await db.from('animals').delete().eq('owner_hn', hn);
-            await db.from('owners').delete().eq('hn', hn); await loadData();
-            document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><h3>เลือกรายการเจ้าของ</h3></div>`;
-        }
-
-        async function deletePetRecord(petId, petName) {
-            if (!confirm(`ลบสัตว์ "${petName}"?`)) return;
-            await db.from('animals').delete().eq('id', petId); await loadData();
-            editOwner(document.getElementById('f_hn').value);
-        }
-
-        // ✅ แก้ไข: เปลี่ยน type เป็น doc_consent เพื่อให้ตรงกับฐานข้อมูล และรับ petId
-        function goToConsent(hn, petId = '') { 
-            window.location.href = `documents.html?hn=${hn}&type=doc_consent&id=${petId}`; 
-        }
-
-        function gotoMedicalRecord(id, name, hn) { window.location.href = `medrec.html?id=${id}&name=${encodeURIComponent(name)}&hn=${hn}`; }
-
-        async function printPetLabel(petId) {
-            const pet = allAnimals.find(a => String(a.id) === String(petId));
-            const owner = allOwners.find(o => o.hn === pet.owner_hn);
-            if (!pet) return alert("ไม่พบข้อมูลสัตว์");
-
-            try {
-                const { data: dbTemplate } = await db.from('print_templates')
-                    .select('config').eq('template_type', 'sticker_pet_id').single();
-
-                if (!dbTemplate) return alert("❌ ไม่พบ Template 'sticker_pet_id'");
-
-                const config = dbTemplate.config;
-                const pw = config.width || 80;
-                const ph = config.height || 45;
-
-                const printData = {
-                    pet_name: pet.pet_name,
-                    hn: pet.owner_hn,
-                    owner_name: owner?.owner_name || '-',
-                    species: pet.pet_type,
-                    sex: pet.gender,
-                    weight: pet.weight,
-                    breed: pet.breed,
-                    date: new Date().toLocaleDateString('th-TH'),
-                    time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                };
-
-                const printContent = config.lines.map(l => {
-                    const val = (l.text || "").replace(/\{\{(.*?)\}\}/g, (match, key) => printData[key.trim()] || match);
-                    const fontSizePt = l.size || 12;
-                    const textColor = l.color || '#000000';
-                    let style = `position:absolute; top:${l.y}mm; font-family:${l.font || 'Sarabun'}; font-size:${fontSizePt}pt; font-weight:${l.bold ? 'bold' : 'normal'}; color:${textColor}; line-height:1.1; white-space:pre-wrap;`;
-
-                    if (l.align === 'center') style += `left:0; width:${pw}mm; text-align:center;`;
-                    else if (l.align === 'right') style += `left:0; width:${pw}mm; text-align:right; padding-right:${l.x}mm;`;
-                    else style += `left:${l.x}mm; width:${l.w ? l.w + 'mm' : 'auto'}; text-align:left;`;
-
-                    if (l.type === 'text') return `<div style="${style}">${val}</div>`;
-                    if (l.type === 'rect') return `<div style="position:absolute; top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; border:1px solid ${textColor}; border-radius:${l.radius || 0}mm;"></div>`;
-                    if (l.type === 'image') return `<img src="${l.url}" style="position:absolute; top:${l.y}mm; left:${l.x}mm; width:${l.w}mm; height:${l.h}mm; object-fit:contain;">`;
-                    return '';
-                }).join('');
-
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-                const pri = iframe.contentWindow;
-                pri.document.open();
-                pri.document.write(`<html><head><style>body { margin: 0; padding: 0; } .page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }</style></head><body><div class="page">${printContent}</div></body></html>`);
-                pri.document.close();
-                setTimeout(() => { pri.focus(); pri.print(); document.body.removeChild(iframe); }, 700);
-
-            } catch (err) { alert("Error: " + err.message); }
-        }
-
-        window.onload = async () => {
-            if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
-            await loadData();
-        };
     </script>
 </body>
 </html>
