@@ -15,10 +15,7 @@
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
 
         .sidebar-container { position: relative; width: 400px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .param-card { 
-            padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
-            transition: 0.2s;
-        }
+        .param-card { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
         .param-card:hover { background: rgba(255,255,255,0.07); }
         .param-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
 
@@ -38,6 +35,9 @@
 
         .tab-btn { padding: 10px 20px; font-weight: 800; border-radius: 10px; transition: 0.2s; color: #94a3b8; }
         .tab-btn.active { background: var(--teal); color: white; }
+
+        .template-chip { padding: 8px 16px; background: rgba(20, 184, 177, 0.1); border: 1px solid var(--teal); border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; color: #14b8b1; }
+        .template-chip:hover { background: var(--teal); color: white; transform: translateY(-2px); }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -54,20 +54,25 @@
                 <button onclick="switchTab('Chem')" id="tab-Chem" class="tab-btn flex-1">Chemistry</button>
             </div>
 
-            <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อ Parameter..." oninput="renderList()">
+            <input type="text" id="search-box" class="input-box" placeholder="ค้นหาพารามิเตอร์..." oninput="renderList()">
         </div>
         <div id="param-list" class="flex-1 overflow-y-auto custom-scroll p-2"></div>
         <div class="p-5">
             <button onclick="resetForm()" class="w-full btn-base btn-teal py-4 text-xl shadow-lg">
-                + เพิ่มรายการตรวจใหม่
+                + เพิ่มรายการใหม่
             </button>
         </div>
     </aside>
 
     <main class="flex-1 overflow-y-auto p-12 bg-[#020617] custom-scroll">
-        <div class="max-w-4xl mx-auto">
-            <div class="flex justify-between items-center mb-10">
-                <h1 class="text-4xl font-black text-white">🔬 ตั้งค่าพารามิเตอร์ <span id="display-tab-name" class="text-teal-400">CBC</span></h1>
+        <div class="max-w-5xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-4xl font-black text-white">🔬 ตั้งค่า <span id="display-tab-name" class="text-teal-400">CBC</span> Parameter</h1>
+            </div>
+
+            <div class="mb-10">
+                <label class="label-text">รายการแนะนำจากเครื่องตรวจ (Quick Select)</label>
+                <div id="template-container" class="flex flex-wrap gap-2 mt-2"></div>
             </div>
 
             <div class="section-card border-l-[12px] border-teal-500 shadow-2xl">
@@ -75,8 +80,8 @@
                 
                 <div class="grid grid-cols-12 gap-6">
                     <div class="col-span-8">
-                        <label class="label-text">ชื่อ Parameter (เช่น WBC, RBC, ALT, BUN)</label>
-                        <input type="text" id="f_name" class="input-box text-2xl font-black text-teal-400" placeholder="ระบุชื่อเรียก...">
+                        <label class="label-text">ชื่อ Parameter (เช่น WBC, ALT, BUN)</label>
+                        <input type="text" id="f_name" class="input-box text-2xl font-black text-teal-400" placeholder="ชื่อเรียก...">
                     </div>
 
                     <div class="col-span-4">
@@ -88,22 +93,21 @@
                             <option value="fL">fL</option>
                             <option value="pg">pg</option>
                             <option value="g/L">g/L</option>
-                            <option value="ml/L">ml/L</option>
                             <option value="g/dL">g/dL</option>
-                            <option value="U/L">U/L</option>
                             <option value="mg/dL">mg/dL</option>
+                            <option value="U/L">U/L</option>
                             <option value="mmol/L">mmol/L</option>
                             <option value="umol/L">umol/L</option>
                             <option value="%">%</option>
                             <option value="CUSTOM">อื่นๆ (ระบุเอง)</option>
                         </select>
-                        <input type="text" id="f_unit_custom" class="input-box hidden" placeholder="พิมพ์หน่วยเอง...">
+                        <input type="text" id="f_unit_custom" class="input-box hidden" placeholder="ระบุหน่วย...">
                     </div>
 
                     <div class="col-span-12"><hr class="opacity-10 my-4"></div>
 
                     <div class="col-span-6">
-                        <h3 class="text-blue-400 font-black mb-4 flex items-center gap-2 text-xl">🐶 ค่าอ้างอิง: สุนัข</h3>
+                        <h3 class="text-blue-400 font-black mb-4 flex items-center gap-2 text-xl">🐶 ค่าอ้างอิง: สุนัข (Canine)</h3>
                         <div class="grid grid-cols-2 gap-4 bg-blue-500/5 p-6 rounded-2xl border border-blue-500/10">
                             <div>
                                 <label class="label-text">Minimum</label>
@@ -117,7 +121,7 @@
                     </div>
 
                     <div class="col-span-6">
-                        <h3 class="text-pink-400 font-black mb-4 flex items-center gap-2 text-xl">🐱 ค่าอ้างอิง: แมว</h3>
+                        <h3 class="text-pink-400 font-black mb-4 flex items-center gap-2 text-xl">🐱 ค่าอ้างอิง: แมว (Feline)</h3>
                         <div class="grid grid-cols-2 gap-4 bg-pink-500/5 p-6 rounded-2xl border border-pink-500/10">
                             <div>
                                 <label class="label-text">Minimum</label>
@@ -131,25 +135,78 @@
                     </div>
 
                     <div class="col-span-12 flex gap-4 mt-10">
-                        <button onclick="saveData()" class="btn-base btn-teal flex-1 text-2xl py-6 shadow-2xl">💾 บันทึกข้อมูลพารามิเตอร์</button>
-                        <button id="btn-delete" onclick="deleteData()" class="btn-base btn-red px-10 hidden">🗑️ ลบรายการ</button>
+                        <button onclick="saveData()" class="btn-base btn-teal flex-1 text-2xl py-6 shadow-2xl">💾 บันทึกข้อมูล</button>
+                        <button id="btn-delete" onclick="deleteData()" class="btn-base btn-red px-10 hidden">🗑️ ลบ</button>
                         <button onclick="resetForm()" class="btn-base btn-gray px-10">ล้างฟอร์ม</button>
                     </div>
                 </div>
             </div>
-            
-            <p class="text-gray-500 text-sm text-center">ค่าที่ตั้งไว้นี้จะถูกนำไปตรวจสอบความผิดปกติอัตโนมัติในหน้าบันทึกผลแล็บ</p>
+            <p class="text-gray-500 text-sm text-center">ค่าเหล่านี้จะแสดงเป็นช่วงอ้างอิงในรายงานผลแล็บและใช้ระบุค่าที่ผิดปกติ (สูง/ต่ำ)</p>
         </div>
     </main>
 
     <script>
         let allParams = [];
-        let currentActiveTab = 'CBC'; // Default tab
+        let currentActiveTab = 'CBC';
+
+        // ✅ อัปเดตค่าตามรูปภาพที่ส่งมา (IDEXX Reference Ranges)
+        const LAB_TEMPLATES = {
+            'CBC': [
+                { name: 'WBC', unit: '10^9/L', dMin: 5.05, dMax: 16.76, cMin: 2.87, cMax: 17.02 },
+                { name: 'RBC', unit: '10^12/L', dMin: 5.65, dMax: 8.87, cMin: 6.54, cMax: 12.20 },
+                { name: 'HGB', unit: 'g/dL', dMin: 13.1, dMax: 20.5, cMin: 9.8, cMax: 15.4 },
+                { name: 'HCT', unit: '%', dMin: 37.3, dMax: 61.7, cMin: 30.3, cMax: 52.3 },
+                { name: 'MCV', unit: 'fL', dMin: 61.6, dMax: 73.5, cMin: 35.9, cMax: 53.1 },
+                { name: 'MCH', unit: 'pg', dMin: 21.2, dMax: 25.9, cMin: 11.8, cMax: 17.3 },
+                { name: 'MCHC', unit: 'g/dL', dMin: 32.0, dMax: 37.9, cMin: 28.1, cMax: 35.8 },
+                { name: 'PLT', unit: '10^9/L', dMin: 148, dMax: 484, cMin: 151, cMax: 600 }
+            ],
+            'Chem': [
+                { name: 'ALB', unit: 'g/dL', dMin: 2.3, dMax: 4.0, cMin: 2.3, cMax: 3.9 },
+                { name: 'ALKP', unit: 'U/L', dMin: 23, dMax: 212, cMin: 14, dMax: 111 },
+                { name: 'ALT', unit: 'U/L', dMin: 10, dMax: 125, cMin: 12, dMax: 130 },
+                { name: 'AMYL', unit: 'U/L', dMin: 500, dMax: 1500, cMin: 500, cMax: 1500 },
+                { name: 'BUN', unit: 'mg/dL', dMin: 7, dMax: 27, cMin: 16, cMax: 36 },
+                { name: 'CA', unit: 'mg/dL', dMin: 7.9, dMax: 12.0, cMin: 7.1, cMax: 11.5 },
+                { name: 'CHOL', unit: 'mg/dL', dMin: 110, dMax: 321, cMin: 65, cMax: 225 },
+                { name: 'CREA', unit: 'mg/dL', dMin: 0.5, dMax: 1.8, cMin: 0.8, cMax: 2.4 },
+                { name: 'GLU', unit: 'mg/dL', dMin: 77, dMax: 125, cMin: 71, cMax: 159 },
+                { name: 'PHOS', unit: 'mg/dL', dMin: 2.5, dMax: 6.8, cMin: 3.1, cMax: 7.5 },
+                { name: 'TBIL', unit: 'mg/dL', dMin: 0.0, dMax: 0.9, cMin: 0.0, cMax: 0.9 },
+                { name: 'TP', unit: 'g/dL', dMin: 5.2, dMax: 8.2, cMin: 5.7, cMax: 8.9 },
+                { name: 'GLOB', unit: 'g/dL', dMin: 2.5, dMax: 4.5, cMin: 2.8, cMax: 5.1 },
+                // Electrolytes from Image 3
+                { name: 'NA (Sodium)', unit: 'mmol/L', dMin: 144, dMax: 160, cMin: 150, cMax: 165 },
+                { name: 'K (Potassium)', unit: 'mmol/L', dMin: 3.5, dMax: 5.8, cMin: 3.5, cMax: 5.8 },
+                { name: 'CL (Chloride)', unit: 'mmol/L', dMin: 109, dMax: 122, cMin: 112, cMax: 129 }
+            ]
+        };
 
         window.onload = async () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; return; }
             await loadParams();
+            loadTemplates();
         };
+
+        function loadTemplates() {
+            const container = document.getElementById('template-container');
+            const templates = LAB_TEMPLATES[currentActiveTab];
+            container.innerHTML = templates.map(t => `
+                <div class="template-chip" onclick="applyTemplate('${t.name}')">${t.name}</div>
+            `).join('');
+        }
+
+        function applyTemplate(name) {
+            const t = LAB_TEMPLATES[currentActiveTab].find(item => item.name === name);
+            if (!t) return;
+            document.getElementById('f_name').value = t.name;
+            document.getElementById('f_unit_select').value = t.unit;
+            document.getElementById('f_dog_min').value = t.dMin;
+            document.getElementById('f_dog_max').value = t.dMax;
+            document.getElementById('f_cat_min').value = t.cMin;
+            document.getElementById('f_cat_max').value = t.cMax;
+            handleUnitChange();
+        }
 
         async function loadParams() {
             const { data } = await db.from('mas_lab_parameters').select('*').order('parameter_name');
@@ -164,28 +221,23 @@
             document.getElementById('display-tab-name').innerText = tab === 'CBC' ? 'CBC' : 'Chemistry';
             resetForm();
             renderList();
+            loadTemplates();
         }
 
         function renderList() {
             const term = document.getElementById('search-box').value.toLowerCase();
             const container = document.getElementById('param-list');
-            
-            // กรองตาม Tab และ Search Term
-            const filtered = allParams.filter(p => {
-                const matchTab = p.category === currentActiveTab;
-                const matchSearch = p.parameter_name.toLowerCase().includes(term);
-                return matchTab && matchSearch;
-            });
+            const filtered = allParams.filter(p => p.category === currentActiveTab && p.parameter_name.toLowerCase().includes(term));
 
             container.innerHTML = filtered.map(p => `
                 <div class="param-card" onclick="editParam('${p.id}')" id="param-${p.id}">
                     <div class="flex justify-between items-center mb-1">
                         <span class="text-white font-bold text-lg">${p.parameter_name}</span>
-                        <span class="text-teal-400 text-xs font-bold bg-teal-400/10 px-2 py-1 rounded">${p.unit || 'No Unit'}</span>
+                        <span class="text-teal-400 text-xs font-bold bg-teal-400/10 px-2 py-1 rounded">${p.unit || ''}</span>
                     </div>
-                    <div class="flex gap-4 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                        <span>🐶 ${p.dog_min} - ${p.dog_max}</span>
-                        <span>🐱 ${p.cat_min} - ${p.cat_max}</span>
+                    <div class="flex gap-4 text-[10px] text-gray-500 font-bold uppercase">
+                        <span>🐶 ${p.dog_min}-${p.dog_max}</span>
+                        <span>🐱 ${p.cat_min}-${p.cat_max}</span>
                     </div>
                 </div>
             `).join('');
@@ -194,20 +246,14 @@
         function handleUnitChange() {
             const select = document.getElementById('f_unit_select');
             const custom = document.getElementById('f_unit_custom');
-            if (select.value === 'CUSTOM') {
-                custom.classList.remove('hidden');
-                custom.focus();
-            } else {
-                custom.classList.add('hidden');
-                custom.value = '';
-            }
+            if (select.value === 'CUSTOM') { custom.classList.remove('hidden'); custom.focus(); } 
+            else { custom.classList.add('hidden'); custom.value = ''; }
         }
 
         function resetForm() {
             document.getElementById('f_id').value = '';
             document.getElementById('f_name').value = '';
             document.getElementById('f_unit_select').value = '';
-            document.getElementById('f_unit_custom').value = '';
             document.getElementById('f_unit_custom').classList.add('hidden');
             document.getElementById('f_dog_min').value = '';
             document.getElementById('f_dog_max').value = '';
@@ -218,15 +264,12 @@
         }
 
         function editParam(id) {
-            resetForm();
             const p = allParams.find(item => item.id === id);
             if (!p) return;
-
+            resetForm();
             document.getElementById('f_id').value = p.id;
             document.getElementById('f_name').value = p.parameter_name;
-            
-            // จัดการหน่วย
-            const stdUnits = ['10^9/L', '10^12/L', 'fL', 'pg', 'g/L', 'ml/L', 'g/dL', 'U/L', 'mg/dL', 'mmol/L', 'umol/L', '%'];
+            const stdUnits = ['10^9/L', '10^12/L', 'fL', 'pg', 'g/L', 'g/dL', 'mg/dL', 'U/L', 'mmol/L', 'umol/L', '%'];
             if (stdUnits.includes(p.unit)) {
                 document.getElementById('f_unit_select').value = p.unit;
             } else if (p.unit) {
@@ -234,12 +277,10 @@
                 document.getElementById('f_unit_custom').value = p.unit;
                 document.getElementById('f_unit_custom').classList.remove('hidden');
             }
-
             document.getElementById('f_dog_min').value = p.dog_min;
             document.getElementById('f_dog_max').value = p.dog_max;
             document.getElementById('f_cat_min').value = p.cat_min;
             document.getElementById('f_cat_max').value = p.cat_max;
-
             document.getElementById('btn-delete').classList.remove('hidden');
             document.getElementById(`param-${id}`).classList.add('active');
         }
@@ -247,13 +288,12 @@
         async function saveData() {
             const name = document.getElementById('f_name').value.trim();
             if (!name) return alert("❌ โปรดระบุชื่อ Parameter");
-
             const unitSelect = document.getElementById('f_unit_select').value;
             const unit = unitSelect === 'CUSTOM' ? document.getElementById('f_unit_custom').value.trim() : unitSelect;
 
             const payload = {
                 parameter_name: name,
-                category: currentActiveTab, // บันทึก CBC หรือ Chem
+                category: currentActiveTab,
                 unit: unit,
                 dog_min: parseFloat(document.getElementById('f_dog_min').value) || 0,
                 dog_max: parseFloat(document.getElementById('f_dog_max').value) || 0,
@@ -276,9 +316,7 @@
 
         async function deleteData() {
             const id = document.getElementById('f_id').value;
-            const name = document.getElementById('f_name').value;
-            if (!id || !confirm(`⚠️ ยืนยันการลบ "${name}"?`)) return;
-
+            if (!id || !confirm(`⚠️ ยืนยันการลบพารามิเตอร์นี้?`)) return;
             try {
                 await db.from('mas_lab_parameters').delete().eq('id', id);
                 alert("🗑️ ลบพารามิเตอร์สำเร็จ");
