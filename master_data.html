@@ -42,7 +42,7 @@
             <div class="tab-btn" onclick="switchTab('species')"><span>🐾</span> ชนิดสัตว์</div>
             <div class="tab-btn" onclick="switchTab('breeds')"><span>🐕</span> สายพันธุ์สัตว์</div>
             <div class="tab-btn" onclick="switchTab('sub_cat')"><span>📂</span> หมวดหมู่สินค้า</div>
-            <div class="tab-btn" onclick="switchTab('templates')"><span>🏷️</span> เทมเพลตการพิมพ์ (ถาวร)</div>
+            <div class="tab-btn" onclick="switchTab('templates')"><span>🏷️</span> เทมเพลตการพิมพ์</div>
         </aside>
 
         <main class="flex-1 flex gap-4 p-4 overflow-hidden">
@@ -94,7 +94,7 @@
             templates: { 
                 table: 'print_templates', title: 'เทมเพลตการพิมพ์', 
                 fields: [
-                    { name: 'template_type', label: 'รหัสเทมเพลต (ID ถาวร)', type: 'text' },
+                    { name: 'template_type', label: 'รหัสเทมเพลต (ID)', type: 'text' },
                     { name: 'config', label: 'การตั้งค่า Layout (JSON)', type: 'textarea' }
                 ] 
             }
@@ -156,7 +156,7 @@
             config[currentTab].fields.forEach(field => {
                 let inputHtml = '';
                 const isPK = (currentTab === 'templates' && field.name === 'template_type');
-                const readOnly = (isPK && selectedId && permanentTemplates.includes(selectedId)) ? 'readonly' : '';
+            const readOnly = (isPK && selectedId) ? 'readonly' : '';
 
                 if (field.type === 'text') {
                     inputHtml = `<input type="text" id="f_${field.name}" class="input-box" placeholder="ระบุ${field.label}" ${readOnly}>`;
@@ -202,8 +202,7 @@
                 const id = (currentTab === 'templates') ? item.template_type : item.id;
                 const div = document.createElement('div');
                 div.className = `list-item ${selectedId === id ? 'selected' : ''}`;
-                const isPermanent = permanentTemplates.includes(id);
-                div.innerHTML = `<div><div class="font-medium text-white">${item.name || id}</div>${isPermanent ? '<span class="text-[10px] bg-teal-500/20 text-teal-400 px-2 rounded-full">SYSTEM</span>' : ''}</div><div class="text-gray-500 text-xs text-right">ID: ${id.toString().slice(0,12)}</div>`;
+                div.innerHTML = `<div><div class="font-medium text-white">${item.name || id}</div></div><div class="text-gray-500 text-xs text-right">ID: ${id.toString().slice(0,12)}</div>`;
                 div.onclick = () => selectItem(item, id);
                 container.appendChild(div);
             });
@@ -215,8 +214,7 @@
             document.getElementById('form-title').innerText = 'แก้ไขรายการ';
             document.getElementById('form-title').className = 'font-bold text-lg text-yellow-400';
             
-            const isPermanent = permanentTemplates.includes(id);
-            document.getElementById('btn-delete').classList.toggle('hidden', isPermanent);
+            document.getElementById('btn-delete').classList.remove('hidden');
             
             config[currentTab].fields.forEach(field => {
                 const el = document.getElementById(`f_${field.name}`);
