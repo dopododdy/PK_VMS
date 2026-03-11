@@ -565,40 +565,119 @@ async function fetchRecords() {
         }
 
         async function executeDynamicPrint(dataList, templateType) {
-            const { data: t } = await db.from('print_templates').select('config').eq('template_type', templateType).single();
-            const config = t.config, px = 3.78, pw = window.open('', '_blank');
-            let html = `<html><head><style>body{margin:0;padding:0;}.sticker{position:relative;width:${config.width}mm;height:${config.height}mm;overflow:hidden;page-break-after:always;}.elem{position:absolute;color:black;line-height:1.2;}@page{size:${config.width}mm ${config.height}mm;margin:0;}</style></head><body>`;
-            dataList.forEach(data => {
-                html += `<div class="sticker">`;
-                config.lines.forEach(l => {
-                    let txt = l.text.replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || "");
-                    let style = `top:${l.y*px}px; font-family:'Sarabun'; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'};`;
-                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`; else if (l.align === 'right') style += `right:${l.x*px}px; text-align:right;`; else style += `left:${l.x*px}px;`;
-                    html += `<div class="elem" style="${style}">${txt}</div>`;
-                });
-                html += `</div>`;
-            });
-            html += `</body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></html>`;
-            pw.document.write(html); pw.document.close();
-        }
+    const { data: t } = await db.from('print_templates').select('config').eq('template_type', templateType).single();
+    const config = t.config;
+    const px = 3.78;
+    const pw = window.open('', '_blank');
+    
+    // 1. นำเข้า Font Sarabun และกำหนด Style พื้นฐาน
+    let html = `<html><head>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
+            .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; }
+            .elem { position:absolute; color:black; line-height:1.2; }
+            @page { size:${config.width}mm ${config.height}mm; margin:0; }
+        </style>
+    </head><body>`;
+    
+    // 2. วนลูปสร้างหน้าสติ๊กเกอร์ตามจำนวนข้อมูล
+    dataList.forEach(data => {
+        html += `<div class="sticker">`;
+        config.lines.forEach(l => {
+            // ป้องกัน Error กรณีที่ element นั้นเป็นกรอบสี่เหลี่ยมหรือรูปภาพ (ไม่มีข้อความ)
+            let txt = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || "");
+            
+            // กำหนด Style สำหรับข้อความ
+            let style = `top:${l.y * px}px; font-family:'Sarabun', sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'};`;
+            
+            // จัดการการจัดหน้า (Alignment)
+            if (l.align === 'center') {
+                style += `left:0; width:100%; text-align:center;`; 
+            } else if (l.align === 'right') {
+                style += `right:${l.x * px}px; text-align:right;`; 
+            } else {
+                style += `left:${l.x * px}px;`;
+            }
+            
+            // วาด Element ลงไป
+            html += `<div class="elem" style="${style}">${txt}</div>`;
+        });
+        html += `</div>`;
+    });
+    
+    // 3. หน่วงเวลา 800ms รอให้โหลดฟอนต์เสร็จก่อนสั่งพิมพ์
+    html += `</body><script>
+        window.onload = () => {
+            setTimeout(() => {
+                window.print();
+                window.close();
+            }, 800);
+        };
+    <\/script></html>`;
+    
+    pw.document.write(html); 
+    pw.document.close();
+}
 
-        function executeMultiTemplatePrint(jobs) {
-            const px = 3.78, pw = window.open('', '_blank', 'width=400');
-            const pageWidth = jobs[0].config.width || 80, pageHeight = jobs[0].config.height || 50;
-            let html = `<html><head><style>body{margin:0;padding:0;}.sticker{position:relative;width:${pageWidth}mm;height:${pageHeight}mm;overflow:hidden;page-break-after:always;}.elem{position:absolute;color:black;line-height:1.2;}@page{size:${pageWidth}mm ${pageHeight}mm;margin:0;}</style></head><body>`;
-            jobs.forEach(job => {
-                html += `<div class="sticker">`;
-                job.config.lines.forEach(l => {
-                    let style = `top:${l.y*px}px; left:${l.x*px}px; font-family:'Sarabun'; font-size:${l.size*1.33}px; font-weight:${l.bold?'bold':'normal'}; position:absolute;`;
-                    if (l.align === 'center') style = `top:${l.y*px}px; left:0; width:${pageWidth*px}px; text-align:center; position:absolute; font-size:${l.size*1.33}px;`;
-                    let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => job.data[k.trim()] || m);
-                    html += `<div class="elem" style="${style}">${content}</div>`;
-                });
-                html += `</div>`;
-            });
-            html += `</body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},500);};<\/script></html>`;
-            pw.document.write(html); pw.document.close();
-        }
+function executeMultiTemplatePrint(jobs) {
+    const px = 3.78;
+    const pw = window.open('', '_blank', 'width=400');
+    const pageWidth = jobs[0].config.width || 80;
+    const pageHeight = jobs[0].config.height || 50;
+    
+    // 1. นำเข้า Font Sarabun และกำหนด Style พื้นฐาน
+    let html = `<html><head>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <style>
+            body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
+            .sticker { position:relative; width:${pageWidth}mm; height:${pageHeight}mm; overflow:hidden; page-break-after:always; }
+            .elem { position:absolute; color:black; line-height:1.2; }
+            @page { size:${pageWidth}mm ${pageHeight}mm; margin:0; }
+        </style>
+    </head><body>`;
+    
+    // 2. วนลูปสร้างหน้าสติ๊กเกอร์ตามจำนวนข้อมูล/เทมเพลตที่ส่งมา (เช่น ข้อมูลสัตว์ + ใบนัดหมาย)
+    jobs.forEach(job => {
+        html += `<div class="sticker">`;
+        job.config.lines.forEach(l => {
+            // จัดการ Style สำหรับข้อความ
+            let style = `top:${l.y * px}px; font-family:'Sarabun', sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; position:absolute;`;
+            
+            // จัดการการจัดหน้า (Alignment) ให้ครอบคลุม ซ้าย กลาง ขวา
+            if (l.align === 'center') {
+                style += `left:0; width:${pageWidth * px}px; text-align:center;`;
+            } else if (l.align === 'right') {
+                style += `right:${l.x * px}px; text-align:right;`;
+            } else {
+                style += `left:${l.x * px}px;`;
+            }
+            
+            // แทนที่ตัวแปร ป้องกัน Error หาก l.text ไม่มีค่า
+            let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => job.data[k.trim()] || "");
+            
+            // วาด Element ลงไป
+            html += `<div class="elem" style="${style}">${content}</div>`;
+        });
+        html += `</div>`;
+    });
+    
+    // 3. หน่วงเวลา 800ms รอให้โหลดฟอนต์เสร็จก่อนสั่งพิมพ์
+    html += `</body><script>
+        window.onload = () => {
+            setTimeout(() => {
+                window.print();
+                window.close();
+            }, 800);
+        };
+    <\/script></html>`;
+    
+    pw.document.write(html); 
+    pw.document.close();
+}
+
+
+        
     </script>
 </body>
 </html>
