@@ -239,9 +239,38 @@
             handleUnitChange();
         }
 
+// ✅ อัปเดตลำดับที่ถูกต้องตามตารางอ้างอิงใหม่
+        const PARAM_ORDER = [
+            // CBC
+            'WBC', 'Lym#', 'Mid#', 'Gran#', 'Lym%', 'Mid%', 'Gran%', 'NLR', 'PLR',
+            'RBC', 'HGB', 'HCT', 'MCV', 'MCH', 'MCHC', 'RDW-CV', 'RDW-SD',
+            'PLT', 'MPV', 'PDW-CV', 'PDW-SD', 'PCT', 'P-LCC', 'P-LCR',
+            // Chemistry
+            'Alb', 'TP', 'ALP', 'ALT', 'AST', 'GGT', 'DBIL', 'TBIL', 'Glob', 'IBIL', 'Alb/Glob',
+            'Ca', 'Crea', 'CO2', 'TCH', 'Glu', 'BUN', 'Amy', 'BUN/Crea', 'TBA', 'AST/ALT', 'P', 'CK'
+        ];
+
         async function loadParams() {
-            const { data } = await db.from('mas_lab_parameters').select('*').order('parameter_name');
-            allParams = data || [];
+            const { data } = await db.from('mas_lab_parameters').select('*');
+            
+            let fetchedData = data || [];
+            
+            // ทำให้ Array ต้นแบบเป็นตัวพิมพ์ใหญ่ทั้งหมดเพื่อใช้เทียบง่ายๆ
+            const upperParamOrder = PARAM_ORDER.map(p => p.toUpperCase());
+            
+            // ✅ จัดเรียงตามลำดับใน Array ด้านบน โดยไม่สนใจตัวพิมพ์เล็ก-ใหญ่
+            fetchedData.sort((a, b) => {
+                let indexA = upperParamOrder.indexOf(a.parameter_name.toUpperCase());
+                let indexB = upperParamOrder.indexOf(b.parameter_name.toUpperCase());
+                
+                // ถ้าพารามิเตอร์ไหนในฐานข้อมูลไม่มีใน List จะถูกเด้งไปอยู่ล่างสุด (999)
+                if (indexA === -1) indexA = 999;
+                if (indexB === -1) indexB = 999;
+                
+                return indexA - indexB;
+            });
+
+            allParams = fetchedData;
             renderList();
         }
 
