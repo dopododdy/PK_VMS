@@ -90,12 +90,15 @@
                 <div id="view-input">
                     <div class="flex justify-between items-center mb-8">
                         <div>
-                            <h3 class="text-2xl font-black text-white">บันทึกผลเลือดใหม่</h3>
+                            <h3 class="text-2xl font-black text-white" id="form-title-text">บันทึกผลเลือดใหม่</h3>
                             <p class="text-teal-500 font-bold text-sm mt-1" id="disp-ref-mode">-</p>
                         </div>
-                        <button onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-2xl font-black transition flex items-center gap-3 shadow-lg">
-                            <i data-lucide="save"></i> บันทึกผลเลือด
-                        </button>
+                        <div class="flex gap-3">
+                            <button id="btn-cancel-edit" onclick="cancelEditLab()" class="hidden bg-gray-700 hover:bg-gray-600 px-6 py-4 rounded-2xl font-black transition text-white">ยกเลิก</button>
+                            <button id="btn-save-lab" onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-2xl font-black transition flex items-center gap-3 shadow-lg text-white">
+                                <i data-lucide="save"></i> บันทึกผลเลือด
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -216,6 +219,7 @@
     <script>
         let masterParams = [], currentAnimal = null, labHistory = [], imagingHistory = [];
         let currentAgeYears = 0;
+        let editingLabSession = null;
 
         // ✅ อัปเดตลำดับที่ถูกต้องตามตารางอ้างอิงใหม่
         const PARAM_ORDER = [
@@ -304,23 +308,37 @@
         }
 
         async function selectAnimal(id) {
+            // ✅ ยกเลิกโหมดแก้ไขอัตโนมัติถ้ามีการสลับไปดูสัตว์ตัวอื่น
+            if (editingLabSession) {
+                cancelEditLab(); 
+            }
+
             const { data: a } = await db.from('animals').select('*').eq('id', id).single();
             currentAnimal = a;
             
+            // อัปเดตแถบสีส้มด้านซ้าย (Sidebar) ให้ไฮไลท์ตัวที่ถูกเลือก
             document.querySelectorAll('.pet-card').forEach(c => c.classList.remove('active'));
             document.getElementById(`pet-${id}`)?.classList.add('active');
+            
+            // ซ่อนหน้าว่างๆ และแสดงหน้าต่างแก้ไข Lab
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('lab-editor').classList.remove('hidden');
             
+            // แสดงข้อมูลสัตว์บน Header
             document.getElementById('disp-name').innerText = a.pet_name;
             document.getElementById('disp-hn').innerText = `HN: ${a.owner_hn} | ${a.pet_type} (${a.breed})`;
             document.getElementById('ec-bw').value = a.weight || '';
 
+            // โหลดข้อมูลทั้งหมดของสัตว์ตัวนี้
             renderInputForm(); 
             await fetchLabHistory(id); 
             await fetchImagingHistory(id); 
+            
+            // บังคับเปิดไปที่แท็บ Input (กรอกผลเลือด) เสมอเวลาเปลี่ยนตัว
             switchTab('input', document.getElementById('tab-input'));
         }
+
+        
 
         function renderInputForm() {
             const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
@@ -361,10 +379,24 @@
 
         function renderTrendTable() {
             const sessions = {}; 
-            labHistory.forEach(r => { if(!sessions[r.created_at]) sessions[r.created_at] = {}; sessions[r.created_at][r.parameter_name] = r; });
+            labHistory.forEach(r => { 
+                if(!sessions[r.created_at]) sessions[r.created_at] = {}; 
+                sessions[r.created_at][r.parameter_name] = r; 
+            });
             const sortedTs = Object.keys(sessions).sort((a,b) => new Date(b) - new Date(a));
             
-            document.getElementById('trend-head').innerHTML = `<tr><th class="fixed-col">Parameter</th>${sortedTs.map(ts => `<th><button onclick="deleteSession('${ts}')" class="text-gray-600 hover:text-red-500 text-xs mb-1">✕ Del</button><br><span class="text-white">${formatThaiDate(new Date(ts))}</span></th>`).join('')}</tr>`;
+            // แทรกปุ่ม Edit และ Delete ตรงนี้
+            document.getElementById('trend-head').innerHTML = `<tr>
+                <th class="fixed-col">Parameter</th>
+                ${sortedTs.map(ts => `
+                <th>
+                    <div class="flex justify-center gap-3 mb-1">
+                        <button onclick="editSession('${ts}')" class="text-blue-500 hover:text-blue-400 text-xs">✏️ Edit</button>
+                        <button onclick="deleteSession('${ts}')" class="text-red-500 hover:text-red-400 text-xs">✕ Del</button>
+                    </div>
+                    <span class="text-white">${formatThaiDate(new Date(ts))}</span>
+                </th>`).join('')}
+            </tr>`;
             
             document.getElementById('trend-body').innerHTML = masterParams.map(p => {
                 let html = `<td class="fixed-col font-bold text-slate-300 text-sm pl-4">${p.parameter_name} <span class="text-[10px] text-gray-500 font-normal ml-2">${p.unit || ''}</span></td>`;
@@ -458,13 +490,91 @@
 
         async function deleteImaging(id) { if (confirm("ลบประวัตินี้?")) { await db.from('imaging_results').delete().eq('id', id); fetchImagingHistory(currentAnimal.id); } }
         
-        async function saveLabResults() {
-            const results = []; const ts = new Date().toISOString();
-            document.querySelectorAll('.lab-input').forEach(i => { if (i.value) results.push({ animal_id: currentAnimal.id, parameter_id: i.dataset.id, parameter_name: i.dataset.name, test_value: parseFloat(i.value), unit: i.dataset.unit, created_at: ts }); });
-            if (results.length === 0) return alert("กรุณากรอกข้อมูล");
-            const { error } = await db.from('lab_results').insert(results);
-            if (!error) { alert("บันทึกสำเร็จ"); fetchLabHistory(currentAnimal.id); switchTab('trends', document.getElementById('tab-trends')); document.querySelectorAll('.lab-input').forEach(i => i.value = ''); }
+        // ฟังก์ชันเมื่อกดปุ่ม Edit
+        function editSession(ts) {
+            editingLabSession = ts;
+            const sessionData = labHistory.filter(r => r.created_at === ts);
+            
+            // ล้างค่าช่องกรอกทั้งหมดก่อน
+            document.querySelectorAll('.lab-input').forEach(i => i.value = '');
+            
+            // ดึงค่าเก่ามาใส่ในช่องกรอก
+            sessionData.forEach(res => {
+                const input = document.querySelector(`.lab-input[data-name="${res.parameter_name}"]`);
+                if (input) input.value = res.test_value;
+            });
+            
+            // เปลี่ยนหน้าตา UI เป็นโหมดแก้ไข
+            document.getElementById('form-title-text').innerText = '✏️ แก้ไขผลเลือด';
+            document.getElementById('disp-ref-mode').innerText = `อัปเดตข้อมูลของวันที่: ${formatThaiDate(new Date(ts))}`;
+            
+            const saveBtn = document.getElementById('btn-save-lab');
+            saveBtn.innerHTML = '<i data-lucide="save"></i> อัปเดตผลเลือด';
+            saveBtn.classList.remove('bg-teal-600', 'hover:bg-teal-500');
+            saveBtn.classList.add('bg-blue-600', 'hover:bg-blue-500');
+            
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            
+            // สลับกลับไปที่แท็บ Input
+            switchTab('input', document.getElementById('tab-input'));
         }
+
+        // ฟังก์ชันยกเลิกการแก้ไข
+        function cancelEditLab() {
+            editingLabSession = null;
+            document.querySelectorAll('.lab-input').forEach(i => i.value = '');
+            
+            document.getElementById('form-title-text').innerText = 'บันทึกผลเลือดใหม่';
+            const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
+            document.getElementById('disp-ref-mode').innerText = `อ้างอิงช่วงอายุ: ${refInfo.modeName}`;
+            
+            const saveBtn = document.getElementById('btn-save-lab');
+            saveBtn.innerHTML = '<i data-lucide="save"></i> บันทึกผลเลือด';
+            saveBtn.classList.add('bg-teal-600', 'hover:bg-teal-500');
+            saveBtn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
+            
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            lucide.createIcons();
+        }
+
+        // ฟังก์ชัน Save (รองรับทั้งเพิ่มใหม่ และ อัปเดต)
+        async function saveLabResults() {
+            const results = []; 
+            // ถ้าเป็นการแก้ไข ให้ใช้ timestamp เดิม (ข้อมูลจะได้อยู่คอลัมน์เดิม) ถ้าเพิ่มใหม่สร้าง ts ใหม่
+            const ts = editingLabSession ? editingLabSession : new Date().toISOString();
+            
+            document.querySelectorAll('.lab-input').forEach(i => { 
+                if (i.value) {
+                    results.push({ 
+                        animal_id: currentAnimal.id, 
+                        parameter_id: i.dataset.id, 
+                        parameter_name: i.dataset.name, 
+                        test_value: parseFloat(i.value), 
+                        unit: i.dataset.unit, 
+                        created_at: ts 
+                    }); 
+                }
+            });
+            
+            if (results.length === 0) return alert("กรุณากรอกข้อมูล");
+            
+            // หากเป็นการแก้ไข ให้ลบผลเลือดชุดเก่า (ของเวลานี้) ทิ้งก่อน แล้วค่อย Insert ใหม่ทับเข้าไป
+            if (editingLabSession) {
+                await db.from('lab_results').delete().eq('animal_id', currentAnimal.id).eq('created_at', editingLabSession);
+            }
+            
+            const { error } = await db.from('lab_results').insert(results);
+            
+            if (!error) { 
+                alert(editingLabSession ? "อัปเดตข้อมูลสำเร็จ" : "บันทึกข้อมูลสำเร็จ"); 
+                cancelEditLab(); // รีเซ็ตฟอร์ม
+                await fetchLabHistory(currentAnimal.id); 
+                switchTab('trends', document.getElementById('tab-trends')); 
+            } else {
+                alert("เกิดข้อผิดพลาด: " + error.message);
+            }
+        }
+        
 
         async function deleteSession(ts) { if (confirm("ลบผลเลือดชุดนี้ทิ้งอย่างถาวร?")) { await db.from('lab_results').delete().eq('animal_id', currentAnimal.id).eq('created_at', ts); fetchLabHistory(currentAnimal.id); } }
         function switchTab(tab, el) { document.querySelectorAll('.lab-tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); ['input', 'imaging', 'echo', 'trends'].forEach(v => document.getElementById('view-'+v).classList.add('hidden')); document.getElementById('view-' + tab).classList.remove('hidden'); lucide.createIcons(); }
