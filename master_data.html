@@ -176,14 +176,34 @@
 
         function loadPreset(val) {
             if (!val) return;
-            document.getElementById('f_template_type').value = val;
-            let w = 80, h = 50;
-            if (val.startsWith('thermal')) h = 150;
-            if (val.includes('a5')) { w = 210; h = 148; }
-            if (val.includes('a4')) { w = 210; h = 297; }
-            const preset = { width: w, height: h, lines: [] };
-            document.getElementById('f_config').value = JSON.stringify(preset, null, 4);
+            
+            // เช็คว่าในระบบมีเทมเพลตชื่อนี้อยู่แล้วหรือไม่ (currentData ดึงมาจาก Supabase แล้วตอนเปิดแท็บ)
+            const existingItem = currentData.find(item => item.template_type === val);
+            
+            if (existingItem) {
+                // ถ้ามีอยู่แล้ว ให้เข้าสู่โหมดแก้ไข และดึงข้อมูลเก่ามาแสดง
+                selectItem(existingItem, val);
+                document.getElementById('form-title').innerText = 'แก้ไขรายการ (ดึงข้อมูลเดิมมาแสดง)';
+            } else {
+                // ถ้ายังไม่มี ให้สร้างโครงสร้างเปล่าๆ แบบสร้างใหม่
+                selectedId = null; // ยืนยันว่าเป็นรายการใหม่
+                document.getElementById('f_template_type').value = val;
+                
+                let w = 80, h = 50;
+                if (val.startsWith('thermal')) h = 150;
+                if (val.includes('a5')) { w = 210; h = 148; }
+                if (val.includes('a4')) { w = 210; h = 297; }
+                const preset = { width: w, height: h, lines: [] };
+                
+                const configBox = document.getElementById('f_config');
+                if (configBox) configBox.value = JSON.stringify(preset, null, 4);
+                
+                document.getElementById('form-title').innerText = 'เพิ่มรายการใหม่';
+                document.getElementById('form-title').className = 'font-bold text-lg text-teal-400';
+                document.getElementById('btn-delete').classList.add('hidden');
+            }
         }
+
 
         async function loadData() {
             const listContainer = document.getElementById('data-list');
@@ -242,22 +262,44 @@
         async function saveData() {
             const payload = {};
             let hasError = false;
+            
             config[currentTab].fields.forEach(f => {
                 const el = document.getElementById(`f_${f.name}`);
                 const val = el.value.trim();
                 if (!val) hasError = true;
                 if (f.name === 'config') {
-                    try { payload[f.name] = JSON.parse(val); } catch(e) { alert('JSON รูปแบบไม่ถูกต้อง'); hasError = true; }
-                } else payload[f.name] = val;
+                    try { payload[f.name] = JSON.parse(val); } catch(e) { alert('❌ JSON รูปแบบไม่ถูกต้อง'); hasError = true; }
+                } else {
+                    payload[f.name] = val;
+                }
             });
-            if (hasError) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+            
+            if (hasError) return alert('กรุณากรอกข้อมูลและตรวจสอบรูปแบบให้ถูกต้องครบถ้วน');
 
             try {
                 const pk = currentTab === 'templates' ? 'template_type' : 'id';
-                const { error } = selectedId ? await db.from(config[currentTab].table).update(payload).eq(pk, selectedId) : await db.from(config[currentTab].table).insert([payload]);
+                
+                // กันเหนียว: ถ้ากำลังเพิ่มรายการใหม่ แต่ดันพิมพ์รหัสที่ซ้ำกับในระบบ
+                if (!selectedId) {
+                    const isDuplicate = currentData.find(item => item[pk] === payload[pk]);
+                    if (isDuplicate) {
+                        return alert('❌ รหัสนี้มีอยู่ในระบบแล้ว กรุณาเลือกแก้ไขจากรายการด้านซ้าย หรือพิมพ์รหัสใหม่');
+                    }
+                }
+
+                // ถ้ามี selectedId ให้ Update ถ้าไม่มีให้ Insert
+                const { error } = selectedId 
+                    ? await db.from(config[currentTab].table).update(payload).eq(pk, selectedId) 
+                    : await db.from(config[currentTab].table).insert([payload]);
+                    
                 if (error) throw error;
-                alert('บันทึกสำเร็จ!'); resetForm(); loadData();
-            } catch (err) { alert('บันทึกไม่สำเร็จ: ' + err.message); }
+                
+                alert('✅ บันทึกสำเร็จ!'); 
+                resetForm(); 
+                loadData();
+            } catch (err) { 
+                alert('❌ บันทึกไม่สำเร็จ: ' + err.message); 
+            }
         }
 
         async function deleteData() {
