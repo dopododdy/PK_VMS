@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <style>
+<style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8a6; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; margin: 0; overflow: hidden; }
@@ -27,12 +27,34 @@
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         
-        /* Trend Table & Scaling */
+        /* --- [New] Input Row Text Sizes --- */
+        /* ปรับขนาดตัวอักษรหน้ากรอกผลเลือดให้ชัดขึ้น */
+        .lab-row-label { font-size: 0.95rem; font-weight: 700; color: #f1f5f9; }
+        .lab-row-unit { font-size: 0.9rem; color: #94a3b8; font-weight: 500; } 
+        .lab-row-ref { font-size: 0.9rem; color: #5eead4; font-family: monospace; font-weight: 600; }
+
+        /* --- [New] Trend Table & Sticky Columns --- */
         .trend-container { overflow-x: auto; border-radius: 20px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); }
-        .trend-table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        .trend-table th { background: rgba(15, 23, 42, 0.95); padding: 15px; border: 1px solid var(--border); font-size: 0.75rem; color: #94a3b8; }
-        .trend-table td { padding: 14px; border: 1px solid var(--border); text-align: center; font-size: 1rem; }
-        .fixed-col { position: sticky; left: 0; background: #0f172a !important; z-index: 10; min-width: 180px; text-align: left !important; }
+        .trend-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px; }
+        .trend-table th { background: rgba(15, 23, 42, 0.95); padding: 15px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); font-size: 0.8rem; color: #94a3b8; }
+        .trend-table td { padding: 14px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); text-align: center; font-size: 1.1rem; }
+
+        /* ตรึง 3 คอลัมน์แรก: Parameter, Unit, Reference */
+        .col-sticky-param { 
+            position: sticky; left: 0; background: #0f172a !important; z-index: 20; 
+            min-width: 180px; text-align: left !important; border-right: 2px solid var(--teal) !important;
+            font-size: 0.95rem !important; font-weight: 700;
+        }
+        .col-sticky-unit { 
+            position: sticky; left: 180px; background: #0f172a !important; z-index: 19; 
+            min-width: 100px; border-right: 1px solid var(--border) !important;
+            font-size: 0.95rem !important; color: #94a3b8;
+        }
+        .col-sticky-ref { 
+            position: sticky; left: 280px; background: #1e293b !important; z-index: 18; 
+            min-width: 140px; border-right: 2px solid var(--teal) !important;
+            font-size: 0.95rem !important; color: #5eead4; font-family: monospace;
+        }
 
         .v-high-severe { color: #ff0000; background: rgba(255, 0, 0, 0.25); font-weight: 900; }
         .v-high-mod { color: #ff4d4d; background: rgba(255, 77, 77, 0.15); font-weight: 800; }
@@ -42,7 +64,12 @@
         .v-low-mild { color: #99ccff; }
         .v-normal { color: #ffffff; }
 
-        .echo-label { font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        /* --- [New] Echo Styles --- */
+        .echo-label { font-size: 11px; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        .echo-label.highlight-teal { color: var(--teal); }
+        /* RVOT และป้ายกำกับทั่วไปใช้สีเทามาตรฐานตามฟิลด์อื่น */
+        .echo-label-normal { font-size: 11px; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: block; }
+
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
     </style>
@@ -165,14 +192,32 @@
                                     <div><label class="echo-label text-teal-500 font-black">Ao (cm)</label><input type="number" step="0.01" id="ec-ao" class="input-box ec-in" oninput="runEchoCalc()"></div>
                                 </div>
                                 <p class="text-[10px] font-black text-blue-400 mb-4 uppercase tracking-widest">Doppler & Inflow Velocities (cm/s)</p>
-                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                    <div><label class="echo-label">Mitral E</label><input type="number" id="ec-me" class="input-box ec-in"></div>
-                                    <div><label class="echo-label">Mitral A</label><input type="number" id="ec-ma" class="input-box ec-in"></div>
-                                    <div><label class="echo-label">LVOT</label><input type="number" id="ec-lvot" class="input-box ec-in"></div>
-                                    <div><label class="echo-label text-orange-400">RVOT</label><input type="number" id="ec-rvot" class="input-box ec-in"></div>
-                                    <div><label class="echo-label">Tricuspid E</label><input type="number" id="ec-te" class="input-box ec-in"></div>
-                                    <div><label class="echo-label">Tricuspid A</label><input type="number" id="ec-ta" class="input-box ec-in"></div>
-                                </div>
+                               <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+    <div>
+        <label class="echo-label-normal">Mitral E</label>
+        <input type="number" id="ec-me" class="input-box ec-in">
+    </div>
+    <div>
+        <label class="echo-label-normal">Mitral A</label>
+        <input type="number" id="ec-ma" class="input-box ec-in">
+    </div>
+    <div>
+        <label class="echo-label-normal">LVOT</label>
+        <input type="number" id="ec-lvot" class="input-box ec-in">
+    </div>
+    <div>
+        <label class="echo-label-normal">RVOT (cm/s)</label>
+        <input type="number" id="ec-rvot" class="input-box ec-in">
+    </div>
+    <div>
+        <label class="echo-label-normal">Tricuspid E</label>
+        <input type="number" id="ec-te" class="input-box ec-in">
+    </div>
+    <div>
+        <label class="echo-label-normal">Tricuspid A</label>
+        <input type="number" id="ec-ta" class="input-box ec-in">
+    </div>
+</div>
                             </div>
                             <div class="section-card">
                                 <label class="echo-label text-teal-500">Impression / Notes</label>
@@ -341,31 +386,38 @@
         
 
         function renderInputForm() {
-            const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
-            document.getElementById('disp-ref-mode').innerText = `อ้างอิงช่วงอายุ: ${refInfo.modeName}`;
+    const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
+    document.getElementById('disp-ref-mode').innerText = `อ้างอิงช่วงอายุ: ${refInfo.modeName}`;
 
-            let htmlCbc = '', htmlChem = '';
+    let htmlCbc = '', htmlChem = '';
 
-            masterParams.forEach(p => {
-                const { min, max } = getRefRange(p, refInfo.mode, refInfo.isDog);
-                const displayRef = (min !== null && max !== null) ? `${min} - ${max}` : '-';
-                
-                const row = `
-                    <div class="grid grid-cols-4 gap-4 items-center p-3 border-b border-white/5 hover:bg-white/5 transition-all text-sm">
-                        <div class="font-bold text-slate-300 pl-2">${p.parameter_name}</div>
-                        <div class="text-gray-500 text-xs">${p.unit || '-'}</div>
-                        <div class="text-gray-500 font-mono text-xs italic">${displayRef}</div>
-                        <div><input type="number" step="0.01" class="input-box text-center lab-input font-bold text-teal-400 h-9" 
-                            data-id="${p.id}" data-name="${p.parameter_name}" data-min="${min}" data-max="${max}" data-unit="${p.unit}"></div>
-                    </div>`;
+    masterParams.forEach(p => {
+        const { min, max } = getRefRange(p, refInfo.mode, refInfo.isDog);
+        const displayRef = (min !== null && max !== null) ? `${min} - ${max}` : '-';
+        
+        // ใช้ Class lab-row-label, lab-row-unit และ lab-row-ref ตาม Style ใหม่
+        const row = `
+            <div class="grid grid-cols-4 gap-4 items-center p-3 border-b border-white/5 hover:bg-white/5 transition-all">
+                <div class="lab-row-label pl-2">${p.parameter_name}</div>
+                <div class="lab-row-unit">${p.unit || '-'}</div>
+                <div class="lab-row-ref">${displayRef}</div>
+                <div>
+                    <input type="number" step="0.01" class="input-box text-center lab-input font-bold text-teal-400 h-10" 
+                        data-id="${p.id}" 
+                        data-name="${p.parameter_name}" 
+                        data-min="${min}" 
+                        data-max="${max}" 
+                        data-unit="${p.unit}">
+                </div>
+            </div>`;
 
-                if (p.category === 'CBC') htmlCbc += row;
-                else htmlChem += row;
-            });
+        if (p.category === 'CBC') htmlCbc += row;
+        else htmlChem += row;
+    });
 
-            document.getElementById('cbc-container').innerHTML = htmlCbc;
-            document.getElementById('chem-container').innerHTML = htmlChem;
-        }
+    document.getElementById('cbc-container').innerHTML = htmlCbc;
+    document.getElementById('chem-container').innerHTML = htmlChem;
+}
 
         // --- TRENDS LOGIC (คำนวณอายุย้อนหลังตามวันที่เจาะเลือด) ---
         function getScaleClass(val, min, max) {
@@ -377,43 +429,58 @@
 
         async function fetchLabHistory(id) { const { data } = await db.from('lab_results').select('*').eq('animal_id', id).order('created_at', { ascending: false }); labHistory = data || []; renderTrendTable(); }
 
-        function renderTrendTable() {
-            const sessions = {}; 
-            labHistory.forEach(r => { 
-                if(!sessions[r.created_at]) sessions[r.created_at] = {}; 
-                sessions[r.created_at][r.parameter_name] = r; 
-            });
-            const sortedTs = Object.keys(sessions).sort((a,b) => new Date(b) - new Date(a));
-            
-            // แทรกปุ่ม Edit และ Delete ตรงนี้
-            document.getElementById('trend-head').innerHTML = `<tr>
-                <th class="fixed-col">Parameter</th>
-                ${sortedTs.map(ts => `
-                <th>
-                    <div class="flex justify-center gap-3 mb-1">
-                        <button onclick="editSession('${ts}')" class="text-blue-500 hover:text-blue-400 text-xs">✏️ Edit</button>
-                        <button onclick="deleteSession('${ts}')" class="text-red-500 hover:text-red-400 text-xs">✕ Del</button>
-                    </div>
-                    <span class="text-white">${formatThaiDate(new Date(ts))}</span>
-                </th>`).join('')}
-            </tr>`;
-            
-            document.getElementById('trend-body').innerHTML = masterParams.map(p => {
-                let html = `<td class="fixed-col font-bold text-slate-300 text-sm pl-4">${p.parameter_name} <span class="text-[10px] text-gray-500 font-normal ml-2">${p.unit || ''}</span></td>`;
-                
-                sortedTs.forEach(ts => { 
-                    const res = sessions[ts][p.parameter_name]; 
-                    const val = res ? res.test_value : '-'; 
-                    
-                    // คำนวณหา Ref Min/Max ย้อนหลังตามอายุ ณ วันที่เจาะเลือด
-                    const refInfo = getAgeReferenceMode(currentAnimal.birth_date, ts);
-                    const { min, max } = getRefRange(p, refInfo.mode, refInfo.isDog);
+       function renderTrendTable() {
+    const sessions = {}; 
+    labHistory.forEach(r => { 
+        if(!sessions[r.created_at]) sessions[r.created_at] = {}; 
+        sessions[r.created_at][r.parameter_name] = r; 
+    });
+    const sortedTs = Object.keys(sessions).sort((a,b) => new Date(b) - new Date(a));
+    
+    // 1. สร้าง Header: เพิ่มหัวข้อ Unit และ Reference
+    document.getElementById('trend-head').innerHTML = `<tr>
+        <th class="col-sticky-param">Parameter</th>
+        <th class="col-sticky-unit">Unit</th>
+        <th class="col-sticky-ref">Reference</th>
+        ${sortedTs.map(ts => `
+        <th class="text-center">
+            <div class="flex justify-center gap-3 mb-1">
+                <button onclick="editSession('${ts}')" class="text-blue-500 hover:text-blue-400 text-xs">✏️ Edit</button>
+                <button onclick="deleteSession('${ts}')" class="text-red-500 hover:text-red-400 text-xs">✕ Del</button>
+            </div>
+            <span class="text-white">${formatThaiDate(new Date(ts))}</span>
+        </th>`).join('')}
+    </tr>`;
+    
+    // 2. สร้าง Body: แยกข้อมูลเป็นคอลัมน์ตาม Style ใหม่
+    document.getElementById('trend-body').innerHTML = masterParams.map(p => {
+        // คำนวณหาค่า Reference ปัจจุบันเพื่อโชว์ในคอลัมน์ที่ 3 (เป็นเกณฑ์อ้างอิงหลัก)
+        const currentRefInfo = getAgeReferenceMode(currentAnimal.birth_date);
+        const cRef = getRefRange(p, currentRefInfo.mode, currentRefInfo.isDog);
+        const refRangeStr = (cRef.min !== null && cRef.max !== null) ? `${cRef.min} - ${cRef.max}` : '-';
 
-                    html += `<td class="${res ? getScaleClass(val, min, max) : ''}">${val} <br><span class="text-[9px] text-gray-600 font-mono">${min!==null ? `(${min}-${max})` : ''}</span></td>`; 
-                });
-                return `<tr class="border-b border-white/5 hover:bg-white/5">${html}</tr>`;
-            }).join('');
-        }
+        // สร้าง 3 คอลัมน์แรกที่ถูกตรึง (Sticky)
+        let html = `
+            <td class="col-sticky-param">${p.parameter_name}</td>
+            <td class="col-sticky-unit">${p.unit || '-'}</td>
+            <td class="col-sticky-ref">${refRangeStr}</td>
+        `;
+        
+        // สร้างคอลัมน์ข้อมูลตามวันที่ (Data Columns)
+        sortedTs.forEach(ts => { 
+            const res = sessions[ts][p.parameter_name]; 
+            const val = res ? res.test_value : '-'; 
+            
+            // คำนวณสีไฮไลท์ (getScaleClass) โดยอิงตามอายุ ณ วันที่เจาะเลือดจริง (คง Logic เดิม)
+            const histRefInfo = getAgeReferenceMode(currentAnimal.birth_date, ts);
+            const { min, max } = getRefRange(p, histRefInfo.mode, histRefInfo.isDog);
+
+            html += `<td class="${res ? getScaleClass(val, min, max) : ''}">${val}</td>`; 
+        });
+
+        return `<tr class="border-b border-white/5 hover:bg-white/5">${html}</tr>`;
+    }).join('');
+}
 
         // --- IMAGING & ECHO (คงเดิม) ---
         function runEchoCalc() {
