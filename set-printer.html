@@ -32,6 +32,11 @@
         .canvas-element:hover { outline: 1px dashed var(--teal); }
         .canvas-element.active { outline: 2px solid var(--teal) !important; background: rgba(20, 184, 17, 0.08); z-index: 100; }
         
+        /* ปรับปรุงการเลือกสีแบบ Preset */
+        .color-swatch { width: 32px; height: 32px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.active { border-color: var(--teal); box-shadow: 0 0 10px var(--teal); }
+
         .dragging { opacity: 0.5; transform: scale(0.98); border: 2px dashed var(--teal) !important; }
         .var-badge { background: rgba(20, 184, 17, 0.08); border: 1px solid rgba(20, 184, 17, 0.15); color: #4ade80; padding: 5px 12px; border-radius: 10px; font-size: 0.8rem; cursor: pointer; display: inline-block; margin: 4px; transition: 0.2s; font-family: monospace; }
         .var-badge:hover { background: var(--teal); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(20, 184, 17, 0.3); }
@@ -44,7 +49,6 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-        /* ป้องกันปัญหาขณะลากเส้นแบ่ง */
         body.resizing { cursor: col-resize !important; user-select: none !important; }
         .resizing .canvas-wrapper, .resizing img, .resizing .preview-area { pointer-events: none !important; }
     </style>
@@ -172,6 +176,15 @@
             I: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 20l4-16m-4 0h8M6 20h8" stroke-width="2"/></svg>`
         };
 
+        const PRESET_COLORS = [
+            { name: 'Black', hex: '#000000' },
+            { name: 'Slate', hex: '#475569' },
+            { name: 'Red', hex: '#ef4444' },
+            { name: 'Blue', hex: '#3b82f6' },
+            { name: 'Green', hex: '#22c55e' },
+            { name: 'Teal', hex: '#06b6d4' }
+        ];
+
         function replaceVars(text, fontSize, color) {
             const textColor = color || '#000000';
             if (text.includes("{{items_list}}")) {
@@ -267,13 +280,22 @@
             
             let fields = '';
             if (l.type === 'text') {
+                const colorButtons = PRESET_COLORS.map(c => `
+                    <div class="color-swatch ${l.color === c.hex ? 'active' : ''}" 
+                         style="background-color: ${c.hex}" 
+                         onclick="updateLine(${i}, 'color', '${c.hex}'); renderLinesList();"
+                         title="${c.name}"></div>
+                `).join('');
+
                 fields = `<div class="editor-group"><label class="label-title">เนื้อหาข้อความ</label><textarea class="input-control" oninput="updateLine(${i},'text',this.value)">${l.text}</textarea></div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="editor-group"><label class="label-title">ฟอนต์</label><select class="input-control" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun">Sarabun</option><option value="Kanit">Kanit</option><option value="Prompt">Prompt</option></select></div>
+                        <div class="editor-group"><label class="label-title">ฟอนต์</label><select class="input-control" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun" ${l.font==='Sarabun'?'selected':''}>Sarabun</option><option value="Kanit" ${l.font==='Kanit'?'selected':''}>Kanit</option><option value="Prompt" ${l.font==='Prompt'?'selected':''}>Prompt</option></select></div>
                         <div class="editor-group"><label class="label-title">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="editor-group"><label class="label-title">สี</label><input type="color" class="input-control h-10" value="${l.color || '#000000'}" oninput="updateLine(${i},'color',this.value)"></div>
+                        <div class="editor-group"><label class="label-title">เลือกสี</label>
+                            <div class="flex flex-wrap gap-2 pt-1">${colorButtons}</div>
+                        </div>
                         <div class="editor-group space-y-2"><label class="label-title">สไตล์</label><div class="flex gap-2"><button class="btn-align ${l.bold?'active':''}" onclick="updateLine(${i},'bold',${!l.bold});">${icons.B}</button><button class="btn-align ${l.italic?'active':''}" onclick="updateLine(${i},'italic',${!l.italic});">${icons.I}</button></div></div>
                     </div>${alignControl}`;
             } else if (l.type === 'rect') {
@@ -342,21 +364,26 @@
             win.document.close(); win.print();
         }
 
-        // --- รวมฟังก์ชันเริ่มต้น (ONLOAD) ไว้ที่เดียว ---
+        // --- ฟังก์ชันเริ่มต้นทำงาน (รวมไว้ที่เดียว ไม่ให้ซ้ำซ้อน) ---
         window.onload = async () => {
+            // 1. โหลด Template จาก Supabase
             await fetchAvailableTemplates();
+            
+            // 2. แสดงรายการ Variables ใน Sidebar
             const sideContainer = document.getElementById('var_sidebar_container');
             if (sideContainer) {
                 sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
                     <div>
                         <div class="var-category-title" style="color:var(--teal); font-weight:800; font-size:0.8rem; margin-bottom:5px; margin-top:10px;">${group}</div>
-                        <div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('คัดลอก {{${v}}}');">{{${v}}}</span>`).join('')}</div>
+                        <div class="flex flex-wrap">
+                            ${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('คัดลอก {{${v}}} แล้ว');">{{${v}}}</span>`).join('')}
+                        </div>
                     </div>
                 `).join('');
             }
         };
 
-        // --- ระบบลากปรับขนาดเส้นแบ่ง ---
+        // --- ระบบลากเส้นแบ่ง Splitter ---
         let isResizing = false;
         const resizer = document.getElementById('resizer');
         const leftPanel = document.getElementById('left-panel');
@@ -370,5 +397,21 @@
             if (isResizing) { isResizing = false; document.body.classList.remove('resizing'); renderCanvas(); }
         });
     </script>
+
+    <div id="sticker_pet_id" style="display: none;">
+        <div style="width: 80mm; height: 45mm; padding: 2mm; box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+            <div style="font-size: 18pt; font-weight: 800; border-bottom: 2px solid black; margin-bottom: 1mm;">
+                {{pet_name}} 
+            </div>
+            <div style="font-size: 11pt; line-height: 1.3;">
+                <b>HN:</b> #{{owner_hn}}<br>
+                <b>เจ้าของ:</b> {{owner_name}}<br>
+                <b>พันธุ์:</b> {{breed}} ({{gender}})<br>
+                <div style="margin-top: 1mm; font-size: 9pt; border-top: 1px dashed #ccc; padding-top: 1mm;">
+                    พิมพ์เมื่อ: ${new Date().toLocaleDateString('th-TH')}
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
