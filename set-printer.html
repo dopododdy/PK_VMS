@@ -43,6 +43,27 @@
         .editor-group { background: rgba(0,0,0,0.2); border-radius: 15px; padding: 12px; border: 1px solid rgba(255,255,255,0.03); }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        <style>
+        /* ... โค้ดเดิมของคุณ ... */
+
+        .editor-group { background: rgba(0,0,0,0.2); border-radius: 15px; padding: 12px; border: 1px solid rgba(255,255,255,0.03); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        /* --- [เพิ่มส่วนนี้ลงไปครับ] --- */
+        /* ป้องกันการคลุมดำข้อความและจัดระเบียบ Cursor ขณะลากเส้นแบ่ง */
+        body.resizing {
+            cursor: col-resize !important;
+            user-select: none !important; /* ป้องกันการคลุมดำ (Highlight) ข้อความขณะลาก */
+        }
+        
+        /* ป้องกันเมาส์ไปค้างที่รูปภาพหรือองค์ประกอบอื่นๆ ขณะลาก */
+        .resizing .canvas-wrapper, 
+        .resizing img, 
+        .resizing .preview-area {
+            pointer-events: none !important;
+        }
     </style>
 </head>
 <body class="overflow-hidden">
@@ -64,60 +85,63 @@
             </div>
         </header>
 
-        <div class="flex flex-1 overflow-hidden">
-            <div class="w-7/12 flex flex-col border-r border-white/10 bg-[#020617] overflow-y-auto p-6" id="left-scroll-container">
-                <div class="section-card p-6 mb-8 bg-slate-900/60 backdrop-blur-sm">
-                    <div class="grid grid-cols-12 gap-5 items-end">
-                        <div class="col-span-6">
-                            <label class="label-title">เลือก Template</label>
-                            <select id="template_type" class="input-control font-black text-teal-400" onchange="loadTemplate()">
-                                <option value="">🔄 กำลังโหลดรายการ...</option>
-                            </select>
-                        </div>
-                        <div class="col-span-3">
-                            <label class="label-title">กว้าง (มม.)</label>
-                            <input type="number" id="paper_w" class="input-control text-center font-bold" value="210" onchange="renderCanvas()">
-                        </div>
-                        <div class="col-span-3">
-                            <label class="label-title">สูง (มม.)</label>
-                            <input type="number" id="paper_h" class="input-control text-center font-bold" value="148" onchange="renderCanvas()">
-                        </div>
-                    </div>
+<div class="flex flex-1 overflow-hidden" id="main-split-container">
+    <div id="left-panel" class="flex flex-col border-r border-white/10 bg-[#020617] overflow-y-auto p-6" style="width: 58%;">
+        <div class="section-card p-6 mb-8 bg-slate-900/60 backdrop-blur-sm">
+            <div class="grid grid-cols-12 gap-5 items-end">
+                <div class="col-span-6">
+                    <label class="label-title">เลือก Template</label>
+                    <select id="template_type" class="input-control font-black text-teal-400" onchange="loadTemplate()">
+                        <option value="">🔄 กำลังโหลดรายการ...</option>
+                    </select>
                 </div>
-
-                <div class="flex justify-between items-center mb-6 px-2">
-                    <h2 class="text-xl font-black text-white flex items-center gap-3">
-                        <span class="w-2 h-8 bg-teal-500 rounded-full"></span>รายการองค์ประกอบ
-                    </h2>
-                    <div class="flex gap-2">
-                        <button onclick="addLine('text')" class="btn-tool bg-white/5 hover:bg-teal-500/10 border-white/5 text-white">+ ข้อความ</button>
-                        <button onclick="addLine('rect')" class="btn-tool bg-white/5 hover:bg-orange-500/10 border-white/5 text-orange-400">+ สี่เหลี่ยม</button>
-                        <button onclick="addLine('image')" class="btn-tool bg-white/5 hover:bg-blue-500/10 border-white/5 text-blue-400">+ รูปภาพ</button>
-                    </div>
+                <div class="col-span-3">
+                    <label class="label-title">กว้าง (มม.)</label>
+                    <input type="number" id="paper_w" class="input-control text-center font-bold" value="210" onchange="renderCanvas()">
                 </div>
-
-                <div id="lines_container" class="space-y-5 pb-24"></div>
-            </div>
-
-            <div class="w-5/12 flex flex-col bg-[#050b14]">
-                <div class="flex-1 p-6 flex flex-col overflow-hidden">
-                    <div class="flex justify-between items-center mb-4 px-2">
-                        <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Live Preview (Select & Move)</span>
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] text-gray-500 font-bold">ZOOM</span>
-                            <input type="range" id="zoom_level" min="30" max="300" value="100" class="accent-teal-500 w-32" oninput="applyZoom()">
-                        </div>
-                    </div>
-                    <div class="preview-area flex-1">
-                        <div id="canvas_wrapper" class="canvas-wrapper"></div>
-                    </div>
-                </div>
-                <div class="h-80 border-t border-white/10 bg-navy-light p-6 overflow-y-auto">
-                    <div id="var_sidebar_container" class="space-y-4"></div>
+                <div class="col-span-3">
+                    <label class="label-title">สูง (มม.)</label>
+                    <input type="number" id="paper_h" class="input-control text-center font-bold" value="148" onchange="renderCanvas()">
                 </div>
             </div>
         </div>
+
+        <div class="flex justify-between items-center mb-6 px-2">
+            <h2 class="text-xl font-black text-white flex items-center gap-3">
+                <span class="w-2 h-8 bg-teal-500 rounded-full"></span>รายการองค์ประกอบ
+            </h2>
+            <div class="flex gap-2">
+                <button onclick="addLine('text')" class="btn-tool bg-white/5 hover:bg-teal-500/10 border-white/5 text-white">+ ข้อความ</button>
+                <button onclick="addLine('rect')" class="btn-tool bg-white/5 hover:bg-orange-500/10 border-white/5 text-orange-400">+ สี่เหลี่ยม</button>
+                <button onclick="addLine('image')" class="btn-tool bg-white/5 hover:bg-blue-500/10 border-white/5 text-blue-400">+ รูปภาพ</button>
+            </div>
+        </div>
+
+        <div id="lines_container" class="space-y-5 pb-24"></div>
     </div>
+
+    <div id="resizer" class="w-2 bg-white/5 hover:bg-teal-500/50 cursor-col-resize transition-all z-50 flex items-center justify-center group">
+        <div class="w-1 h-12 bg-white/10 group-hover:bg-teal-400 rounded-full"></div>
+    </div>
+
+    <div id="right-panel" class="flex-1 flex flex-col bg-[#050b14] min-w-0">
+        <div class="flex-1 p-6 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center mb-4 px-2">
+                <span class="text-xs font-black text-gray-500 uppercase tracking-widest">Live Preview (Select & Move)</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-[10px] text-gray-500 font-bold">ZOOM</span>
+                    <input type="range" id="zoom_level" min="30" max="300" value="100" class="accent-teal-500 w-32" oninput="applyZoom()">
+                </div>
+            </div>
+            <div class="preview-area flex-1">
+                <div id="canvas_wrapper" class="canvas-wrapper"></div>
+            </div>
+        </div>
+        <div class="h-80 border-t border-white/10 bg-navy-light p-6 overflow-y-auto">
+            <div id="var_sidebar_container" class="space-y-4"></div>
+        </div>
+    </div>
+</div>
 
     <script>
         let currentConfig = { width: 210, height: 148, lines: [] };
@@ -417,7 +441,40 @@
             const sideContainer = document.getElementById('var_sidebar_container');
             sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `<div><div class="var-category-title" style="color:var(--teal); font-weight:800; font-size:0.8rem; margin-bottom:5px; margin-top:10px;">${group}</div><div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}');">{{${v}}}</span>`).join('')}</div></div>`).join('');
         };
+
+
+        window.onload = async () => {
+            await fetchAvailableTemplates();
+            // ... โค้ดเดิมที่คุณมีอยู่บรรทัดสุดท้าย ...
+        };
+
+        // ✅ [วางต่อท้ายตรงนี้เลยครับ!] ✅
         
+        let isResizing = false;
+        const resizer = document.getElementById('resizer');
+        const leftPanel = document.getElementById('left-panel');
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.classList.add('resizing');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            let newWidth = (e.clientX / window.innerWidth) * 100;
+            if (newWidth > 20 && newWidth < 80) {
+                leftPanel.style.width = `${newWidth}%`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.classList.remove('resizing');
+                if (typeof renderCanvas === "function") renderCanvas();
+            }
+        });
+        // ✅ [สิ้นสุดการวาง] ✅
     </script>
 
     <div id="sticker_pet_id" style="display: none;">
