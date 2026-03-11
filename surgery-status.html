@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<!--
+    ═══════════════════════════════════════════════════════════════
+    surgery-status.html  |  PK-VMS  |  หน้าติดตามสถานะการผ่าตัด
+    ───────────────────────────────────────────────────────────────
+    สร้างตาราง surgery_status ใน Supabase ก่อนใช้งาน:
+
+    CREATE TABLE surgery_status (
+        id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+        animal_id   uuid REFERENCES animals(id) ON DELETE CASCADE,
+        owner_hn    text NOT NULL,
+        pet_name    text,
+        pet_type    text,
+        gender      text,
+        surgery_name text,
+        status      text,
+        created_at  timestamptz DEFAULT now(),
+        updated_at  timestamptz DEFAULT now()
+    );
+
+    -- trigger อัปเดต updated_at อัตโนมัติเมื่อมีการแก้ไขข้อมูล
+    CREATE OR REPLACE FUNCTION set_updated_at()
+    RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = now(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+    CREATE TRIGGER trg_surgery_status_updated_at
+        BEFORE UPDATE ON surgery_status
+        FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+    -- เปิด RLS และอนุญาต public read (เจ้าของดูได้โดยไม่ต้อง login)
+    -- write operations ควรจำกัดเฉพาะ authenticated staff ในระบบ production
+    ALTER TABLE surgery_status ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY "public_read"  ON surgery_status FOR SELECT USING (true);
+    CREATE POLICY "staff_insert" ON surgery_status FOR INSERT TO authenticated WITH CHECK (true);
+    CREATE POLICY "staff_update" ON surgery_status FOR UPDATE TO authenticated USING (true);
+    CREATE POLICY "staff_delete" ON surgery_status FOR DELETE TO authenticated USING (true);
+    ═══════════════════════════════════════════════════════════════
+-->
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สถานะการผ่าตัด | PK-VMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+
+    <style>
+        :root {
+            --navy: #020617;
+            --navy-light: #0f172a;
+            --teal: #14b8b1;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        * { font-family: "Sarabun", sans-serif !important; }
+        body { background: var(--navy); color: #e2e8f0; min-height: 100vh; margin: 0; }
+
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background:
+                radial-gradient(circle at 10% 10%, rgba(20, 184, 177, 0.08), transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(59, 130, 246, 0.08), transparent 40%);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            backdrop-filter: blur(15px);
+        }
+
+        .search-input {
+            background: rgba(0,0,0,0.3);
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 20px;
+            color: white;
+            width: 100%;
+            outline: none;
+            font-size: 1.15rem;
+            transition: 0.2s;
+        }
+        .search-input:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        .search-input::placeholder { color: #475569; }
+
+        /* Status Progress Bar */
+        .status-track {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            padding: 0 10px;
+        }
+        .status-track::before {
+            content: '';
+            position: absolute;
+            top: 28px;
+            left: 10%;
+            right: 10%;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            z-index: 0;
+        }
+        .status-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+            flex: 1;
+        }
+        .step-circle {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            transition: all 0.4s;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #475569;
+            text-align: center;
+            max-width: 80px;
+            line-height: 1.3;
+            transition: 0.4s;
+        }
+        .status-step.active .step-circle {
+            background: rgba(20, 184, 177, 0.2);
+            border-color: var(--teal);
+            box-shadow: 0 0 20px rgba(20, 184, 177, 0.4);
+        }
+        .status-step.active .step-label { color: var(--teal); }
+        .status-step.done .step-circle {
+            background: rgba(20, 184, 177, 0.1);
+            border-color: rgba(20, 184, 177, 0.4);
+        }
+        .status-step.done .step-label { color: #4ade80; }
+        .status-step.waiting .step-circle {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+            animation: pulse 2s infinite;
+        }
+        .status-step.waiting .step-label { color: #fbbf24; }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+            50% { box-shadow: 0 0 35px rgba(245, 158, 11, 0.6); }
+        }
+
+        .status-banner {
+            border-radius: 16px;
+            padding: 20px 28px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+        .banner-waiting  { background: rgba(245, 158, 11, 0.1); border: 1.5px solid rgba(245, 158, 11, 0.3); color: #fbbf24; }
+        .banner-surgery  { background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+        .banner-recovery { background: rgba(99, 102, 241, 0.1); border: 1.5px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; }
+        .banner-ready    { background: rgba(20, 184, 177, 0.1); border: 1.5px solid rgba(20, 184, 177, 0.3); color: var(--teal); }
+
+        .info-chip {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+        .info-chip .chip-label { font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .info-chip .chip-value { font-size: 1.1rem; font-weight: 700; color: white; margin-top: 4px; }
+
+        .btn-search {
+            background: var(--teal);
+            color: #020617;
+            font-weight: 800;
+            font-size: 1.1rem;
+            padding: 16px 32px;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        .btn-search:hover { background: #0d9488; }
+
+        .refresh-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            color: #94a3b8;
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .refresh-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinning { animation: spin 1s linear infinite; display: inline-block; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #475569; }
+        .empty-state .empty-icon { font-size: 4rem; margin-bottom: 16px; opacity: 0.5; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="mesh-bg"></div>
+
+    <div class="max-w-2xl mx-auto">
+
+        <!-- Header -->
+        <div class="text-center mb-10 pt-6">
+            <div class="text-5xl mb-4">🐾</div>
+            <h1 class="text-3xl font-black text-white mb-2">ติดตามสถานะการผ่าตัด</h1>
+            <p class="text-slate-400 text-base">คลินิกสัตว์หมอปิติพัฒน์ · PK-VMS</p>
+        </div>
+
+        <!-- Search Box -->
+        <div class="glass-card p-6 mb-6">
+            <p class="text-slate-400 text-sm font-bold mb-4">🔍 ค้นหาด้วยชื่อสัตว์ หรือ รหัสเจ้าของ (HN)</p>
+            <div class="flex gap-3">
+                <input
+                    type="text"
+                    id="search-input"
+                    class="search-input"
+                    placeholder="ใส่ชื่อสัตว์ หรือ HN เช่น 00123"
+                    onkeydown="if(event.key==='Enter') searchStatus()"
+                >
+                <button class="btn-search" onclick="searchStatus()">ค้นหา</button>
+            </div>
+            <p class="text-slate-600 text-xs mt-3">* ข้อมูลแสดงเฉพาะสัตว์ที่กำลังรับการผ่าตัดในวันนี้เท่านั้น</p>
+        </div>
+
+        <!-- Result Area -->
+        <div id="result-area"></div>
+
+        <!-- Footer -->
+        <div class="text-center mt-12 pb-6 text-slate-600 text-sm">
+            <p>🏥 PK-VMS · ระบบจัดการคลินิกสัตว์</p>
+            <p class="mt-1">หากมีข้อสงสัยกรุณาติดต่อคลินิกโดยตรง</p>
+        </div>
+    </div>
+
+    <script>
+        let refreshTimer = null;
+        let currentQuery = '';
+
+        async function searchStatus() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) {
+                showEmpty('กรุณากรอกชื่อสัตว์ หรือ รหัสเจ้าของ (HN)');
+                return;
+            }
+            currentQuery = query;
+            await loadStatus(query);
+            startAutoRefresh(query);
+        }
+
+        async function loadStatus(query) {
+            const area = document.getElementById('result-area');
+            area.innerHTML = `<div class="glass-card p-10 text-center text-slate-400">
+                <div class="text-3xl mb-3 spinning">⏳</div>
+                <p class="font-bold">กำลังโหลดข้อมูล...</p>
+            </div>`;
+
+            try {
+                // Run two separate parameterized queries and merge results
+                const [byName, byHn] = await Promise.all([
+                    db.from('surgery_status').select('*').ilike('pet_name', `%${query}%`)
+                        .order('updated_at', { ascending: false }).limit(5),
+                    db.from('surgery_status').select('*').ilike('owner_hn', `%${query}%`)
+                        .order('updated_at', { ascending: false }).limit(5),
+                ]);
+                if (byName.error) throw byName.error;
+                if (byHn.error) throw byHn.error;
+
+                // Deduplicate by id
+                const seen = new Set();
+                const data = [...(byName.data || []), ...(byHn.data || [])]
+                    .filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; })
+                    .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+                    .slice(0, 5);
+
+                if (data.length === 0) {
+                    showEmpty('ไม่พบข้อมูลการผ่าตัด\nกรุณาตรวจสอบชื่อสัตว์หรือ HN อีกครั้ง');
+                    return;
+                }
+
+                renderResults(data);
+            } catch (err) {
+                console.error(err);
+                area.innerHTML = `<div class="glass-card p-10 text-center text-red-400">
+                    <div class="text-3xl mb-3">⚠️</div>
+                    <p class="font-bold">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                    <p class="text-sm text-slate-500 mt-2">${err.message || ''}</p>
+                </div>`;
+            }
+        }
+
+        function renderResults(records) {
+            const area = document.getElementById('result-area');
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+            area.innerHTML = records.map(rec => buildCard(rec)).join('') +
+                `<div class="flex items-center justify-between mt-4 px-2">
+                    <span class="text-slate-600 text-xs">อัปเดตล่าสุด: ${timeStr}</span>
+                    <button class="refresh-btn" onclick="manualRefresh()">
+                        <span id="refresh-icon">🔄</span> รีเฟรช
+                    </button>
+                </div>`;
+        }
+
+        function buildCard(rec) {
+            const statusConfig = getStatusConfig(rec.status);
+            const steps = [
+                { key: 'รอผ่าตัด',     icon: '📋', label: 'รอผ่าตัด' },
+                { key: 'กำลังผ่าตัด',  icon: '🔪', label: 'กำลังผ่าตัด' },
+                { key: 'กำลังพักฟื้น', icon: '💊', label: 'กำลังพักฟื้น' },
+                { key: 'รอรับกลับบ้าน',icon: '🏠', label: 'รอรับกลับบ้าน' },
+            ];
+            const currentIdx = steps.findIndex(s => s.key === rec.status);
+
+            const stepsHtml = steps.map((step, idx) => {
+                let cls = '';
+                if (idx < currentIdx) cls = 'done';
+                else if (idx === currentIdx) cls = step.key === 'รอรับกลับบ้าน' ? 'active' : 'waiting';
+                return `
+                <div class="status-step ${cls}">
+                    <div class="step-circle">${step.icon}</div>
+                    <div class="step-label">${step.label}</div>
+                </div>`;
+            }).join('');
+
+            const updatedTime = rec.updated_at
+                ? new Date(rec.updated_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                : '-';
+
+            return `
+            <div class="glass-card p-6 mb-4">
+                <!-- Status Banner -->
+                <div class="status-banner ${statusConfig.bannerClass} mb-6">
+                    <span class="text-2xl">${statusConfig.icon}</span>
+                    <div>
+                        <div class="text-base font-black">${rec.status}</div>
+                        <div class="text-sm opacity-70 font-normal">${statusConfig.desc}</div>
+                    </div>
+                </div>
+
+                <!-- Pet Info -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div class="info-chip">
+                        <div class="chip-label">ชื่อสัตว์</div>
+                        <div class="chip-value">${rec.pet_name || '-'}</div>
+                    </div>
+                    <div class="info-chip">
+                        <div class="chip-label">ชนิด</div>
+                        <div class="chip-value">${rec.pet_type || '-'}</div>
+                    </div>
+                    <div class="info-chip">
+                        <div class="chip-label">เพศ</div>
+                        <div class="chip-value">${rec.gender || '-'}</div>
+                    </div>
+                    <div class="info-chip">
+                        <div class="chip-label">HN เจ้าของ</div>
+                        <div class="chip-value text-teal-400">${rec.owner_hn || '-'}</div>
+                    </div>
+                </div>
+
+                <!-- Surgery Name -->
+                <div class="info-chip mb-6">
+                    <div class="chip-label">🔪 ชื่อการผ่าตัด / หัตถการ</div>
+                    <div class="chip-value text-lg">${rec.surgery_name || '-'}</div>
+                </div>
+
+                <!-- Progress Steps -->
+                <div class="status-track mb-3">
+                    ${stepsHtml}
+                </div>
+                <p class="text-center text-slate-600 text-xs mt-3">อัปเดตสถานะ: ${updatedTime} น.</p>
+            </div>`;
+        }
+
+        function getStatusConfig(status) {
+            const map = {
+                'รอผ่าตัด':     { icon: '📋', bannerClass: 'banner-waiting',  desc: 'กำลังเตรียมตัวสำหรับการผ่าตัด' },
+                'กำลังผ่าตัด':  { icon: '🔪', bannerClass: 'banner-surgery',  desc: 'อยู่ในห้องผ่าตัด กรุณารอสักครู่' },
+                'กำลังพักฟื้น': { icon: '💊', bannerClass: 'banner-recovery', desc: 'ผ่าตัดเสร็จ กำลังฟื้นตัวจากยาสลบ' },
+                'รอรับกลับบ้าน':{ icon: '🏠', bannerClass: 'banner-ready',    desc: 'พร้อมกลับบ้านแล้ว! มารับสัตว์ได้เลย' },
+            };
+            return map[status] || { icon: '❓', bannerClass: 'banner-waiting', desc: status };
+        }
+
+        function showEmpty(msg) {
+            document.getElementById('result-area').innerHTML = `
+            <div class="glass-card">
+                <div class="empty-state">
+                    <div class="empty-icon">🐾</div>
+                    <p class="font-bold text-lg text-slate-400 whitespace-pre-line">${msg}</p>
+                </div>
+            </div>`;
+            stopAutoRefresh();
+        }
+
+        function startAutoRefresh(query) {
+            stopAutoRefresh();
+            refreshTimer = setInterval(() => loadStatus(query), 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+        }
+
+        async function manualRefresh() {
+            if (!currentQuery) return;
+            const icon = document.getElementById('refresh-icon');
+            if (icon) icon.classList.add('spinning');
+            await loadStatus(currentQuery);
+        }
+
+        // Allow URL param ?hn=XXXX for direct link
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const hn = params.get('hn') || params.get('name');
+            if (hn) {
+                document.getElementById('search-input').value = hn;
+                searchStatus();
+            }
+        };
+    </script>
+</body>
+</html>

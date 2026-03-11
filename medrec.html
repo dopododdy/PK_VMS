@@ -83,7 +83,59 @@
                     <div class="col-span-12 md:col-span-7"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="text-lg font-bold text-red-400">-</div></div>
                 </div>
             </div>
-            
+
+            <!-- ═══════════════════════════════════════════════════ -->
+            <!--  🔪 SURGERY STATUS PANEL                           -->
+            <!-- ═══════════════════════════════════════════════════ -->
+            <div class="section-card border-l-8 border-violet-500 mb-6" id="surgery-status-panel">
+                <div class="flex justify-between items-center mb-5">
+                    <h3 class="text-xl font-bold text-violet-300 flex items-center gap-2">🔪 สถานะการผ่าตัด</h3>
+                    <div class="flex items-center gap-3">
+                        <span id="surgery-status-badge" class="hidden px-4 py-1.5 rounded-full text-sm font-black"></span>
+                        <a id="surgery-public-link" href="#" target="_blank" class="btn-base bg-slate-600 hover:bg-slate-500 text-xs hidden">🔗 ลิงก์เจ้าของ</a>
+                    </div>
+                </div>
+
+                <!-- Input: Surgery Name -->
+                <div class="mb-4">
+                    <label class="label-text text-violet-300">ชื่อการผ่าตัด / หัตถการ</label>
+                    <input type="text" id="surgery-name-input" class="input-box" placeholder="เช่น ทำหมัน, ผ่าตัดก้อนเนื้อ...">
+                </div>
+
+                <!-- Status Buttons -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <button onclick="setSurgeryStatus('รอผ่าตัด')"
+                        class="btn-base !bg-amber-600 hover:!bg-amber-500 text-sm py-3 flex-col h-auto gap-1"
+                        id="btn-status-wait">
+                        <span class="text-lg">📋</span>รอผ่าตัด
+                    </button>
+                    <button onclick="setSurgeryStatus('กำลังผ่าตัด')"
+                        class="btn-base !bg-red-600 hover:!bg-red-500 text-sm py-3 flex-col h-auto gap-1"
+                        id="btn-status-surgery">
+                        <span class="text-lg">🔪</span>กำลังผ่าตัด
+                    </button>
+                    <button onclick="setSurgeryStatus('กำลังพักฟื้น')"
+                        class="btn-base !bg-indigo-600 hover:!bg-indigo-500 text-sm py-3 flex-col h-auto gap-1"
+                        id="btn-status-recovery">
+                        <span class="text-lg">💊</span>กำลังพักฟื้น
+                    </button>
+                    <button onclick="setSurgeryStatus('รอรับกลับบ้าน')"
+                        class="btn-base !bg-teal-600 hover:!bg-teal-500 text-sm py-3 flex-col h-auto gap-1"
+                        id="btn-status-ready">
+                        <span class="text-lg">🏠</span>รอรับกลับบ้าน
+                    </button>
+                </div>
+
+                <!-- Clear Button -->
+                <button onclick="clearSurgeryStatus()"
+                    class="btn-base btn-red text-xs px-4"
+                    id="btn-status-clear">
+                    🗑️ ล้างสถานะการผ่าตัด
+                </button>
+                <p class="text-slate-600 text-xs mt-3">* กดปุ่มสถานะเพื่ออัปเดต — เจ้าของสัตว์สามารถดูได้ที่ <b class="text-slate-500">surgery-status.html</b></p>
+            </div>
+            <!-- ═══════════════════════════════════════════════════ -->
+
             <div class="flex justify-between items-center mb-8">
                 <h3 class="text-3xl font-black text-white flex items-center gap-3">
                     ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
@@ -180,7 +232,7 @@
         window.onload = async () => {
             if (!animalId || !ownerHN) return location.href='animals.html';
             flatpickr(".datepicker", { locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y" });
-            await fetchInfo(); await fetchRecords();
+            await fetchInfo(); await fetchRecords(); await fetchSurgeryStatus();
         };
 
         async function fetchInfo() {
@@ -195,6 +247,7 @@
                 document.getElementById('head-hn').innerText = `HN: ${owner.hn}`;
                 document.getElementById('head-pet-name').innerText = pet.pet_name;
                 document.getElementById('v-pet-name').innerText = pet.pet_name;
+                document.getElementById('v-pet-name').dataset.gender = pet.gender || '-';
                 document.getElementById('v-pet-weight').innerText = pet.weight || '0';
                 document.getElementById('f_weight').value = pet.weight || 0;
                 document.getElementById('v-pet-congenital').innerText = pet.congenital_disease || 'ไม่มี';
@@ -676,6 +729,106 @@ function executeMultiTemplatePrint(jobs) {
     pw.document.close();
 }
 
+
+        // ═══════════════════════════════════════════════════════
+        //  🔪 SURGERY STATUS FUNCTIONS
+        // ═══════════════════════════════════════════════════════
+
+        let currentSurgeryId = null;
+
+        // โหลดสถานะการผ่าตัดปัจจุบันของสัตว์
+        async function fetchSurgeryStatus() {
+            try {
+                const { data } = await db
+                    .from('surgery_status')
+                    .select('*')
+                    .eq('animal_id', animalId)
+                    .order('updated_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                if (data) {
+                    currentSurgeryId = data.id;
+                    document.getElementById('surgery-name-input').value = data.surgery_name || '';
+                    updateSurgeryBadge(data.status);
+                    document.getElementById('surgery-public-link').classList.remove('hidden');
+                    document.getElementById('surgery-public-link').href =
+                        `surgery-status.html?hn=${encodeURIComponent(ownerHN)}`;
+                }
+            } catch (e) {
+                console.warn('fetchSurgeryStatus:', e.message);
+            }
+        }
+
+        // อัปเดตหรือสร้างสถานะการผ่าตัด
+        async function setSurgeryStatus(status) {
+            const surgeryName = document.getElementById('surgery-name-input').value.trim();
+            if (!surgeryName) {
+                alert('กรุณาระบุชื่อการผ่าตัด/หัตถการก่อน');
+                document.getElementById('surgery-name-input').focus();
+                return;
+            }
+
+            // ใช้ข้อมูลที่โหลดมาแล้วจากหน้า แทนการ query DB ซ้ำ
+            const payload = {
+                animal_id: animalId,
+                owner_hn: ownerHN,
+                pet_name: document.getElementById('v-pet-name').innerText,
+                pet_type: petType,
+                gender: document.getElementById('v-pet-name').dataset.gender || '-',
+                surgery_name: surgeryName,
+                status: status,
+            };
+
+            try {
+                if (currentSurgeryId) {
+                    await db.from('surgery_status').update(payload).eq('id', currentSurgeryId);
+                } else {
+                    const { data: inserted } = await db
+                        .from('surgery_status')
+                        .insert([payload])
+                        .select()
+                        .single();
+                    currentSurgeryId = inserted?.id || null;
+                }
+                updateSurgeryBadge(status);
+                document.getElementById('surgery-public-link').classList.remove('hidden');
+                document.getElementById('surgery-public-link').href =
+                    `surgery-status.html?hn=${encodeURIComponent(ownerHN)}`;
+            } catch (err) {
+                console.error('setSurgeryStatus error:', err);
+                alert('บันทึกสถานะไม่สำเร็จ: ' + (err.message || err));
+            }
+        }
+
+        // ล้างสถานะการผ่าตัด (ลบออกจาก DB)
+        async function clearSurgeryStatus() {
+            if (!currentSurgeryId) return;
+            if (!confirm('ยืนยันการลบข้อมูลสถานะการผ่าตัด?')) return;
+            try {
+                await db.from('surgery_status').delete().eq('id', currentSurgeryId);
+                currentSurgeryId = null;
+                document.getElementById('surgery-name-input').value = '';
+                const badge = document.getElementById('surgery-status-badge');
+                badge.classList.add('hidden');
+                document.getElementById('surgery-public-link').classList.add('hidden');
+            } catch (err) {
+                console.error('clearSurgeryStatus error:', err);
+            }
+        }
+
+        // อัปเดต Badge แสดงสถานะในหน้า
+        function updateSurgeryBadge(status) {
+            const badge = document.getElementById('surgery-status-badge');
+            const colorMap = {
+                'รอผ่าตัด':     'bg-amber-500/20 text-amber-300 border border-amber-500/40',
+                'กำลังผ่าตัด':  'bg-red-500/20 text-red-300 border border-red-500/40',
+                'กำลังพักฟื้น': 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40',
+                'รอรับกลับบ้าน':'bg-teal-500/20 text-teal-300 border border-teal-500/40',
+            };
+            badge.className = `px-4 py-1.5 rounded-full text-sm font-black ${colorMap[status] || 'bg-white/10 text-white'}`;
+            badge.innerText = status;
+            badge.classList.remove('hidden');
+        }
 
         
     </script>
