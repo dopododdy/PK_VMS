@@ -20,6 +20,9 @@
         th { text-align: left; color: var(--teal); font-size: 0.8rem; text-transform: uppercase; padding: 10px; border-bottom: 1px solid var(--border); }
         td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.95rem; }
         .res-val { color: #4ade80; font-weight: 800; font-family: monospace; }
+        .conc-select { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 8px; color: #e2e8f0; font-size: 0.8rem; cursor: pointer; outline: none; max-width: 170px; }
+        .conc-select:hover, .conc-select:focus { border-color: var(--teal); }
+        .badge { display: inline-block; font-size: 0.7rem; padding: 1px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
     </style>
 </head>
 <body class="flex h-screen">
@@ -67,6 +70,22 @@
     <script>
         let patient = { species: 'dog', weight: 0 };
         let currentActiveTool = 'emergency';
+        let drugConcentrations = {};
+
+        const emergencyDrugs = [
+            { name: 'Atropine',          category: 'Cardiac',           doseText: '0.04 mg/kg IV',        dosePerKg: 0.04,  concentrations: [{value:0.54,label:'0.54 mg/ml'},{value:1.0,label:'1 mg/ml'}] },
+            { name: 'Epinephrine',       category: 'Cardiac',           doseText: '0.01 mg/kg IV',        dosePerKg: 0.01,  concentrations: [{value:1.0,label:'1 mg/ml (1:1000)'},{value:0.1,label:'0.1 mg/ml (1:10,000)'}] },
+            { name: 'Lidocaine',         category: 'Antiarrhythmic',    doseText: 'Dog: 2 mg/kg | Cat: 0.25 mg/kg IV', speciesDose: {dog:2, cat:0.25},                     concentrations: [{value:20,label:'20 mg/ml (2%)'},{value:10,label:'10 mg/ml (1%)'}] },
+            { name: 'Naloxone',          category: 'Reversal',          doseText: '0.04 mg/kg IV',        dosePerKg: 0.04,  concentrations: [{value:0.4,label:'0.4 mg/ml'},{value:1.0,label:'1 mg/ml'}] },
+            { name: 'Diazepam',          category: 'Seizure',           doseText: '0.5 mg/kg IV',         dosePerKg: 0.5,   concentrations: [{value:5,label:'5 mg/ml'}] },
+            { name: 'Ephedrine',         category: 'Vasopressor',       doseText: '0.05–0.1 mg/kg IV',   dosePerKg: 0.075, concentrations: [{value:3,label:'3 mg/ml'},{value:50,label:'50 mg/ml'}] },
+            { name: 'Dexamethasone',     category: 'Anti-inflammatory', doseText: '0.1–0.5 mg/kg IV',    dosePerKg: 0.25,  concentrations: [{value:4,label:'4 mg/ml'},{value:2,label:'2 mg/ml'}] },
+            { name: 'Calcium Gluconate', category: 'Electrolyte',       doseText: '50–100 mg/kg slow IV', dosePerKg: 75,    concentrations: [{value:100,label:'100 mg/ml (10%)'}] },
+            { name: 'Magnesium Sulfate', category: 'Electrolyte',       doseText: '25–50 mg/kg slow IV',  dosePerKg: 37.5,  concentrations: [{value:500,label:'500 mg/ml (50%)'},{value:250,label:'250 mg/ml (25%)'}] },
+            { name: 'Amiodarone',        category: 'Antiarrhythmic',    doseText: '5 mg/kg IV (dog)',     dosePerKg: 5,     concentrations: [{value:50,label:'50 mg/ml'}] },
+            { name: 'Dopamine',          category: 'Vasopressor',       doseText: '5–10 μg/kg/min CRI',  dosePerKgMin: 7.5,  isCRI: true, concentrations: [{value:40,label:'40 mg/ml'},{value:200,label:'200 mg/ml'}] },
+            { name: 'Isoproterenol',     category: 'Cardiac',           doseText: '0.01–0.1 μg/kg/min CRI', dosePerKgMin: 0.05, isCRI: true, concentrations: [{value:0.2,label:'0.2 mg/ml'}] },
+        ];
 
         function setSpecies(s) {
             patient.species = s;
@@ -95,14 +114,43 @@
             let html = `<h2 class="text-3xl font-black mb-6 uppercase tracking-tight">${currentActiveTool.replace('_',' ')}</h2>`;
 
             if (currentActiveTool === 'emergency') {
-                const drugs = [
-                    { name: 'Atropine (0.54mg/ml)', dose: '0.04 mg/kg', calc: w * 0.04 / 0.54 },
-                    { name: 'Epinephrine (1:1000)', dose: '0.01 mg/kg', calc: w * 0.01 },
-                    { name: 'Lidocaine 2% (20mg/ml)', dose: patient.species === 'dog' ? '2-8 mg/kg' : '0.2-1 mg/kg', calc: patient.species === 'dog' ? w * 4 / 20 : w * 0.5 / 20 },
-                    { name: 'Naloxone (0.4mg/ml)', dose: '0.04 mg/kg', calc: w * 0.04 / 0.4 },
-                    { name: 'Diazepam (5mg/ml)', dose: '0.5 mg/kg', calc: w * 0.5 / 5 }
-                ];
-                html += renderTable(['Drug Name', 'Dosage', 'Volume (ml)'], drugs);
+                const catColors = {
+                    'Cardiac':'bg-blue-500/20 text-blue-300', 'Antiarrhythmic':'bg-purple-500/20 text-purple-300',
+                    'Reversal':'bg-green-500/20 text-green-300', 'Seizure':'bg-yellow-500/20 text-yellow-300',
+                    'Vasopressor':'bg-red-500/20 text-red-300', 'Anti-inflammatory':'bg-teal-500/20 text-teal-300',
+                    'Electrolyte':'bg-cyan-500/20 text-cyan-300'
+                };
+                const rows = emergencyDrugs.map((drug, idx) => {
+                    const conc = drugConcentrations[idx] !== undefined ? drugConcentrations[idx] : drug.concentrations[0].value;
+                    const doseText = drug.speciesDose ? `${drug.speciesDose[patient.species]} mg/kg IV` : drug.doseText;
+                    let vol = 0;
+                    if (w > 0) {
+                        if (drug.isCRI) { vol = (drug.dosePerKgMin * w * 60) / (conc * 1000); }
+                        else if (drug.speciesDose) { vol = (drug.speciesDose[patient.species] * w) / conc; }
+                        else { vol = (drug.dosePerKg * w) / conc; }
+                    }
+                    const volText = w > 0 ? vol.toFixed(2) : '—';
+                    const volUnit = drug.isCRI ? 'ml/hr' : 'ml';
+                    const badgeClass = catColors[drug.category] || 'bg-gray-500/20 text-gray-300';
+                    const concOptions = drug.concentrations.map(c =>
+                        `<option value="${c.value}"${c.value === conc ? ' selected' : ''}>${c.label}</option>`
+                    ).join('');
+                    const concCell = drug.concentrations.length > 1
+                        ? `<select class="conc-select" onchange="changeEmergencyConc(${idx},this.value)">${concOptions}</select>`
+                        : `<span class="text-gray-400 text-sm">${drug.concentrations[0].label}</span>`;
+                    return `<tr>
+                        <td><div class="font-semibold">${drug.name}</div><span class="badge ${badgeClass}">${drug.category}</span></td>
+                        <td class="text-gray-300 text-sm">${doseText}</td>
+                        <td>${concCell}</td>
+                        <td class="res-val">${volText} <span class="text-xs text-gray-500 font-normal">${volUnit}</span></td>
+                    </tr>`;
+                }).join('');
+                html += `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+                    <table>
+                        <thead><tr><th>Drug</th><th>Dosage</th><th>Concentration</th><th>Volume</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
             } 
             
             else if (currentActiveTool === 'anesthetics') {
@@ -160,6 +208,11 @@
                     </tbody>
                 </table>
             </div>`;
+        }
+
+        function changeEmergencyConc(idx, val) {
+            drugConcentrations[idx] = parseFloat(val);
+            renderCurrentTool();
         }
 
         window.onload = () => {
