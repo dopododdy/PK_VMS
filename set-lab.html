@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <style>
         :root { --navy: #0b1929; --navy-light: #112240; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
@@ -38,6 +39,22 @@
 
         .template-chip { padding: 8px 16px; background: rgba(20, 184, 177, 0.1); border: 1px solid var(--teal); border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; color: #14b8b1; }
         .template-chip:hover { background: var(--teal); color: white; transform: translateY(-2px); }
+
+        /* CSS สำหรับไอคอนจับลาก (Drag Handle) */
+        .drag-handle {
+            cursor: grab;
+            color: #64748b;
+            padding: 0 10px;
+            font-size: 1.2rem;
+            transition: 0.2s;
+        }
+        .drag-handle:hover {
+            color: white;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            background: rgba(20, 184, 177, 0.2);
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -174,6 +191,7 @@
     <script>
         let allParams = [];
         let currentActiveTab = 'CBC';
+        let sortableInstance = null; // เพิ่มตัวแปรเก็บ instance ของ Sortable
 
         // ค่ามาตรฐานตั้งต้น (จะถูก Copy ลงในทุกช่วงอายุเมื่อกด Quick Select เพื่อให้หมอปรับแก้ง่ายขึ้น)
         const LAB_TEMPLATES = {
@@ -221,7 +239,6 @@
             `).join('');
         }
 
-        // กระจายค่ามาตรฐานลงไปในทั้ง 3 ช่วงอายุให้หมอแก้ไขง่ายๆ
         function applyTemplate(name) {
             const t = LAB_TEMPLATES[currentActiveTab].find(item => item.name === name);
             if (!t) return;
@@ -239,38 +256,16 @@
             handleUnitChange();
         }
 
-// ✅ อัปเดตลำดับที่ถูกต้องตามตารางอ้างอิงใหม่
-        const PARAM_ORDER = [
-            // CBC
-            'WBC', 'Lym#', 'Mid#', 'Gran#', 'Lym%', 'Mid%', 'Gran%', 'NLR', 'PLR',
-            'RBC', 'HGB', 'HCT', 'MCV', 'MCH', 'MCHC', 'RDW-CV', 'RDW-SD',
-            'PLT', 'MPV', 'PDW-CV', 'PDW-SD', 'PCT', 'P-LCC', 'P-LCR',
-            // Chemistry
-            'Alb', 'TP', 'ALP', 'ALT', 'AST', 'GGT', 'DBIL', 'TBIL', 'Glob', 'IBIL', 'Alb/Glob',
-            'Ca', 'Crea', 'CO2', 'TCH', 'Glu', 'BUN', 'Amy', 'BUN/Crea', 'TBA', 'AST/ALT', 'P', 'CK'
-        ];
-
+        // โหลดข้อมูลและเรียงตาม order_index จาก Database
         async function loadParams() {
-            const { data } = await db.from('mas_lab_parameters').select('*');
-            
-            let fetchedData = data || [];
-            
-            // ทำให้ Array ต้นแบบเป็นตัวพิมพ์ใหญ่ทั้งหมดเพื่อใช้เทียบง่ายๆ
-            const upperParamOrder = PARAM_ORDER.map(p => p.toUpperCase());
-            
-            // ✅ จัดเรียงตามลำดับใน Array ด้านบน โดยไม่สนใจตัวพิมพ์เล็ก-ใหญ่
-            fetchedData.sort((a, b) => {
-                let indexA = upperParamOrder.indexOf(a.parameter_name.toUpperCase());
-                let indexB = upperParamOrder.indexOf(b.parameter_name.toUpperCase());
-                
-                // ถ้าพารามิเตอร์ไหนในฐานข้อมูลไม่มีใน List จะถูกเด้งไปอยู่ล่างสุด (999)
-                if (indexA === -1) indexA = 999;
-                if (indexB === -1) indexB = 999;
-                
-                return indexA - indexB;
-            });
-
-            allParams = fetchedData;
+            const { data, error } = await db.from('mas_lab_parameters')
+                                          .select('*')
+                                          .order('order_index', { ascending: true });
+            if (error) {
+                console.error("Error loading params:", error);
+                return;
+            }
+            allParams = data || [];
             renderList();
         }
 
@@ -284,24 +279,69 @@
             loadTemplates();
         }
 
+        // ปรับโครงสร้าง HTML ให้มีปุ่มลากและเรียกใช้ SortableJS
         function renderList() {
             const term = document.getElementById('search-box').value.toLowerCase();
             const container = document.getElementById('param-list');
             const filtered = allParams.filter(p => p.category === currentActiveTab && p.parameter_name.toLowerCase().includes(term));
 
-            // แสดงเฉพาะค่า Adult ในแถบด้านข้างเป็นตัวอย่าง
             container.innerHTML = filtered.map(p => `
-                <div class="param-card" onclick="editParam('${p.id}')" id="param-${p.id}">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-white font-bold text-lg">${p.parameter_name}</span>
-                        <span class="text-teal-400 text-xs font-bold bg-teal-400/10 px-2 py-1 rounded">${p.unit || ''}</span>
-                    </div>
-                    <div class="flex flex-col gap-1 text-[10px] text-gray-500 font-bold uppercase mt-2">
-                        <span>🐶 Adult: ${p.dog_2_min || '-'} - ${p.dog_2_max || '-'}</span>
-                        <span>🐱 Adult: ${p.cat_2_min || '-'} - ${p.cat_2_max || '-'}</span>
+                <div class="param-card flex items-center gap-2" data-id="${p.id}" id="param-${p.id}">
+                    <div class="drag-handle" title="ลากเพื่อเปลี่ยนลำดับ">☰</div>
+                    <div class="flex-1" onclick="editParam('${p.id}')">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-white font-bold text-lg">${p.parameter_name}</span>
+                            <span class="text-teal-400 text-xs font-bold bg-teal-400/10 px-2 py-1 rounded">${p.unit || ''}</span>
+                        </div>
+                        <div class="flex flex-col gap-1 text-[10px] text-gray-500 font-bold uppercase mt-1">
+                            <span>🐶 Adult: ${p.dog_2_min || '-'} - ${p.dog_2_max || '-'}</span>
+                            <span>🐱 Adult: ${p.cat_2_min || '-'} - ${p.cat_2_max || '-'}</span>
+                        </div>
                     </div>
                 </div>
             `).join('');
+
+            initSortable();
+        }
+
+        // ฟังก์ชันเปิดใช้งานระบบ Drag & Drop
+        function initSortable() {
+            const container = document.getElementById('param-list');
+            if (sortableInstance) {
+                sortableInstance.destroy();
+            }
+            sortableInstance = new Sortable(container, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'sortable-ghost',
+                onEnd: async function () {
+                    await saveNewOrder();
+                }
+            });
+        }
+
+        // ฟังก์ชันบันทึกลำดับใหม่ลง Database เมื่อปล่อยเมาส์
+        async function saveNewOrder() {
+            const items = document.querySelectorAll('.param-card');
+            const updatePromises = [];
+
+            items.forEach((item, index) => {
+                const id = item.getAttribute('data-id');
+                const paramIndex = allParams.findIndex(p => p.id == id);
+                if (paramIndex !== -1) {
+                    allParams[paramIndex].order_index = index;
+                }
+                updatePromises.push(
+                    db.from('mas_lab_parameters').update({ order_index: index }).eq('id', id)
+                );
+            });
+
+            try {
+                await Promise.all(updatePromises);
+                console.log("✅ บันทึกลำดับใหม่สำเร็จ");
+            } catch (err) {
+                console.error("❌ เกิดข้อผิดพลาดในการบันทึกลำดับ:", err);
+            }
         }
 
         function handleUnitChange() {
@@ -341,7 +381,6 @@
                 document.getElementById('f_unit_custom').classList.remove('hidden');
             }
             
-            // ดึงค่า 6 ช่วงอายุมาแสดง
             ['d1', 'd2', 'd3'].forEach((prefix, i) => {
                 document.getElementById(`f_${prefix}_min`).value = p[`dog_${i+1}_min`] !== null ? p[`dog_${i+1}_min`] : '';
                 document.getElementById(`f_${prefix}_max`).value = p[`dog_${i+1}_max`] !== null ? p[`dog_${i+1}_max`] : '';
@@ -360,6 +399,16 @@
             if (!name) return alert("❌ โปรดระบุชื่อ Parameter");
             const unitSelect = document.getElementById('f_unit_select').value;
             const unit = unitSelect === 'CUSTOM' ? document.getElementById('f_unit_custom').value.trim() : unitSelect;
+            const id = document.getElementById('f_id').value;
+
+            // ตรวจสอบค่า order_index เดิมเพื่อไม่ให้ถูกเคลียร์เป็นค่าว่างเวลาบันทึกแก้ไข
+            let currentOrder = allParams.length; // ค่าปริยายสำหรับเพิ่มใหม่ให้อยู่ท้ายสุด
+            if (id) {
+                const existing = allParams.find(item => item.id === id);
+                if (existing && existing.order_index !== undefined) {
+                    currentOrder = existing.order_index;
+                }
+            }
 
             const payload = {
                 parameter_name: name,
@@ -377,10 +426,10 @@
                 cat_2_max: parseFloat(document.getElementById('f_c2_max').value) || null,
                 cat_3_min: parseFloat(document.getElementById('f_c3_min').value) || null,
                 cat_3_max: parseFloat(document.getElementById('f_c3_max').value) || null,
+                order_index: currentOrder,
                 updated_at: new Date()
             };
 
-            const id = document.getElementById('f_id').value;
             if (id) payload.id = id;
 
             try {
