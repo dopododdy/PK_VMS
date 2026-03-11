@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <title>Template Designer Pro | PK-VMS</title>
+    <title>PK-VMS | Template Designer Pro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Prompt:wght@300;400;600&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -10,47 +10,40 @@
     <script src="supabase-config.js"></script>
 
     <style>
-        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255,255,255,0.1); --text: #e2e8f0; }
-        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; margin: 0; }
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255,255,255,0.1); }
+        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; min-height: 100vh; margin: 0; overflow: hidden; }
         .input-control { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 10px; outline: none; transition: 0.2s; font-size: 1rem; }
         .input-control:focus { border-color: var(--teal); background: rgba(0,0,0,0.6); }
         .label-title { color: var(--teal); font-weight: 800; font-size: 0.85rem; margin-bottom: 6px; display: block; text-transform: uppercase; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 24px; border: 1px solid var(--border); }
-
         .preview-area { background: #050b14; border-radius: 20px; border: 2px dashed rgba(255,255,255,0.1); overflow: auto; display: block; position: relative; padding: 100px; }
         .canvas-wrapper { background: #ffffff; position: relative; transform-origin: top center; box-shadow: 0 0 40px rgba(0, 0, 0, 0.7); overflow: visible; margin: 0 auto; flex-shrink: 0; }
-        
-        /* สไตล์ของ Object ที่เลือก */
         .canvas-element { position: absolute; cursor: pointer; user-select: none; line-height: 1.1; box-sizing: border-box; white-space: pre-wrap; transition: outline 0.1s; }
         .canvas-element:hover { outline: 1px dashed var(--teal); }
         .canvas-element.active { outline: 2px solid var(--teal) !important; background: rgba(20, 184, 17, 0.08); z-index: 100; }
-        
         .color-swatch { width: 24px; height: 24px; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
-        .color-swatch:hover { transform: scale(1.2); }
         .color-swatch.active { border: 2px solid #fff; outline: 2px solid var(--teal); }
-
-        .var-badge { background: rgba(20, 184, 17, 0.08); border: 1px solid rgba(20, 184, 17, 0.15); color: #4ade80; padding: 5px 12px; border-radius: 10px; font-size: 0.8rem; cursor: pointer; display: inline-block; margin: 4px; }
-        .btn-tool { background: rgba(255,255,255,0.05); padding: 10px 18px; border-radius: 12px; font-size: 0.9rem; font-weight: 800; border: 1px solid var(--border); transition: 0.2s; }
-        .btn-tool:hover { background: rgba(255,255,255,0.1); border-color: var(--teal); color: var(--teal); }
-        
+        .dragging { opacity: 0.4; border: 2px dashed var(--teal) !important; }
+        .btn-tool { background: rgba(255,255,255,0.05); padding: 10px 18px; border-radius: 12px; font-size: 0.9rem; font-weight: 800; border: 1px solid var(--border); transition: 0.2s; color: #fff; }
+        .btn-tool:hover { background: rgba(255,255,255,0.1); border-color: var(--teal); }
         .btn-align { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; color: #94a3b8; }
         .btn-align.active { background: var(--teal) !important; color: white !important; }
-
-        /* ระบบลากเส้นแบ่ง */
+        .var-badge { background: rgba(20, 184, 17, 0.08); border: 1px solid rgba(20, 184, 17, 0.15); color: #4ade80; padding: 5px 12px; border-radius: 10px; font-size: 0.8rem; cursor: pointer; display: inline-block; margin: 4px; transition: 0.2s; }
+        .var-badge:hover { background: var(--teal); color: #fff; }
         body.resizing { cursor: col-resize !important; user-select: none !important; }
-        .resizing .canvas-wrapper, .resizing img, .resizing .preview-area { pointer-events: none !important; }
+        .resizing .preview-area, .resizing .canvas-wrapper { pointer-events: none !important; }
     </style>
 </head>
 <body class="overflow-hidden">
     <div class="flex flex-col h-screen">
-        <header class="p-5 border-b border-white/5 bg-navy-light flex items-center justify-between z-30">
+        <header class="p-5 border-b border-white/5 bg-navy-light flex items-center justify-between z-30 shadow-xl">
             <div class="flex items-center gap-6">
-                <a href="index.html" class="text-xl">🏠</a>
-                <h1 class="text-xl font-bold">Template Designer Pro</h1>
+                <a href="index.html" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition">🏠</a>
+                <h1 class="text-xl font-black">🖨️ Template Designer Pro</h1>
             </div>
             <div class="flex gap-4">
                 <button class="btn-tool" onclick="printTest()">ทดสอบพิมพ์</button>
-                <button class="bg-teal-600 px-6 py-2 rounded-xl font-bold" onclick="saveTemplate()">💾 บันทึก</button>
+                <button class="bg-teal-600 hover:bg-teal-500 px-8 py-2 rounded-xl font-bold transition shadow-lg shadow-teal-900/20" onclick="saveTemplate()">💾 บันทึกรูปแบบ</button>
             </div>
         </header>
 
@@ -60,42 +53,42 @@
                     <div class="grid grid-cols-12 gap-5 items-end">
                         <div class="col-span-6">
                             <label class="label-title">เลือก Template</label>
-                            <select id="template_type" class="input-control text-teal-400" onchange="loadTemplate()">
-                                <option value="">กำลังโหลด...</option>
+                            <select id="template_type" class="input-control text-teal-400 font-bold" onchange="loadTemplate()">
+                                <option value="">🔄 กำลังโหลดรายการ...</option>
                             </select>
                         </div>
                         <div class="col-span-3">
                             <label class="label-title">กว้าง (มม.)</label>
-                            <input type="number" id="paper_w" class="input-control text-center" value="210" onchange="renderCanvas()">
+                            <input type="number" id="paper_w" class="input-control text-center font-bold" onchange="renderCanvas()">
                         </div>
                         <div class="col-span-3">
                             <label class="label-title">สูง (มม.)</label>
-                            <input type="number" id="paper_h" class="input-control text-center" value="148" onchange="renderCanvas()">
+                            <input type="number" id="paper_h" class="input-control text-center font-bold" onchange="renderCanvas()">
                         </div>
                     </div>
                 </div>
 
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-lg font-bold">รายการองค์ประกอบ</h2>
+                    <h2 class="text-lg font-black flex items-center gap-2"><span class="w-1 h-6 bg-teal-500 rounded-full"></span>รายการองค์ประกอบ</h2>
                     <div class="flex gap-2">
-                        <button onclick="addLine('text')" class="btn-tool">+ ข้อความ</button>
-                        <button onclick="addLine('rect')" class="btn-tool">+ สี่เหลี่ยม</button>
-                        <button onclick="addLine('image')" class="btn-tool">+ รูปภาพ</button>
+                        <button onclick="addLine('text')" class="btn-tool text-xs">+ ข้อความ</button>
+                        <button onclick="addLine('rect')" class="btn-tool text-xs">+ สี่เหลี่ยม</button>
                     </div>
                 </div>
-                <div id="lines_container" class="space-y-4 pb-20"></div>
+                <div id="lines_container" class="space-y-4 pb-24"></div>
             </div>
 
-            <div id="resizer" class="w-1.5 bg-white/5 hover:bg-teal-500 cursor-col-resize transition-all z-50 flex items-center justify-center group">
-                <div class="w-[1px] h-10 bg-white/20"></div>
+            <div id="resizer" class="w-1.5 bg-white/5 hover:bg-teal-500 cursor-col-resize transition-all z-50 flex items-center justify-center">
+                <div class="w-[1px] h-12 bg-white/20"></div>
             </div>
 
             <div id="right-panel" class="flex-1 flex flex-col bg-[#050b14] min-w-0">
                 <div class="flex-1 p-6 flex flex-col overflow-hidden">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="text-xs text-gray-500 font-bold uppercase">Live Preview (คลิกที่วัตถุแล้วใช้ปุ่มลูกศรขยับได้)</span>
+                        <span class="text-[10px] text-gray-500 font-black uppercase tracking-widest">Live Preview (Select & Move)</span>
                         <div class="flex items-center gap-3">
-                            <input type="range" id="zoom_level" min="30" max="250" value="100" oninput="applyZoom()">
+                            <span class="text-[10px] text-gray-500">ZOOM</span>
+                            <input type="range" id="zoom_level" min="30" max="250" value="100" class="accent-teal-500" oninput="applyZoom()">
                         </div>
                     </div>
                     <div class="preview-area flex-1">
@@ -114,22 +107,14 @@
         let activeLineIndex = -1;
         let draggedIndex = null;
         
-        const mockItems = [{ name: "ยาฆ่าเชื้อ (ตัวอย่าง)", price: 150.00 }];
-        const mockData = { clinic_name: "PK Clinic", owner_name: "สมชาย ใจดี", pet_name: "โคล่า", hn: "69001" };
+        const mockItems = [{ name: "ยาฆ่าเชื้อ อะม็อกซี่", price: 150.00 }];
+        const mockData = { clinic_name: "PK Clinic", owner_name: "สมชาย ใจดี", pet_name: "โคล่า", hn: "69001", breed: "ชิวาวา" };
         const varGroups = {
             "🏥 คลินิก": ["clinic_name", "phone"],
             "🐾 สัตว์": ["owner_name", "pet_name", "hn", "breed"],
             "💰 การเงิน": ["receipt_no", "total_price", "items_list"]
         };
-
-        const PALETTE = ['#000000', '#475569', '#ef4444', '#f97316', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
-
-        const icons = {
-            L: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h16" stroke-width="2"/></svg>`,
-            C: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M4 18h16" stroke-width="2"/></svg>`,
-            R: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M10 12h10M4 18h16" stroke-width="2"/></svg>`,
-            B: `<b>B</b>`, I: `<i>I</i>`
-        };
+        const PALETTE = ['#000000', '#475569', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#78350f'];
 
         function replaceVars(text, fontSize, color) {
             const textColor = color || '#000000';
@@ -166,63 +151,68 @@
             currentConfig.width = parseFloat(document.getElementById('paper_w').value);
             currentConfig.height = parseFloat(document.getElementById('paper_h').value);
             const { error } = await db.from('print_templates').update({ config: currentConfig }).eq('template_type', type);
-            if (!error) alert('✅ บันทึกแล้ว');
+            if (!error) alert('✅ บันทึกรูปแบบเรียบร้อย');
         }
 
         function addLine(type) {
             let newLine = { type, x: 10, y: 10 };
-            if (type === 'text') newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 12, color: "#000000", bold: false, italic: false, align: "left" };
-            else if (type === 'rect') newLine = { ...newLine, w: 50, h: 10, radius: 0 };
-            else if (type === 'image') newLine = { ...newLine, w: 20, h: 20, url: '' };
+            if (type === 'text') newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 12, color: "#000000", align: "left" };
+            else if (type === 'rect') newLine = { ...newLine, w: 50, h: 10 };
             currentConfig.lines.push(newLine); activeLineIndex = currentConfig.lines.length - 1;
             renderLinesList(); renderCanvas();
+        }
+
+        // ✅ กู้คืนระบบลากสลับลำดับ (Drag & Drop)
+        function handleDragStart(index) { draggedIndex = index; }
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDrop(index) {
+            if (draggedIndex === null || draggedIndex === index) return;
+            const line = currentConfig.lines.splice(draggedIndex, 1)[0];
+            currentConfig.lines.splice(index, 0, line);
+            activeLineIndex = index; renderLinesList(); renderCanvas();
         }
 
         function renderLinesList() {
             const container = document.getElementById('lines_container');
             container.innerHTML = currentConfig.lines.map((l, i) => `
-                <div id="line-item-${i}" class="p-4 rounded-2xl border ${i === activeLineIndex ? 'bg-slate-800 border-teal-500' : 'bg-white/5 border-white/5'} transition-all cursor-pointer" onclick="selectLine(${i})">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-bold uppercase opacity-50">${l.type}</span>
-                        <button onclick="event.stopPropagation(); currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();" class="text-red-500">✕</button>
+                <div id="line-item-${i}" draggable="true" 
+                     ondragstart="handleDragStart(${i})" ondragover="handleDragOver(event)" ondrop="handleDrop(${i})"
+                     class="p-4 rounded-2xl border ${i === activeLineIndex ? 'bg-slate-800 border-teal-500 shadow-lg' : 'bg-white/5 border-white/5'} transition-all cursor-move" 
+                     onclick="selectLine(${i})">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-black uppercase opacity-40 tracking-widest">${l.type}</span>
+                        <button onclick="event.stopPropagation(); currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();" class="text-red-500 hover:text-red-400">✕</button>
                     </div>
-                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="truncate text-sm opacity-60">${l.text || 'Object'}</div>`}
+                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="truncate text-sm font-bold opacity-70">${l.text || 'Rectangle'}</div>`}
                 </div>`).join('');
         }
 
-        function selectLine(index) { 
-            activeLineIndex = index; 
-            renderLinesList(); 
-            renderCanvas(); 
-        }
+        function selectLine(index) { activeLineIndex = index; renderLinesList(); renderCanvas(); }
 
         function renderEditor(l, i) {
             const colorSwatches = PALETTE.map(hex => `<div class="color-swatch ${l.color === hex ? 'active' : ''}" style="background-color: ${hex}" onclick="updateLine(${i}, 'color', '${hex}')"></div>`).join('');
-            
             let fields = '';
             if (l.type === 'text') {
-                fields = `<div class="editor-group"><label class="label-title">เนื้อหา</label><textarea class="input-control" oninput="updateLine(${i},'text',this.value)">${l.text}</textarea></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="editor-group"><label class="label-title">ฟอนต์</label><select class="input-control" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun">Sarabun</option><option value="Kanit">Kanit</option></select></div>
-                        <div class="editor-group"><label class="label-title">ขนาด</label><input type="number" class="input-control" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
+                fields = `<textarea class="input-control mb-3" oninput="updateLine(${i},'text',this.value)">${l.text}</textarea>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div><label class="label-title">ฟอนต์</label><select class="input-control" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun">Sarabun</option><option value="Kanit">Kanit</option></select></div>
+                        <div><label class="label-title">ขนาด</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                     </div>
-                    <div class="editor-group"><label class="label-title">เลือกสี</label><div class="flex flex-wrap gap-2">${colorSwatches}</div></div>
+                    <div class="mb-3"><label class="label-title">สีมาตรฐาน</label><div class="flex flex-wrap gap-2">${colorSwatches}</div></div>
                     <div class="flex gap-2">
-                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left')">${icons.L}</button>
-                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center')">${icons.C}</button>
-                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right')">${icons.R}</button>
+                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left')">L</button>
+                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center')">C</button>
+                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right')">R</button>
                     </div>`;
-            } else if (l.type === 'rect') {
-                fields = `<div class="grid grid-cols-2 gap-3"><div class="editor-group"><label class="label-title">กว้าง</label><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"></div><div class="editor-group"><label class="label-title">สูง</label><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div></div>`;
+            } else {
+                fields = `<div class="grid grid-cols-2 gap-3"><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>`;
             }
-            return `<div class="space-y-4 mt-2" onclick="event.stopPropagation()">${fields}<div class="grid grid-cols-2 gap-3 border-t border-white/5 pt-3"><div class="editor-group"><label class="label-title">X (mm)</label><input type="number" id="input-x-${i}" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"></div><div class="editor-group"><label class="label-title">Y (mm)</label><input type="number" id="input-y-${i}" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div></div></div>`;
+            return `<div onclick="event.stopPropagation()">${fields}<div class="grid grid-cols-2 gap-3 border-t border-white/5 pt-3 mt-3"><input type="number" id="input-x-${i}" class="input-control" value="${l.x}" oninput="updateLine(${i},'x',this.value)"><input type="number" id="input-y-${i}" class="input-control" value="${l.y}" oninput="updateLine(${i},'y',this.value)"></div></div>`;
         }
 
         function updateLine(i, k, v) {
-            const numericKeys = ['x', 'y', 'w', 'h', 'size', 'radius'];
-            currentConfig.lines[i][k] = numericKeys.includes(k) ? parseFloat(v) : v;
+            currentConfig.lines[i][k] = ['x', 'y', 'w', 'h', 'size'].includes(k) ? parseFloat(v) : v;
             renderCanvas();
-            // ไม่เรียก renderLinesList() ทั้งหมดเพื่อให้ Keyboard ไม่หลุดโฟกัส
         }
 
         function renderCanvas() {
@@ -231,48 +221,38 @@
             wrapper.style.width = (pw * px) + 'px'; wrapper.style.height = (ph * px) + 'px';
             wrapper.innerHTML = currentConfig.lines.map((l, idx) => {
                 const isActive = idx === activeLineIndex;
-                let style = `top:${l.y * px}px; left:${l.x * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; color:${l.color || '#000000'};`;
-                
+                let style = `top:${l.y * px}px; left:${l.x * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; color:${l.color || '#000'};`;
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
                     return `<div class="canvas-element ${isActive ? 'active' : ''}" style="${style}" onclick="event.stopPropagation(); selectLine(${idx})">${replaceVars(l.text, l.size, l.color)}</div>`;
-                } else if (l.type === 'rect') {
-                    const rectStyle = `top:${l.y * px}px; left:${l.x * px}px; width:${l.w * px}px; height:${l.h * px}px; border:1px solid ${l.color || '#000'};`;
-                    return `<div class="canvas-element ${isActive ? 'active' : ''}" style="${rectStyle}" onclick="event.stopPropagation(); selectLine(${idx})"></div>`;
+                } else {
+                    style += `width:${l.w * px}px; height:${l.h * px}px; border:1px solid ${l.color || '#000'};`;
+                    return `<div class="canvas-element ${isActive ? 'active' : ''}" style="${style}" onclick="event.stopPropagation(); selectLine(${idx})"></div>`;
                 }
             }).join('');
         }
 
-        // ✅ ฟังก์ชัน Keyboard Movement ที่ได้รับการแก้ไขแล้ว
+        // ✅ Keyboard Move (ขยับทันที ไม่วาด List ใหม่)
         window.addEventListener('keydown', (e) => {
-            if (activeLineIndex === -1) return;
-            // ถ้ากำลังพิมพ์ในช่องกรอกข้อมูล ห้ามขยับ Object
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-
+            if (activeLineIndex === -1 || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
             const line = currentConfig.lines[activeLineIndex];
-            const step = e.shiftKey ? 5 : 1;
-            let moved = false;
-
+            const step = e.shiftKey ? 5 : 1; let moved = false;
             if (e.key === 'ArrowUp') { line.y -= step; moved = true; }
             else if (e.key === 'ArrowDown') { line.y += step; moved = true; }
             else if (e.key === 'ArrowLeft') { line.x -= step; moved = true; }
             else if (e.key === 'ArrowRight') { line.x += step; moved = true; }
-
             if (moved) {
-                e.preventDefault();
-                renderCanvas();
-                // อัปเดตตัวเลขในช่อง Input โดยไม่ต้องวาด Sidebar ใหม่ (เพื่อกันกระตุก)
+                e.preventDefault(); renderCanvas();
                 const ix = document.getElementById(`input-x-${activeLineIndex}`);
                 const iy = document.getElementById(`input-y-${activeLineIndex}`);
-                if (ix) ix.value = line.x;
-                if (iy) iy.value = line.y;
+                if (ix) ix.value = line.x; if (iy) iy.value = line.y;
             }
         });
 
         function applyZoom() { document.getElementById('canvas_wrapper').style.transform = `scale(${document.getElementById('zoom_level').value / 100})`; }
 
-        // --- ระบบ Resizer (ลากเส้นแบ่ง) ---
+        // --- Splitter ---
         let isResizing = false;
         const resizer = document.getElementById('resizer');
         const leftPanel = document.getElementById('left-panel');
@@ -289,13 +269,20 @@
             const sideContainer = document.getElementById('var_sidebar_container');
             if (sideContainer) {
                 sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
-                    <div>
-                        <div class="var-category-title" style="color:var(--teal); font-weight:800; font-size:0.8rem; margin-top:10px;">${group}</div>
-                        <div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('คัดลอก {{${v}}}');">{{${v}}}</span>`).join('')}</div>
-                    </div>
+                    <div><div class="var-category-title text-teal-500 font-bold text-xs mb-2 mt-4">${group}</div>
+                    <div class="flex flex-wrap">${vars.map(v => `<span class="var-badge" onclick="navigator.clipboard.writeText('{{${v}}}'); alert('คัดลอกแล้ว');">{{${v}}}</span>`).join('')}</div></div>
                 `).join('');
             }
         };
+
+        function printTest() {
+            const pw = document.getElementById('paper_w').value;
+            const ph = document.getElementById('paper_h').value;
+            const win = window.open('', '_blank');
+            const content = currentConfig.lines.map(l => `<div style="position:absolute; top:${l.y}mm; left:${l.x}mm; font-family:${l.font}; font-size:${l.size}pt; color:${l.color};">${replaceVars(l.text, l.size, l.color)}</div>`).join('');
+            win.document.write(`<html><head><style>@page{size:${pw}mm ${ph}mm; margin:0;}</style></head><body>${content}</body></html>`);
+            win.document.close(); win.print();
+        }
     </script>
 </body>
 </html>
