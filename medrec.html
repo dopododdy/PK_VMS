@@ -183,9 +183,11 @@
         };
 
         async function fetchInfo() {
-            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
-            const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
-            const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN);
+            const [{ data: owner }, { data: pet }, { data: phones }] = await Promise.all([
+                db.from('owners').select('*').eq('hn', ownerHN).single(),
+                db.from('animals').select('*').eq('id', animalId).single(),
+                db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN)
+            ]);
             if (owner && pet) {
                 petType = pet.pet_type;
                 document.getElementById('info-owner-name').innerText = owner.owner_name;
@@ -341,15 +343,19 @@
             if (item.type === 'Rx' && item.is_med) {
                 pendingItem = item; document.getElementById('rx-calc-name').innerText = item.name;
                 document.getElementById('rx-conc-val').value = item.data.concentration_mg_unit || 1;
-                const ds = document.getElementById('rx-dose-select'); ds.innerHTML = '<option value="">-- โดสแนะนำ --</option>';
+                const ds = document.getElementById('rx-dose-select');
                 const p = petType === 'แมว' ? 'cat' : 'dog';
-                for(let k=1; k<=5; k++) if(item.data[`${p}_dose_${k}`] > 0) ds.innerHTML += `<option value="${item.data[`${p}_dose_${k}`]}">${item.data[`${p}_dose_${k}`]} mg/kg</option>`;
+                let opts = '<option value="">-- โดสแนะนำ --</option>';
+                for(let k=1; k<=5; k++) if(item.data[`${p}_dose_${k}`] > 0) opts += `<option value="${item.data[`${p}_dose_${k}`]}">${item.data[`${p}_dose_${k}`]} mg/kg</option>`;
+                ds.innerHTML = opts;
                 document.getElementById('rx-calc-modal').style.display = 'flex'; calculateRxTablets();
             } else if (item.type === 'Tx') {
                 pendingItem = item; document.getElementById('inj-name').innerText = item.name;
-                const ds = document.getElementById('inj-dose-select'); ds.innerHTML = '<option value="0">-- ระบุปริมาณเอง --</option>';
+                const ds = document.getElementById('inj-dose-select');
                 const p = petType === 'แมว' ? 'cat' : 'dog';
-                for(let k=1; k<=5; k++) if(item.data[`${p}_dose_${k}`] > 0) ds.innerHTML += `<option value="${item.data[`${p}_dose_${k}`]}">${item.data[`${p}_dose_${k}`]} mg/kg (${item.data[`${p}_for_${k}`] || '-'})</option>`;
+                let opts = '<option value="0">-- ระบุปริมาณเอง --</option>';
+                for(let k=1; k<=5; k++) if(item.data[`${p}_dose_${k}`] > 0) opts += `<option value="${item.data[`${p}_dose_${k}`]}">${item.data[`${p}_dose_${k}`]} mg/kg (${item.data[`${p}_for_${k}`] || '-'})</option>`;
+                ds.innerHTML = opts;
                 document.getElementById('inj-modal').style.display = 'flex'; calculateInjMl();
             } else if (item.type === 'Lab') {
                 let finalPrice = parseFloat(item.price) || 0;

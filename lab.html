@@ -84,7 +84,7 @@
             </div>
             <div class="relative">
                 <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-gray-500"></i>
-                <input type="text" id="search-box" class="input-box pl-10" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="fetchAnimals()">
+                <input type="text" id="search-box" class="input-box pl-10" placeholder="ค้นหา HN หรือ ชื่อสัตว์..." oninput="filterAnimals()">
             </div>
         </div>
         <div id="animal-list" class="flex-1 overflow-y-auto custom-scroll p-2"></div>
@@ -277,7 +277,9 @@
             'Ca', 'Crea', 'CO2', 'TCH', 'Glu', 'BUN', 'Amy', 'BUN/Crea', 'TBA', 'AST/ALT', 'P', 'CK'
         ];
 
-        window.onload = async () => { lucide.createIcons(); await fetchMasterParams(); await fetchAnimals(); };
+        let allAnimalsCache = [];
+
+        window.onload = async () => { lucide.createIcons(); await Promise.all([fetchMasterParams(), loadAnimals()]); };
 
         async function fetchMasterParams() { 
             const { data } = await db.from('mas_lab_parameters').select('*'); 
@@ -302,10 +304,17 @@
             masterParams = fetchedData; 
         }
 
-        async function fetchAnimals() {
-            const term = document.getElementById('search-box').value.toLowerCase();
+        async function loadAnimals() {
             const { data } = await db.from('animals').select('*, owners(owner_name)');
-            const filtered = data.filter(a => a.pet_name.toLowerCase().includes(term) || a.owner_hn.includes(term));
+            allAnimalsCache = data || [];
+            filterAnimals();
+        }
+
+        function filterAnimals() {
+            const term = document.getElementById('search-box').value.toLowerCase();
+            const filtered = allAnimalsCache.filter(a => 
+                (a.pet_name || '').toLowerCase().includes(term) || (a.owner_hn || '').includes(term)
+            );
             document.getElementById('animal-list').innerHTML = filtered.map(a => `
                 <div class="pet-card" onclick="selectAnimal('${a.id}')" id="pet-${a.id}">
                     <div class="hn-col">#${a.owner_hn}</div>
@@ -358,8 +367,11 @@
                 cancelEditLab(); 
             }
 
-            const { data: a } = await db.from('animals').select('*').eq('id', id).single();
-            currentAnimal = a;
+            currentAnimal = allAnimalsCache.find(a => a.id == id) || null;
+            if (!currentAnimal) {
+                const { data: a } = await db.from('animals').select('*').eq('id', id).single();
+                currentAnimal = a;
+            }
             
             // อัปเดตแถบสีส้มด้านซ้าย (Sidebar) ให้ไฮไลท์ตัวที่ถูกเลือก
             document.querySelectorAll('.pet-card').forEach(c => c.classList.remove('active'));
@@ -370,14 +382,13 @@
             document.getElementById('lab-editor').classList.remove('hidden');
             
             // แสดงข้อมูลสัตว์บน Header
-            document.getElementById('disp-name').innerText = a.pet_name;
-            document.getElementById('disp-hn').innerText = `HN: ${a.owner_hn} | ${a.pet_type} (${a.breed})`;
-            document.getElementById('ec-bw').value = a.weight || '';
+            document.getElementById('disp-name').innerText = currentAnimal.pet_name;
+            document.getElementById('disp-hn').innerText = `HN: ${currentAnimal.owner_hn} | ${currentAnimal.pet_type} (${currentAnimal.breed})`;
+            document.getElementById('ec-bw').value = currentAnimal.weight || '';
 
             // โหลดข้อมูลทั้งหมดของสัตว์ตัวนี้
             renderInputForm(); 
-            await fetchLabHistory(id); 
-            await fetchImagingHistory(id); 
+            await Promise.all([fetchLabHistory(id), fetchImagingHistory(id)]);
             
             // บังคับเปิดไปที่แท็บ Input (กรอกผลเลือด) เสมอเวลาเปลี่ยนตัว
             switchTab('input', document.getElementById('tab-input'));
