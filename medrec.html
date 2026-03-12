@@ -1,11 +1,675 @@
-<!-- Previous version of the medrec.html file -->
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-    <title>Medical Records</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>บันทึกการรักษา | PK-VMS Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Prompt:wght@300;400;600&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+
+    <style>
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b811; --border: rgba(255, 255, 255, 0.1); }
+        * { font-family: "Sarabun", sans-serif !important; }
+        body { background: var(--navy); color: #e2e8f0; font-size: 1rem; margin: 0; padding: 0; }
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1.1rem; }
+        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        .label-text { color: #94a3b8; font-size: 1rem; margin-bottom: 4px; display: block; font-weight: 600; }
+        .label-clinical { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; display: block; }
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
+        
+        .history-record-box { background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden; position: relative; }
+        .history-header { padding: 18px 25px; cursor: pointer; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
+        .history-header:hover { background: rgba(255,255,255,0.03); }
+        .history-content { padding: 0 25px 25px 25px; border-top: 1px solid rgba(255,255,255,0.05); position: relative; }
+
+        .data-label { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+        .data-value { font-size: 1rem; color: #cbd5e1; }
+        
+        .btn-base { padding: 8px 16px; border-radius: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; font-size: 0.9rem; }
+        .btn-teal { background-color: #0d9488 !important; }
+        .btn-blue { background-color: #2563eb !important; }
+        .btn-red { background-color: #dc2626 !important; }
+        .btn-amber { background-color: #d97706 !important; }
+        
+        .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 12px; cursor: pointer; }
+        .view-hidden { display: none; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .summary-col { font-size: 0.7rem; font-weight: 500; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .col-lab { color: #c084fc; }
+        .col-tx { color: #f472b6; }
+        .col-rx { color: #34d399; }
+
+        @media print { #main-ui, .modal-overlay { display: none !important; } }
+    </style>
 </head>
-<body>
-    <h1>Medical Records</h1>
-    <p>Patient information will be displayed here.</p>
+<body class="p-4 md:p-10">
+
+    <div id="main-ui" class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-6">
+                <button onclick="goBack()" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-2xl shadow-lg">⬅️</button>
+                <div><h1 class="text-4xl font-black text-white" id="head-pet-name">กำลังโหลด...</h1><p class="text-teal-400 font-bold text-xl" id="head-hn">HN: -</p></div>
+            </div>
+            <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl border border-white/5">🏠</a>
+        </header>
+
+        <div class="section-card border-l-8 border-blue-500">
+            <h3 class="text-2xl font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
+            <div class="grid grid-cols-12 gap-6">
+                <div class="col-span-12 md:col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><div id="info-owner-name" class="text-xl font-bold text-white">-</div></div>
+                <div class="col-span-12 md:col-span-3"><label class="label-text">เบอร์โทรศัพท์</label><div id="info-owner-phone" class="text-xl font-bold text-teal-400">-</div></div>
+                <div class="col-span-12 md:col-span-5"><label class="label-text">ที่อยู่</label><div id="info-owner-address" class="text-base text-slate-400">-</div></div>
+            </div>
+        </div>
+
+        <div id="history-view-container">
+            <div class="section-card border-l-8 border-teal-500">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">🐾 ข้อมูลสัตว์</h3>
+                    <button onclick="showFormView()" class="btn-base btn-teal text-xl py-3 px-6 shadow-xl">+ เพิ่มประวัติการรักษา</button>
+                </div>
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-6 md:col-span-2"><label class="label-text">ชื่อสัตว์</label><div id="v-pet-name" class="text-xl font-bold text-white">-</div></div>
+                    <div class="col-span-6 md:col-span-3"><label class="label-text">นน.(กก.)</label><div id="v-pet-weight" class="text-xl font-bold text-yellow-400">-</div></div>
+                    <div class="col-span-12 md:col-span-7"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="text-lg font-bold text-red-400">-</div></div>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-3xl font-black text-white flex items-center gap-3">
+                    ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
+                </h3>
+                <div class="flex gap-3">
+                    <button onclick="goToPOS()" class="btn-base bg-blue-600 hover:bg-blue-500 shadow-lg text-xs">💰 คิดเงิน</button>
+                    <button onclick="printBothLabels(animalId)" class="btn-base bg-emerald-600 hover:bg-emerald-500 shadow-lg text-xs">🖨️ ข้อมูลสัตว์ + นัดหมาย</button>
+                    <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-xs">🪪 บัตรประจำตัวสัตว์</button>
+                    <button onclick="printApptLabel(animalId)" class="btn-base bg-orange-600 hover:bg-orange-500 shadow-lg text-xs">📅 ใบนัดหมาย</button>
+                </div>
+            </div>
+            <div id="history-list" class="space-y-3"></div>
+        </div>
+
+        <div id="form-view-container" class="view-hidden">
+            <div class="section-card border-l-8 border-teal-400">
+                <h3 class="text-2xl font-bold text-white mb-8" id="form-title">🏥 บันทึกการตรวจรักษา</h3>
+                <div class="grid grid-cols-12 gap-5">
+                    <div class="col-span-12 md:col-span-2"><label class="label-clinical text-yellow-400">น้ำหนัก (กก.)</label><input type="number" id="f_weight" class="input-box font-bold text-yellow-400 text-2xl" step="0.1" oninput="renderCatalog()"></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-clinical">CC</label><textarea id="f_cc" class="input-box h-24" placeholder="อาการสำคัญ..."></textarea></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-clinical">Hx</label><textarea id="f_hx" class="input-box h-24" placeholder="ประวัติย้อนหลัง..."></textarea></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE</label><textarea id="f_pe" class="input-box h-32" placeholder="ร่างกาย..."></textarea></div>
+                    <div class="col-span-12 md:col-span-4">
+                        <label class="label-clinical">🔬 Lab/หัตถการ</label>
+                        <div id="list_lab_display" class="list-box overflow-y-auto max-h-40" onclick="openCatalog('lab')">คลิกเพื่อเลือก...</div>
+                    </div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-clinical text-yellow-400">Dx</label><textarea id="f_dx" class="input-box h-32" placeholder="วินิจฉัย..."></textarea></div>
+                    <div class="col-span-12 md:col-span-6">
+                        <label class="label-clinical">💉 Tx (ยาฉีด)</label>
+                        <div id="list_tx_display" class="list-box overflow-y-auto max-h-40" onclick="openCatalog('tx')">คลิกเพื่อเลือก...</div>
+                    </div>
+                    <div class="col-span-12 md:col-span-6">
+                        <div class="flex justify-between items-center mb-1"><label class="label-clinical">💊 Rx (ยากลับบ้าน)</label><button onclick="printAllRx()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded-lg font-bold">🖨️ พิมพ์ที่เลือก</button></div>
+                        <div id="list_rx_display" class="list-box border-blue-500/50 overflow-y-auto max-h-40" onclick="openCatalog('rx')">คลิกเพื่อเลือก...</div>
+                    </div>
+
+                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">📅 วันนัด</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
+                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ</label><input type="text" id="f_app_note" class="input-box"></div>
+                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">📅 วันนัด (2)</label><input type="text" id="f_appointment_2" class="input-box datepicker"></div>
+                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ (2)</label><input type="text" id="f_app_note_2" class="input-box"></div>
+                    
+                    <div class="col-span-12 md:col-span-9"><label class="label-clinical">Plan (แผนการรักษาต่อ)</label><input type="text" id="f_plan" class="input-box"></div>
+                    <div class="col-span-12 md:col-span-3"><label class="label-text text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-3xl font-black text-yellow-400" value="0" step="0.01"></div>
+                </div>
+                <div class="flex gap-4 mt-10">
+                    <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-2xl py-5 shadow-2xl" id="btn-save-main">💾 บันทึกการรักษา</button>
+                    <button onclick="showHistoryView()" class="btn-base btn-red px-10">ยกเลิก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="catalog-modal" class="modal-overlay"><div class="modal-content"><div class="p-6 border-b border-white/10 flex justify-between bg-slate-900/50"><h3 id="modal-title" class="text-2xl font-bold">เลือกรายการ</h3><button onclick="closeCatalog()" class="text-3xl">✕</button></div><div class="p-4 bg-white/5"><input type="text" id="catalog-search" class="input-box" placeholder="ค้นหา..." oninput="filterCatalog()"></div><div id="catalog-items" class="flex-1 overflow-y-auto p-4 space-y-3 bg-black/20"></div><div class="p-5 bg-teal-500/10 border-t border-teal-500/20"><div id="modal-session-list" class="flex flex-wrap gap-3"></div></div><div class="p-6 border-t border-white/10 bg-slate-900/50"><button onclick="closeCatalog()" class="btn-base btn-blue w-full text-xl py-4">เสร็จสิ้น</button></div></div></div>
+    
+    <div id="rx-calc-modal" class="modal-overlay" style="z-index: 120;"><div class="modal-content !max-w-2xl"><div class="p-6 border-b border-white/10 bg-blue-900/30"><h4 id="rx-calc-name" class="text-2xl font-black text-blue-400">💊 กำหนดการให้ยา</h4></div><div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto"><div class="space-y-4"><div><label class="label-clinical">โดสแนะนำ (mg/kg)</label><select id="rx-dose-select" class="input-box w-full" onchange="document.getElementById('rx-dose-val').value=this.value; calculateRxTablets();"></select></div><div class="grid grid-cols-2 gap-4"><div><label class="label-clinical">โดสจริง</label><input type="number" id="rx-dose-val" class="input-box" step="0.1" oninput="calculateRxTablets()"></div><div><label class="label-clinical">Conc.</label><input type="number" id="rx-conc-val" class="input-box bg-white/5" readonly></div></div><div class="p-4 bg-teal-500/10 rounded-2xl"><label class="label-clinical text-teal-400">ป้อนครั้งละ</label><div id="rx-tabs-display" class="text-3xl font-black text-white">0</div><input type="hidden" id="rx-tabs-val"></div></div><div class="space-y-4 border-l border-white/5 pl-6"><div class="grid grid-cols-2 gap-2"><div><label class="label-clinical">ความถี่/วัน</label><select id="rx-freq" class="input-box" onchange="calculateRxTotal(); updateTimeOfDay();"><option value="1">1 ครั้ง</option><option value="2" selected>2 ครั้ง</option><option value="3">3 ครั้ง</option><option value="4">4 ครั้ง</option><option value="0.5">วันเว้นวัน</option></select></div><div><label class="label-clinical">จำนวนวัน</label><input type="number" id="rx-days" class="input-box" value="7" oninput="calculateRxTotal()"></div></div><div class="grid grid-cols-2 gap-2"><div><label class="label-clinical">มื้ออาหาร</label><select id="rx-meal-timing" class="input-box"><option value="หลังอาหาร">หลังอาหาร</option><option value="หลังอาหารทันที">หลังอาหารทันที</option><option value="ก่อนอาหาร">ก่อนอาหาร</option><option value="พร้อมอาหาร">พร้อมอาหาร</option></select></div><div><label class="label-clinical">ช่วงเวลา</label><select id="rx-day-timing" class="input-box"><option value="เช้า">เช้า</option><option value="เย็น">เย็น</option><option value="เช้า-เย็น" selected>เช้า-เย็น</option><option value="เช้า-กลางวัน-เย็น">เช้า-กลางวัน-เย็น</option><option value="ก่อนนอน">ก่อนนอน</option></select></div></div><div class="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20"><div id="rx-info-text" class="text-slate-300 font-bold mb-1">฿0 /เม็ด | รวม 0 เม็ด</div><div id="rx-total-price-display" class="text-2xl font-black text-white">฿ 0.00</div><input type="hidden" id="rx-final-price-val"></div></div></div><div class="p-6 border-t border-white/10 flex gap-4"><button onclick="printCurrentRx()" class="btn-base bg-slate-700 px-6">🖨️ พิมพ์</button><button onclick="confirmRxCalc()" class="btn-base btn-teal flex-1">✅ เพิ่มรายการ</button></div></div></div>
+
+    <div id="inj-modal" class="modal-overlay" style="z-index: 110;">
+        <div class="modal-content !max-w-sm">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30"><h4 id="inj-name" class="font-bold text-teal-400">-</h4></div>
+            <div class="p-6 space-y-5">
+                <div><label class="label-clinical">โดสแนะนำ (mg/kg)</label><select id="inj-dose-select" class="input-box" onchange="calculateInjMl()"></select></div>
+                <div><label class="label-clinical">ปริมาณ (ml)</label><input type="number" id="inj-ml" class="input-box text-2xl font-black text-yellow-400" step="0.01" value="0.1"></div>
+                <div><label class="label-clinical">Route</label><div class="flex flex-wrap gap-3"><label class="route-opt flex items-center gap-1"><input type="checkbox" name="route" value="SC"> SC</label><label class="route-opt flex items-center gap-1"><input type="checkbox" name="route" value="IM"> IM</label><label class="route-opt flex items-center gap-1"><input type="checkbox" name="route" value="IV"> IV</label></div></div>
+                <div class="p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-center"><label class="label-clinical text-yellow-400">ราคาคำนวณตามน้ำหนัก</label><div id="inj-pop-price" class="text-3xl font-black text-white">฿ 0.00</div><input type="hidden" id="inj-final-price"></div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3"><button onclick="confirmInj()" class="btn-base btn-teal flex-1">ยืนยัน</button></div>
+        </div>
+    </div>
+
+    <div id="lab-view-modal" class="modal-overlay" style="z-index: 150;">
+        <div class="modal-content !max-w-4xl">
+            <div class="p-6 border-b border-white/10 flex justify-between bg-slate-900/50"><h3 class="text-2xl font-bold flex items-center gap-2">🔬 ผลตรวจทางห้องปฏิบัติการ</h3><button onclick="document.getElementById('lab-view-modal').style.display='none'" class="text-3xl">✕</button></div>
+            <div class="p-6 flex-1 overflow-y-auto custom-scroll space-y-6"><div class="lab-table-container"><table class="lab-table"><thead><tr id="lab-view-head"></tr></thead><tbody id="lab-view-body"></tbody></table></div></div>
+            <div class="p-4 border-t border-white/10 text-right"><button onclick="document.getElementById('lab-view-modal').style.display='none'" class="btn-base btn-blue px-8">ปิดหน้าต่าง</button></div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
+        let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
+        let selectedItems = [], petType = 'สุนัข', editingId = null;
+
+        function formatThaiDate(dateString, format = 'long') {
+            if (!dateString) return "-";
+            const date = new Date(dateString);
+            const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const d = date.getDate(), m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()], y = date.getFullYear() + 543;
+            return `${d} ${m} ${y}`;
+        }
+
+        window.onload = async () => {
+            if (!animalId || !ownerHN) return location.href='animals.html';
+            flatpickr(".datepicker", { locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y" });
+            await fetchInfo(); await fetchRecords();
+        };
+
+        async function fetchInfo() {
+            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+            const { data: pet } = await db.from('animals').select('*').eq('id', animalId).single();
+            const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN);
+            if (owner && pet) {
+                petType = pet.pet_type;
+                document.getElementById('info-owner-name').innerText = owner.owner_name;
+                document.getElementById('info-owner-phone').innerText = phones?.[0]?.phone_number || '-';
+                document.getElementById('info-owner-address').innerText = owner.address || '-';
+                document.getElementById('head-hn').innerText = `HN: ${owner.hn}`;
+                document.getElementById('head-pet-name').innerText = pet.pet_name;
+                document.getElementById('v-pet-name').innerText = pet.pet_name;
+                document.getElementById('v-pet-weight').innerText = pet.weight || '0';
+                document.getElementById('f_weight').value = pet.weight || 0;
+                document.getElementById('v-pet-congenital').innerText = pet.congenital_disease || 'ไม่มี';
+            }
+        }
+
+        async function fetchRecords() {
+            const { data, error } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', animalId).order('created_at', { ascending: false });
+            
+            // เพิ่มตัวเช็ค Error ถ้าโหลดข้อมูลไม่สำเร็จให้เด้งแจ้งเตือน
+            if (error) {
+                console.error("โหลดประวัติไม่สำเร็จ:", error);
+                alert("⚠️ โหลดประวัติไม่สำเร็จ: " + error.message + "\n(ลองกดปุ่ม Reload schema cache ใน Supabase)");
+            }
+            
+            records = data || []; 
+            renderRecordsList();
+        }
+
+        function renderRecordsList() {
+            const list = document.getElementById('history-list');
+            document.getElementById('record-count').innerText = records.length;
+            if (records.length === 0) { list.innerHTML = `<p class="text-gray-500 py-10 text-center">ยังไม่มีประวัติการรักษา</p>`; return; }
+            
+            list.innerHTML = records.map(rec => {
+                const labItems = rec.medical_record_items.filter(i => i.item_type === 'Lab');
+                const txItems = rec.medical_record_items.filter(i => i.item_type === 'Tx');
+                const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
+                
+                const labText = labItems.map(i => i.item_name).join(', ');
+                const txText = txItems.map(i => i.item_name).join(', ');
+                const rxText = rxItems.map(i => i.item_name).join(', ');
+
+                return `
+                <div class="history-record-box shadow-xl">
+                    <div class="history-header" onclick="toggleCollapse('${rec.id}')">
+                        <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs">🔽</div>
+                        <div class="flex flex-col min-w-[120px]">
+                            <span class="text-teal-400 font-black text-sm">${formatThaiDate(rec.created_at, 'short')}</span>
+                            <span class="text-slate-500 text-[10px]">${rec.weight} กก. | ฿${(rec.total_cost || 0).toLocaleString()}</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-4 gap-4 flex-1">
+                            <div class="summary-col text-yellow-300">${rec.cc || ''}</div>
+                            <div class="summary-col col-lab">${labText || ''}</div>
+                            <div class="summary-col col-tx">${txText || ''}</div>
+                            <div class="summary-col col-rx">${rxText || ''}</div>
+                        </div>
+                        
+                        <div class="flex gap-2 ml-4">
+                            <button onclick="event.stopPropagation(); refillMeds('${rec.id}')" class="btn-base btn-amber !py-1 !px-2 text-[10px]">💊 จ่ายยาเดิม</button>
+                            <button onclick="event.stopPropagation(); editRecord('${rec.id}')" class="btn-base btn-blue !py-1 !px-2 text-[10px]">✏️ แก้ไข</button>
+                            <button onclick="event.stopPropagation(); deleteRecord('${rec.id}')" class="btn-base btn-red !py-1 !px-2 text-[10px]">🗑️ ลบ</button>
+                        </div>
+                    </div>
+
+                    <div id="collapse-${rec.id}" class="history-content hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-b border-white/10 pb-4">
+                            <div><span class="data-label">CC</span><div class="data-value">${rec.cc || '-'}</div></div>
+                            <div><span class="data-label">Dx</span><div class="data-value text-blue-300 font-bold">${rec.dx || '-'}</div></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-b border-white/10">
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="data-label text-purple-400">🔬 Lab</span>
+                                    ${labItems.length > 0 ? `<button onclick="viewLabResults('${animalId}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">ผลเลือด</button>` : ''}
+                                </div>
+                                <div class="data-value text-sm">${labText || '-'}</div>
+                            </div>
+                            <div><span class="data-label text-pink-400">💉 Tx (ยาฉีด)</span><div class="data-value text-sm">${txText || '-'}</div></div>
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="data-label text-emerald-400">💊 Rx (ยากลับบ้าน)</span>
+                                    <button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์</button>
+                                </div>
+                                <div class="data-value text-xs space-y-1">
+                                    ${rxItems.map(i => `<div class="flex gap-2"><input type="checkbox" class="rx-select-${rec.id}" value="${i.id}" checked><span>${i.item_name} x ${Math.floor(i.quantity)}</span></div>`).join('') || '-'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <span class="data-label">📌 Plan</span><div class="data-value italic">${rec.plan || '-'}</div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleCollapse(id) { document.getElementById(`collapse-${id}`).classList.toggle('hidden'); }
+
+        // ✅ ฟังก์ชันปุ่มคิดเงิน (ส่งไปหน้า POS)
+        function goToPOS() {
+            if (!ownerHN) return alert("ไม่พบรหัสเจ้าของสัตว์");
+            window.location.href = `pos.html?hn=${ownerHN}`;
+        }
+
+        function refillMeds(recordId) {
+            const rec = records.find(r => r.id === recordId);
+            if (!rec) return;
+            const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
+            if (rxItems.length === 0) return alert("ไม่พบรายการยา");
+            if (confirm(`คัดลอกยาเดิม (${rxItems.length} รายการ)?`)) {
+                editingId = null;
+                selectedItems = rxItems.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
+                ['cc','hx','pe','dx','plan','appointment','app_note','appointment_2','app_note_2'].forEach(f => { if(document.getElementById('f_'+f)) document.getElementById('f_'+f).value = ''; });
+                document.getElementById('f_cost').value = selectedItems.reduce((sum, i) => sum + i.price, 0).toFixed(2);
+                updateFormUI(); showFormView();
+                document.getElementById('form-title').innerText = "🏥 บันทึกการรักษา (จ่ายยาเดิม)";
+            }
+        }
+
+        async function openCatalog(type) {
+            currentCatalogType = type; document.getElementById('catalog-modal').style.display = 'flex';
+            let items = [];
+            if (type === 'lab') {
+                const { data } = await db.from('services').select('*').in('category', ['Lab', 'หัตถการ']);
+                items = (data || []).map(i => ({ name: i.service_name, price: i.price, type: 'Lab', data: i }));
+            } else if (type === 'tx') {
+                const { data } = await db.from('pharmacy').select('*').eq('category', 'Injection');
+                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Tx', subtype: 'inj', data: i }));
+            } else if (type === 'rx') {
+                const { data } = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']);
+                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Rx', is_med: i.category !== 'General', data: i }));
+            }
+            fullCatalog = items; displayedItems = [...items]; renderCatalog(); updateModalUI();
+        }
+
+        function renderCatalog() {
+            const weight = parseFloat(document.getElementById('f_weight').value) || 0;
+            document.getElementById('catalog-items').innerHTML = displayedItems.map((i, idx) => {
+                let displayPrice = parseFloat(i.price) || 0;
+                if (i.data && i.data.price_config && Array.isArray(i.data.price_config)) {
+                    const matchedTier = i.data.price_config.find(t => weight <= t.max);
+                    if (matchedTier) displayPrice = matchedTier.price; else if (i.data.price_config.length > 0) displayPrice = i.data.price_config[i.data.price_config.length-1].price;
+                }
+                return `<div class="p-4 bg-white/5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/10 border border-transparent hover:border-teal-500/50" onclick="handleItemSelect(${idx})"><div><b>${i.name}</b><br><small class="text-teal-400 font-bold">฿ ${displayPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</small></div><div class="text-teal-500 text-2xl font-bold">+</div></div>`;
+            }).join('');
+        }
+
+        window.handleItemSelect = function(idx) {
+            const item = displayedItems[idx]; if (!item) return;
+            const weight = parseFloat(document.getElementById('f_weight').value) || 0;
+            if (item.type === 'Rx' && item.is_med) {
+                pendingItem = item; document.getElementById('rx-calc-name').innerText = item.name;
+                document.getElementById('rx-conc-val').value = item.data.concentration_mg_unit || 1;
+                const ds = document.getElementById('rx-dose-select'); ds.innerHTML = '<option value="">-- โดสแนะนำ --</option>';
+                const p = petType === 'แมว' ? 'cat' : 'dog';
+                for(let k=1; k<=5; k++) if(item.data[`${p}_dose_${k}`] > 0) ds.innerHTML += `<option value="${item.data[`${p}_dose_${k}`]}">${item.data[`${p}_dose_${k}`]} mg/kg</option>`;
+                document.getElementById('rx-calc-modal').style.display = 'flex'; calculateRxTablets();
+            } else if (item.type === 'Tx') {
+                pendingItem = item; document.getElementById('inj-name').innerText = item.name;
+                const ds = document.getElementById('inj-dose-select'); ds.innerHTML = '<option value="0">-- ระบุปริมาณเอง --</option>';
+                const p = petType === 'แมว' ? 'cat' : 'dog';
+                for(let k=1; k<=5; k++) if(item.data[`${p}_dose_${k}`] > 0) ds.innerHTML += `<option value="${item.data[`${p}_dose_${k}`]}">${item.data[`${p}_dose_${k}`]} mg/kg (${item.data[`${p}_for_${k}`] || '-'})</option>`;
+                document.getElementById('inj-modal').style.display = 'flex'; calculateInjMl();
+            } else if (item.type === 'Lab') {
+                let finalPrice = parseFloat(item.price) || 0;
+                if (item.data.price_config && Array.isArray(item.data.price_config)) {
+                    const tier = item.data.price_config.find(t => weight <= t.max);
+                    if (tier) finalPrice = tier.price; else if (item.data.price_config.length > 0) finalPrice = item.data.price_config[item.data.price_config.length-1].price;
+                }
+                addItem('Lab', item.name, finalPrice);
+            } else { addItem(item.type, item.name, item.price); }
+        };
+
+        function calculateInjMl() {
+            const weight = parseFloat(document.getElementById('f_weight').value) || 0, dose = parseFloat(document.getElementById('inj-dose-select').value) || 0, conc = parseFloat(pendingItem.data.concentration_mg_unit) || 1;
+            if (dose > 0) document.getElementById('inj-ml').value = ((weight * dose) / conc).toFixed(2);
+            let finalPrice = pendingItem.price;
+            if (pendingItem.data.price_config && Array.isArray(pendingItem.data.price_config)) {
+                const tier = pendingItem.data.price_config.find(t => weight <= t.max);
+                if (tier) finalPrice = tier.price; else finalPrice = pendingItem.data.price_config[pendingItem.data.price_config.length-1].price;
+            }
+            document.getElementById('inj-pop-price').innerText = `฿ ${parseFloat(finalPrice).toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            document.getElementById('inj-final-price').value = finalPrice;
+        }
+
+        function confirmInj() { addItem('Tx', `${pendingItem.name} (${document.getElementById('inj-ml').value}ml) ${Array.from(document.querySelectorAll('input[name="route"]:checked')).map(c=>c.value).join('/')}`, document.getElementById('inj-final-price').value); document.getElementById('inj-modal').style.display='none'; }
+        function filterCatalog() { const t = document.getElementById('catalog-search').value.toLowerCase(); displayedItems = fullCatalog.filter(i=>i.name.toLowerCase().includes(t)); renderCatalog(); }
+        function addItem(type, name, price, meta = {}) { selectedItems.push({ type, name, price: parseFloat(price), ...meta }); document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) + parseFloat(price)).toFixed(2); updateFormUI(); updateModalUI(); }
+
+        function calculateRxTablets() {
+            const w = parseFloat(document.getElementById('f_weight').value) || 0, d = parseFloat(document.getElementById('rx-dose-val').value) || 0, c = parseFloat(document.getElementById('rx-conc-val').value) || 1;
+            let t = Math.round(((w * d) / c) * 4) / 4; document.getElementById('rx-tabs-val').value = t;
+            document.getElementById('rx-tabs-display').innerText = `${t % 1 === 0 ? t : (Math.floor(t) > 0 ? Math.floor(t) + ' ' : '') + (t%1===0.25?'1/4':t%1===0.5?'1/2':'3/4')} ${pendingItem.data.unit || 'เม็ด'}`;
+            calculateRxTotal();
+        }
+
+        function calculateRxTotal() {
+            const t = parseFloat(document.getElementById('rx-tabs-val').value) || 0, f = parseFloat(document.getElementById('rx-freq').value) || 1, d = parseInt(document.getElementById('rx-days').value) || 1;
+            const q = Math.ceil(t * f * d), total = q * (pendingItem.price || 0);
+            document.getElementById('rx-info-text').innerText = `฿${(pendingItem.price||0).toFixed(2)} /${pendingItem.data.unit || 'เม็ด'} | รวม ${q}`;
+            document.getElementById('rx-total-price-display').innerText = `฿ ${total.toFixed(2)}`;
+            document.getElementById('rx-final-price-val').value = total.toFixed(2);
+            pendingItem.calculatedQty = q;
+        }
+
+        function confirmRxCalc() { addItem('Rx', pendingItem.name, parseFloat(document.getElementById('rx-final-price-val').value), { dose: document.getElementById('rx-tabs-display').innerText.split(' ')[0], unit: pendingItem.data.unit || 'เม็ด', freq: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`, meal: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value, days: parseInt(document.getElementById('rx-days').value), qty: pendingItem.calculatedQty, drug_name_th: pendingItem.data.name_th, warning: pendingItem.data.side_effects }); document.getElementById('rx-calc-modal').style.display = 'none'; }
+
+        async function printCurrentRx() {
+            if (!pendingItem) return alert("ไม่พบข้อมูลยา");
+            const tabsVal = parseFloat(document.getElementById('rx-tabs-val').value) || 0;
+            const freqVal = parseFloat(document.getElementById('rx-freq').value) || 1;
+            const daysVal = parseInt(document.getElementById('rx-days').value) || 1;
+            const qty = Math.ceil(tabsVal * freqVal * daysVal);
+            
+            const doseText = document.getElementById('rx-tabs-display').innerText.split(' ')[0];
+            const freqText = document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`;
+            
+            const rxData = {
+                clinic_name: "PK-VMS Clinic",
+                pet_name: document.getElementById('v-pet-name').innerText,
+                owner_name: document.getElementById('info-owner-name').innerText,
+                species: petType,
+                hn: ownerHN,
+                drug_name: pendingItem.name,
+                drug_name_th: pendingItem.data.name_th || "",
+                warning: pendingItem.data.side_effects || "",
+                dose_per_time: doseText,
+                unit: pendingItem.data.unit || 'เม็ด',
+                frequency: freqText,
+                meal_timing: document.getElementById('rx-meal-timing').value,
+                day_timing: document.getElementById('rx-day-timing').value,
+                duration_days: daysVal,
+                total_qty: `${qty} ${pendingItem.data.unit || 'เม็ด'}`,
+                date: new Date().toLocaleDateString('th-TH')
+            };
+            await executeDynamicPrint([rxData], 'sticker_drug');
+        }
+
+        async function printAllRx() {
+            const rxItems = selectedItems.filter(i => i.type === 'Rx');
+            if (rxItems.length === 0) return alert("กรุณาเลือกยาในช่อง Rx ก่อนกดพิมพ์");
+            const batch = rxItems.map(i => {
+                return {
+                    clinic_name: "PK-VMS Clinic",
+                    pet_name: document.getElementById('v-pet-name').innerText,
+                    owner_name: document.getElementById('info-owner-name').innerText,
+                    species: petType,
+                    hn: ownerHN,
+                    drug_name: i.name,
+                    drug_name_th: i.drug_name_th || "",
+                    warning: i.warning || "",
+                    dose_per_time: i.dose,
+                    unit: i.unit,
+                    frequency: i.freq,
+                    meal_timing: i.meal,
+                    day_timing: i.day_timing,
+                    duration_days: i.days,
+                    total_qty: `${i.qty} ${i.unit}`,
+                    date: new Date().toLocaleDateString('th-TH')
+                };
+            });
+            await executeDynamicPrint(batch, 'sticker_drug');
+        }
+
+        async function saveMedicalRecord() {
+            try {
+                const headerData = { animal_id: animalId, owner_hn: ownerHN, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: 'pending' };
+                let currentRecordId = editingId;
+                if (editingId) { await db.from('medical_records').update(headerData).eq('id', editingId); await db.from('medical_record_items').delete().eq('record_id', editingId); }
+                else { const { data: record } = await db.from('medical_records').insert([headerData]).select().single(); currentRecordId = record.id; }
+                const itemInserts = selectedItems.map(item => ({ record_id: currentRecordId, item_type: item.type, item_name: item.name, dose_per_time: item.dose || null, unit: item.unit || null, frequency: item.freq || null, meal_timing: item.meal || null, day_timing: item.day_timing || null, duration_days: item.days || null, quantity: item.qty || 1, unit_price: item.unit_price || item.price, total_price: item.price }));
+                await db.from('medical_record_items').insert(itemInserts);
+                location.reload();
+            } catch (err) { console.error(err); }
+        }
+
+        async function editRecord(id) {
+            const rec = records.find(r => r.id === id); if (!rec) return;
+            editingId = id; document.getElementById('f_weight').value = rec.weight || 0;
+            ['cc','hx','pe','dx','plan','appointment','app_note','appointment_2','app_note_2'].forEach(f => { const el = document.getElementById('f_'+f); if(el) el.value = rec[f] || ''; });
+            document.getElementById('f_cost').value = rec.total_cost || 0;
+            selectedItems = rec.medical_record_items.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
+            updateFormUI(); showFormView();
+        }
+
+        async function deleteRecord(id) { if(confirm("ลบประวัติ?")) { await db.from('medical_records').delete().eq('id', id); location.reload(); } }
+        function drawBullets(arr, mode = null) { if (!arr || arr.length === 0) return "-"; return `<ul class="bullet-list">${arr.map((n, idx) => `<li onclick="${mode==='form_item'?'removeItem('+idx+')':''}"><span>${n}</span></li>`).join('')}</ul>`; }
+        function showFormView() { document.getElementById('history-view-container').classList.add('view-hidden'); document.getElementById('form-view-container').classList.remove('view-hidden'); }
+        function showHistoryView() { location.reload(); }
+        function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
+        function goBack() { location.href = 'animals.html'; }
+        function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
+        
+        function updateFormUI() {
+            document.getElementById('list_lab_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Lab').map(i=>i.name), 'form_item');
+            document.getElementById('list_tx_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Tx').map(i=>i.name), 'form_item');
+            document.getElementById('list_rx_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Rx').map(i=> i.dose ? `${i.name} (${i.dose} ${i.unit} ${i.freq})` : i.name), 'form_item');
+        }
+
+        function removeItem(idx) {
+            const filterType = currentCatalogType === 'rx' ? 'Rx' : currentCatalogType === 'tx' ? 'Tx' : 'Lab';
+            const list = selectedItems.filter(i => i.type === filterType);
+            const originalIndex = selectedItems.indexOf(list[idx]);
+            if (originalIndex > -1) { document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) - selectedItems[originalIndex].price).toFixed(2); selectedItems.splice(originalIndex, 1); }
+            updateFormUI(); updateModalUI();
+        }
+
+        function updateModalUI() {
+            const filterType = currentCatalogType === 'rx' ? 'Rx' : currentCatalogType === 'tx' ? 'Tx' : 'Lab';
+            const current = selectedItems.filter(i => i.type === filterType);
+            document.getElementById('modal-session-list').innerHTML = current.map((i, idx) => `<span class="bg-teal-500 text-black px-3 py-1 rounded-lg text-sm font-bold cursor-pointer" onclick="removeItem(${idx})">✕ ${i.name}</span>`).join('');
+        }
+
+        async function viewLabResults(id) {
+            const modal = document.getElementById('lab-view-modal'); modal.style.display = 'flex';
+            const head = document.getElementById('lab-view-head'), body = document.getElementById('lab-view-body');
+            head.innerHTML = '<th>กำลังโหลด...</th>'; body.innerHTML = '';
+            try {
+                const { data: masterParams } = await db.from('mas_lab_parameters').select('*').order('parameter_name');
+                const { data: labData } = await db.from('lab_results').select('*').eq('animal_id', id).order('created_at', { ascending: false });
+                if (!labData || labData.length === 0) { head.innerHTML = '<th class="p-10 text-center">ไม่พบข้อมูล</th>'; return; }
+                const sessions = {}; labData.forEach(row => { if (!sessions[row.created_at]) sessions[row.created_at] = {}; sessions[row.created_at][row.parameter_name] = row; });
+                const sortedTimestamps = Object.keys(sessions).sort((a, b) => new Date(b) - new Date(a));
+                head.innerHTML = `<th class="lab-param-name text-center">Parameter</th>` + sortedTimestamps.map(ts => { const d = new Date(ts); return `<th>${d.toLocaleDateString('th-TH')}<br><span class="text-[9px] text-teal-400">${d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</span></th>`; }).join('');
+                body.innerHTML = masterParams.map(p => {
+                    const isDog = petType === 'สุนัข', min = isDog ? p.dog_min : p.cat_min, max = isDog ? p.dog_max : p.cat_max;
+                    let rowHtml = `<td class="lab-param-name text-xs">${p.parameter_name} <span class="text-[9px] text-gray-500">(${min}-${max})</span></td>`;
+                    sortedTimestamps.forEach(ts => { const res = sessions[ts][p.parameter_name]; if (!res) rowHtml += `<td class="opacity-10">-</td>`; else { const val = res.test_value; const status = (val > max) ? 'val-high' : (val < min) ? 'val-low' : 'val-normal'; rowHtml += `<td class="${status} font-bold">${val}</td>`; } });
+                    return `<tr>${rowHtml}</tr>`;
+                }).join('');
+            } catch (e) { head.innerHTML = '<th>เกิดข้อผิดพลาด</th>'; }
+        }
+
+        async function printHistoryRx(recordId) {
+            const rec = records.find(r => r.id === recordId);
+            const ids = Array.from(document.querySelectorAll(`.rx-select-${recordId}:checked`)).map(cb => cb.value);
+            const items = rec.medical_record_items.filter(i => ids.includes(i.id));
+            if (items.length === 0) return alert("เลือกยา");
+            const batch = await Promise.all(items.map(async (i) => {
+                const { data: drug } = await db.from('pharmacy').select('name_th, side_effects').eq('item_name', i.item_name).maybeSingle();
+                return { clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, owner_name: document.getElementById('info-owner-name').innerText, species: petType, hn: ownerHN, drug_name: i.item_name, drug_name_th: drug?.name_th || "", warning: drug?.side_effects || "", dose_per_time: i.dose_per_time, unit: i.unit, frequency: i.frequency, meal_timing: i.meal_timing, day_timing: i.day_timing, duration_days: i.duration_days, total_qty: `${i.quantity} ${i.unit}`, date: new Date(rec.created_at).toLocaleDateString('th-TH') };
+            }));
+            await executeDynamicPrint(batch, 'sticker_drug');
+        }
+
+        async function printBothLabels(petId) {
+            const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
+            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+            const latestRec = records.find(r => r.appointment || r.appointment_2);
+            const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
+            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment) : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2) : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
+            executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }]);
+        }
+
+        async function printPetLabel(petId) {
+            const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
+            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            await executeDynamicPrint([printData], 'sticker_pet_id');
+        }
+
+        async function printApptLabel(petId) {
+            const latestRec = records.find(r => r.appointment || r.appointment_2);
+            if (!latestRec) return alert("ไม่พบข้อมูลนัดหมาย");
+            const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
+            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec.appointment ? formatThaiDate(latestRec.appointment) : "-", appointment_note_1: latestRec.appointment_note || "-", appointment_date_2: latestRec.appointment_2 ? formatThaiDate(latestRec.appointment_2) : "-", appointment_note_2: latestRec.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
+            await executeDynamicPrint([printData], 'sticker_appt');
+        }
+
+        async function executeDynamicPrint(dataList, templateType) {
+            const { data: t } = await db.from('print_templates').select('config').eq('template_type', templateType).single();
+            const config = t.config;
+            const px = 3.78;
+            const pw = window.open('', '_blank');
+            
+            // 1. นำเข้า Font Sarabun และกำหนด Style พื้นฐาน
+            let html = `<html><head>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                <style>
+                    body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
+                    .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; }
+                    .elem { position:absolute; color:black; line-height:1.2; }
+                    @page { size:${config.width}mm ${config.height}mm; margin:0; }
+                </style>
+            </head><body>`;
+            
+            // 2. วนลูปสร้างหน้าสติ๊กเกอร์ตามจำนวนข้อมูล
+            dataList.forEach(data => {
+                html += `<div class="sticker">`;
+                config.lines.forEach(l => {
+                    // ป้องกัน Error กรณีที่ element นั้นเป็นกรอบสี่เหลี่ยมหรือรูปภาพ (ไม่มีข้อความ)
+                    let txt = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || "");
+                    
+                    // กำหนด Style สำหรับข้อความ
+                    let style = `top:${l.y * px}px; font-family:'Sarabun', sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'};`;
+                    
+                    // จัดการการจัดหน้า (Alignment)
+                    if (l.align === 'center') {
+                        style += `left:0; width:100%; text-align:center;`; 
+                    } else if (l.align === 'right') {
+                        style += `right:${l.x * px}px; text-align:right;`; 
+                    } else {
+                        style += `left:${l.x * px}px;`;
+                    }
+                    
+                    // วาด Element ลงไป
+                    html += `<div class="elem" style="${style}">${txt}</div>`;
+                });
+                html += `</div>`;
+            });
+            
+            // 3. หน่วงเวลา 800ms รอให้โหลดฟอนต์เสร็จก่อนสั่งพิมพ์
+            html += `</body><script>
+                window.onload = () => {
+                    setTimeout(() => {
+                        window.print();
+                        window.close();
+                    }, 800);
+                };
+            <\/script></html>`;
+            
+            pw.document.write(html); 
+            pw.document.close();
+        }
+
+        function executeMultiTemplatePrint(jobs) {
+            const px = 3.78;
+            const pw = window.open('', '_blank', 'width=400');
+            const pageWidth = jobs[0].config.width || 80;
+            const pageHeight = jobs[0].config.height || 50;
+            
+            // 1. นำเข้า Font Sarabun และกำหนด Style พื้นฐาน
+            let html = `<html><head>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                <style>
+                    body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
+                    .sticker { position:relative; width:${pageWidth}mm; height:${pageHeight}mm; overflow:hidden; page-break-after:always; }
+                    .elem { position:absolute; color:black; line-height:1.2; }
+                    @page { size:${pageWidth}mm ${pageHeight}mm; margin:0; }
+                </style>
+            </head><body>`;
+            
+            // 2. วนลูปสร้างหน้าสติ๊กเกอร์ตามจำนวนข้อมูล/เทมเพลตที่ส่งมา (เช่น ข้อมูลสัตว์ + ใบนัดหมาย)
+            jobs.forEach(job => {
+                html += `<div class="sticker">`;
+                job.config.lines.forEach(l => {
+                    // จัดการ Style สำหรับข้อความ
+                    let style = `top:${l.y * px}px; font-family:'Sarabun', sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'}; position:absolute;`;
+                    
+                    // จัดการการจัดหน้า (Alignment) ให้ครอบคลุม ซ้าย กลาง ขวา
+                    if (l.align === 'center') {
+                        style += `left:0; width:${pageWidth * px}px; text-align:center;`;
+                    } else if (l.align === 'right') {
+                        style += `right:${l.x * px}px; text-align:right;`;
+                    } else {
+                        style += `left:${l.x * px}px;`;
+                    }
+                    
+                    // แทนที่ตัวแปร ป้องกัน Error หาก l.text ไม่มีค่า
+                    let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => job.data[k.trim()] || "");
+                    
+                    // วาด Element ลงไป
+                    html += `<div class="elem" style="${style}">${content}</div>`;
+                });
+                html += `</div>`;
+            });
+            
+            // 3. หน่วงเวลา 800ms รอให้โหลดฟอนต์เสร็จก่อนสั่งพิมพ์
+            html += `</body><script>
+                window.onload = () => {
+                    setTimeout(() => {
+                        window.print();
+                        window.close();
+                    }, 800);
+                };
+            <\/script></html>`;
+            
+            pw.document.write(html); 
+            pw.document.close();
+        }
+    </script>
 </body>
 </html>
