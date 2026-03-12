@@ -71,9 +71,10 @@
 
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-lg font-black flex items-center gap-2"><span class="w-1 h-6 bg-teal-500 rounded-full"></span>รายการองค์ประกอบ</h2>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 flex-wrap">
                         <button onclick="addLine('text')" class="btn-tool text-xs">+ ข้อความ</button>
                         <button onclick="addLine('rect')" class="btn-tool text-xs">+ สี่เหลี่ยม</button>
+                        <button onclick="addLine('image')" class="btn-tool text-xs">+ แทรกรูปภาพ</button>
                     </div>
                 </div>
                 <div id="lines_container" class="space-y-4 pb-24"></div>
@@ -108,8 +109,25 @@
         let activeLineIndex = -1;
         let draggedIndex = null;
         
-        const mockItems = [{ name: "ยาฆ่าเชื้อ อะม็อกซี่", price: 150.00 }];
-        const mockData = { clinic_name: "PK Clinic", owner_name: "สมชาย ใจดี", pet_name: "โคล่า", hn: "69001", breed: "ชิวาวา" };
+        const mockItems = [
+            { name: "ยาฆ่าเชื้อ อะม็อกซี่ซิลลิน 250mg", qty: 10, unit: "เม็ด", price: 150.00 },
+            { name: "วิตามินรวม Pet-Tab", qty: 1, unit: "กล่อง", price: 85.00 },
+            { name: "ค่าตรวจรักษา", qty: 1, unit: "ครั้ง", price: 200.00 },
+            { name: "ค่าฉีดวัคซีน DHPPi", qty: 1, unit: "เข็ม", price: 350.00 }
+        ];
+        const mockData = {
+            clinic_name: "PK Animal Clinic", clinic_address: "123 ถ.สุขุมวิท แขวงคลองเตย กรุงเทพฯ 10110",
+            phone: "02-123-4567", tax_id: "0105560001234",
+            owner_name: "สมชาย ใจดี", owner_phone: "089-123-4567", owner_address: "99 ถ.รัชดาภิเษก เขตห้วยขวาง กรุงเทพฯ",
+            pet_name: "โคล่า", species: "สุนัข", sex: "ตัวผู้", hn: "69001", weight: "5.2 กก.", breed: "ชิวาวา", pet_surgery_list: "ทำหมัน, ตัดเล็บ",
+            drug_name: "Amoxicillin", drug_name_th: "อะม็อกซี่ซิลลิน", dose_per_time: "1 เม็ด", unit: "เม็ด",
+            frequency: "วันละ 2 ครั้ง", meal_timing: "หลังอาหาร", day_timing: "เช้า-เย็น", duration_days: "5 วัน",
+            total_qty: "10 เม็ด", warning: "เก็บในที่แห้งและเย็น ไม่ควรเก็บในตู้เย็น",
+            receipt_no: "RC-25001", total_price: "785.00", discount_val: "0.00", net_total: "785.00",
+            received_amount: "800.00", change_amount: "15.00", date: "12/03/2568", time: "14:30",
+            appointment_date_1: "19/03/2568", appointment_note_1: "ฉีดวัคซีนประจำปี",
+            appointment_date_2: "26/03/2568", appointment_note_2: "ตรวจติดตามอาการ"
+        };
         const varGroups = {
     "🏥 คลินิก": ["clinic_name", "clinic_address", "phone", "tax_id"],
     "🐾 สัตว์/เจ้าของ": ["owner_name", "owner_phone", "pet_name", "species", "sex", "hn", "weight", "breed", "owner_address", "pet_surgery_list"],
@@ -120,13 +138,18 @@
         const PALETTE = ['#000000', '#475569', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#78350f'];
 
         function replaceVars(text, fontSize, color) {
+            if (!text) return '';
             const textColor = color || '#000000';
             if (text.includes("{{items_list}}")) {
-                return `<table style="width:100%; border-collapse:collapse; font-size:${fontSize*0.9}pt; color:${textColor};">
-                    ${mockItems.map(i => `<tr><td>${i.name}</td><td style="text-align:right;">${i.price.toFixed(2)}</td></tr>`).join('')}
+                return `<table style="width:100%; border-collapse:collapse; font-size:${fontSize*0.9}pt; color:${textColor}; font-family:inherit;">
+                    <tr style="border-bottom:1px solid #aaa;"><th style="text-align:left; padding:2px 4px;">รายการ</th><th style="text-align:center; padding:2px 4px;">จำนวน</th><th style="text-align:right; padding:2px 4px;">ราคา</th></tr>
+                    ${mockItems.map(item => `<tr><td style="padding:2px 4px;">${item.name}</td><td style="text-align:center; padding:2px 4px;">${item.qty} ${item.unit}</td><td style="text-align:right; padding:2px 4px;">${item.price.toFixed(2)}</td></tr>`).join('')}
                 </table>`;
             }
-            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => mockData[key.trim()] || match);
+            return text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
+                const k = key.trim();
+                return (mockData[k] !== undefined ? mockData[k] : match);
+            });
         }
 
         async function fetchAvailableTemplates() {
@@ -159,8 +182,9 @@
 
         function addLine(type) {
             let newLine = { type, x: 10, y: 10 };
-            if (type === 'text') newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 12, color: "#000000", align: "left" };
-            else if (type === 'rect') newLine = { ...newLine, w: 50, h: 10 };
+            if (type === 'text') newLine = { ...newLine, text: "ข้อความใหม่", font: "Sarabun", size: 12, color: "#000000", align: "left", bold: false, italic: false, underline: false };
+            else if (type === 'rect') newLine = { ...newLine, w: 50, h: 10, color: "#000000" };
+            else if (type === 'image') newLine = { ...newLine, url: '', w: 30, h: 20 };
             currentConfig.lines.push(newLine); activeLineIndex = currentConfig.lines.length - 1;
             renderLinesList(); renderCanvas();
         }
@@ -186,7 +210,7 @@
                         <span class="text-[10px] font-black uppercase opacity-40 tracking-widest">${l.type}</span>
                         <button onclick="event.stopPropagation(); currentConfig.lines.splice(${i},1); activeLineIndex=-1; renderLinesList(); renderCanvas();" class="text-red-500 hover:text-red-400">✕</button>
                     </div>
-                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="truncate text-sm font-bold opacity-70">${l.text || 'Rectangle'}</div>`}
+                    ${i === activeLineIndex ? renderEditor(l, i) : `<div class="truncate text-sm font-bold opacity-70">${l.type === 'image' ? '🖼️ รูปภาพ' : (l.text || 'สี่เหลี่ยม')}</div>`}
                 </div>`).join('');
         }
 
@@ -194,6 +218,9 @@
 
         function renderEditor(l, i) {
             const colorSwatches = PALETTE.map(hex => `<div class="color-swatch ${l.color === hex ? 'active' : ''}" style="background-color: ${hex}" onclick="updateLine(${i}, 'color', '${hex}')"></div>`).join('');
+            const icoL = `<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="14" height="2.5" rx="1"/><rect x="0" y="4" width="9" height="2.5" rx="1"/><rect x="0" y="8" width="14" height="2.5" rx="1"/><rect x="0" y="11.5" width="6" height="2.5" rx="1"/></svg>`;
+            const icoC = `<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="14" height="2.5" rx="1"/><rect x="2.5" y="4" width="9" height="2.5" rx="1"/><rect x="0" y="8" width="14" height="2.5" rx="1"/><rect x="4" y="11.5" width="6" height="2.5" rx="1"/></svg>`;
+            const icoR = `<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="14" height="2.5" rx="1"/><rect x="5" y="4" width="9" height="2.5" rx="1"/><rect x="0" y="8" width="14" height="2.5" rx="1"/><rect x="8" y="11.5" width="6" height="2.5" rx="1"/></svg>`;
             let fields = '';
             if (l.type === 'text') {
                 fields = `<textarea class="input-control mb-3" oninput="updateLine(${i},'text',this.value)">${l.text}</textarea>
@@ -202,10 +229,21 @@
                         <div><label class="label-title">ขนาด</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                     </div>
                     <div class="mb-3"><label class="label-title">สีมาตรฐาน</label><div class="flex flex-wrap gap-2">${colorSwatches}</div></div>
-                    <div class="flex gap-2">
-                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left')">L</button>
-                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center')">C</button>
-                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right')">R</button>
+                    <div class="mb-1"><label class="label-title">การจัดรูปแบบ</label></div>
+                    <div class="flex gap-2 flex-wrap items-center">
+                        <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left')" title="ชิดซ้าย">${icoL}</button>
+                        <button class="btn-align ${l.align==='center'?'active':''}" onclick="updateLine(${i},'align','center')" title="กึ่งกลาง">${icoC}</button>
+                        <button class="btn-align ${l.align==='right'?'active':''}" onclick="updateLine(${i},'align','right')" title="ชิดขวา">${icoR}</button>
+                        <span class="w-px h-6 bg-white/20 mx-1"></span>
+                        <button class="btn-align ${l.bold?'active':''}" onclick="toggleTextStyle(${i},'bold')" title="หนา" style="font-weight:900; font-size:0.95rem;">B</button>
+                        <button class="btn-align ${l.italic?'active':''}" onclick="toggleTextStyle(${i},'italic')" title="เอียง" style="font-style:italic; font-size:0.95rem;">I</button>
+                        <button class="btn-align ${l.underline?'active':''}" onclick="toggleTextStyle(${i},'underline')" title="ขีดเส้นใต้" style="text-decoration:underline; font-size:0.95rem;">U</button>
+                    </div>`;
+            } else if (l.type === 'image') {
+                fields = `<div class="mb-3"><label class="label-title">URL รูปภาพ</label><input type="text" class="input-control" placeholder="https://..." value="${l.url || ''}" oninput="updateLine(${i},'url',this.value)"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="label-title">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w || 30}" oninput="updateLine(${i},'w',this.value)"></div>
+                        <div><label class="label-title">สูง (มม.)</label><input type="number" class="input-control" value="${l.h || 20}" oninput="updateLine(${i},'h',this.value)"></div>
                     </div>`;
             } else {
                 fields = `<div class="grid grid-cols-2 gap-3"><input type="number" class="input-control" value="${l.w}" oninput="updateLine(${i},'w',this.value)"><input type="number" class="input-control" value="${l.h}" oninput="updateLine(${i},'h',this.value)"></div>`;
@@ -218,22 +256,52 @@
             renderCanvas();
         }
 
+        function toggleTextStyle(i, prop) {
+            currentConfig.lines[i][prop] = !currentConfig.lines[i][prop];
+            renderCanvas();
+            renderLinesList();
+        }
+
         function renderCanvas() {
-            const wrapper = document.getElementById('canvas_wrapper'); const px = 3.78; 
+            const wrapper = document.getElementById('canvas_wrapper'); const px = 3.78;
             const pw = document.getElementById('paper_w').value; const ph = document.getElementById('paper_h').value;
             wrapper.style.width = (pw * px) + 'px'; wrapper.style.height = (ph * px) + 'px';
             wrapper.innerHTML = currentConfig.lines.map((l, idx) => {
                 const isActive = idx === activeLineIndex;
-                let style = `top:${l.y * px}px; left:${l.x * px}px; font-family:${l.font || 'Sarabun'}; font-size:${l.size * 1.33}px; color:${l.color || '#000'};`;
+                let style = `top:${l.y * px}px; left:${l.x * px}px; font-family:${l.font || 'Sarabun'}; font-size:${(l.size || 12) * 1.33}px; color:${l.color || '#000'};`;
+                if (l.bold) style += 'font-weight:bold;';
+                if (l.italic) style += 'font-style:italic;';
+                if (l.underline) style += 'text-decoration:underline;';
                 if (l.type === 'text') {
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
                     else if (l.align === 'right') style += `left:0; width:100%; text-align:right; padding-right:${l.x*px}px;`;
+                    else if (l.text && l.text.includes('{{items_list}}')) style += `width:calc(100% - ${l.x * px}px);`;
                     return `<div class="canvas-element ${isActive ? 'active' : ''}" style="${style}" onclick="event.stopPropagation(); selectLine(${idx})">${replaceVars(l.text, l.size, l.color)}</div>`;
+                } else if (l.type === 'image') {
+                    style += `width:${(l.w || 30) * px}px; height:${(l.h || 20) * px}px; overflow:hidden;`;
+                    const imgContent = l.url
+                        ? `<img src="${l.url}" style="width:100%;height:100%;object-fit:contain;" />`
+                        : `<div style="width:100%;height:100%;background:rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;">🖼️</div>`;
+                    return `<div class="canvas-element ${isActive ? 'active' : ''}" style="${style}" onclick="event.stopPropagation(); selectLine(${idx})">${imgContent}</div>`;
                 } else {
                     style += `width:${l.w * px}px; height:${l.h * px}px; border:1px solid ${l.color || '#000'};`;
                     return `<div class="canvas-element ${isActive ? 'active' : ''}" style="${style}" onclick="event.stopPropagation(); selectLine(${idx})"></div>`;
                 }
             }).join('');
+            // Two-pass: push elements below {{items_list}} down to accommodate dynamic table height
+            const itemsListIdx = currentConfig.lines.findIndex(l => l.type === 'text' && l.text && l.text.includes('{{items_list}}'));
+            if (itemsListIdx !== -1 && wrapper.children[itemsListIdx]) {
+                const listDom = wrapper.children[itemsListIdx];
+                const actualH = listDom.offsetHeight;
+                const configuredH = (currentConfig.lines[itemsListIdx].size || 12) * 1.33;
+                const extraPx = Math.max(0, actualH - configuredH);
+                if (extraPx > 0) {
+                    wrapper.style.height = (parseFloat(ph) * px + extraPx) + 'px';
+                    for (let ci = itemsListIdx + 1; ci < wrapper.children.length; ci++) {
+                        wrapper.children[ci].style.top = (parseFloat(wrapper.children[ci].style.top || 0) + extraPx) + 'px';
+                    }
+                }
+            }
         }
 
         // ✅ Keyboard Move (ขยับทันที ไม่วาด List ใหม่)
@@ -286,8 +354,21 @@ if (sideContainer) {
             const pw = document.getElementById('paper_w').value;
             const ph = document.getElementById('paper_h').value;
             const win = window.open('', '_blank');
-            const content = currentConfig.lines.map(l => `<div style="position:absolute; top:${l.y}mm; left:${l.x}mm; font-family:${l.font}; font-size:${l.size}pt; color:${l.color};">${replaceVars(l.text, l.size, l.color)}</div>`).join('');
-            win.document.write(`<html><head><style>@page{size:${pw}mm ${ph}mm; margin:0;}</style></head><body>${content}</body></html>`);
+            const content = currentConfig.lines.map(l => {
+                const base = `position:absolute; top:${l.y}mm; left:${l.x}mm;`;
+                if (l.type === 'image') {
+                    return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                } else if (l.type === 'rect') {
+                    return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
+                } else {
+                    const fw = l.bold ? 'font-weight:bold;' : '';
+                    const fs = l.italic ? 'font-style:italic;' : '';
+                    const td = l.underline ? 'text-decoration:underline;' : '';
+                    const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' : l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
+                    return `<div style="${base} font-family:${l.font}; font-size:${l.size}pt; color:${l.color}; ${fw} ${fs} ${td} ${alignStyle}">${replaceVars(l.text, l.size, l.color)}</div>`;
+                }
+            }).join('');
+            win.document.write(`<html><head><style>@page{size:${pw}mm ${ph}mm; margin:0;} body{margin:0;}</style></head><body>${content}</body></html>`);
             win.document.close(); win.print();
         }
     </script>
