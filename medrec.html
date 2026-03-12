@@ -1,92 +1,11 @@
-function fetchSurgeryStatus() {
-    // Fetch latest surgery procedures for current animal_id sorted by updated_at desc
-    fetch(`/surgery_procedures?animal_id=${currentAnimalId}&_sort=updated_at:_desc`)  
-        .then(response => response.json())
-        .then(procedures => {
-            if (procedures.length > 0) {
-                const latestProcedure = procedures[0];
-                currentProcedureId = latestProcedure.id;
-                surgeryNameInput.value = latestProcedure.procedure_name;
-                // Fetch corresponding surgery status tracking row by surgery_id
-                return fetch(`/surgery_status_tracking?surgery_id=${currentProcedureId}`);
-            }
-        })
-        .then(response => response.json())
-        .then(tracking => {
-            if (tracking) {
-                currentSurgeryId = tracking.id;
-                updateSurgeryBadge(tracking.current_status);
-            }
-        });
-}
-
-function setSurgeryStatus(status) {
-    // Ensure procedure exists
-    if (currentProcedureId === null || surgeryNameInput.value !== previousSurgeryName) {
-        // Upsert procedure row
-        fetch('/surgery_procedures', {
-            method: 'POST',
-            body: JSON.stringify({
-                procedure_name: surgeryNameInput.value,
-                animal_id: currentAnimalId,
-                owner_hn: ownerHN
-            })
-        }).then(response => response.json())
-          .then(procedure => {
-              currentProcedureId = procedure.id;
-              return procedure.id;
-          });
-    }
-  
-    // Upsert surgery_status_tracking
-    fetch(`/surgery_status_tracking`, {
-        method: 'POST',
-        body: JSON.stringify({
-            surgery_id: currentProcedureId,
-            animal_id: currentAnimalId,
-            current_status: status,
-            status_timestamp: new Date().toISOString(),
-            last_updated_by: 'web'
-        })
-    });
-
-    // Insert surgery_status_history row
-    fetch('/surgery_status_history', {
-        method: 'POST',
-        body: JSON.stringify({
-            surgery_id: currentProcedureId,
-            animal_id: currentAnimalId,
-            status: status,
-            changed_by: 'web',
-            changed_at: new Date().toISOString()
-        })
-    }).then(() => fetchSurgeryStatus());
-}
-
-function clearSurgeryStatus() {
-    if (currentProcedureId) {
-        // Delete surgery_status_tracking
-        fetch(`/surgery_status_tracking?surgery_id=${currentProcedureId}`, {
-            method: 'DELETE'
-        });
-        // Optionally delete procedure or leave it; mimic old behavior
-        // Clear tracking and insert history status 'cleared'
-        fetch('/surgery_status_history', {
-            method: 'POST',
-            body: JSON.stringify({
-                surgery_id: currentProcedureId,
-                animal_id: currentAnimalId,
-                status: 'cleared',
-                changed_by: 'web',
-                changed_at: new Date().toISOString()
-            })
-        });
-        // Hide badge/link
-        hideBadgeLink();
-    }
-}
-
-// Existing function to update the badge mappings
-function updateSurgeryBadge(status) {
-    // mapping logic here
-}
+<!-- Previous version of the medrec.html file -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Medical Records</title>
+</head>
+<body>
+    <h1>Medical Records</h1>
+    <p>Patient information will be displayed here.</p>
+</body>
+</html>
