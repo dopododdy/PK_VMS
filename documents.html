@@ -329,6 +329,34 @@
                 return '';
             }).join('');
 
+if (activeDocType === 'doc_consent') {
+                const surgeryInputs = document.querySelectorAll('.surgery-input');
+                const queuePayload = [];
+                
+                surgeryInputs.forEach(i => {
+                    const surgeryText = i.value.trim();
+                    if (surgeryText && surgeryText !== '-') {
+                        queuePayload.push({
+                            animal_id: i.dataset.petId,
+                            pet_name: i.dataset.petName,
+                            owner_name: currentOwner.owner_name,
+                            procedures: surgeryText,
+                            status: 'รอผ่าตัด', // สถานะเริ่มต้น
+                            created_at: new Date().toISOString()
+                        });
+                    }
+                });
+                
+                if (queuePayload.length > 0) {
+                    // แอบส่งข้อมูลไปที่ Supabase ด้านหลัง โดยไม่รบกวนจังหวะเปิดหน้าต่างพิมพ์
+                    db.from('surgery_queue').insert(queuePayload).then(({error}) => {
+                        if (error) console.error("Error inserting to surgery queue:", error);
+                    });
+                }
+            }
+
+
+            
             const win = window.open('', '_blank');
             win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');body { margin: 0; padding: 0; background: white; }.page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }@media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style></head><body><div class="page">${printContent}</div><script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body></html>`);
             win.document.close();
