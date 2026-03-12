@@ -28,6 +28,11 @@
         .save-conc-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 3px 5px; border-radius: 6px; transition: 0.2s; opacity: 0.55; line-height: 1; }
         .save-conc-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
         .badge { display: inline-block; font-size: 0.7rem; padding: 1px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+        .tool-input { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 8px 12px; color: #e2e8f0; font-size: 0.95rem; outline: none; width: 100%; box-sizing: border-box; }
+        .tool-input:focus { border-color: var(--teal); }
+        .score-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; font-size: 0.85rem; transition: 0.15s; }
+        .score-btn:hover { border-color: var(--teal); color: #e2e8f0; }
+        .score-btn.selected { background: var(--teal); border-color: var(--teal); color: var(--navy); font-weight: 700; }
     </style>
 </head>
 <body class="flex h-screen">
@@ -50,20 +55,20 @@
         </div>
 
         <nav class="flex-1 overflow-y-auto pt-2 custom-scroll">
-            <div class="nav-item active" onclick="showTool('emergency')">🚑 Emergency Drugs</div>
-            <div class="nav-item" onclick="showTool('anesthetics')">💤 Anesthetics</div>
-            <div class="nav-item" onclick="showTool('fluids')">💧 Fluid Therapy</div>
-            <div class="nav-item" onclick="showTool('cris')">🧪 CRI's</div>
-            <div class="nav-item" onclick="showTool('transfusions')">🩸 Transfusions</div>
-            <div class="nav-item" onclick="showTool('conversion')">🔄 Unit Conversion</div>
-            <div class="nav-item" onclick="showTool('glucose')">📉 Glucose Curve</div>
-            <div class="nav-item" onclick="showTool('age')">🎂 Pet Age</div>
-            <div class="nav-item" onclick="showTool('pregnancy')">🤰 Pregnancy</div>
-            <div class="nav-item" onclick="showTool('pain')">📋 Pain Scales</div>
-            <div class="nav-item" onclick="showTool('trauma')">💥 Trauma Triage</div>
-            <div class="nav-item" onclick="showTool('iris')">🏥 IRIS Staging</div>
-            <div class="nav-item" onclick="showTool('mitral')">🫀 Mitral (MINE)</div>
-            <div class="nav-item" onclick="showTool('rule20')">📜 Rule of 20</div>
+            <div class="nav-item active" data-tool="emergency" onclick="showTool('emergency')">🚑 Emergency Drugs</div>
+            <div class="nav-item" data-tool="anesthetics" onclick="showTool('anesthetics')">💤 Anesthetics</div>
+            <div class="nav-item" data-tool="fluids" onclick="showTool('fluids')">💧 Fluid Therapy</div>
+            <div class="nav-item" data-tool="cris" onclick="showTool('cris')">🧪 CRI's</div>
+            <div class="nav-item" data-tool="transfusions" onclick="showTool('transfusions')">🩸 Transfusions</div>
+            <div class="nav-item" data-tool="conversion" onclick="showTool('conversion')">🔄 Unit Conversion</div>
+            <div class="nav-item" data-tool="glucose" onclick="showTool('glucose')">📉 Glucose Curve</div>
+            <div class="nav-item" data-tool="age" onclick="showTool('age')">🎂 Pet Age</div>
+            <div class="nav-item" data-tool="pregnancy" onclick="showTool('pregnancy')">🤰 Pregnancy</div>
+            <div class="nav-item" data-tool="pain" onclick="showTool('pain')">📋 Pain Scales</div>
+            <div class="nav-item" data-tool="trauma" onclick="showTool('trauma')">💥 Trauma Triage</div>
+            <div class="nav-item" data-tool="iris" onclick="showTool('iris')">🏥 IRIS Staging</div>
+            <div class="nav-item" data-tool="mitral" onclick="showTool('mitral')">🫀 Mitral (MINE)</div>
+            <div class="nav-item" data-tool="rule20" onclick="showTool('rule20')">📜 Rule of 20</div>
         </nav>
     </aside>
 
@@ -77,6 +82,19 @@
         let currentActiveTool = 'emergency';
         let drugConcentrations = {};
         let drugConcMode = {}; // 'custom' when user selects อื่นๆ ระบุ
+        let anestConcentrations = {};
+        let anestConcMode = {};
+        let criConcentrations = {};
+        let criConcMode = {};
+        let dehydrationPercent = 5;
+        let petAgeInput = '';
+        let breedingDate = '';
+        let glucoseReadings = [{time:'', glucose:''}];
+        let transfData = {currentPCV:'', targetPCV:''};
+        let irisData = {creatinine:'', sdma:'', upcr:'', bp:''};
+        let mitralData = {grade:'', vhs:'', lviddn:'', laao:''};
+        let traumaData = [null, null, null, null, null, null];
+        let ruleOf20 = {};
 
         const emergencyDrugs = [
             { name: 'Atropine',          category: 'Cardiac',           doseText: '0.04 mg/kg IV',        dosePerKg: 0.04,  concentrations: [{value:0.54,label:'0.54 mg/ml'},{value:1.0,label:'1 mg/ml'}] },
@@ -91,6 +109,35 @@
             { name: 'Amiodarone',        category: 'Antiarrhythmic',    doseText: '5 mg/kg IV (dog)',     dosePerKg: 5,     concentrations: [{value:50,label:'50 mg/ml'}] },
             { name: 'Dopamine',          category: 'Vasopressor',       doseText: '5–10 μg/kg/min CRI',  dosePerKgMin: 7.5,  isCRI: true, concentrations: [{value:40,label:'40 mg/ml'},{value:200,label:'200 mg/ml'}] },
             { name: 'Isoproterenol',     category: 'Cardiac',           doseText: '0.01–0.1 μg/kg/min CRI', dosePerKgMin: 0.05, isCRI: true, concentrations: [{value:0.2,label:'0.2 mg/ml'}] },
+        ];
+
+        const anestheticDrugs = [
+            { name: 'Acepromazine',      category: 'Premed',       doseText: '0.025–0.05 mg/kg IM/IV', dosePerKg: 0.05, concentrations: [{value:10,label:'10 mg/ml'}] },
+            { name: 'Dexmedetomidine',   category: 'Premed',       doseText: 'Dog: 10 μg/kg | Cat: 20 μg/kg IM', speciesDose:{dog:0.01,cat:0.02}, concentrations: [{value:0.5,label:'0.5 mg/ml (500 μg/ml)'}] },
+            { name: 'Butorphanol',       category: 'Premed',       doseText: '0.2–0.4 mg/kg IM/IV', dosePerKg: 0.3, concentrations: [{value:10,label:'10 mg/ml'}] },
+            { name: 'Buprenorphine',     category: 'Premed',       doseText: '0.01–0.02 mg/kg IM/IV', dosePerKg: 0.02, concentrations: [{value:0.3,label:'0.3 mg/ml'}] },
+            { name: 'Morphine (Premed)', category: 'Premed',       doseText: 'Dog: 0.3 mg/kg | Cat: 0.1 mg/kg IM', speciesDose:{dog:0.3,cat:0.1}, concentrations: [{value:10,label:'10 mg/ml'},{value:1,label:'1 mg/ml'}] },
+            { name: 'Methadone',         category: 'Premed',       doseText: '0.1–0.3 mg/kg IM/IV', dosePerKg: 0.2, concentrations: [{value:10,label:'10 mg/ml'}] },
+            { name: 'Propofol',          category: 'Induction',    doseText: '4–6 mg/kg IV (to effect)', dosePerKg: 4, concentrations: [{value:10,label:'10 mg/ml (1%)'}] },
+            { name: 'Alfaxalone',        category: 'Induction',    doseText: 'Dog: 2 mg/kg | Cat: 3 mg/kg IV', speciesDose:{dog:2,cat:3}, concentrations: [{value:10,label:'10 mg/ml'}] },
+            { name: 'Ketamine',          category: 'Induction',    doseText: '5 mg/kg IV (+ co-induction)', dosePerKg: 5, concentrations: [{value:100,label:'100 mg/ml (10%)'}] },
+            { name: 'Diazepam',          category: 'Co-induction', doseText: '0.25–0.5 mg/kg IV', dosePerKg: 0.25, concentrations: [{value:5,label:'5 mg/ml'}] },
+            { name: 'Midazolam',         category: 'Co-induction', doseText: '0.2–0.4 mg/kg IV/IM', dosePerKg: 0.3, concentrations: [{value:5,label:'5 mg/ml'},{value:1,label:'1 mg/ml'}] },
+            { name: 'Atipamezole',       category: 'Reversal',     doseText: '5× dex dose volume IM', dosePerKg: 0.05, concentrations: [{value:5,label:'5 mg/ml'}] },
+            { name: 'Naloxone',          category: 'Reversal',     doseText: '0.04 mg/kg IV/IM', dosePerKg: 0.04, concentrations: [{value:0.4,label:'0.4 mg/ml'},{value:1.0,label:'1 mg/ml'}] },
+            { name: 'Flumazenil',        category: 'Reversal',     doseText: '0.01 mg/kg IV', dosePerKg: 0.01, concentrations: [{value:0.1,label:'0.1 mg/ml'}] },
+        ];
+
+        const criDrugs = [
+            { name: 'Fentanyl',        category: 'Opioid',      doseText: '2–10 μg/kg/hr',    doseUnit: 'μg/kg/hr',  doseVal: 5,    concentrations: [{value:0.05,label:'0.05 mg/ml (50 μg/ml)'}] },
+            { name: 'Morphine',        category: 'Opioid',      doseText: '0.1–0.5 mg/kg/hr', doseUnit: 'mg/kg/hr',  doseVal: 0.2,  concentrations: [{value:1,label:'1 mg/ml'},{value:10,label:'10 mg/ml'}] },
+            { name: 'Methadone',       category: 'Opioid',      doseText: '0.1–0.2 mg/kg/hr', doseUnit: 'mg/kg/hr',  doseVal: 0.15, concentrations: [{value:10,label:'10 mg/ml'}] },
+            { name: 'Ketamine',        category: 'NMDA',        doseText: '0.2–1 mg/kg/hr',   doseUnit: 'mg/kg/hr',  doseVal: 0.6,  concentrations: [{value:10,label:'10 mg/ml'},{value:100,label:'100 mg/ml'}] },
+            { name: 'Lidocaine',       category: 'Analgesic',   doseText: '1.5–3 mg/kg/hr',   doseUnit: 'mg/kg/hr',  doseVal: 2,    concentrations: [{value:20,label:'20 mg/ml (2%)'},{value:10,label:'10 mg/ml (1%)'}] },
+            { name: 'Dexmedetomidine', category: 'α2-agonist',  doseText: '0.5–2 μg/kg/hr',   doseUnit: 'μg/kg/hr',  doseVal: 1,    concentrations: [{value:0.5,label:'0.5 mg/ml (500 μg/ml)'}] },
+            { name: 'Dopamine',        category: 'Vasopressor', doseText: '2–10 μg/kg/min',   doseUnit: 'μg/kg/min', doseVal: 5,    concentrations: [{value:40,label:'40 mg/ml'},{value:200,label:'200 mg/ml'}] },
+            { name: 'Dobutamine',      category: 'Inotrope',    doseText: '2–15 μg/kg/min',   doseUnit: 'μg/kg/min', doseVal: 5,    concentrations: [{value:12.5,label:'12.5 mg/ml'},{value:50,label:'50 mg/ml'}] },
+            { name: 'Norepinephrine',  category: 'Vasopressor', doseText: '0.1–1 μg/kg/min',  doseUnit: 'μg/kg/min', doseVal: 0.3,  concentrations: [{value:1,label:'1 mg/ml'}] },
         ];
 
         function setSpecies(s) {
@@ -108,7 +155,7 @@
         function showTool(toolId) {
             currentActiveTool = toolId;
             document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.toggle('active', el.innerText.toLowerCase().includes(toolId.replace('_',' ')));
+                el.classList.toggle('active', el.dataset.tool === toolId);
             });
             renderCurrentTool();
         }
@@ -162,39 +209,442 @@
             } 
             
             else if (currentActiveTool === 'anesthetics') {
-                const drugs = [
-                    { name: 'Propofol (10mg/ml)', dose: '4-6 mg/kg', calc: w * 4 / 10 },
-                    { name: 'Alfaxalone (10mg/ml)', dose: patient.species === 'dog' ? '2 mg/kg' : '3 mg/kg', calc: patient.species === 'dog' ? w * 2 / 10 : w * 3 / 10 },
-                    { name: 'Ketamine (100mg/ml)', dose: '5 mg/kg', calc: w * 5 / 100 },
-                    { name: 'Morphine', dose: '0.1-0.5 mg/kg', calc: w * 0.2 }
-                ];
-                html += renderTable(['Anesthetic', 'Standard Dose', 'Approx. Volume (ml)'], drugs);
+                const anestCatColors = {
+                    'Premed':       'bg-indigo-500/20 text-indigo-300',
+                    'Induction':    'bg-orange-500/20 text-orange-300',
+                    'Co-induction': 'bg-yellow-500/20 text-yellow-300',
+                    'Reversal':     'bg-green-500/20 text-green-300'
+                };
+                const rows = anestheticDrugs.map((drug, idx) => {
+                    const conc = anestConcentrations[idx] !== undefined ? anestConcentrations[idx] : drug.concentrations[0].value;
+                    const doseText = drug.speciesDose ? `${drug.speciesDose[patient.species]} mg/kg` : drug.doseText;
+                    let vol = 0;
+                    if (w > 0) {
+                        const dose = drug.speciesDose ? drug.speciesDose[patient.species] : drug.dosePerKg;
+                        vol = (dose * w) / conc;
+                    }
+                    const volText = w > 0 ? vol.toFixed(2) : '—';
+                    const badgeClass = anestCatColors[drug.category] || 'bg-gray-500/20 text-gray-300';
+                    const isCustomMode = anestConcMode[idx] === 'custom';
+                    const concOptions = drug.concentrations.map(c =>
+                        `<option value="${c.value}"${!isCustomMode && c.value === conc ? ' selected' : ''}>${c.label}</option>`
+                    ).join('') + `<option value="custom"${isCustomMode ? ' selected' : ''}>อื่นๆ ระบุ</option>`;
+                    const customInput = isCustomMode
+                        ? `<input type="number" class="custom-conc-input" placeholder="mg/ml" value="${conc > 0 ? conc : ''}" onchange="changeAnestCustomConc(${idx},this.value)" min="0.001" step="any">`
+                        : '';
+                    const concCell = `<div class="conc-cell-wrapper"><select class="conc-select" onchange="changeAnestConc(${idx},this.value)">${concOptions}</select>${customInput}<button class="save-conc-btn" data-anest-save-btn="${idx}" onclick="saveAnestConc(${idx})" title="บันทึกความเข้มข้นเริ่มต้น">💾</button></div>`;
+                    return `<tr>
+                        <td><div class="font-semibold">${drug.name}</div><span class="badge ${badgeClass}">${drug.category}</span></td>
+                        <td class="text-gray-300 text-sm">${doseText}</td>
+                        <td>${concCell}</td>
+                        <td class="res-val">${volText} <span class="text-xs text-gray-500 font-normal">ml</span></td>
+                    </tr>`;
+                }).join('');
+                html += `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+                    <table>
+                        <thead><tr><th>Drug</th><th>Dosage</th><th>Concentration</th><th>Volume</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
             }
 
             else if (currentActiveTool === 'fluids') {
                 const maint = patient.species === 'dog' ? (w * 60) : (w * 40);
+                const dehydVol = w > 0 ? (dehydrationPercent / 100) * w * 1000 : 0;
+                const shockVol = w > 0 ? (patient.species === 'dog' ? w * 90 : w * 45) : 0;
                 html += `
-                <div class="grid grid-cols-2 gap-6">
+                <div class="grid grid-cols-2 gap-4 mb-4">
                     <div class="calc-box">
                         <label class="block text-gray-400 text-xs mb-2">Maintenance Rate</label>
-                        <div class="text-3xl font-black text-teal-400">${maint.toFixed(1)} ml/day</div>
-                        <div class="text-sm mt-1">${(maint/24).toFixed(1)} ml/hr</div>
+                        <div class="text-3xl font-black text-teal-400">${w > 0 ? maint.toFixed(1) : '—'} ml/day</div>
+                        <div class="text-sm mt-1">${w > 0 ? (maint/24).toFixed(1) : '—'} ml/hr</div>
                     </div>
                     <div class="calc-box">
                         <label class="block text-gray-400 text-xs mb-2">Shock Dose (Bolus)</label>
-                        <div class="text-3xl font-black text-orange-400">${patient.species === 'dog' ? w*90 : w*45} ml</div>
+                        <div class="text-3xl font-black text-orange-400">${w > 0 ? shockVol : '—'} ml</div>
                         <div class="text-xs text-gray-500 mt-1">1/4 dose over 15 mins</div>
+                    </div>
+                </div>
+                <div class="calc-box mb-4">
+                    <label class="block text-gray-400 text-xs mb-3">Dehydration Replacement</label>
+                    <div class="flex gap-2 mb-3 flex-wrap">
+                        ${[5,7,10,12].map(p => `<button onclick="setDehydration(${p})" class="score-btn${dehydrationPercent===p?' selected':''}">${p}%</button>`).join('')}
+                    </div>
+                    <div class="text-2xl font-black text-teal-400">${w > 0 ? dehydVol.toFixed(0) : '—'} ml</div>
+                    <div class="text-xs text-gray-500 mt-1">Replace over 4–6 hrs (${w > 0 ? (dehydVol/6).toFixed(1) : '—'} – ${w > 0 ? (dehydVol/4).toFixed(1) : '—'} ml/hr)</div>
+                </div>
+                <div class="calc-box">
+                    <label class="block text-gray-400 text-xs mb-3">Surgery / Anaesthesia Fluid Rate</label>
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div><div class="text-xs text-gray-500 mb-1">Conservative</div><div class="text-xl font-bold text-blue-400">${w > 0 ? (w*5).toFixed(1) : '—'} ml/hr</div><div class="text-xs text-gray-600">5 ml/kg/hr</div></div>
+                        <div><div class="text-xs text-gray-500 mb-1">Standard</div><div class="text-xl font-bold text-teal-400">${w > 0 ? (w*8).toFixed(1) : '—'} ml/hr</div><div class="text-xs text-gray-600">8 ml/kg/hr</div></div>
+                        <div><div class="text-xs text-gray-500 mb-1">Aggressive</div><div class="text-xl font-bold text-orange-400">${w > 0 ? (w*10).toFixed(1) : '—'} ml/hr</div><div class="text-xs text-gray-600">10 ml/kg/hr</div></div>
                     </div>
                 </div>`;
             }
 
             else if (currentActiveTool === 'age') {
+                const petAge = parseFloat(petAgeInput) || 0;
                 let humanAge = 0;
-                if(w > 0) {
-                    if(patient.species === 'dog') humanAge = w <= 1 ? 15 : (w <= 2 ? 24 : 24 + (w-2)*4);
-                    else humanAge = w <= 1 ? 15 : (w <= 2 ? 24 : 24 + (w-2)*4);
+                if (petAge > 0) {
+                    humanAge = petAge <= 1 ? 15 : (petAge <= 2 ? 24 : Math.round(24 + (petAge - 2) * 4));
                 }
-                html += `<div class="calc-box text-center py-10"><div class="text-sm text-gray-400 mb-2">Human Equivalent Age</div><div class="text-6xl font-black text-teal-500">${humanAge} Years</div></div>`;
+                const ageCategory = petAge <= 0 ? '' : petAge < 1 ? 'Puppy/Kitten' : petAge < 7 ? 'Adult' : petAge < 11 ? 'Senior' : 'Geriatric';
+                const ageCatColor = ageCategory === 'Puppy/Kitten' ? 'text-yellow-400' : ageCategory === 'Adult' ? 'text-teal-400' : ageCategory === 'Senior' ? 'text-orange-400' : 'text-red-400';
+                html += `<div class="calc-box mb-4">
+                    <label class="block text-gray-400 text-xs mb-2">Age (years)</label>
+                    <input type="number" class="tool-input" placeholder="e.g. 5.5" value="${petAgeInput}" oninput="petAgeInput=this.value; renderCurrentTool()" min="0" step="0.1">
+                </div>
+                <div class="calc-box text-center py-10">
+                    <div class="text-sm text-gray-400 mb-2">Human Equivalent Age</div>
+                    <div class="text-6xl font-black text-teal-500">${petAge > 0 ? humanAge : '—'} <span class="text-2xl">yrs</span></div>
+                    ${ageCategory ? `<div class="text-sm font-semibold mt-3 ${ageCatColor}">${ageCategory}</div>` : ''}
+                </div>`;
+            }
+
+            else if (currentActiveTool === 'cris') {
+                const criCatColors = {
+                    'Opioid':      'bg-purple-500/20 text-purple-300',
+                    'NMDA':        'bg-blue-500/20 text-blue-300',
+                    'Analgesic':   'bg-teal-500/20 text-teal-300',
+                    'α2-agonist':  'bg-indigo-500/20 text-indigo-300',
+                    'Vasopressor': 'bg-red-500/20 text-red-300',
+                    'Inotrope':    'bg-orange-500/20 text-orange-300'
+                };
+                const criRows = criDrugs.map((drug, idx) => {
+                    const conc = criConcentrations[idx] !== undefined ? criConcentrations[idx] : drug.concentrations[0].value;
+                    let vol = 0;
+                    if (w > 0) {
+                        if (drug.doseUnit === 'μg/kg/hr')  vol = (drug.doseVal * w) / (conc * 1000);
+                        else if (drug.doseUnit === 'mg/kg/hr')  vol = (drug.doseVal * w) / conc;
+                        else if (drug.doseUnit === 'μg/kg/min') vol = (drug.doseVal * w * 60) / (conc * 1000);
+                    }
+                    const volText = w > 0 ? vol.toFixed(3).replace(/\.?0+$/, '') || '0' : '—';
+                    const badgeClass = criCatColors[drug.category] || 'bg-gray-500/20 text-gray-300';
+                    const isCustomMode = criConcMode[idx] === 'custom';
+                    const concOptions = drug.concentrations.map(c =>
+                        `<option value="${c.value}"${!isCustomMode && c.value === conc ? ' selected' : ''}>${c.label}</option>`
+                    ).join('') + `<option value="custom"${isCustomMode ? ' selected' : ''}>อื่นๆ ระบุ</option>`;
+                    const customInput = isCustomMode
+                        ? `<input type="number" class="custom-conc-input" placeholder="mg/ml" value="${conc > 0 ? conc : ''}" onchange="changeCriCustomConc(${idx},this.value)" min="0.001" step="any">`
+                        : '';
+                    const concCell = `<div class="conc-cell-wrapper"><select class="conc-select" onchange="changeCriConc(${idx},this.value)">${concOptions}</select>${customInput}<button class="save-conc-btn" data-cri-save-btn="${idx}" onclick="saveCriConc(${idx})" title="บันทึกความเข้มข้นเริ่มต้น">💾</button></div>`;
+                    return `<tr>
+                        <td><div class="font-semibold">${drug.name}</div><span class="badge ${badgeClass}">${drug.category}</span></td>
+                        <td class="text-gray-300 text-sm">${drug.doseText}</td>
+                        <td>${concCell}</td>
+                        <td class="res-val">${volText} <span class="text-xs text-gray-500 font-normal">ml/hr</span></td>
+                    </tr>`;
+                }).join('');
+                html += `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+                    <table>
+                        <thead><tr><th>Drug</th><th>Dose (mid-range)</th><th>Concentration</th><th>Rate</th></tr></thead>
+                        <tbody>${criRows}</tbody>
+                    </table>
+                </div>`;
+            }
+
+            else if (currentActiveTool === 'transfusions') {
+                const bv = patient.species === 'dog' ? w * 90 : w * 60;
+                const donorPCV = 80;
+                const curPCV = parseFloat(transfData.currentPCV) || 0;
+                const tgtPCV = parseFloat(transfData.targetPCV) || 0;
+                const prbcVol = (curPCV > 0 && tgtPCV > curPCV && w > 0) ? ((tgtPCV - curPCV) / donorPCV) * bv : null;
+                html += `<div class="calc-box mb-4">
+                    <label class="block text-gray-400 text-xs mb-3">pRBC Volume Calculator</label>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Current PCV (%)</label>
+                            <input type="number" class="tool-input" placeholder="e.g. 18" value="${transfData.currentPCV}" oninput="transfData.currentPCV=this.value; renderCurrentTool()" min="0" max="60">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Target PCV (%)</label>
+                            <input type="number" class="tool-input" placeholder="e.g. 25" value="${transfData.targetPCV}" oninput="transfData.targetPCV=this.value; renderCurrentTool()" min="0" max="60">
+                        </div>
+                    </div>
+                    <div class="text-2xl font-black ${prbcVol !== null ? 'text-red-400' : 'text-gray-500'}">
+                        ${prbcVol !== null ? prbcVol.toFixed(1) + ' ml pRBC' : 'Enter PCV values above'}
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">Blood volume: ${w > 0 ? bv.toFixed(0) : '—'} ml | Donor PCV assumed 80%</div>
+                </div>
+                <div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+                    <table>
+                        <thead><tr><th>Product</th><th>Dose</th><th>Volume</th></tr></thead>
+                        <tbody>
+                            <tr><td><div class="font-semibold">Fresh Whole Blood (FWB)</div></td><td class="text-gray-300 text-sm">20 ml/kg</td><td class="res-val">${w > 0 ? (w*20).toFixed(1) : '—'} <span class="text-xs text-gray-500 font-normal">ml</span></td></tr>
+                            <tr><td><div class="font-semibold">Fresh Frozen Plasma (FFP)</div></td><td class="text-gray-300 text-sm">10–15 ml/kg</td><td class="res-val">${w > 0 ? (w*10).toFixed(1) : '—'}–${w > 0 ? (w*15).toFixed(1) : '—'} <span class="text-xs text-gray-500 font-normal">ml</span></td></tr>
+                            <tr><td><div class="font-semibold">Platelet-Rich Plasma</div></td><td class="text-gray-300 text-sm">1 unit / 10 kg</td><td class="res-val">${w > 0 ? Math.ceil(w/10) : '—'} <span class="text-xs text-gray-500 font-normal">unit(s)</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>`;
+            }
+
+            else if (currentActiveTool === 'conversion') {
+                html += `<div class="grid grid-cols-1 gap-4">
+                    <div class="calc-box">
+                        <label class="block text-gray-400 text-xs mb-3 font-semibold uppercase tracking-wider">⚖️ Weight</label>
+                        <div class="grid grid-cols-2 gap-3 items-center">
+                            <div><label class="text-xs text-gray-500 mb-1 block">kg</label><input id="cv-kg" type="number" class="tool-input" placeholder="kg" oninput="document.getElementById('cv-lbs').value=(parseFloat(this.value)*2.20462||'').toFixed?((parseFloat(this.value)*2.20462).toFixed(3)):''" step="any"></div>
+                            <div><label class="text-xs text-gray-500 mb-1 block">lbs</label><input id="cv-lbs" type="number" class="tool-input" placeholder="lbs" oninput="document.getElementById('cv-kg').value=(parseFloat(this.value)/2.20462||'').toFixed?((parseFloat(this.value)/2.20462).toFixed(3)):''" step="any"></div>
+                        </div>
+                    </div>
+                    <div class="calc-box">
+                        <label class="block text-gray-400 text-xs mb-3 font-semibold uppercase tracking-wider">🌡️ Temperature</label>
+                        <div class="grid grid-cols-2 gap-3 items-center">
+                            <div><label class="text-xs text-gray-500 mb-1 block">°C</label><input id="cv-cel" type="number" class="tool-input" placeholder="°C" oninput="const f=parseFloat(this.value);document.getElementById('cv-fah').value=isNaN(f)?'':((f*9/5+32).toFixed(2))" step="any"></div>
+                            <div><label class="text-xs text-gray-500 mb-1 block">°F</label><input id="cv-fah" type="number" class="tool-input" placeholder="°F" oninput="const c=parseFloat(this.value);document.getElementById('cv-cel').value=isNaN(c)?'':((c-32)*5/9).toFixed(2)" step="any"></div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-2">Normal dog: 38.3–39.2 °C (101–102.5 °F) | Cat: 38.1–39.2 °C</div>
+                    </div>
+                    <div class="calc-box">
+                        <label class="block text-gray-400 text-xs mb-3 font-semibold uppercase tracking-wider">💧 Volume</label>
+                        <div class="grid grid-cols-2 gap-3 items-center">
+                            <div><label class="text-xs text-gray-500 mb-1 block">ml</label><input id="cv-ml" type="number" class="tool-input" placeholder="ml" oninput="const v=parseFloat(this.value);document.getElementById('cv-floz').value=isNaN(v)?'':(v/29.5735).toFixed(3)" step="any"></div>
+                            <div><label class="text-xs text-gray-500 mb-1 block">fl oz</label><input id="cv-floz" type="number" class="tool-input" placeholder="fl oz" oninput="const v=parseFloat(this.value);document.getElementById('cv-ml').value=isNaN(v)?'':(v*29.5735).toFixed(2)" step="any"></div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            else if (currentActiveTool === 'glucose') {
+                const hasData = glucoseReadings.some(r => r.glucose !== '' && !isNaN(parseFloat(r.glucose)));
+                const vals = glucoseReadings.map(r => parseFloat(r.glucose)).filter(v => !isNaN(v));
+                const gMin = vals.length ? Math.min(...vals).toFixed(1) : '—';
+                const gMax = vals.length ? Math.max(...vals).toFixed(1) : '—';
+                const gAvg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+                const rowsHtml = glucoseReadings.map((r, i) =>
+                    `<tr>
+                        <td><input type="time" class="tool-input" style="width:120px" value="${r.time}" onchange="glucoseReadings[${i}].time=this.value"></td>
+                        <td><input type="number" class="tool-input" style="width:120px" placeholder="mg/dL" value="${r.glucose}" onchange="glucoseReadings[${i}].glucose=this.value; renderCurrentTool()" min="0" step="0.1"></td>
+                        <td><button onclick="removeGlucoseRow(${i})" class="text-red-400 hover:text-red-300 text-lg px-2">✕</button></td>
+                    </tr>`
+                ).join('');
+                html += `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5 mb-4">
+                    <table>
+                        <thead><tr><th>Time</th><th>Glucose (mg/dL)</th><th></th></tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+                <button onclick="addGlucoseRow()" class="mb-4 px-4 py-2 rounded-xl border border-teal-500/40 text-teal-400 hover:bg-teal-500/10 text-sm">+ Add Reading</button>
+                ${hasData ? `<div class="grid grid-cols-3 gap-4">
+                    <div class="calc-box text-center"><div class="text-xs text-gray-500 mb-1">Min</div><div class="text-2xl font-black text-blue-400">${gMin}</div></div>
+                    <div class="calc-box text-center"><div class="text-xs text-gray-500 mb-1">Average</div><div class="text-2xl font-black text-teal-400">${gAvg}</div></div>
+                    <div class="calc-box text-center"><div class="text-xs text-gray-500 mb-1">Max</div><div class="text-2xl font-black text-orange-400">${gMax}</div></div>
+                </div>` : ''}`;
+            }
+
+            else if (currentActiveTool === 'pregnancy') {
+                let dueDate = '', daysLeft = '', daysElapsed = '';
+                if (breedingDate) {
+                    const gestation = patient.species === 'dog' ? 63 : 63;
+                    const breed = new Date(breedingDate);
+                    const due = new Date(breed.getTime() + gestation * 86400000);
+                    const today = new Date();
+                    dueDate = due.toLocaleDateString('th-TH', {year:'numeric', month:'long', day:'numeric'});
+                    daysElapsed = Math.max(0, Math.floor((today - breed) / 86400000));
+                    daysLeft = Math.max(0, Math.floor((due - today) / 86400000));
+                }
+                html += `<div class="calc-box mb-4">
+                    <label class="block text-gray-400 text-xs mb-2">Breeding / Mating Date</label>
+                    <input type="date" class="tool-input" value="${breedingDate}" onchange="breedingDate=this.value; renderCurrentTool()">
+                </div>
+                ${breedingDate ? `
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="calc-box text-center">
+                        <div class="text-xs text-gray-500 mb-2">Expected Due Date</div>
+                        <div class="text-xl font-black text-teal-400">${dueDate}</div>
+                        <div class="text-xs text-gray-500 mt-1">Gestation: 63 days (range 58–68)</div>
+                    </div>
+                    <div class="calc-box text-center">
+                        <div class="text-xs text-gray-500 mb-2">Days Remaining</div>
+                        <div class="text-5xl font-black ${parseInt(daysLeft)<=7?'text-red-400':parseInt(daysLeft)<=14?'text-orange-400':'text-teal-400'}">${daysLeft}</div>
+                        <div class="text-xs text-gray-500 mt-1">Day ${daysElapsed} of pregnancy</div>
+                    </div>
+                </div>` : '<div class="text-gray-600 text-center py-8">Select a breeding date above to calculate due date.</div>'}`;
+            }
+
+            else if (currentActiveTool === 'pain') {
+                const painScales = patient.species === 'dog' ? [
+                    { score:0, label:'No Pain',    desc:'Content, relaxed, moving normally; not guarding any body part' },
+                    { score:1, label:'Mild',        desc:'Slightly anxious or fearful; some tension; may be panting' },
+                    { score:2, label:'Moderate',    desc:'Vocalizing; protecting body part; reluctant to move; guarding' },
+                    { score:3, label:'Severe',      desc:'Crying/howling; limb spasm; rigid posture; won\'t bear weight' },
+                    { score:4, label:'Excruciating',desc:'Screaming; thrashing; unresponsive or comatose from pain' }
+                ] : [
+                    { score:0, label:'No Pain',    desc:'Sleeping or relaxed when awake; purring possible' },
+                    { score:1, label:'Mild',        desc:'Hunched; head held low; eyes partially closed; may seek hiding' },
+                    { score:2, label:'Moderate',    desc:'Reluctant to move; guarding; quiet; ears back; tail tucked low' },
+                    { score:3, label:'Severe',      desc:'Tense; growling; tail lashing; may bite if touched' },
+                    { score:4, label:'Excruciating',desc:'Rigid; unresponsive; severely thrashing or catatonic' }
+                ];
+                const scaleColors = ['text-green-400','text-yellow-400','text-orange-400','text-red-400','text-red-600'];
+                html += `<div class="text-xs text-gray-500 mb-3 uppercase tracking-wider">Colorado State University Acute Pain Scale</div>
+                <div class="space-y-2">
+                    ${painScales.map(p => `
+                    <div class="calc-box flex gap-4 items-start">
+                        <div class="text-3xl font-black ${scaleColors[p.score]} w-10 shrink-0 text-center">${p.score}</div>
+                        <div>
+                            <div class="font-semibold ${scaleColors[p.score]}">${p.label}</div>
+                            <div class="text-sm text-gray-400 mt-0.5">${p.desc}</div>
+                        </div>
+                    </div>`).join('')}
+                </div>`;
+            }
+
+            else if (currentActiveTool === 'trauma') {
+                const attParams = [
+                    { label: 'Perfusion (CRT & MM color)',    opts: ['White/gray, CRT absent','Pale, CRT > 3s','Pale pink/muddy, CRT 2–3s','Pink, CRT ≤ 2s (normal)'] },
+                    { label: 'Cardiac (Heart rate)',          opts: patient.species==='dog'
+                        ? ['< 60 or > 170 bpm','61–80 or 151–170','81–100 or 131–150','101–130 (normal)']
+                        : ['< 100 or > 240 bpm','100–130 or 201–240','131–160 or 181–200','161–180 (normal)'] },
+                    { label: 'Respiratory (Rate & effort)',   opts: ['Apnea','RR > 60 with severe dyspnea','RR 36–60 or mild dyspnea','RR 18–35, normal effort'] },
+                    { label: 'Eye/Motor/Consciousness',       opts: ['Coma, no response','Stupor, severe depression','Obtunded, markedly depressed','Alert and responsive'] },
+                    { label: 'Pain response',                 opts: ['Paralysis/absent','Screaming in pain','Vocalizing/moaning','Ambulatory, minor pain'] },
+                    { label: 'Integument (Wounds)',           opts: ['Full thickness >50% body','Full thickness <50% body','Partial thickness wounds','No wounds / minor'] }
+                ];
+                const total = traumaData.reduce((sum, v) => sum + (v !== null ? v : 0), 0);
+                const maxScore = attParams.length * 3;
+                const prog = traumaData.filter(v => v !== null).length;
+                let prognosis = '', progColor = '';
+                if (prog === attParams.length) {
+                    if (total <= 8)       { prognosis = 'Poor prognosis';  progColor = 'text-red-400'; }
+                    else if (total <= 14) { prognosis = 'Fair prognosis';  progColor = 'text-orange-400'; }
+                    else                  { prognosis = 'Good prognosis';  progColor = 'text-green-400'; }
+                }
+                html += `<div class="space-y-3 mb-4">
+                    ${attParams.map((p, pi) => `
+                    <div class="calc-box">
+                        <div class="text-sm font-semibold mb-2">${pi+1}. ${p.label}</div>
+                        <div class="flex flex-wrap gap-2">
+                            ${p.opts.map((o, oi) => `<button onclick="setTrauma(${pi},${oi})" class="score-btn text-xs${traumaData[pi]===oi?' selected':''}">${oi} – ${o}</button>`).join('')}
+                        </div>
+                    </div>`).join('')}
+                </div>
+                <div class="calc-box text-center">
+                    <div class="text-xs text-gray-500 mb-1">ATT Score</div>
+                    <div class="text-5xl font-black text-teal-500">${prog > 0 ? total : '—'} <span class="text-xl text-gray-500">/ ${maxScore}</span></div>
+                    ${prognosis ? `<div class="text-sm font-semibold mt-2 ${progColor}">${prognosis}</div>` : ''}
+                    ${prog < attParams.length && prog > 0 ? `<div class="text-xs text-gray-600 mt-1">${attParams.length - prog} parameter(s) remaining</div>` : ''}
+                </div>`;
+            }
+
+            else if (currentActiveTool === 'iris') {
+                const cr = parseFloat(irisData.creatinine);
+                const sdma = parseFloat(irisData.sdma);
+                const upcr = parseFloat(irisData.upcr);
+                const bp = parseFloat(irisData.bp);
+                let stage = null, stageColor = '';
+                if (!isNaN(cr) && cr > 0) {
+                    const cuts = patient.species === 'dog'
+                        ? [1.4, 2.8, 5.0]
+                        : [1.6, 2.8, 5.0];
+                    stage = cr < cuts[0] ? 1 : cr <= cuts[1] ? 2 : cr <= cuts[2] ? 3 : 4;
+                } else if (!isNaN(sdma) && sdma > 0) {
+                    const scuts = patient.species === 'dog'
+                        ? [18, 35, 54]
+                        : [18, 25, 38];
+                    stage = sdma < scuts[0] ? 1 : sdma <= scuts[1] ? 2 : sdma <= scuts[2] ? 3 : 4;
+                }
+                stageColor = stage === 1 ? 'text-green-400' : stage === 2 ? 'text-yellow-400' : stage === 3 ? 'text-orange-400' : 'text-red-500';
+                const stageDesc = ['','Normal or slightly increased risk','Mild CKD','Moderate CKD','Severe CKD'];
+                let protSubstage = '', protColor = '';
+                if (!isNaN(upcr)) {
+                    const cutH = patient.species === 'dog' ? 0.5 : 0.4;
+                    if (upcr < 0.2) { protSubstage = 'Non-proteinuric (NP)'; protColor = 'text-green-400'; }
+                    else if (upcr <= cutH) { protSubstage = 'Borderline proteinuric (BP)'; protColor = 'text-yellow-400'; }
+                    else { protSubstage = 'Proteinuric (P)'; protColor = 'text-red-400'; }
+                }
+                let bpSubstage = '', bpColor = '';
+                if (!isNaN(bp)) {
+                    if (bp < 140) { bpSubstage = 'Normotensive'; bpColor = 'text-green-400'; }
+                    else if (bp < 160) { bpSubstage = 'Prehypertensive'; bpColor = 'text-yellow-400'; }
+                    else if (bp < 180) { bpSubstage = 'Hypertensive'; bpColor = 'text-orange-400'; }
+                    else { bpSubstage = 'Severely hypertensive'; bpColor = 'text-red-500'; }
+                }
+                html += `<div class="grid grid-cols-2 gap-3 mb-4">
+                    <div><label class="block text-xs text-gray-500 mb-1">Creatinine (mg/dL)</label><input type="number" class="tool-input" placeholder="e.g. 2.1" value="${irisData.creatinine}" oninput="irisData.creatinine=this.value; renderCurrentTool()" step="0.01"></div>
+                    <div><label class="block text-xs text-gray-500 mb-1">SDMA (μg/dL)</label><input type="number" class="tool-input" placeholder="e.g. 25" value="${irisData.sdma}" oninput="irisData.sdma=this.value; renderCurrentTool()" step="1"></div>
+                    <div><label class="block text-xs text-gray-500 mb-1">UPC Ratio</label><input type="number" class="tool-input" placeholder="e.g. 0.3" value="${irisData.upcr}" oninput="irisData.upcr=this.value; renderCurrentTool()" step="0.01"></div>
+                    <div><label class="block text-xs text-gray-500 mb-1">Systolic BP (mmHg)</label><input type="number" class="tool-input" placeholder="e.g. 155" value="${irisData.bp}" oninput="irisData.bp=this.value; renderCurrentTool()" step="1"></div>
+                </div>
+                <div class="calc-box text-center mb-4 py-6">
+                    <div class="text-xs text-gray-500 mb-1 uppercase tracking-wider">IRIS CKD Stage</div>
+                    <div class="text-6xl font-black ${stageColor}">${stage !== null ? stage : '—'}</div>
+                    ${stage ? `<div class="text-sm text-gray-400 mt-2">${stageDesc[stage]}</div>` : ''}
+                </div>
+                ${protSubstage || bpSubstage ? `<div class="grid grid-cols-2 gap-4">
+                    ${protSubstage ? `<div class="calc-box text-center"><div class="text-xs text-gray-500 mb-1">Proteinuria Substage</div><div class="font-bold ${protColor} text-sm">${protSubstage}</div></div>` : ''}
+                    ${bpSubstage ? `<div class="calc-box text-center"><div class="text-xs text-gray-500 mb-1">BP Substage</div><div class="font-bold ${bpColor} text-sm">${bpSubstage}</div></div>` : ''}
+                </div>` : ''}`;
+            }
+
+            else if (currentActiveTool === 'mitral') {
+                const vhs = parseFloat(mitralData.vhs);
+                const lviddn = parseFloat(mitralData.lviddn);
+                const laao = parseFloat(mitralData.laao);
+                const grade = parseInt(mitralData.grade);
+                const vhsAbnormal  = !isNaN(vhs)    && vhs    > 10.5;
+                const lviddnAbnormal = !isNaN(lviddn) && lviddn > 1.7;
+                const laaoAbnormal  = !isNaN(laao)   && laao   >= 1.6;
+                const hasEnlargement = vhsAbnormal || lviddnAbnormal || laaoAbnormal;
+                let mmvdStage = '', stageColor = '', stageDesc2 = '';
+                if (!isNaN(grade) && grade >= 1) {
+                    if (grade === 0) { mmvdStage = 'A'; stageColor = 'text-gray-400'; stageDesc2 = 'At-risk breed, no murmur detected'; }
+                    else if (!hasEnlargement) { mmvdStage = 'B1'; stageColor = 'text-yellow-400'; stageDesc2 = 'Murmur present, no cardiac enlargement'; }
+                    else { mmvdStage = 'B2'; stageColor = 'text-orange-400'; stageDesc2 = 'Murmur + cardiac enlargement — consider treatment (ACVIM 2019)'; }
+                }
+                html += `<div class="calc-box mb-4">
+                    <label class="block text-xs text-gray-500 mb-2">Heart Murmur Grade</label>
+                    <div class="flex gap-2 flex-wrap">
+                        ${[0,1,2,3,4,5,6].map(g => `<button onclick="mitralData.grade='${g}'; renderCurrentTool()" class="score-btn${mitralData.grade==g?' selected':''}">${g===0?'None':'Grade '+g}</button>`).join('')}
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">VHS (vertebrae)</label>
+                        <input type="number" class="tool-input" placeholder="e.g. 10.8" value="${mitralData.vhs}" oninput="mitralData.vhs=this.value; renderCurrentTool()" step="0.1">
+                        ${!isNaN(vhs) ? `<div class="text-xs mt-1 ${vhsAbnormal?'text-orange-400':'text-green-400'}">${vhsAbnormal?'↑ Enlarged':'Normal (≤10.5)'}</div>` : ''}
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">LVIDDN</label>
+                        <input type="number" class="tool-input" placeholder="e.g. 1.85" value="${mitralData.lviddn}" oninput="mitralData.lviddn=this.value; renderCurrentTool()" step="0.01">
+                        ${!isNaN(lviddn) ? `<div class="text-xs mt-1 ${lviddnAbnormal?'text-orange-400':'text-green-400'}">${lviddnAbnormal?'↑ Enlarged':'Normal (≤1.7)'}</div>` : ''}
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">LA : Ao ratio</label>
+                        <input type="number" class="tool-input" placeholder="e.g. 1.7" value="${mitralData.laao}" oninput="mitralData.laao=this.value; renderCurrentTool()" step="0.01">
+                        ${!isNaN(laao) ? `<div class="text-xs mt-1 ${laaoAbnormal?'text-orange-400':'text-green-400'}">${laaoAbnormal?'↑ Enlarged':'Normal (<1.6)'}</div>` : ''}
+                    </div>
+                </div>
+                <div class="calc-box text-center py-6">
+                    <div class="text-xs text-gray-500 mb-1 uppercase tracking-wider">MMVD Stage</div>
+                    <div class="text-6xl font-black ${stageColor}">${mmvdStage || '—'}</div>
+                    ${stageDesc2 ? `<div class="text-sm text-gray-400 mt-2">${stageDesc2}</div>` : ''}
+                </div>`;
+            }
+
+            else if (currentActiveTool === 'rule20') {
+                const items = [
+                    'Fluid balance','Oncotic pressure (albumin/colloid)','Glucose',
+                    'Electrolytes & acid-base','Oxygenation & ventilation','Mentation & pain/analgesia',
+                    'Blood pressure','Heart rate & rhythm','Temperature regulation','Urine output (renal function)',
+                    'Red blood cell mass','Coagulation','Bones, joints & muscles','Gastrointestinal tract & nutrition',
+                    'Immune status & infection control','Skin & wounds','Drug dosing & metabolism',
+                    'Nursing care & physical therapy','Diagnostics & monitoring','Owner communication'
+                ];
+                const checkedCount = items.filter((_, i) => ruleOf20[i]).length;
+                html += `<div class="mb-3 flex items-center gap-3">
+                    <div class="text-3xl font-black text-teal-500">${checkedCount}<span class="text-lg text-gray-500"> / ${items.length}</span></div>
+                    <div class="text-sm text-gray-400">items addressed</div>
+                    <button onclick="Object.keys(ruleOf20).forEach(k=>delete ruleOf20[k]); renderCurrentTool()" class="ml-auto text-xs text-gray-600 hover:text-gray-400 border border-white/10 rounded-lg px-3 py-1">Reset</button>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                    ${items.map((item, i) => `
+                    <label class="calc-box flex items-center gap-3 cursor-pointer hover:border-teal-500/30 transition">
+                        <input type="checkbox" ${ruleOf20[i]?'checked':''} onchange="ruleOf20[${i}]=this.checked; document.getElementById('r20count').textContent=Object.values(ruleOf20).filter(Boolean).length" class="w-4 h-4 accent-teal-500">
+                        <span class="text-sm ${ruleOf20[i]?'text-gray-400 line-through':'text-gray-200'}">${i+1}. ${item}</span>
+                    </label>`).join('')}
+                </div>`.replace('text-3xl font-black text-teal-500">', `text-3xl font-black text-teal-500" id="r20count">`);
             }
 
             else {
@@ -246,6 +696,82 @@
             if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
         }
 
+        function changeAnestConc(idx, val) {
+            if (val === 'custom') {
+                anestConcMode[idx] = 'custom';
+            } else {
+                delete anestConcMode[idx];
+                anestConcentrations[idx] = parseFloat(val);
+            }
+            renderCurrentTool();
+        }
+
+        function changeAnestCustomConc(idx, val) {
+            const numVal = parseFloat(val);
+            if (!isNaN(numVal) && numVal >= 0.001) {
+                anestConcentrations[idx] = numVal;
+                renderCurrentTool();
+            }
+        }
+
+        function saveAnestConc(idx) {
+            const drug = anestheticDrugs[idx];
+            const conc = anestConcentrations[idx] !== undefined ? anestConcentrations[idx] : drug.concentrations[0].value;
+            const isCustom = anestConcMode[idx] === 'custom';
+            localStorage.setItem(`anestConc_${idx}`, JSON.stringify({ value: conc, isCustom }));
+            const btn = document.querySelector(`[data-anest-save-btn="${idx}"]`);
+            if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
+        }
+
+        function changeCriConc(idx, val) {
+            if (val === 'custom') {
+                criConcMode[idx] = 'custom';
+            } else {
+                delete criConcMode[idx];
+                criConcentrations[idx] = parseFloat(val);
+            }
+            renderCurrentTool();
+        }
+
+        function changeCriCustomConc(idx, val) {
+            const numVal = parseFloat(val);
+            if (!isNaN(numVal) && numVal >= 0.001) {
+                criConcentrations[idx] = numVal;
+                renderCurrentTool();
+            }
+        }
+
+        function saveCriConc(idx) {
+            const drug = criDrugs[idx];
+            const conc = criConcentrations[idx] !== undefined ? criConcentrations[idx] : drug.concentrations[0].value;
+            const isCustom = criConcMode[idx] === 'custom';
+            localStorage.setItem(`criConc_${idx}`, JSON.stringify({ value: conc, isCustom }));
+            const btn = document.querySelector(`[data-cri-save-btn="${idx}"]`);
+            if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
+        }
+
+        function setDehydration(pct) {
+            dehydrationPercent = pct;
+            renderCurrentTool();
+        }
+
+        function addGlucoseRow() {
+            glucoseReadings.push({time:'', glucose:''});
+            renderCurrentTool();
+        }
+
+        function removeGlucoseRow(idx) {
+            if (glucoseReadings.length > 1) {
+                glucoseReadings.splice(idx, 1);
+                renderCurrentTool();
+            }
+        }
+
+        function setTrauma(paramIdx, score) {
+            traumaData[paramIdx] = score;
+            renderCurrentTool();
+        }
+
         window.onload = () => {
             if (sessionStorage.getItem("isLoggedIn") !== "true") window.location.href = "index.html";
             emergencyDrugs.forEach((drug, idx) => {
@@ -256,6 +782,26 @@
                         drugConcentrations[idx] = data.value;
                         if (data.isCustom) drugConcMode[idx] = 'custom';
                     } catch (e) { console.warn('Failed to parse saved concentration:', e); }
+                }
+            });
+            anestheticDrugs.forEach((drug, idx) => {
+                const saved = localStorage.getItem(`anestConc_${idx}`);
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        anestConcentrations[idx] = data.value;
+                        if (data.isCustom) anestConcMode[idx] = 'custom';
+                    } catch (e) { console.warn('Failed to parse saved anesthetic concentration:', e); }
+                }
+            });
+            criDrugs.forEach((drug, idx) => {
+                const saved = localStorage.getItem(`criConc_${idx}`);
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        criConcentrations[idx] = data.value;
+                        if (data.isCustom) criConcMode[idx] = 'custom';
+                    } catch (e) { console.warn('Failed to parse saved CRI concentration:', e); }
                 }
             });
             setSpecies('dog');
