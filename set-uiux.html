@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>ตั้งค่า UI/UX | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        :root {
+            --navy:     #020617;
+            --navy-mid: #0f172a;
+            --teal:     #14b8b1;
+            --border:   rgba(255, 255, 255, 0.1);
+        }
+        body {
+            font-family: "Sarabun", sans-serif;
+            background: var(--navy);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 50% 50%, rgba(14, 165, 160, 0.05) 0%, transparent 80%);
+        }
+
+        /* Settings section card */
+        .settings-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.75rem 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Option buttons (font / size) */
+        .option-btn {
+            padding: 10px 22px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: transparent;
+            color: #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .option-btn:hover { border-color: var(--teal); color: var(--teal); }
+        .option-btn.active {
+            border-color: var(--teal);
+            background: rgba(20, 184, 177, 0.12);
+            color: var(--teal);
+        }
+
+        /* Color swatches */
+        .color-swatch {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: 2px solid transparent;
+            outline-offset: 3px;
+        }
+        .color-swatch:hover { transform: scale(1.15); }
+        .color-swatch.active {
+            border-color: white;
+            outline-color: white;
+            transform: scale(1.2);
+        }
+
+        /* Live preview card */
+        .preview-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+        }
+        .preview-menu-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 1.5rem 1.25rem;
+            text-align: center;
+            transition: 0.3s;
+        }
+        .preview-menu-card:hover { border-color: var(--teal); }
+        .preview-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+        .preview-title { font-weight: 800; font-size: 1rem; color: white; margin-bottom: 0.3rem; }
+        .preview-desc  { font-size: 0.8rem; color: #94a3b8; }
+
+        .preview-btn-teal {
+            background: var(--teal);
+            color: var(--navy);
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            border: none;
+            cursor: default;
+        }
+        .preview-badge {
+            background: var(--teal);
+            color: var(--navy);
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 900;
+        }
+
+        /* Settings card (mirrors settings.html) */
+        .settings-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .settings-card:hover {
+            background: rgba(14, 165, 160, 0.1);
+            border-color: var(--teal);
+            transform: translateX(8px);
+        }
+    </style>
+</head>
+<body>
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+    </script>
+
+    <div class="mesh-bg"></div>
+
+    <!-- ── Header ── -->
+    <header class="p-6 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex items-center gap-4">
+            <a href="settings.html" class="text-gray-400 hover:text-white transition text-sm">← กลับหน้าตั้งค่า</a>
+            <h1 class="text-xl font-bold border-l pl-4 border-white/20">🎨 ตั้งค่า UI/UX</h1>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-6">
+        <p class="text-gray-400 mb-8">ปรับแต่งชนิดตัวอักษร ขนาดตัวอักษร และธีมสีของระบบ PK-VMS ตามความชอบของคุณ</p>
+
+        <!-- ── Font Family ── -->
+        <div class="settings-section">
+            <div class="section-title">🔤 ชนิดตัวอักษร (Font Family)</div>
+            <div class="flex flex-wrap gap-3" id="font-options">
+                <button class="option-btn" data-font="Sarabun"
+                    style="font-family: 'Sarabun', sans-serif;"
+                    onclick="selectFont('Sarabun')">Sarabun</button>
+                <button class="option-btn" data-font="Kanit"
+                    style="font-family: 'Kanit', sans-serif;"
+                    onclick="selectFont('Kanit')">Kanit</button>
+                <button class="option-btn" data-font="Prompt"
+                    style="font-family: 'Prompt', sans-serif;"
+                    onclick="selectFont('Prompt')">Prompt</button>
+            </div>
+        </div>
+
+        <!-- ── Font Size ── -->
+        <div class="settings-section">
+            <div class="section-title">📏 ขนาดตัวอักษร (Font Size)</div>
+            <div class="flex flex-wrap gap-3" id="size-options">
+                <button class="option-btn" data-size="13" onclick="selectSize(13)">
+                    <span style="font-size:0.75rem;">A</span> เล็ก (13px)
+                </button>
+                <button class="option-btn" data-size="14" onclick="selectSize(14)">
+                    <span style="font-size:0.875rem;">A</span> มาตรฐาน (14px)
+                </button>
+                <button class="option-btn" data-size="16" onclick="selectSize(16)">
+                    <span style="font-size:1rem;">A</span> ปานกลาง (16px)
+                </button>
+                <button class="option-btn" data-size="18" onclick="selectSize(18)">
+                    <span style="font-size:1.125rem;">A</span> ใหญ่ (18px)
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Theme / Accent Color ── -->
+        <div class="settings-section">
+            <div class="section-title">🎨 ธีมสี (Accent Color)</div>
+            <div class="flex flex-wrap gap-4 items-center" id="color-options">
+                <button class="color-swatch" data-color="#14b8b1" title="Teal (ค่าเริ่มต้น)"
+                    style="background:#14b8b1;" onclick="selectColor('#14b8b1')"></button>
+                <button class="color-swatch" data-color="#3b82f6" title="Blue"
+                    style="background:#3b82f6;" onclick="selectColor('#3b82f6')"></button>
+                <button class="color-swatch" data-color="#8b5cf6" title="Purple"
+                    style="background:#8b5cf6;" onclick="selectColor('#8b5cf6')"></button>
+                <button class="color-swatch" data-color="#f59e0b" title="Amber"
+                    style="background:#f59e0b;" onclick="selectColor('#f59e0b')"></button>
+                <button class="color-swatch" data-color="#ef4444" title="Red"
+                    style="background:#ef4444;" onclick="selectColor('#ef4444')"></button>
+                <button class="color-swatch" data-color="#10b981" title="Green"
+                    style="background:#10b981;" onclick="selectColor('#10b981')"></button>
+                <button class="color-swatch" data-color="#f472b6" title="Pink"
+                    style="background:#f472b6;" onclick="selectColor('#f472b6')"></button>
+            </div>
+        </div>
+
+        <!-- ── Live Preview ── -->
+        <div class="settings-section">
+            <div class="section-title">👁️ ตัวอย่างการแสดงผล (Live Preview)</div>
+            <div class="preview-card">
+                <!-- Mini header -->
+                <div class="flex items-center justify-between mb-5 pb-4 border-b border-white/10">
+                    <div class="flex items-center gap-3">
+                        <div id="preview-logo" class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm" style="background: var(--teal); color: #020617;">PK</div>
+                        <div>
+                            <div class="font-black text-base text-white leading-none">VMS Professional</div>
+                            <div id="preview-sub" class="text-xs font-black mt-0.5" style="color: var(--teal);">PK-VMS SYSTEM</div>
+                        </div>
+                    </div>
+                    <span id="preview-badge" class="preview-badge">14 รายชื่อ</span>
+                </div>
+
+                <!-- Mini cards grid -->
+                <div class="grid grid-cols-3 gap-3 mb-5">
+                    <div class="preview-menu-card">
+                        <div class="preview-icon">🐾</div>
+                        <div class="preview-title">เวชระเบียน</div>
+                        <div class="preview-desc">จัดการประวัติสัตว์</div>
+                    </div>
+                    <div class="preview-menu-card">
+                        <div class="preview-icon">🔬</div>
+                        <div class="preview-title">Lab Results</div>
+                        <div class="preview-desc">ผลการตรวจห้องแล็บ</div>
+                    </div>
+                    <div class="preview-menu-card">
+                        <div class="preview-icon">💰</div>
+                        <div class="preview-title">คิดเงิน / POS</div>
+                        <div class="preview-desc">สรุปค่ารักษา</div>
+                    </div>
+                </div>
+
+                <!-- Sample buttons -->
+                <div class="flex flex-wrap gap-3 items-center">
+                    <button class="preview-btn-teal" id="preview-btn">+ ลงทะเบียนใหม่</button>
+                    <span class="text-gray-400 text-sm" id="preview-text">ข้อความตัวอย่าง: ระบบบริหารจัดการคลินิกสัตว์</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Reset ── -->
+        <div class="text-right">
+            <button onclick="resetDefaults()"
+                class="text-sm text-gray-500 hover:text-red-400 transition underline underline-offset-2">
+                รีเซ็ตเป็นค่าเริ่มต้น
+            </button>
+        </div>
+
+        <div class="mt-10 p-6 rounded-2xl border border-teal-500/20 bg-teal-500/5">
+            <h4 class="font-bold mb-1 uppercase text-xs tracking-widest" style="color: var(--teal);">หมายเหตุ</h4>
+            <p class="text-sm text-gray-400">การตั้งค่าจะถูกบันทึกในเบราว์เซอร์นี้ และมีผลกับทุกหน้าในระบบ PK-VMS</p>
+        </div>
+    </main>
+
+    <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
+        PK-VMS © 2026 UI/UX Settings
+    </footer>
+
+    <script>
+        // ── Init: mark active buttons from saved values ────────────────────────
+        function initUI() {
+            // UISettings is always loaded via ui-settings.js in <head>
+            var f = UISettings.getFontFamily();
+            var s = UISettings.getFontSize();
+            var c = UISettings.getAccentColor();
+
+            markActive('font-options',  '[data-font="' + f + '"]');
+            markActive('size-options',  '[data-size="' + s + '"]');
+            markActive('color-options', '[data-color="' + c + '"]');
+        }
+
+        function markActive(parentId, selector) {
+            var parent = document.getElementById(parentId);
+            if (!parent) return;
+            parent.querySelectorAll('.option-btn, .color-swatch').forEach(function (el) {
+                el.classList.remove('active');
+            });
+            var target = parent.querySelector(selector);
+            if (target) target.classList.add('active');
+        }
+
+        // ── Font selection ─────────────────────────────────────────────────────
+        function selectFont(font) {
+            UISettings.setFontFamily(font);
+            markActive('font-options', '[data-font="' + font + '"]');
+        }
+
+        // ── Size selection ─────────────────────────────────────────────────────
+        function selectSize(size) {
+            UISettings.setFontSize(size);
+            markActive('size-options', '[data-size="' + size + '"]');
+        }
+
+        // ── Color selection ────────────────────────────────────────────────────
+        function selectColor(color) {
+            UISettings.setAccentColor(color);
+            markActive('color-options', '[data-color="' + color + '"]');
+            // Update preview elements that use var(--teal)
+            updatePreviewColor(color);
+        }
+
+        function updatePreviewColor(color) {
+            document.documentElement.style.setProperty('--teal', color);
+        }
+
+        // ── Reset to defaults ─────────────────────────────────────────────────
+        function resetDefaults() {
+            if (!confirm('รีเซ็ตการตั้งค่า UI/UX ทั้งหมดเป็นค่าเริ่มต้น?')) return;
+            localStorage.removeItem('ui-font-family');
+            localStorage.removeItem('preferred-font-size');
+            localStorage.removeItem('ui-accent-color');
+            location.reload();
+        }
+
+        // Run on load
+        document.addEventListener('DOMContentLoaded', initUI);
+    </script>
+</body>
+</html>

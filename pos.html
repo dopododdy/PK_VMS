@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PK-VMS Pro | Smart POS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,13 +13,14 @@
 
     <style>
         :root { 
-            --navy-dark: #020617; 
-            --navy-panel: #0f172a; 
-            --teal-accent: #10b981; 
-            --border: rgba(255, 255, 255, 0.08); 
+            --navy:     #020617; 
+            --navy-mid: #0f172a; 
+            --teal:     #14b8b1;
+            --teal-accent: #14b8b1;
+            --border:   rgba(255, 255, 255, 0.08); 
         }
         * { font-family: "Sarabun", sans-serif !important; }
-        body { background: var(--navy-dark); color: #e2e8f0; height: 100vh; overflow: hidden; }
+        body { background: var(--navy); color: #e2e8f0; height: 100vh; overflow: hidden; }
 
         /* Typography */
         .txt-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -29,11 +31,11 @@
         /* Layout */
         .col-side { width: 23%; border-right: 1px solid var(--border); }
         .col-main { width: 52%; background: rgba(0,0,0,0.2); }
-        .col-pay { width: 25%; background: var(--navy-panel); border-left: 1px solid var(--border); }
+        .col-pay { width: 25%; background: var(--navy-mid); border-left: 1px solid var(--border); }
 
         .glass-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; transition: 0.2s; cursor: pointer; padding: 16px; }
-        .glass-card:hover { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.05); }
-        .glass-card.active { border-color: var(--teal-accent); background: rgba(16, 185, 129, 0.1); }
+        .glass-card:hover { border-color: var(--teal-accent); background: rgba(20, 184, 177, 0.05); }
+        .glass-card.active { border-color: var(--teal-accent); background: rgba(20, 184, 177, 0.1); }
 
         .search-input { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; width: 100%; padding: 12px 14px 12px 42px; outline: none; font-size: 16px; color: white; }
         .search-input:focus { border-color: var(--teal-accent); }
@@ -42,19 +44,19 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
         .numpad button { background: rgba(255,255,255,0.05); height: 60px; border-radius: 10px; font-weight: 800; font-size: 22px; transition: 0.1s; }
-        .numpad button:active { background: var(--teal-accent); color: var(--navy-dark); transform: scale(0.95); }
+        .numpad button:active { background: var(--teal-accent); color: var(--navy); transform: scale(0.95); }
         
         .btn-print { background-color: #2563eb !important; color: white !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important; }
         .btn-print:hover { background-color: #1d4ed8 !important; }
 
         .btn-home { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
-        .btn-home:hover { background: var(--teal-accent); color: var(--navy-dark); }
+        .btn-home:hover { background: var(--teal-accent); color: var(--navy); }
 
         /* Modal Context Styles */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: #0f172a; border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
         .cat-tab { padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; border: 1px solid transparent; color: #64748b; }
-        .cat-tab.active { background: rgba(16, 185, 129, 0.1); color: var(--teal-accent); border-color: rgba(16, 185, 129, 0.3); }
+        .cat-tab.active { background: rgba(20, 184, 177, 0.1); color: var(--teal-accent); border-color: rgba(20, 184, 177, 0.3); }
         .item-grid-box { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
         
         /* Remove Button */
