@@ -123,15 +123,22 @@
         function renderSidebar() {
             const term = document.getElementById('search-box').value.toLowerCase();
             const container = document.getElementById('owner-list');
+            const ownerMap = new Map(allOwners.map(o => [o.hn, o]));
+            const primaryPhoneMap = new Map();
+            allPhones.forEach(p => {
+                if (p.label === 'เบอร์หลัก' && !primaryPhoneMap.has(p.owner_hn)) {
+                    primaryPhoneMap.set(p.owner_hn, p.phone_number);
+                }
+            });
             const sorted = [...allAnimals].sort((a, b) => parseInt(b.owner_hn) - parseInt(a.owner_hn));
             const filtered = sorted.filter(pet => {
-                const owner = allOwners.find(o => o.hn === pet.owner_hn);
+                const owner = ownerMap.get(pet.owner_hn);
                 return pet.pet_name.toLowerCase().includes(term) || pet.owner_hn.includes(term) || owner?.owner_name.toLowerCase().includes(term);
             });
 
             container.innerHTML = filtered.map(pet => {
-                const owner = allOwners.find(o => o.hn === pet.owner_hn);
-                const p1 = allPhones.find(p => p.owner_hn === pet.owner_hn && p.label === 'เบอร์หลัก')?.phone_number || '-';
+                const owner = ownerMap.get(pet.owner_hn);
+                const p1 = primaryPhoneMap.get(pet.owner_hn) || '-';
                 const typeIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
                 return `
                     <div class="pet-card" onclick="editOwner('${pet.owner_hn}')" id="pet-${pet.id}">
@@ -357,7 +364,10 @@
 
         async function deleteOwner(hn, name) {
             if (!confirm(`⚠️ ยืนยันการลบเจ้าของ: ${name}?\nข้อมูลสัตว์ทั้งหมดจะหายไป`)) return;
-            await db.from('owner_phones').delete().eq('owner_hn', hn); await db.from('animals').delete().eq('owner_hn', hn);
+            await Promise.all([
+                db.from('owner_phones').delete().eq('owner_hn', hn),
+                db.from('animals').delete().eq('owner_hn', hn)
+            ]);
             await db.from('owners').delete().eq('hn', hn); await loadData();
             document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><h3>เลือกรายการเจ้าของ</h3></div>`;
         }
