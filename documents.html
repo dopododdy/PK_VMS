@@ -60,6 +60,7 @@
         <nav class="p-4 bg-navy-light/50 border-b border-white/5 flex gap-2 overflow-x-auto custom-scroll">
             <div class="doc-tab active" data-type="doc_consent" onclick="switchDocType('doc_consent')">📋 ใบยินยอมหัตถการ</div>
             <div class="doc-tab" data-type="doc_lab" onclick="switchDocType('doc_lab')">🔬 รายงานผล Lab</div>
+            <div class="doc-tab" data-type="doc_referral" onclick="switchDocType('doc_referral')">📨 ใบส่งตัว</div>
         </nav>
 
         <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-[#020617]">
@@ -194,8 +195,63 @@
                 title.innerText = "รายงานผลทางห้องปฏิบัติการ";
                 form.innerHTML = `<div class="section-card space-y-6"><div id="lab-session-list" class="space-y-4"></div></div>`;
                 refreshLabPicker();
+            } else if (type === 'doc_referral') {
+                title.innerText = "ใบส่งตัวสัตว์ป่วย";
+                form.innerHTML = `
+                    <div class="section-card space-y-5">
+                        <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">ข้อมูลการส่งตัว</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">ส่งตัวไปยัง (โรงพยาบาล/คลินิก)</label>
+                                <input type="text" id="ref-to" class="input-box" placeholder="เช่น โรงพยาบาลสัตว์ มหาวิทยาลัยเกษตรศาสตร์">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">แพทย์ผู้รับ (ถ้าทราบ)</label>
+                                <input type="text" id="ref-doc" class="input-box" placeholder="เช่น น.สพ. สมชาย ใจดี">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">เหตุผลในการส่งตัว</label>
+                            <input type="text" id="ref-reason" class="input-box font-bold text-teal-400" placeholder="เช่น เพื่อทำ MRI, ผ่าตัดเฉพาะทาง, ตรวจ Echocardiography">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">การวินิจฉัยเบื้องต้น / ประวัติย่อ</label>
+                            <textarea id="ref-diagnosis" class="input-box" rows="3" placeholder="เช่น สุนัขพันธุ์ชิวาวา อายุ 5 ปี มีอาการ..."></textarea>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">การรักษาที่ได้รับไปแล้ว / ยาที่ได้รับ</label>
+                            <textarea id="ref-treatment" class="input-box" rows="2" placeholder="เช่น ได้รับ Amoxicillin 250mg วันละ 2 ครั้ง เป็นเวลา 5 วัน..."></textarea>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">ความเร่งด่วน</label>
+                            <div class="flex gap-3 flex-wrap">
+                                <label class="check-pill" id="urgency-normal"><input type="radio" name="ref-urgency" value="ปกติ" checked onchange="syncUrgency()"> ปกติ</label>
+                                <label class="check-pill" id="urgency-urgent"><input type="radio" name="ref-urgency" value="เร่งด่วน" onchange="syncUrgency()"> ⚡ เร่งด่วน</label>
+                                <label class="check-pill" id="urgency-emergency"><input type="radio" name="ref-urgency" value="ฉุกเฉิน" onchange="syncUrgency()"> 🔴 ฉุกเฉิน</label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">เอกสาร/ผลตรวจที่แนบ</label>
+                            <input type="text" id="ref-attachments" class="input-box" placeholder="เช่น ผลเลือด CBC, ฟิล์ม X-ray, ผล USG">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">หมายเหตุเพิ่มเติม</label>
+                            <textarea id="ref-note" class="input-box" rows="2" placeholder="ข้อมูลอื่นๆ ที่แพทย์ผู้รับควรทราบ..."></textarea>
+                        </div>
+                    </div>`;
+                // Apply active styles to default urgency selection
+                setTimeout(() => {
+                    document.getElementById('urgency-normal')?.classList.add('active');
+                    lucide.createIcons();
+                }, 50);
             }
             lucide.createIcons();
+        }
+
+        function syncUrgency() {
+            document.querySelectorAll('[id^="urgency-"]').forEach(l => l.classList.remove('active'));
+            const checked = document.querySelector('input[name="ref-urgency"]:checked');
+            if (checked) checked.parentElement.classList.add('active');
         }
 
         function refreshSurgeryRows() {
@@ -272,7 +328,98 @@
         }
 
         async function printCurrentDoc() {
-            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            if (activeDocType !== 'doc_referral' && selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+
+            // ใบส่งตัว: สร้าง layout เอง ไม่ต้องใช้ template
+            if (activeDocType === 'doc_referral') {
+                const refTo       = document.getElementById('ref-to')?.value || '-';
+                const refDoc      = document.getElementById('ref-doc')?.value || '-';
+                const refReason   = document.getElementById('ref-reason')?.value || '-';
+                const refDiagnosis= document.getElementById('ref-diagnosis')?.value || '-';
+                const refTreatment= document.getElementById('ref-treatment')?.value || '-';
+                const refUrgency  = document.querySelector('input[name="ref-urgency"]:checked')?.value || 'ปกติ';
+                const refAttach   = document.getElementById('ref-attachments')?.value || '-';
+                const refNote     = document.getElementById('ref-note')?.value || '-';
+                const petNames    = ownerPets.filter(p => selectedPetIds.has(p.id.toString())).map(p => `${p.pet_name} (${p.pet_type}/${p.gender})`).join(', ') || '-';
+                const urgColor    = refUrgency === 'ฉุกเฉิน' ? '#dc2626' : refUrgency === 'เร่งด่วน' ? '#ea580c' : '#16a34a';
+                const dateStr     = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+                const win = window.open('', '_blank');
+                win.document.write(`<html><head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
+  * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
+  body { margin: 0; padding: 20mm 20mm; background: white; color: #111; font-size: 11pt; }
+  h1 { font-size: 18pt; font-weight: 800; margin: 0 0 4px; }
+  h2 { font-size: 14pt; font-weight: 700; margin: 0 0 12px; }
+  .header { border-bottom: 3px solid #0891b2; padding-bottom: 10px; margin-bottom: 16px; }
+  .clinic { font-size: 9pt; color: #555; }
+  .urgency-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-weight: 800; font-size: 10pt; color: white; background: ${urgColor}; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  td { padding: 7px 10px; border: 1px solid #ccc; vertical-align: top; }
+  td.label { font-weight: 700; background: #f0f9ff; width: 36%; color: #0369a1; }
+  .section-title { font-size: 10pt; font-weight: 800; color: #0891b2; text-transform: uppercase; letter-spacing: 0.1em; margin: 16px 0 4px; }
+  .signature-row { display: flex; justify-content: space-between; margin-top: 30px; }
+  .signature-block { text-align: center; width: 45%; }
+  .sig-line { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; font-size: 9pt; }
+  @media print { @page { size: A4; margin: 0; } body { padding: 18mm 18mm; } }
+</style>
+</head><body>
+  <div class="header">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        <h1>ใบส่งตัวสัตว์ป่วย</h1>
+        <h2>Veterinary Referral Letter</h2>
+        <div class="clinic">PK-VMS Animal Clinic | ที่อยู่: 123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:9pt; color:#555;">วันที่: ${dateStr}</div>
+        <div style="margin-top:6px;"><span class="urgency-badge">${refUrgency}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">ข้อมูลผู้ส่งตัว</div>
+  <table>
+    <tr><td class="label">เจ้าของสัตว์</td><td>${currentOwner?.owner_name || '-'} (HN: ${currentOwner?.hn || '-'})</td></tr>
+    <tr><td class="label">เบอร์โทรศัพท์</td><td>${currentOwner?.phone || '-'}</td></tr>
+    <tr><td class="label">สัตว์เลี้ยง</td><td>${petNames}</td></tr>
+    <tr><td class="label">แพทย์ผู้ส่ง</td><td>${VET_NAME}</td></tr>
+  </table>
+
+  <div class="section-title">ข้อมูลการส่งตัว</div>
+  <table>
+    <tr><td class="label">ส่งตัวไปยัง</td><td>${refTo}</td></tr>
+    <tr><td class="label">แพทย์ผู้รับ</td><td>${refDoc}</td></tr>
+    <tr><td class="label">เหตุผลการส่งตัว</td><td>${refReason}</td></tr>
+  </table>
+
+  <div class="section-title">ประวัติและการรักษา</div>
+  <table>
+    <tr><td class="label">การวินิจฉัยเบื้องต้น</td><td>${refDiagnosis.replace(/\n/g,'<br>')}</td></tr>
+    <tr><td class="label">การรักษาที่ได้รับ</td><td>${refTreatment.replace(/\n/g,'<br>')}</td></tr>
+    <tr><td class="label">เอกสาร/ผลตรวจแนบ</td><td>${refAttach}</td></tr>
+    <tr><td class="label">หมายเหตุ</td><td>${refNote.replace(/\n/g,'<br>')}</td></tr>
+  </table>
+
+  <div class="signature-row">
+    <div class="signature-block">
+      <div style="height:30px;"></div>
+      <div class="sig-line">ลายมือชื่อแพทย์ผู้ส่งตัว</div>
+      <div style="font-size:9pt;">(${VET_NAME})</div>
+    </div>
+    <div class="signature-block">
+      <div style="height:30px;"></div>
+      <div class="sig-line">ลายมือชื่อเจ้าของสัตว์</div>
+      <div style="font-size:9pt;">(${currentOwner?.owner_name || ''})</div>
+    </div>
+  </div>
+<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>
+</body></html>`);
+                win.document.close();
+                return;
+            }
+
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
             if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
             

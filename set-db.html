@@ -26,62 +26,165 @@
             border-radius: 24px;
             backdrop-filter: blur(10px);
         }
-        .status-dot {
-            width: 12px; height: 12px; border-radius: 50%; display: inline-block;
-        }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+        .action-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.2s;
+        }
+        .action-card:hover { border-color: var(--teal); background: rgba(20,184,177,0.05); }
+        .btn-primary { background: var(--teal); color: #fff; font-weight: 700; padding: 10px 20px; border-radius: 12px; border: none; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary:hover { background: #0e9994; }
+        .btn-secondary { background: rgba(255,255,255,0.06); color: #e2e8f0; font-weight: 700; padding: 10px 20px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: var(--teal); }
+        .btn-danger { background: rgba(239,68,68,0.1); color: #f87171; font-weight: 700; padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(239,68,68,0.2); cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-danger:hover { background: rgba(239,68,68,0.2); }
+        .table-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.2s;
+        }
+        .table-card:hover { border-color: rgba(20,184,177,0.3); }
+        .progress-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .progress-bar-inner { height: 100%; background: var(--teal); border-radius: 4px; transition: width 0.5s ease; }
+        #restore-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+        #restore-overlay.show { display: flex; }
+        .modal-box { background: #0f172a; border: 1px solid var(--border); border-radius: 24px; padding: 32px; max-width: 480px; width: 90%; }
     </style>
 </head>
 <body class="p-6">
 
-    <div class="max-w-3xl mx-auto">
-       <header class="flex justify-between items-center mb-8 pb-5 border-b border-white/10">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8 pb-5 border-b border-white/10">
             <div class="flex items-center gap-4">
-                <a href="settings.html" class="text-gray-400 hover:text-white transition text-sm">← กลับหน้าตั้งค่า</a>
-                <h1 class="text-xl font-bold border-l pl-4 border-white/20">🗄️ จัดการฐานข้อมูล (Database)</h1>
+                <a href="settings.html" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition text-gray-400 text-xl" title="กลับหน้าตั้งค่า">🏠</a>
+                <div>
+                    <h1 class="text-xl font-bold">🗄️ จัดการฐานข้อมูล</h1>
+                    <p class="text-xs text-gray-500 mt-0.5">Database Management</p>
+                </div>
             </div>
-            <button onclick="checkConnection()" class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2.5 rounded-xl text-sm transition shadow-lg shadow-teal-500/20">
-                ตรวจสอบการเชื่อมต่อ
+            <button onclick="checkConnection()" class="btn-primary text-sm">
+                🔌 ตรวจสอบการเชื่อมต่อ
             </button>
         </header>
 
+        <!-- Connection Status -->
         <div class="glass-panel p-6 mb-6">
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-gray-400">สถานะการเชื่อมต่อปัจจุบัน</span>
-                <div id="status-tag" class="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full text-xs">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="font-bold text-white flex items-center gap-2">📡 สถานะการเชื่อมต่อ</h2>
+                <div id="status-tag" class="flex items-center gap-2 bg-white/5 px-4 py-1.5 rounded-full text-xs font-bold">
                     <span id="status-color" class="status-dot bg-gray-500"></span>
                     <span id="status-text">กำลังตรวจสอบ...</span>
                 </div>
             </div>
-            
-            <div class="space-y-3">
-                <div class="bg-black/20 p-3 rounded-lg border border-white/5">
-                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Project URL</p>
-                    <p id="display-url" class="text-sm font-mono text-teal-400 break-all italic">Loading...</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="bg-black/20 p-4 rounded-xl border border-white/5">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5">Project URL</p>
+                    <p id="display-url" class="text-sm font-mono text-teal-400 break-all">Loading...</p>
                 </div>
-                <div class="bg-black/20 p-3 rounded-lg border border-white/5">
-                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">API Key (Public)</p>
-                    <p id="display-key" class="text-sm font-mono text-gray-400 break-all italic">Loading...</p>
+                <div class="bg-black/20 p-4 rounded-xl border border-white/5">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5">API Key (Public)</p>
+                    <p id="display-key" class="text-sm font-mono text-gray-400 break-all">Loading...</p>
                 </div>
             </div>
         </div>
 
-        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-            📊 ตารางในระบบ (Tables)
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="table-list">
-            <div class="glass-panel p-4 animate-pulse">กำลังโหลดข้อมูลตาราง...</div>
+        <!-- Tables Section -->
+        <div class="mb-8">
+            <h2 class="text-base font-bold mb-4 flex items-center gap-2 text-gray-300">
+                📊 ตารางในระบบ
+                <span class="text-xs font-normal text-gray-500 ml-1">(Database Tables)</span>
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="table-list">
+                <div class="table-card animate-pulse col-span-full"><p class="text-gray-500 text-sm">กำลังโหลดข้อมูลตาราง...</p></div>
+            </div>
         </div>
 
-        <div class="mt-8 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-            <p class="text-amber-500 text-xs">
-                <strong>คำแนะนำ:</strong> หากสถานะเป็น Offline กรุณาตรวจสอบค่าในไฟล์ <code>supabase-config.js</code> หรือเช็คอินเทอร์เน็ตของคุณ
+        <!-- Backup & Restore Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+
+            <!-- Backup Card -->
+            <div class="action-card">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-2xl">📦</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">สำรองข้อมูล</h3>
+                        <p class="text-xs text-gray-500">Backup ข้อมูลทั้งระบบเป็นไฟล์ JSON</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mb-5 leading-relaxed">ดาวน์โหลดข้อมูลทั้งหมดในระบบ ได้แก่ ประวัติสัตว์, การรักษา, คลังยา, เอกสาร และการตั้งค่า เพื่อเก็บสำรองไว้</p>
+                <div id="backup-progress" class="mb-4 hidden">
+                    <div class="flex justify-between text-xs text-gray-400 mb-1">
+                        <span id="backup-status-text">กำลังสำรองข้อมูล...</span>
+                        <span id="backup-percent">0%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-bar-inner" id="backup-bar" style="width:0%"></div></div>
+                </div>
+                <button onclick="backupData()" class="btn-primary w-full justify-center" id="btn-backup">
+                    ⬇️ ดาวน์โหลด Backup
+                </button>
+            </div>
+
+            <!-- Restore Card -->
+            <div class="action-card">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl">♻️</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">กู้คืนข้อมูล</h3>
+                        <p class="text-xs text-gray-500">Restore จากไฟล์ Backup JSON</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mb-5 leading-relaxed">นำเข้าข้อมูลจากไฟล์ Backup ที่ดาวน์โหลดไว้ ระบบจะ Upsert ข้อมูลทีละตาราง โดยไม่ลบข้อมูลที่มีอยู่แล้ว</p>
+                <label class="btn-secondary w-full justify-center cursor-pointer" id="btn-restore-label">
+                    ⬆️ เลือกไฟล์ Backup
+                    <input type="file" accept=".json" class="hidden" onchange="prepareRestore(event)">
+                </label>
+            </div>
+        </div>
+
+        <!-- Warning -->
+        <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-3 items-start">
+            <span class="text-amber-500 text-lg mt-0.5">⚠️</span>
+            <p class="text-amber-500 text-xs leading-relaxed">
+                <strong>คำแนะนำ:</strong> หากสถานะเป็น Offline กรุณาตรวจสอบค่าในไฟล์ <code class="bg-amber-500/20 px-1 rounded">supabase-config.js</code> หรือเช็คอินเทอร์เน็ตของคุณ | การ Restore จะ Upsert (เพิ่มหรืออัปเดต) ข้อมูล ไม่ได้ลบข้อมูลที่มีอยู่
             </p>
         </div>
     </div>
 
+    <!-- Restore Confirm Modal -->
+    <div id="restore-overlay" onclick="closeRestoreModal(event)">
+        <div class="modal-box">
+            <h3 class="text-white font-black text-xl mb-2">♻️ ยืนยันการกู้คืนข้อมูล</h3>
+            <p class="text-gray-400 text-sm mb-4" id="restore-file-info">—</p>
+            <div id="restore-table-preview" class="bg-black/30 rounded-xl p-4 mb-5 max-h-52 overflow-y-auto space-y-2 text-sm"></div>
+            <div id="restore-progress" class="mb-4 hidden">
+                <div class="flex justify-between text-xs text-gray-400 mb-1">
+                    <span id="restore-status-text">กำลังกู้คืนข้อมูล...</span>
+                    <span id="restore-percent">0%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-bar-inner" id="restore-bar" style="width:0%"></div></div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('restore-overlay').classList.remove('show')" class="btn-secondary flex-1 justify-center">ยกเลิก</button>
+                <button onclick="confirmRestore()" class="btn-danger flex-1 justify-center" id="btn-confirm-restore">✅ ยืนยันกู้คืน</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        const ALL_TABLES = ['owners', 'owner_phones', 'animals', 'medrec', 'pharmacy', 'pos_transactions', 'surgery_queue', 'lab_results', 'imaging_results', 'print_templates'];
+        let restoreData = null;
+
         // แสดงค่าจาก Config
         document.getElementById('display-url').innerText = supabaseUrl;
         document.getElementById('display-key').innerText = supabaseKey.substring(0, 20) + "..." + supabaseKey.substring(supabaseKey.length - 10);
@@ -93,58 +196,186 @@
 
             statusText.innerText = "กำลังทดสอบ...";
             statusColor.className = "status-dot bg-amber-500 animate-pulse-slow";
+            tableList.innerHTML = `<div class="table-card col-span-full animate-pulse"><p class="text-gray-500 text-sm">กำลังโหลดข้อมูลตาราง...</p></div>`;
 
             try {
-                // ทดลองดึงข้อมูลจากตาราง medrec (หรือตารางใดก็ได้) เพื่อเช็ค Connection
                 const { data, error } = await db.from('medrec').select('id').limit(1);
-
                 if (error) throw error;
 
-                // ถ้าสำเร็จ
                 statusColor.className = "status-dot bg-green-500";
-                statusText.innerText = "Online - เชื่อมต่อสำเร็จ";
+                statusText.innerText = "Online — เชื่อมต่อสำเร็จ";
                 statusText.classList.add("text-green-400");
-                
                 loadTableStats();
 
             } catch (err) {
-                // ถ้าล้มเหลว
                 statusColor.className = "status-dot bg-red-500";
-                statusText.innerText = "Offline - การเชื่อมต่อผิดพลาด";
+                statusText.innerText = "Offline — การเชื่อมต่อผิดพลาด";
                 statusText.classList.add("text-red-400");
                 console.error(err);
-                tableList.innerHTML = `<p class="text-red-400 text-sm">ไม่สามารถดึงข้อมูลตารางได้</p>`;
+                tableList.innerHTML = `<div class="table-card col-span-full"><p class="text-red-400 text-sm">⚠️ ไม่สามารถดึงข้อมูลตารางได้</p></div>`;
             }
         }
 
+        const TABLE_ICONS = {
+            owners: '👤', owner_phones: '📞', animals: '🐾', medrec: '📋',
+            pharmacy: '💊', pos_transactions: '🧾', surgery_queue: '🏥',
+            lab_results: '🔬', imaging_results: '📸', print_templates: '🖨️'
+        };
+
         async function loadTableStats() {
             const tableList = document.getElementById('table-list');
-            const tables = ['medrec', 'pharmacy', 'pos_transactions']; // รายชื่อตารางที่เราสร้างไว้
-            
-            tableList.innerHTML = ''; // ล้างค่าเดิม
-
-            for (const tableName of tables) {
-                const { count, error } = await db
-                    .from(tableName)
-                    .select('*', { count: 'exact', head: true });
-
+            tableList.innerHTML = '';
+            for (const tableName of ALL_TABLES) {
+                const { count, error } = await db.from(tableName).select('*', { count: 'exact', head: true });
                 const card = document.createElement('div');
-                card.className = 'glass-panel p-4 flex justify-between items-center';
+                card.className = 'table-card';
                 card.innerHTML = `
-                    <div>
-                        <p class="text-white font-bold">${tableName}</p>
-                        <p class="text-[10px] text-gray-500 uppercase">Database Table</p>
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">${TABLE_ICONS[tableName] || '🗃️'}</span>
+                        <div>
+                            <p class="text-white font-bold text-sm">${tableName}</p>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wider">Table</p>
+                        </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-xl font-bold text-teal-400">${error ? 'N/A' : count}</p>
-                        <p class="text-[10px] text-gray-500">Rows</p>
-                    </div>
-                `;
+                        <p class="text-xl font-black ${error ? 'text-red-400' : 'text-teal-400'}">${error ? 'N/A' : (count ?? 0).toLocaleString()}</p>
+                        <p class="text-[10px] text-gray-500">rows</p>
+                    </div>`;
                 tableList.appendChild(card);
             }
         }
 
-        // รันครั้งแรกเมื่อโหลดหน้า
+        async function backupData() {
+            const btn = document.getElementById('btn-backup');
+            const progressEl = document.getElementById('backup-progress');
+            const barEl = document.getElementById('backup-bar');
+            const pctEl = document.getElementById('backup-percent');
+            const statusEl = document.getElementById('backup-status-text');
+
+            btn.disabled = true;
+            btn.textContent = 'กำลังสำรองข้อมูล...';
+            progressEl.classList.remove('hidden');
+
+            const backup = { version: 1, created_at: new Date().toISOString(), tables: {} };
+            let done = 0;
+
+            for (const tableName of ALL_TABLES) {
+                statusEl.textContent = `กำลังดึง: ${tableName}...`;
+                const pct = Math.round((done / ALL_TABLES.length) * 100);
+                barEl.style.width = pct + '%';
+                pctEl.textContent = pct + '%';
+
+                const { data, error } = await db.from(tableName).select('*');
+                backup.tables[tableName] = error ? [] : (data || []);
+                done++;
+            }
+
+            barEl.style.width = '100%';
+            pctEl.textContent = '100%';
+            statusEl.textContent = 'สำรองข้อมูลสำเร็จ!';
+
+            const jsonStr = JSON.stringify(backup, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pkvms_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '⬇️ ดาวน์โหลด Backup';
+                progressEl.classList.add('hidden');
+                barEl.style.width = '0%';
+            }, 2000);
+        }
+
+        function prepareRestore(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (!parsed.tables) { alert('❌ ไฟล์ไม่ถูกต้อง'); return; }
+                    restoreData = parsed;
+                    const overlay = document.getElementById('restore-overlay');
+                    document.getElementById('restore-file-info').innerText = `ไฟล์: ${file.name} | สร้างเมื่อ: ${new Date(parsed.created_at).toLocaleString('th-TH')}`;
+                    const preview = Object.entries(parsed.tables).map(([t, rows]) =>
+                        `<div class="flex justify-between"><span class="text-gray-300">${TABLE_ICONS[t] || '🗃️'} ${t}</span><span class="text-teal-400 font-bold">${rows.length.toLocaleString()} rows</span></div>`
+                    ).join('');
+                    document.getElementById('restore-table-preview').innerHTML = preview;
+                    overlay.classList.add('show');
+                } catch(err) {
+                    alert('❌ ไม่สามารถอ่านไฟล์ได้: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function closeRestoreModal(event) {
+            if (event.target === document.getElementById('restore-overlay')) {
+                document.getElementById('restore-overlay').classList.remove('show');
+            }
+        }
+
+        async function confirmRestore() {
+            if (!restoreData) return;
+            const btn = document.getElementById('btn-confirm-restore');
+            const progressEl = document.getElementById('restore-progress');
+            const barEl = document.getElementById('restore-bar');
+            const pctEl = document.getElementById('restore-percent');
+            const statusEl = document.getElementById('restore-status-text');
+
+            btn.disabled = true;
+            progressEl.classList.remove('hidden');
+
+            const tables = Object.keys(restoreData.tables);
+            let done = 0;
+            const failedTables = [];
+
+            for (const tableName of tables) {
+                const rows = restoreData.tables[tableName];
+                if (!rows || rows.length === 0) { done++; continue; }
+                statusEl.textContent = `กำลังกู้คืน: ${tableName} (${rows.length} rows)...`;
+                const pct = Math.round((done / tables.length) * 100);
+                barEl.style.width = pct + '%';
+                pctEl.textContent = pct + '%';
+
+                // upsert in chunks of 200
+                const CHUNK = 200;
+                for (let ci = 0; ci < rows.length; ci += CHUNK) {
+                    const chunk = rows.slice(ci, ci + CHUNK);
+                    const { error } = await db.from(tableName).upsert(chunk, { onConflict: 'id', ignoreDuplicates: false });
+                    if (error) {
+                        console.error(`Error restoring ${tableName}:`, error.message);
+                        if (!failedTables.includes(tableName)) failedTables.push(tableName);
+                    }
+                }
+                done++;
+            }
+
+            barEl.style.width = '100%';
+            pctEl.textContent = '100%';
+            statusEl.textContent = failedTables.length ? `เสร็จสิ้น (มีข้อผิดพลาดบางตาราง)` : 'กู้คืนข้อมูลสำเร็จ!';
+
+            setTimeout(() => {
+                document.getElementById('restore-overlay').classList.remove('show');
+                btn.disabled = false;
+                progressEl.classList.add('hidden');
+                barEl.style.width = '0%';
+                restoreData = null;
+                if (failedTables.length > 0) {
+                    alert(`⚠️ กู้คืนข้อมูลเสร็จสิ้น แต่พบข้อผิดพลาดในตาราง: ${failedTables.join(', ')}\nกรุณาตรวจสอบสิทธิ์ RLS ใน Supabase`);
+                } else {
+                    alert('✅ กู้คืนข้อมูลเรียบร้อยแล้ว!');
+                }
+                checkConnection();
+            }, 1500);
+        }
+
         window.onload = checkConnection;
     </script>
 </body>
