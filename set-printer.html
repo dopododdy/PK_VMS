@@ -135,7 +135,12 @@
     "💰 การเงิน": ["receipt_no", "items_list", "total_price", "discount_val", "net_total", "received_amount", "change_amount", "date", "time"],
     "📅 การนัดหมาย": ["appointment_date_1", "appointment_note_1", "appointment_date_2", "appointment_note_2"]
 };
-        const PALETTE = ['#000000', '#475569', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#78350f'];
+        const PALETTE = [
+            '#000000','#1e293b','#334155','#475569','#64748b','#94a3b8','#cbd5e1','#f1f5f9','#ffffff',
+            '#ef4444','#dc2626','#b91c1c','#f97316','#ea580c','#f59e0b','#eab308','#84cc16',
+            '#22c55e','#16a34a','#14b8b1','#06b6d4','#0891b2','#3b82f6','#2563eb','#1d4ed8',
+            '#8b5cf6','#7c3aed','#a855f7','#ec4899','#db2777','#f43f5e','#78350f','#7f1d1d'
+        ];
 
         function replaceVars(text, fontSize, color) {
             if (!text) return '';
@@ -228,7 +233,8 @@
                         <div><label class="label-title">ฟอนต์</label><select class="input-control" onchange="updateLine(${i},'font',this.value)"><option value="Sarabun">Sarabun</option><option value="Kanit">Kanit</option></select></div>
                         <div><label class="label-title">ขนาด</label><input type="number" class="input-control font-bold" value="${l.size}" oninput="updateLine(${i},'size',this.value)"></div>
                     </div>
-                    <div class="mb-3"><label class="label-title">สีมาตรฐาน</label><div class="flex flex-wrap gap-2">${colorSwatches}</div></div>
+                    <div class="mb-3"><label class="label-title">สีข้อความ</label><div class="flex flex-wrap gap-1.5 mb-2">${colorSwatches}</div>
+                    <div class="flex items-center gap-2 mt-2"><label class="label-title mb-0">สีกำหนดเอง</label><input type="color" value="${l.color || '#000000'}" class="w-10 h-8 rounded cursor-pointer border border-white/20 bg-transparent" oninput="updateLine(${i},'color',this.value); document.querySelectorAll('#line-item-${i} .color-swatch').forEach(s=>s.classList.remove('active'));"></div></div>
                     <div class="mb-1"><label class="label-title">การจัดรูปแบบ</label></div>
                     <div class="flex gap-2 flex-wrap items-center">
                         <button class="btn-align ${l.align==='left'?'active':''}" onclick="updateLine(${i},'align','left')" title="ชิดซ้าย">${icoL}</button>
@@ -240,7 +246,14 @@
                         <button class="btn-align ${l.underline?'active':''}" onclick="toggleTextStyle(${i},'underline')" title="ขีดเส้นใต้" style="text-decoration:underline; font-size:0.95rem;">U</button>
                     </div>`;
             } else if (l.type === 'image') {
-                fields = `<div class="mb-3"><label class="label-title">URL รูปภาพ</label><input type="text" class="input-control" placeholder="https://..." value="${l.url || ''}" oninput="updateLine(${i},'url',this.value)"></div>
+                const previewSrc = l.url || '';
+                const previewHtml = previewSrc
+                    ? `<img src="${previewSrc}" class="mt-2 rounded-lg border border-white/10" style="max-height:60px; max-width:100%; object-fit:contain;">`
+                    : `<div class="mt-2 flex items-center justify-center rounded-lg border border-dashed border-white/20 text-gray-500 text-xs" style="height:48px;">ยังไม่มีรูปภาพ</div>`;
+                fields = `<div class="mb-3"><label class="label-title">อัปโหลดรูปภาพ</label>
+                    <input type="file" accept="image/*" class="input-control text-sm py-2" onchange="handleImageUpload(event, ${i})">
+                    ${previewHtml}
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="label-title">กว้าง (มม.)</label><input type="number" class="input-control" value="${l.w || 30}" oninput="updateLine(${i},'w',this.value)"></div>
                         <div><label class="label-title">สูง (มม.)</label><input type="number" class="input-control" value="${l.h || 20}" oninput="updateLine(${i},'h',this.value)"></div>
@@ -260,6 +273,18 @@
             currentConfig.lines[i][prop] = !currentConfig.lines[i][prop];
             renderCanvas();
             renderLinesList();
+        }
+
+        function handleImageUpload(event, i) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentConfig.lines[i].url = e.target.result;
+                renderCanvas();
+                renderLinesList();
+            };
+            reader.readAsDataURL(file);
         }
 
         function renderCanvas() {
