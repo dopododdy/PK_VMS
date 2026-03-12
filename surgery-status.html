@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>สถานะห้องผ่าตัด | PK-VMS Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -13,60 +12,69 @@
     <style>
         :root { --navy: #020617; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif; }
-        body { background: var(--navy); color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        .status-select { 
-            background: rgba(0,0,0,0.6); border: 2px solid transparent; border-radius: 12px; 
-            padding: 10px 14px; color: white; font-weight: 800; cursor: pointer; outline: none; transition: 0.2s;
-            appearance: none; text-align: center;
+        body { background: var(--navy); color: #e2e8f0; min-height: 100vh; }
+
+        /* Status dropdown — ใหญ่ขึ้นสำหรับมือถือ */
+        .status-select {
+            background: rgba(0,0,0,0.5); border: 2px solid transparent; border-radius: 14px;
+            padding: 14px 16px; color: white; font-weight: 800; cursor: pointer; outline: none;
+            transition: 0.2s; appearance: none; text-align: center; font-size: 1rem; width: 100%;
         }
-        
-        /* สีกรอบและตัวหนังสือตามสถานะ */
-        .status-waiting { border-color: #f97316; color: #fdba74; background: rgba(249, 115, 22, 0.1); }
-        .status-recovering { border-color: #3b82f6; color: #93c5fd; background: rgba(59, 130, 246, 0.1); }
-        .status-done { border-color: #10b981; color: #86efac; background: rgba(16, 185, 129, 0.1); }
-        .status-emergency { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, 0.15); animation: pulse-red 1.2s infinite; }
-        @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } }
-        
-        .board-row { transition: 0.2s; border-bottom: 1px solid var(--border); }
-        .board-row:hover { background: rgba(255,255,255,0.03); }
-        
-        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        /* สีตามสถานะ */
+        .status-waiting   { border-color: #f97316; color: #fdba74; background: rgba(249,115,22,0.12); }
+        .status-recovering{ border-color: #3b82f6; color: #93c5fd; background: rgba(59,130,246,0.12); }
+        .status-done      { border-color: #10b981; color: #86efac; background: rgba(16,185,129,0.12); }
+        .status-emergency { border-color: #ef4444; color: #fca5a5; background: rgba(239,68,68,0.15); animation: pulse-red 1.2s infinite; }
+        @keyframes pulse-red { 0%,100%{ box-shadow:0 0 0 0 rgba(239,68,68,0.5); } 50%{ box-shadow:0 0 0 8px rgba(239,68,68,0); } }
+
+        /* Card */
+        .queue-card {
+            background: rgba(15,23,42,0.8); border-radius: 20px;
+            border: 1px solid var(--border); border-left: 5px solid;
+            padding: 20px; margin-bottom: 14px; transition: border-left-color 0.3s;
+        }
+        .card-emergency { border-left-color: #ef4444; }
+        .card-waiting   { border-left-color: #f97316; }
+        .card-recovering{ border-left-color: #3b82f6; }
+        .card-done      { border-left-color: #10b981; }
+
+        /* ปุ่มลบ */
+        .btn-delete {
+            width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer;
+            background: rgba(239,68,68,0.1); color: #f87171;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; transition: 0.2s; flex-shrink: 0;
+        }
+        .btn-delete:hover { background: #ef4444; color: white; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
 </head>
-<body class="p-6 md:p-10 flex flex-col h-screen">
+<body class="px-4 py-6">
 
-    <div class="max-w-7xl mx-auto w-full flex-1 flex flex-col overflow-hidden">
-        <header class="flex justify-between items-center mb-8 border-b border-white/10 pb-6 shrink-0">
-            <div>
-                <h1 class="text-4xl font-black text-white flex items-center gap-4">
-                    <span class="text-5xl">🏥</span> กระดานสถานะห้องผ่าตัด
-                </h1>
-                <p class="text-teal-500 font-bold mt-2 text-lg">Surgery & Recovery Status Board</p>
-            </div>
-            <div class="flex gap-4">
-                <button onclick="fetchQueue()" class="h-14 px-6 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 font-bold border border-white/5 transition-all text-gray-300 gap-2">
-                    <i data-lucide="refresh-cw" class="w-5 h-5"></i> รีเฟรช
+    <div class="max-w-lg mx-auto">
+
+        <!-- Header — ไม่มีปุ่ม Home -->
+        <header class="text-center mb-8">
+            <div class="text-5xl mb-3">🏥</div>
+            <h1 class="text-2xl font-black text-white tracking-tight">กระดานสถานะผ่าตัด</h1>
+            <p class="text-teal-400 text-sm font-bold mt-1">Surgery Status Board</p>
+            <div class="flex items-center justify-center gap-3 mt-4">
+                <span id="last-updated" class="text-xs text-slate-500 font-medium">—</span>
+                <button onclick="fetchQueue()"
+                    class="h-9 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-bold text-slate-300 transition-all">
+                    🔄 รีเฟรช
                 </button>
-                <a href="index.html" class="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center hover:bg-white/10 text-3xl border border-white/5 transition-all">🏠</a>
             </div>
         </header>
 
-        <div class="bg-slate-900/50 border border-white/10 rounded-[30px] overflow-hidden shadow-2xl flex-1 flex flex-col">
-            <div class="grid grid-cols-12 gap-4 p-6 bg-black/60 font-black text-gray-500 uppercase tracking-widest text-sm shrink-0 items-center">
-                <div class="col-span-2 pl-4">เวลาลงทะเบียน</div>
-                <div class="col-span-2">ชื่อสัตว์</div>
-                <div class="col-span-2">ชื่อเจ้าของ</div>
-                <div class="col-span-3">หัตถการที่ทำ</div>
-                <div class="col-span-2 text-center">สถานะ</div>
-                <div class="col-span-1 text-center">จัดการ</div>
-            </div>
-            
-            <div id="queue-list" class="flex-1 overflow-y-auto p-2 custom-scroll">
-                <div class="py-20 text-center text-gray-500 animate-pulse font-bold text-xl">กำลังโหลดข้อมูล...</div>
-            </div>
+        <!-- รายการคิว -->
+        <div id="queue-list">
+            <div class="py-16 text-center text-gray-500 animate-pulse font-bold text-lg">กำลังโหลดข้อมูล...</div>
         </div>
+
     </div>
 
     <script>
@@ -74,14 +82,27 @@
         let queueData = [];
 
         window.onload = async () => {
-            lucide.createIcons();
+            // ผูก Event delegation ครั้งเดียวบน container
+            const container = document.getElementById('queue-list');
+            container.addEventListener('change', async e => {
+                if (e.target.dataset.action !== 'status') return;
+                const cardEl = e.target.closest('.queue-card');
+                await attemptStatusUpdate(e.target, cardEl.dataset.id, cardEl.dataset.status, cardEl);
+            });
+            container.addEventListener('click', async e => {
+                const btn = e.target.closest('[data-action="delete"]');
+                if (!btn) return;
+                const cardEl = btn.closest('.queue-card');
+                await attemptDelete(cardEl.dataset.id, cardEl.dataset.pet);
+            });
+
             await fetchQueue();
             // รีเฟรชกระดานอัตโนมัติทุกๆ 30 วินาที
             setInterval(fetchQueue, 30000);
         };
 
         async function fetchQueue() {
-            // ดึงข้อมูลคิวของวันนี้ (ย้อนหลังไม่เกิน 24 ชม. เพื่อไม่ให้กระดานรกข้ามวัน)
+            // ดึงข้อมูลคิวของวันนี้ (ย้อนหลังไม่เกิน 24 ชม.)
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
 
@@ -96,92 +117,97 @@
             }
             queueData = data || [];
             renderBoard();
+
+            // อัปเดตเวลาที่โหลดล่าสุด
+            const now = new Date();
+            document.getElementById('last-updated').innerText =
+                `อัปเดตล่าสุด ${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`;
+        }
+
+        // HTML-escape เพื่อป้องกัน XSS
+        function esc(str) {
+            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        // คืนค่า CSS class ตามสถานะ
+        function statusCls(status) {
+            if (status === 'ฉุกเฉิน/ลัดคิวผ่าตัด') return { sel: 'status-emergency', card: 'card-emergency' };
+            if (status === 'กำลังพักฟื้น')          return { sel: 'status-recovering', card: 'card-recovering' };
+            if (status === 'ฟื้นแล้ว/รอรับกลับ')    return { sel: 'status-done',       card: 'card-done' };
+            return { sel: 'status-waiting', card: 'card-waiting' };
         }
 
         function renderBoard() {
             const container = document.getElementById('queue-list');
-            
+
             if (queueData.length === 0) {
-                container.innerHTML = `<div class="py-32 flex flex-col items-center justify-center opacity-30">
-                    <i data-lucide="check-circle" class="w-24 h-24 mb-4 text-teal-500"></i>
-                    <h2 class="text-2xl font-bold">ไม่มีคิวผ่าตัดค้างในระบบ</h2>
-                </div>`;
-                lucide.createIcons();
+                container.innerHTML = `
+                    <div class="py-24 flex flex-col items-center justify-center opacity-30 text-center">
+                        <div class="text-6xl mb-4">✅</div>
+                        <h2 class="text-xl font-bold">ไม่มีคิวผ่าตัดค้างในระบบ</h2>
+                    </div>`;
                 return;
             }
 
             container.innerHTML = queueData.map(q => {
-                const timeStr = new Date(q.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                
-                // กำหนดสี Class ตามสถานะปัจจุบัน
-                let statusClass = 'status-waiting';
-                if (q.status === 'ฉุกเฉิน/ลัดคิวผ่าตัด') statusClass = 'status-emergency';
-                if (q.status === 'กำลังพักฟื้น') statusClass = 'status-recovering';
-                if (q.status === 'ฟื้นแล้ว/รอรับกลับ') statusClass = 'status-done';
+                const { sel, card } = statusCls(q.status);
+                const hnBadge = q.owner_hn
+                    ? `<span class="text-xs font-bold text-blue-400 bg-blue-400/10 border border-blue-400/30 rounded-full px-3 py-0.5">HN: ${esc(q.owner_hn)}</span>`
+                    : '';
 
                 return `
-                <div class="grid grid-cols-12 gap-4 items-center p-5 mx-2 rounded-2xl board-row my-1">
-                    <div class="col-span-2 text-teal-400 font-bold font-mono text-xl pl-4">${timeStr} น.</div>
-                    <div class="col-span-2 font-black text-white text-xl">🐾 ${q.pet_name}</div>
-                    <div class="col-span-2 text-slate-300 font-medium truncate pr-4">👤 ${q.owner_name}</div>
-                    <div class="col-span-3 font-bold text-yellow-400 text-lg leading-tight pr-4">${q.procedures}</div>
-                    <div class="col-span-2 text-center">
-                        <select class="status-select ${statusClass} w-full" 
-                                onchange="attemptStatusUpdate(this, '${q.id}', '${q.status}')">
-                            <option value="ฉุกเฉิน/ลัดคิวผ่าตัด" ${q.status === 'ฉุกเฉิน/ลัดคิวผ่าตัด' ? 'selected' : ''} class="bg-slate-800 text-white">🔴 ฉุกเฉิน/ลัดคิวผ่าตัด</option>
-                            <option value="รอผ่าตัด" ${q.status === 'รอผ่าตัด' ? 'selected' : ''} class="bg-slate-800 text-white">🟠 รอผ่าตัด</option>
-                            <option value="กำลังพักฟื้น" ${q.status === 'กำลังพักฟื้น' ? 'selected' : ''} class="bg-slate-800 text-white">🔵 กำลังพักฟื้น</option>
-                            <option value="ฟื้นแล้ว/รอรับกลับ" ${q.status === 'ฟื้นแล้ว/รอรับกลับ' ? 'selected' : ''} class="bg-slate-800 text-white">🟢 ฟื้นแล้ว/รอรับกลับ</option>
-                        </select>
+                <div class="queue-card ${card}" data-id="${esc(q.id)}" data-pet="${esc(q.pet_name)}" data-status="${esc(q.status)}">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex flex-col gap-2">
+                            <span class="text-white font-black text-2xl leading-tight">🐾 ${esc(q.pet_name)}</span>
+                            ${hnBadge}
+                        </div>
+                        <button class="btn-delete" data-action="delete" title="นำออกจากกระดาน">✓</button>
                     </div>
-                    <div class="col-span-1 text-center">
-                        <button onclick="attemptDelete('${q.id}', '${q.pet_name}')" class="w-10 h-10 rounded-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition-all mx-auto">
-                            <i data-lucide="check" class="w-5 h-5"></i>
-                        </button>
-                    </div>
+                    <select class="status-select ${sel}" data-action="status">
+                        <option value="ฉุกเฉิน/ลัดคิวผ่าตัด" ${q.status === 'ฉุกเฉิน/ลัดคิวผ่าตัด' ? 'selected' : ''} class="bg-slate-800 text-white">🔴 ฉุกเฉิน/ลัดคิวผ่าตัด</option>
+                        <option value="รอผ่าตัด"          ${q.status === 'รอผ่าตัด'          ? 'selected' : ''} class="bg-slate-800 text-white">🟠 รอผ่าตัด</option>
+                        <option value="กำลังพักฟื้น"      ${q.status === 'กำลังพักฟื้น'      ? 'selected' : ''} class="bg-slate-800 text-white">🔵 กำลังพักฟื้น</option>
+                        <option value="ฟื้นแล้ว/รอรับกลับ" ${q.status === 'ฟื้นแล้ว/รอรับกลับ' ? 'selected' : ''} class="bg-slate-800 text-white">🟢 ฟื้นแล้ว/รอรับกลับ</option>
+                    </select>
                 </div>`;
             }).join('');
-            
-            lucide.createIcons();
         }
 
-        async function attemptStatusUpdate(selectElement, id, oldStatus) {
+        async function attemptStatusUpdate(selectElement, id, oldStatus, cardEl) {
             const pwd = prompt("🔐 สงวนสิทธิ์เฉพาะสัตวแพทย์\nกรุณาใส่รหัสผ่านเพื่อแก้ไขสถานะ:");
-            
+
             if (pwd === SECRETPWD) {
                 const newStatus = selectElement.value;
                 const { error } = await db.from('surgery_queue').update({ status: newStatus }).eq('id', id);
-                
+
                 if (error) {
                     alert("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
-                    selectElement.value = oldStatus; // คืนค่าเดิมถ้า error
+                    selectElement.value = oldStatus;
                 } else {
-                    // เปลี่ยนสี Dropdown ตามสถานะใหม่ทันที
-                    selectElement.className = `status-select w-full ${
-                        newStatus === 'ฉุกเฉิน/ลัดคิวผ่าตัด' ? 'status-emergency' :
-                        newStatus === 'รอผ่าตัด' ? 'status-waiting' : 
-                        newStatus === 'กำลังพักฟื้น' ? 'status-recovering' : 'status-done'
-                    }`;
-                    // อัปเดตใน Array ตัวแปรเพื่อการอ้างอิงรอบถัดไป
-                    const idx = queueData.findIndex(q => q.id == id);
-                    if(idx > -1) queueData[idx].status = newStatus;
+                    const { sel, card } = statusCls(newStatus);
+                    selectElement.className = `status-select ${sel}`;
+                    cardEl.className = cardEl.className.replace(/card-\S+/, card);
+                    cardEl.dataset.status = newStatus;
+                    const idx = queueData.findIndex(q => q.id === id);
+                    if (idx > -1) queueData[idx].status = newStatus;
                 }
             } else {
                 if (pwd !== null) alert("❌ รหัสผ่านไม่ถูกต้อง");
-                selectElement.value = oldStatus; // คืนค่า Dropdown เป็นค่าเดิม
+                selectElement.value = oldStatus;
             }
         }
 
-        // ฟังก์ชันลบรายการเมื่อรับกลับบ้านเรียบร้อยแล้ว
+        // ลบรายการเมื่อรับกลับบ้านเรียบร้อยแล้ว
         async function attemptDelete(id, petName) {
             const pwd = prompt(`🔐 ยืนยันการนำ "${petName}" ออกจากกระดาน\nกรุณาใส่รหัสผ่าน:`);
-            
+
             if (pwd === SECRETPWD) {
                 const { error } = await db.from('surgery_queue').delete().eq('id', id);
                 if (error) {
                     alert("❌ ลบข้อมูลไม่สำเร็จ: " + error.message);
                 } else {
-                    await fetchQueue(); // ดึงข้อมูลและเรนเดอร์ใหม่
+                    await fetchQueue();
                 }
             } else if (pwd !== null) {
                 alert("❌ รหัสผ่านไม่ถูกต้อง");
