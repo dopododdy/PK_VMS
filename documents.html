@@ -175,11 +175,105 @@
 
         function togglePet(id) {
             const card = document.getElementById(`p-card-${id}`);
+            if (activeDocType === 'doc_referral') {
+                if (selectedPetIds.has(id.toString())) {
+                    selectedPetIds.delete(id.toString());
+                    card.classList.remove('selected');
+                    clearReferralPetFields();
+                } else {
+                    selectedPetIds.forEach(prevId => document.getElementById(`p-card-${prevId}`)?.classList.remove('selected'));
+                    selectedPetIds.clear();
+                    selectedPetIds.add(id.toString());
+                    card.classList.add('selected');
+                    loadReferralDataForPet(id);
+                }
+                return;
+            }
             if (selectedPetIds.has(id.toString())) { selectedPetIds.delete(id.toString()); card.classList.remove('selected'); }
             else { selectedPetIds.add(id.toString()); card.classList.add('selected'); }
             if (activeDocType === 'doc_consent') refreshSurgeryRows();
             if (activeDocType === 'doc_lab') refreshLabPicker();
         }
+
+        function clearReferralPetFields() {
+            const petFields = document.getElementById('ref-pet-fields');
+            const petInfo = document.getElementById('ref-pet-info-section');
+            if (petFields) petFields.classList.add('hidden');
+            if (petInfo) petInfo.classList.remove('hidden');
+            ['ref-pet-name','ref-pet-species','ref-pet-gender','ref-pet-weight',
+             'ref-hx','ref-pe','ref-other-exam','ref-dx','ref-treatment'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+
+        async function loadReferralDataForPet(petId) {
+            const pet = ownerPets.find(p => p.id.toString() === petId.toString());
+            if (!pet) return;
+
+            const petFields = document.getElementById('ref-pet-fields');
+            const petInfo = document.getElementById('ref-pet-info-section');
+            if (petFields) {
+                petFields.classList.remove('hidden');
+                document.getElementById('ref-pet-name').value = pet.pet_name || '';
+                document.getElementById('ref-pet-species').value = [pet.pet_type, pet.breed].filter(Boolean).join(' / ');
+                document.getElementById('ref-pet-gender').value = pet.gender || '';
+                document.getElementById('ref-pet-weight').value = pet.weight ? `${pet.weight} กก.` : '';
+            }
+            if (petInfo) petInfo.classList.add('hidden');
+
+            const { data: records } = await db
+                .from('medical_records')
+                .select('*, medical_record_items(*)')
+                .eq('animal_id', petId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (!records || records.length === 0) return;
+            const rec = records[0];
+
+            const hxEl = document.getElementById('ref-hx');
+            if (hxEl && !hxEl.value) {
+                const parts = [];
+                if (rec.cc) parts.push(`CC: ${rec.cc}`);
+                if (rec.hx) parts.push(`Hx: ${rec.hx}`);
+                hxEl.value = parts.join('\n');
+            }
+
+            const peEl = document.getElementById('ref-pe');
+            if (peEl && !peEl.value && rec.pe) peEl.value = rec.pe;
+
+            const labItems = (rec.medical_record_items || []).filter(i => i.item_type === 'Lab');
+            const otherExamEl = document.getElementById('ref-other-exam');
+            if (otherExamEl && !otherExamEl.value && labItems.length > 0) {
+                otherExamEl.value = labItems.map(i => i.item_name).join(', ');
+            }
+
+            const dxEl = document.getElementById('ref-dx');
+            if (dxEl && !dxEl.value && rec.dx) dxEl.value = rec.dx;
+
+            const txItems = (rec.medical_record_items || []).filter(i => i.item_type === 'Tx');
+            const rxItems = (rec.medical_record_items || []).filter(i => i.item_type === 'Rx');
+            const treatmentEl = document.getElementById('ref-treatment');
+            if (treatmentEl && !treatmentEl.value) {
+                const parts = [];
+                if (txItems.length > 0) parts.push(`Tx: ${txItems.map(i => i.item_name).join(', ')}`);
+                if (rxItems.length > 0) {
+                    parts.push(`Rx: ${rxItems.map(formatRxItem).join(', ')}`);
+                }
+                if (parts.length > 0) treatmentEl.value = parts.join('\n');
+            }
+        }
+
+        function formatRxItem(i) {
+            let s = i.item_name;
+            if (i.dose_per_time) s += ` ${i.dose_per_time}${i.unit || ''}`;
+            if (i.frequency) s += ` ${i.frequency}`;
+            if (i.duration_days) s += ` ${i.duration_days} วัน`;
+            return s;
+        }
+
+        function newlinesToBr(s) { return (s || '-').replace(/\n/g, '<br>'); }
 
         function switchDocType(type) {
             activeDocType = type;
@@ -197,49 +291,92 @@
                 refreshLabPicker();
             } else if (type === 'doc_referral') {
                 title.innerText = "ใบส่งตัวสัตว์ป่วย";
+                const lbl = 'text-[10px] font-black text-gray-500 uppercase block mb-2';
                 form.innerHTML = `
-                    <div class="section-card space-y-5">
-                        <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">ข้อมูลการส่งตัว</h3>
+                    <div class="section-card space-y-4">
+                        <h3 class="${lbl} tracking-[0.2em]">1. ข้อมูลเจ้าของสัตว์</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">ส่งตัวไปยัง (โรงพยาบาล/คลินิก)</label>
-                                <input type="text" id="ref-to" class="input-box" placeholder="เช่น โรงพยาบาลสัตว์ มหาวิทยาลัยเกษตรศาสตร์">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">แพทย์ผู้รับ (ถ้าทราบ)</label>
-                                <input type="text" id="ref-doc" class="input-box" placeholder="เช่น น.สพ. สมชาย ใจดี">
-                            </div>
+                            <div><label class="${lbl}">ชื่อ-นามสกุล</label><input type="text" id="ref-owner-name" class="input-box opacity-70" readonly></div>
+                            <div><label class="${lbl}">เบอร์โทรศัพท์</label><input type="text" id="ref-owner-phone" class="input-box opacity-70" readonly></div>
+                            <div class="md:col-span-2"><label class="${lbl}">ที่อยู่</label><input type="text" id="ref-owner-address" class="input-box opacity-70" readonly></div>
+                        </div>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <h3 class="${lbl} tracking-[0.2em]">2. ข้อมูลสัตว์</h3>
+                        <p id="ref-pet-info-section" class="text-gray-500 italic text-sm">กรุณาเลือกสัตว์เลี้ยงด้านบน...</p>
+                        <div id="ref-pet-fields" class="grid grid-cols-2 md:grid-cols-4 gap-4 hidden">
+                            <div><label class="${lbl}">ชื่อสัตว์</label><input type="text" id="ref-pet-name" class="input-box opacity-70" readonly></div>
+                            <div><label class="${lbl}">ชนิด / สายพันธุ์</label><input type="text" id="ref-pet-species" class="input-box opacity-70" readonly></div>
+                            <div><label class="${lbl}">เพศ</label><input type="text" id="ref-pet-gender" class="input-box opacity-70" readonly></div>
+                            <div><label class="${lbl}">น้ำหนัก</label><input type="text" id="ref-pet-weight" class="input-box opacity-70" readonly></div>
+                        </div>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="${lbl} tracking-[0.2em] mb-0">3. ประวัติ / อาการ</h3>
+                            <span class="text-[10px] text-teal-500 font-bold">CC + Hx</span>
+                        </div>
+                        <textarea id="ref-hx" class="input-box" rows="4" placeholder="ประวัติและอาการสำคัญ..."></textarea>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="${lbl} tracking-[0.2em] mb-0">4. การตรวจทางคลินิก</h3>
+                            <span class="text-[10px] text-teal-500 font-bold">PE</span>
+                        </div>
+                        <textarea id="ref-pe" class="input-box" rows="3" placeholder="ผลการตรวจร่างกาย..."></textarea>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="${lbl} tracking-[0.2em] mb-0">5. การตรวจอื่น ๆ</h3>
+                            <span class="text-[10px] text-teal-500 font-bold">Lab / X-ray / USG</span>
+                        </div>
+                        <textarea id="ref-other-exam" class="input-box" rows="3" placeholder="ผลการตรวจทางห้องปฏิบัติการ, รังสีวิทยา, อื่น ๆ..."></textarea>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="${lbl} tracking-[0.2em] mb-0">6. การวินิจฉัยเบื้องต้น</h3>
+                            <span class="text-[10px] text-teal-500 font-bold">Dx</span>
+                        </div>
+                        <textarea id="ref-dx" class="input-box" rows="2" placeholder="การวินิจฉัยเบื้องต้น..."></textarea>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <h3 class="${lbl} tracking-[0.2em]">7. การรักษา</h3>
+                        <textarea id="ref-treatment" class="input-box" rows="3" placeholder="การรักษาที่ได้รับ, ยาที่ได้รับ..."></textarea>
+                    </div>
+
+                    <div class="section-card space-y-5">
+                        <h3 class="${lbl} tracking-[0.2em]">8. ขอส่งตัวสัตว์ป่วยเพื่อ</h3>
+                        <textarea id="ref-reason" class="input-box font-bold text-teal-400" rows="2" placeholder="เช่น เพื่อทำ MRI, ผ่าตัดเฉพาะทาง, ตรวจ Echocardiography..."></textarea>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="${lbl}">ส่งตัวไปยัง (โรงพยาบาล/คลินิก)</label><input type="text" id="ref-to" class="input-box" placeholder="เช่น โรงพยาบาลสัตว์ มหาวิทยาลัยเกษตรศาสตร์"></div>
+                            <div><label class="${lbl}">แพทย์ผู้รับ (ถ้าทราบ)</label><input type="text" id="ref-doc" class="input-box" placeholder="เช่น น.สพ. สมชาย ใจดี"></div>
                         </div>
                         <div>
-                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">เหตุผลในการส่งตัว</label>
-                            <input type="text" id="ref-reason" class="input-box font-bold text-teal-400" placeholder="เช่น เพื่อทำ MRI, ผ่าตัดเฉพาะทาง, ตรวจ Echocardiography">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">การวินิจฉัยเบื้องต้น / ประวัติย่อ</label>
-                            <textarea id="ref-diagnosis" class="input-box" rows="3" placeholder="เช่น สุนัขพันธุ์ชิวาวา อายุ 5 ปี มีอาการ..."></textarea>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">การรักษาที่ได้รับไปแล้ว / ยาที่ได้รับ</label>
-                            <textarea id="ref-treatment" class="input-box" rows="2" placeholder="เช่น ได้รับ Amoxicillin 250mg วันละ 2 ครั้ง เป็นเวลา 5 วัน..."></textarea>
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">ความเร่งด่วน</label>
+                            <label class="${lbl}">ความเร่งด่วน</label>
                             <div class="flex gap-3 flex-wrap">
                                 <label class="check-pill" id="urgency-normal"><input type="radio" name="ref-urgency" value="ปกติ" checked onchange="syncUrgency()"> ปกติ</label>
                                 <label class="check-pill" id="urgency-urgent"><input type="radio" name="ref-urgency" value="เร่งด่วน" onchange="syncUrgency()"> ⚡ เร่งด่วน</label>
                                 <label class="check-pill" id="urgency-emergency"><input type="radio" name="ref-urgency" value="ฉุกเฉิน" onchange="syncUrgency()"> 🔴 ฉุกเฉิน</label>
                             </div>
                         </div>
-                        <div>
-                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">เอกสาร/ผลตรวจที่แนบ</label>
-                            <input type="text" id="ref-attachments" class="input-box" placeholder="เช่น ผลเลือด CBC, ฟิล์ม X-ray, ผล USG">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-gray-500 uppercase block mb-2">หมายเหตุเพิ่มเติม</label>
-                            <textarea id="ref-note" class="input-box" rows="2" placeholder="ข้อมูลอื่นๆ ที่แพทย์ผู้รับควรทราบ..."></textarea>
-                        </div>
+                        <div><label class="${lbl}">เอกสาร/ผลตรวจที่แนบ</label><input type="text" id="ref-attachments" class="input-box" placeholder="เช่น ผลเลือด CBC, ฟิล์ม X-ray, ผล USG"></div>
                     </div>`;
-                // Apply active styles to default urgency selection
+
+                if (currentOwner) {
+                    document.getElementById('ref-owner-name').value = currentOwner.owner_name || '';
+                    document.getElementById('ref-owner-phone').value = currentOwner.phone || '';
+                    document.getElementById('ref-owner-address').value = currentOwner.address || '';
+                }
+                if (selectedPetIds.size === 1) {
+                    const petId = Array.from(selectedPetIds)[0];
+                    loadReferralDataForPet(petId);
+                }
                 setTimeout(() => {
                     document.getElementById('urgency-normal')?.classList.add('active');
                     lucide.createIcons();
@@ -332,34 +469,38 @@
 
             // ใบส่งตัว: สร้าง layout เอง ไม่ต้องใช้ template
             if (activeDocType === 'doc_referral') {
-                const refTo       = document.getElementById('ref-to')?.value || '-';
-                const refDoc      = document.getElementById('ref-doc')?.value || '-';
-                const refReason   = document.getElementById('ref-reason')?.value || '-';
-                const refDiagnosis= document.getElementById('ref-diagnosis')?.value || '-';
-                const refTreatment= document.getElementById('ref-treatment')?.value || '-';
-                const refUrgency  = document.querySelector('input[name="ref-urgency"]:checked')?.value || 'ปกติ';
-                const refAttach   = document.getElementById('ref-attachments')?.value || '-';
-                const refNote     = document.getElementById('ref-note')?.value || '-';
-                const petNames    = ownerPets.filter(p => selectedPetIds.has(p.id.toString())).map(p => `${p.pet_name} (${p.pet_type}/${p.gender})`).join(', ') || '-';
-                const urgColor    = refUrgency === 'ฉุกเฉิน' ? '#dc2626' : refUrgency === 'เร่งด่วน' ? '#ea580c' : '#16a34a';
-                const dateStr     = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+                if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+                const refTo        = document.getElementById('ref-to')?.value || '-';
+                const refDoc       = document.getElementById('ref-doc')?.value || '-';
+                const refReason    = document.getElementById('ref-reason')?.value || '-';
+                const refHx        = document.getElementById('ref-hx')?.value || '-';
+                const refPe        = document.getElementById('ref-pe')?.value || '-';
+                const refOtherExam = document.getElementById('ref-other-exam')?.value || '-';
+                const refDx        = document.getElementById('ref-dx')?.value || '-';
+                const refTreatment = document.getElementById('ref-treatment')?.value || '-';
+                const refUrgency   = document.querySelector('input[name="ref-urgency"]:checked')?.value || 'ปกติ';
+                const refAttach    = document.getElementById('ref-attachments')?.value || '-';
+                const selectedPet  = ownerPets.find(p => selectedPetIds.has(p.id.toString()));
+                const petInfo      = selectedPet ? `${selectedPet.pet_name} (${selectedPet.pet_type}${selectedPet.breed ? '/' + selectedPet.breed : ''}, ${selectedPet.gender}${selectedPet.weight ? ', ' + selectedPet.weight + ' กก.' : ''})` : '-';
+                const urgColor     = refUrgency === 'ฉุกเฉิน' ? '#dc2626' : refUrgency === 'เร่งด่วน' ? '#ea580c' : '#16a34a';
+                const dateStr      = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
                 const win = window.open('', '_blank');
                 win.document.write(`<html><head>
 <meta charset="UTF-8">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
   * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
-  body { margin: 0; padding: 20mm 20mm; background: white; color: #111; font-size: 11pt; }
+  body { margin: 0; padding: 18mm 18mm; background: white; color: #111; font-size: 11pt; }
   h1 { font-size: 18pt; font-weight: 800; margin: 0 0 4px; }
-  h2 { font-size: 14pt; font-weight: 700; margin: 0 0 12px; }
-  .header { border-bottom: 3px solid #0891b2; padding-bottom: 10px; margin-bottom: 16px; }
+  h2 { font-size: 14pt; font-weight: 700; margin: 0 0 10px; }
+  .header { border-bottom: 3px solid #0891b2; padding-bottom: 10px; margin-bottom: 14px; }
   .clinic { font-size: 9pt; color: #555; }
   .urgency-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-weight: 800; font-size: 10pt; color: white; background: ${urgColor}; }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  td { padding: 7px 10px; border: 1px solid #ccc; vertical-align: top; }
-  td.label { font-weight: 700; background: #f0f9ff; width: 36%; color: #0369a1; }
-  .section-title { font-size: 10pt; font-weight: 800; color: #0891b2; text-transform: uppercase; letter-spacing: 0.1em; margin: 16px 0 4px; }
-  .signature-row { display: flex; justify-content: space-between; margin-top: 30px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  td { padding: 6px 10px; border: 1px solid #ccc; vertical-align: top; }
+  td.label { font-weight: 700; background: #f0f9ff; width: 34%; color: #0369a1; white-space: nowrap; }
+  .section-title { font-size: 9.5pt; font-weight: 800; color: #0891b2; text-transform: uppercase; letter-spacing: 0.08em; margin: 12px 0 3px; border-left: 3px solid #0891b2; padding-left: 6px; }
+  .signature-row { display: flex; justify-content: space-between; margin-top: 28px; }
   .signature-block { text-align: center; width: 45%; }
   .sig-line { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; font-size: 9pt; }
   @media print { @page { size: A4; margin: 0; } body { padding: 18mm 18mm; } }
@@ -370,7 +511,7 @@
       <div>
         <h1>ใบส่งตัวสัตว์ป่วย</h1>
         <h2>Veterinary Referral Letter</h2>
-        <div class="clinic">PK-VMS Animal Clinic | ที่อยู่: 123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000</div>
+        <div class="clinic">PK-VMS Animal Clinic | 123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:9pt; color:#555;">วันที่: ${dateStr}</div>
@@ -379,27 +520,40 @@
     </div>
   </div>
 
-  <div class="section-title">ข้อมูลผู้ส่งตัว</div>
+  <div class="section-title">1. ข้อมูลเจ้าของสัตว์</div>
   <table>
-    <tr><td class="label">เจ้าของสัตว์</td><td>${currentOwner?.owner_name || '-'} (HN: ${currentOwner?.hn || '-'})</td></tr>
+    <tr><td class="label">ชื่อ-นามสกุล</td><td>${currentOwner?.owner_name || '-'} (HN: ${currentOwner?.hn || '-'})</td></tr>
     <tr><td class="label">เบอร์โทรศัพท์</td><td>${currentOwner?.phone || '-'}</td></tr>
-    <tr><td class="label">สัตว์เลี้ยง</td><td>${petNames}</td></tr>
+    <tr><td class="label">ที่อยู่</td><td>${currentOwner?.address || '-'}</td></tr>
+  </table>
+
+  <div class="section-title">2. ข้อมูลสัตว์</div>
+  <table>
+    <tr><td class="label">สัตว์เลี้ยง</td><td>${petInfo}</td></tr>
     <tr><td class="label">แพทย์ผู้ส่ง</td><td>${VET_NAME}</td></tr>
   </table>
 
-  <div class="section-title">ข้อมูลการส่งตัว</div>
+  <div class="section-title">3. ประวัติ / อาการ</div>
+  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refHx)}</td></tr></table>
+
+  <div class="section-title">4. การตรวจทางคลินิก</div>
+  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refPe)}</td></tr></table>
+
+  <div class="section-title">5. การตรวจอื่น ๆ</div>
+  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refOtherExam)}</td></tr></table>
+
+  <div class="section-title">6. การวินิจฉัยเบื้องต้น</div>
+  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refDx)}</td></tr></table>
+
+  <div class="section-title">7. การรักษา</div>
+  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refTreatment)}</td></tr></table>
+
+  <div class="section-title">8. ขอส่งตัวสัตว์ป่วยเพื่อ</div>
   <table>
+    <tr><td class="label">วัตถุประสงค์</td><td>${newlinesToBr(refReason)}</td></tr>
     <tr><td class="label">ส่งตัวไปยัง</td><td>${refTo}</td></tr>
     <tr><td class="label">แพทย์ผู้รับ</td><td>${refDoc}</td></tr>
-    <tr><td class="label">เหตุผลการส่งตัว</td><td>${refReason}</td></tr>
-  </table>
-
-  <div class="section-title">ประวัติและการรักษา</div>
-  <table>
-    <tr><td class="label">การวินิจฉัยเบื้องต้น</td><td>${refDiagnosis.replace(/\n/g,'<br>')}</td></tr>
-    <tr><td class="label">การรักษาที่ได้รับ</td><td>${refTreatment.replace(/\n/g,'<br>')}</td></tr>
     <tr><td class="label">เอกสาร/ผลตรวจแนบ</td><td>${refAttach}</td></tr>
-    <tr><td class="label">หมายเหตุ</td><td>${refNote.replace(/\n/g,'<br>')}</td></tr>
   </table>
 
   <div class="signature-row">
