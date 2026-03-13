@@ -465,11 +465,12 @@
         }
 
         async function printCurrentDoc() {
-            if (activeDocType !== 'doc_referral' && selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
 
-            // ใบส่งตัว: สร้าง layout เอง ไม่ต้องใช้ template
-            if (activeDocType === 'doc_referral') {
-                if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
+
+            // ใบส่งตัว: ถ้าไม่มี template ในฐานข้อมูล ให้ใช้ layout สำเร็จรูปเป็น fallback
+            if (activeDocType === 'doc_referral' && !template) {
                 const refTo        = document.getElementById('ref-to')?.value || '-';
                 const refDoc       = document.getElementById('ref-doc')?.value || '-';
                 const refReason    = document.getElementById('ref-reason')?.value || '-';
@@ -574,13 +575,14 @@
                 return;
             }
 
-            const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
             if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
             
             const config = template.config;
             const pw = parseFloat(config.width) || 210;
             const ph = parseFloat(config.height) || 297;
-            const dataMap = { clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000", owner_name: currentOwner?.owner_name || "-", owner_address: currentOwner?.address || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-", vet_name: VET_NAME, date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), note: document.getElementById('f-note')?.value || "-", };
+            const selectedPet = ownerPets.find(p => selectedPetIds.has(p.id.toString()));
+            const petInfo = selectedPet ? `${selectedPet.pet_name} (${selectedPet.pet_type}${selectedPet.breed ? '/' + selectedPet.breed : ''}, ${selectedPet.gender}${selectedPet.weight ? ', ' + selectedPet.weight + ' กก.' : ''})` : '-';
+            const dataMap = { clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000", owner_name: currentOwner?.owner_name || "-", owner_address: currentOwner?.address || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-", vet_name: VET_NAME, date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), note: document.getElementById('f-note')?.value || "-", pet_info: petInfo, pet_name: selectedPet?.pet_name || '-', ref_to: document.getElementById('ref-to')?.value || '-', ref_doc: document.getElementById('ref-doc')?.value || '-', ref_reason: document.getElementById('ref-reason')?.value || '-', ref_hx: document.getElementById('ref-hx')?.value || '-', ref_pe: document.getElementById('ref-pe')?.value || '-', ref_other_exam: document.getElementById('ref-other-exam')?.value || '-', ref_dx: document.getElementById('ref-dx')?.value || '-', ref_treatment: document.getElementById('ref-treatment')?.value || '-', ref_urgency: document.querySelector('input[name="ref-urgency"]:checked')?.value || 'ปกติ', ref_attachments: document.getElementById('ref-attachments')?.value || '-', };
 
             const printContent = config.lines.map(l => {
                 const currentY = parseFloat(l.y); 
