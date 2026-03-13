@@ -505,19 +505,31 @@
                     received_amount: parseFloat(record.received_amount).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     change_amount: (parseFloat(record.received_amount) - parseFloat(record.net_amount)).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     date: formatThaiDate(record.paid_at),
-                    items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt;">${items.map(i => `<tr><td>${i.item_name} x ${Math.floor(i.quantity)}</td><td align="right">${parseFloat(i.total_price).toLocaleString()}</td></tr>`).join('')}</table>`
+                    items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">${items.map(i => `<tr><td>${i.item_name} x ${Math.floor(i.quantity)}</td><td align="right">${parseFloat(i.total_price).toLocaleString()}</td></tr>`).join('')}</table>`
                 };
 
+                const ph = config.height || 297;
                 let pushOffset = 0;
                 const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
-                    let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
-                    let style = `top:${parseFloat(l.y)+pushOffset}mm; left:${l.x}mm; width:${l.w||pw}mm; font-size:${l.size}pt; position:absolute; ${l.bold?'font-weight:bold;':''}`;
-                    if (l.text?.includes("{{items_list}}")) pushOffset += (items.length - 1) * 5; 
-                    return `<div style="${style}">${content}</div>`;
+                    const base = `position:absolute; top:${parseFloat(l.y)+pushOffset}mm; left:${l.x}mm;`;
+                    if (l.type === 'image') {
+                        return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                    } else if (l.type === 'rect') {
+                        return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
+                    } else {
+                        let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
+                        if (l.text?.includes("{{items_list}}")) pushOffset += (items.length - 1) * 5;
+                        const fw = l.bold ? 'font-weight:bold;' : '';
+                        const fs = l.italic ? 'font-style:italic;' : '';
+                        const td = l.underline ? 'text-decoration:underline;' : '';
+                        const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' :
+                                           l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
+                        return `<div style="${base} font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
+                    }
                 }).join('');
 
-                const win = window.open('', '_blank', 'width=400');
-                win.document.write(`<html><body style="margin:0; font-family:Sarabun;"><div style="position:relative; width:${pw}mm;">${elements}</div><script>window.onload=()=>{window.print();window.close();};<\/script></body></html>`);
+                const win = window.open('', '_blank');
+                win.document.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} body{margin:0;}</style></head><body><div style="position:relative; width:${pw}mm;">${elements}</div><script>window.onload=()=>{document.fonts.ready.then(()=>{window.print();window.close();});};<\/script></body></html>`);
                 win.document.close();
             } catch (e) { alert("Print Error: " + e.message); }
         }
