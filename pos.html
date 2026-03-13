@@ -481,6 +481,10 @@
             try {
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
+                const itemNames = (items || []).map(i => i.item_name);
+                const { data: pharmacyData } = itemNames.length > 0 ? await db.from('pharmacy').select('item_name, name_th').in('item_name', itemNames) : { data: [] };
+                const nameTh = {};
+                (pharmacyData || []).forEach(p => { if (p.name_th) nameTh[p.item_name] = p.name_th; });
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
                 if (!template) { return alert("กรุณาตั้งค่า Template"); }
                 const config = template.config, pw = config.width || 80;
@@ -505,7 +509,7 @@
                     received_amount: parseFloat(record.received_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     change_amount: (parseFloat(record.received_amount || 0) - parseFloat(record.net_amount || 0)).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     date: formatThaiDate(record.paid_at),
-                    items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">${(items || []).map(i => `<tr><td>${i.item_name} x ${Math.floor(i.quantity)}</td><td align="right">${parseFloat(i.total_price).toLocaleString()}</td></tr>`).join('')}</table>`
+                    items_list: `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">${(items || []).map(i => `<tr><td style="text-align:left;">${nameTh[i.item_name] || i.item_name} x ${Math.floor(i.quantity)}</td><td style="text-align:right;">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td></tr>`).join('')}</table>`
                 };
 
                 const ph = config.height || 297;
