@@ -433,7 +433,12 @@
             const { data: items } = await db.from('medical_record_items').select('total_price').eq('record_id', activeRecordId);
             const newTotal = (items || []).reduce((sum, i) => sum + parseFloat(i.total_price || 0), 0);
             const discount = parseFloat(document.getElementById('input-discount').value) || 0;
-            await db.from('medical_records').update({ total_cost: newTotal, net_amount: newTotal - discount }).eq('id', activeRecordId);
+            const { error } = await db.from('medical_records').update({ total_cost: newTotal, net_amount: newTotal - discount }).eq('id', activeRecordId);
+            if (error) {
+                console.error('syncTotalToDB error:', error.message);
+                alert('Error อัปเดตยอดรวม: ' + error.message);
+                return;
+            }
             document.getElementById('sum-total').innerText = newTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
             calculateNet();
         }

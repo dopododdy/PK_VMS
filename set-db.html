@@ -170,6 +170,36 @@ $$;</code>
             </div>
         </div>
 
+        <!-- Schema Migration -->
+        <div class="action-card mb-5">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-2xl">🛠️</div>
+                <div>
+                    <h3 class="text-white font-bold text-base">อัปเดต Schema ฐานข้อมูล</h3>
+                    <p class="text-xs text-gray-500">เพิ่ม Column ที่จำเป็นสำหรับระบบ POS</p>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mb-3 leading-relaxed">
+                หากพบ Error <code class="bg-white/10 px-1 rounded text-red-300">Could not find the 'discount' column of 'medical_records'</code>
+                ใน หน้า POS ให้รัน SQL ด้านล่างนี้ใน
+                <strong class="text-white">Supabase → SQL Editor</strong> เพื่อเพิ่ม Column ที่ขาดหายไป
+            </p>
+            <pre id="migration-sql" class="bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-teal-300 whitespace-pre-wrap overflow-x-auto leading-relaxed">ALTER TABLE medical_records
+  ADD COLUMN IF NOT EXISTS discount        NUMERIC(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS net_amount      NUMERIC(12,2),
+  ADD COLUMN IF NOT EXISTS receipt_no      TEXT,
+  ADD COLUMN IF NOT EXISTS received_amount NUMERIC(12,2),
+  ADD COLUMN IF NOT EXISTS paid_at         TIMESTAMPTZ;
+
+UPDATE medical_records
+  SET net_amount = total_cost
+  WHERE net_amount IS NULL;</pre>
+            <button onclick="copyMigrationSQL()" class="btn-secondary mt-3 text-sm">
+                📋 คัดลอก SQL
+            </button>
+            <span id="copy-ok" class="text-xs text-teal-400 ml-3 hidden">✅ คัดลอกแล้ว!</span>
+        </div>
+
         <!-- Warning -->
         <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-3 items-start">
             <span class="text-amber-500 text-lg mt-0.5">⚠️</span>
@@ -202,6 +232,15 @@ $$;</code>
     <script>
         const ALL_TABLES = ['owners', 'owner_phones', 'animals', 'medrec', 'pharmacy', 'pos_transactions', 'surgery_queue', 'lab_results', 'imaging_results', 'print_templates'];
         let restoreData = null;
+
+        function copyMigrationSQL() {
+            const sql = document.getElementById('migration-sql').innerText;
+            navigator.clipboard.writeText(sql).then(() => {
+                const ok = document.getElementById('copy-ok');
+                ok.classList.remove('hidden');
+                setTimeout(() => ok.classList.add('hidden'), 2500);
+            });
+        }
 
         // แสดงค่าจาก Config
         document.getElementById('display-url').innerText = supabaseUrl;
