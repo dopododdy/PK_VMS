@@ -229,6 +229,8 @@
         let currentRecordData = null; 
         let masterCatalog = [], displayedCatalog = [], currentCatType = 'rx';
 
+        const SCHEMA_MIGRATION_MSG = '⚠️ ฐานข้อมูลยังไม่ได้รัน Migration SQL\n\nกรุณาไปที่ Settings (set-db.html) → อัปเดต Schema ฐานข้อมูล แล้ว Copy SQL ไปรันใน Supabase → SQL Editor';
+
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
             const date = new Date(dateString);
@@ -436,7 +438,11 @@
             const { error } = await db.from('medical_records').update({ total_cost: newTotal, net_amount: newTotal - discount }).eq('id', activeRecordId);
             if (error) {
                 console.error('syncTotalToDB error:', error.message);
-                alert('Error อัปเดตยอดรวม: ' + error.message);
+                if (error.message && error.message.includes('schema cache')) {
+                    alert(SCHEMA_MIGRATION_MSG + '\n\n' + error.message);
+                } else {
+                    alert('Error อัปเดตยอดรวม: ' + error.message);
+                }
                 return;
             }
             document.getElementById('sum-total').innerText = newTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -460,7 +466,12 @@
                 net_amount: net, received_amount: recvd, paid_at: new Date().toISOString()
             }).eq('id', activeRecordId);
             
-            if (error) return alert(error.message);
+            if (error) {
+                if (error.message && error.message.includes('schema cache')) {
+                    return alert(SCHEMA_MIGRATION_MSG + '\n\n' + error.message);
+                }
+                return alert(error.message);
+            }
             alert("ชำระเงินสำเร็จ!");
             printReceipt(activeRecordId);
             loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
