@@ -465,114 +465,7 @@
         }
 
         async function printCurrentDoc() {
-            if (activeDocType !== 'doc_referral' && selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
-
-            // ใบส่งตัว: สร้าง layout เอง ไม่ต้องใช้ template
-            if (activeDocType === 'doc_referral') {
-                if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
-                const refTo        = document.getElementById('ref-to')?.value || '-';
-                const refDoc       = document.getElementById('ref-doc')?.value || '-';
-                const refReason    = document.getElementById('ref-reason')?.value || '-';
-                const refHx        = document.getElementById('ref-hx')?.value || '-';
-                const refPe        = document.getElementById('ref-pe')?.value || '-';
-                const refOtherExam = document.getElementById('ref-other-exam')?.value || '-';
-                const refDx        = document.getElementById('ref-dx')?.value || '-';
-                const refTreatment = document.getElementById('ref-treatment')?.value || '-';
-                const refUrgency   = document.querySelector('input[name="ref-urgency"]:checked')?.value || 'ปกติ';
-                const refAttach    = document.getElementById('ref-attachments')?.value || '-';
-                const selectedPet  = ownerPets.find(p => selectedPetIds.has(p.id.toString()));
-                const petInfo      = selectedPet ? `${selectedPet.pet_name} (${selectedPet.pet_type}${selectedPet.breed ? '/' + selectedPet.breed : ''}, ${selectedPet.gender}${selectedPet.weight ? ', ' + selectedPet.weight + ' กก.' : ''})` : '-';
-                const urgColor     = refUrgency === 'ฉุกเฉิน' ? '#dc2626' : refUrgency === 'เร่งด่วน' ? '#ea580c' : '#16a34a';
-                const dateStr      = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
-                const win = window.open('', '_blank');
-                win.document.write(`<html><head>
-<meta charset="UTF-8">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
-  * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
-  body { margin: 0; padding: 18mm 18mm; background: white; color: #111; font-size: 11pt; }
-  h1 { font-size: 18pt; font-weight: 800; margin: 0 0 4px; }
-  h2 { font-size: 14pt; font-weight: 700; margin: 0 0 10px; }
-  .header { border-bottom: 3px solid #0891b2; padding-bottom: 10px; margin-bottom: 14px; }
-  .clinic { font-size: 9pt; color: #555; }
-  .urgency-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-weight: 800; font-size: 10pt; color: white; background: ${urgColor}; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  td { padding: 6px 10px; border: 1px solid #ccc; vertical-align: top; }
-  td.label { font-weight: 700; background: #f0f9ff; width: 34%; color: #0369a1; white-space: nowrap; }
-  .section-title { font-size: 9.5pt; font-weight: 800; color: #0891b2; text-transform: uppercase; letter-spacing: 0.08em; margin: 12px 0 3px; border-left: 3px solid #0891b2; padding-left: 6px; }
-  .signature-row { display: flex; justify-content: space-between; margin-top: 28px; }
-  .signature-block { text-align: center; width: 45%; }
-  .sig-line { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; font-size: 9pt; }
-  @media print { @page { size: A4; margin: 0; } body { padding: 18mm 18mm; } }
-</style>
-</head><body>
-  <div class="header">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-      <div>
-        <h1>ใบส่งตัวสัตว์ป่วย</h1>
-        <h2>Veterinary Referral Letter</h2>
-        <div class="clinic">PK-VMS Animal Clinic | 123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000</div>
-      </div>
-      <div style="text-align:right;">
-        <div style="font-size:9pt; color:#555;">วันที่: ${dateStr}</div>
-        <div style="margin-top:6px;"><span class="urgency-badge">${refUrgency}</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section-title">1. ข้อมูลเจ้าของสัตว์</div>
-  <table>
-    <tr><td class="label">ชื่อ-นามสกุล</td><td>${currentOwner?.owner_name || '-'} (HN: ${currentOwner?.hn || '-'})</td></tr>
-    <tr><td class="label">เบอร์โทรศัพท์</td><td>${currentOwner?.phone || '-'}</td></tr>
-    <tr><td class="label">ที่อยู่</td><td>${currentOwner?.address || '-'}</td></tr>
-  </table>
-
-  <div class="section-title">2. ข้อมูลสัตว์</div>
-  <table>
-    <tr><td class="label">สัตว์เลี้ยง</td><td>${petInfo}</td></tr>
-    <tr><td class="label">แพทย์ผู้ส่ง</td><td>${VET_NAME}</td></tr>
-  </table>
-
-  <div class="section-title">3. ประวัติ / อาการ</div>
-  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refHx)}</td></tr></table>
-
-  <div class="section-title">4. การตรวจทางคลินิก</div>
-  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refPe)}</td></tr></table>
-
-  <div class="section-title">5. การตรวจอื่น ๆ</div>
-  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refOtherExam)}</td></tr></table>
-
-  <div class="section-title">6. การวินิจฉัยเบื้องต้น</div>
-  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refDx)}</td></tr></table>
-
-  <div class="section-title">7. การรักษา</div>
-  <table><tr><td style="padding:7px 10px;">${newlinesToBr(refTreatment)}</td></tr></table>
-
-  <div class="section-title">8. ขอส่งตัวสัตว์ป่วยเพื่อ</div>
-  <table>
-    <tr><td class="label">วัตถุประสงค์</td><td>${newlinesToBr(refReason)}</td></tr>
-    <tr><td class="label">ส่งตัวไปยัง</td><td>${refTo}</td></tr>
-    <tr><td class="label">แพทย์ผู้รับ</td><td>${refDoc}</td></tr>
-    <tr><td class="label">เอกสาร/ผลตรวจแนบ</td><td>${refAttach}</td></tr>
-  </table>
-
-  <div class="signature-row">
-    <div class="signature-block">
-      <div style="height:30px;"></div>
-      <div class="sig-line">ลายมือชื่อแพทย์ผู้ส่งตัว</div>
-      <div style="font-size:9pt;">(${VET_NAME})</div>
-    </div>
-    <div class="signature-block">
-      <div style="height:30px;"></div>
-      <div class="sig-line">ลายมือชื่อเจ้าของสัตว์</div>
-      <div style="font-size:9pt;">(${currentOwner?.owner_name || ''})</div>
-    </div>
-  </div>
-<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>
-</body></html>`);
-                win.document.close();
-                return;
-            }
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
 
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
             if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
@@ -580,7 +473,41 @@
             const config = template.config;
             const pw = parseFloat(config.width) || 210;
             const ph = parseFloat(config.height) || 297;
-            const dataMap = { clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000", owner_name: currentOwner?.owner_name || "-", owner_address: currentOwner?.address || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-", vet_name: VET_NAME, date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }), time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), note: document.getElementById('f-note')?.value || "-", };
+            const selectedPet = ownerPets.find(p => selectedPetIds.has(p.id.toString()));
+            const dataMap = {
+                // คลินิก
+                clinic_name: "PK-VMS Animal Clinic",
+                clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
+                // เจ้าของ
+                owner_name: currentOwner?.owner_name || "-",
+                owner_address: currentOwner?.address || "-",
+                owner_phone: currentOwner?.phone || "-",
+                hn: currentOwner?.hn || "-",
+                // สัตว์
+                pet_name: selectedPet?.pet_name || "-",
+                species: selectedPet?.pet_type || "-",
+                sex: selectedPet?.gender || "-",
+                weight: selectedPet?.weight ? selectedPet.weight + " กก." : "-",
+                breed: selectedPet?.breed || "-",
+                // แพทย์ / วันที่
+                vet_name: VET_NAME,
+                date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
+                time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                note: document.getElementById('f-note')?.value || "-",
+                // ใบส่งตัว
+                history: document.getElementById('ref-hx')?.value || "-",
+                clinical_exam: document.getElementById('ref-pe')?.value || "-",
+                other_exam: document.getElementById('ref-other-exam')?.value || "-",
+                preliminary_diagnosis: document.getElementById('ref-dx')?.value || "-",
+                treatment: document.getElementById('ref-treatment')?.value || "-",
+                referral_reason: document.getElementById('ref-reason')?.value || "-",
+                referral_date: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
+                referral_time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                ref_to: document.getElementById('ref-to')?.value || "-",
+                ref_doc: document.getElementById('ref-doc')?.value || "-",
+                ref_urgency: document.querySelector('input[name="ref-urgency"]:checked')?.value || "ปกติ",
+                ref_attachments: document.getElementById('ref-attachments')?.value || "-",
+            };
 
             const printContent = config.lines.map(l => {
                 const currentY = parseFloat(l.y); 
