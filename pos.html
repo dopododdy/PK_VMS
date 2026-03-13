@@ -395,7 +395,7 @@
                 }
                 return `
                 <div class="glass-card flex flex-col justify-between h-32" onclick="addItemToDB('${i.type}', '${i.name}', ${JSON.stringify(i.data)})">
-                    <div class="font-bold text-white text-sm line-clamp-2">${i.name}</div>
+                    <div class="font-bold text-white text-sm line-clamp-2">${i.data.name_th || i.name}</div>
                     <div class="text-teal-400 font-black text-right">฿${displayPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                 </div>`;
             }).join('');
@@ -482,9 +482,12 @@
                 const { data: record } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('id', recordId).single();
                 const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
                 const itemNames = (items || []).map(i => i.item_name);
+                const labItemNames = (items || []).filter(i => i.item_type === 'Lab').map(i => i.item_name);
                 const { data: pharmacyData } = itemNames.length > 0 ? await db.from('pharmacy').select('item_name, name_th').in('item_name', itemNames) : { data: [] };
+                const { data: servicesData } = labItemNames.length > 0 ? await db.from('services').select('service_name, name_th').in('service_name', labItemNames) : { data: [] };
                 const nameTh = {};
                 (pharmacyData || []).forEach(p => { if (p.name_th) nameTh[p.item_name] = p.name_th; });
+                (servicesData || []).forEach(s => { if (s.name_th) nameTh[s.service_name] = s.name_th; });
                 const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
                 if (!template) { return alert("กรุณาตั้งค่า Template"); }
                 const config = template.config, pw = config.width || 80;
@@ -528,7 +531,8 @@
                         const td = l.underline ? 'text-decoration:underline;' : '';
                         const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' :
                                            l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
-                        return `<div style="${base} font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
+                        const widthStyle = alignStyle ? '' : `width:${pw - parseFloat(l.x)}mm;`;
+                        return `<div style="${base} ${widthStyle} font-family:${l.font || 'Sarabun'}; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
                     }
                 }).join('');
 
