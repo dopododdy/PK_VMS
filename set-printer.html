@@ -406,11 +406,12 @@ if (sideContainer) {
                     const fs = l.italic ? 'font-style:italic;' : '';
                     const td = l.underline ? 'text-decoration:underline;' : '';
                     const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' : l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
-                    return `<div style="${base} font-family:${l.font}; font-size:${l.size}pt; color:${l.color}; ${fw} ${fs} ${td} ${alignStyle}">${replaceVars(l.text, l.size, l.color)}</div>`;
+                    return `<div style="${base} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${replaceVars(l.text, l.size, l.color)}</div>`;
                 }
             }).join('');
-            win.document.write(`<html><head><style>@page{size:${pw}mm ${ph}mm; margin:0;} body{margin:0;}</style></head><body>${content}</body></html>`);
-            win.document.close(); win.print();
+            win.document.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${content}</div></body></html>`);
+            win.document.close();
+            win.document.fonts.ready.then(() => { win.print(); });
         }
     </script>
 </body>
