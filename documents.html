@@ -578,6 +578,128 @@
                 return;
             }
 
+            // ใบยินยอมหัตถการ/วางยาสลบ: ถ้าไม่มี template ในฐานข้อมูล ให้ใช้ layout สำเร็จรูปเป็น fallback
+            if (activeDocType === 'doc_consent' && !template) {
+                const surgeryInputs = document.querySelectorAll('.surgery-input');
+                const petSurgeries  = Array.from(surgeryInputs).map(i => ({
+                    id: i.dataset.petId, name: i.dataset.petName, surgery: i.value || '-'
+                }));
+                const note    = document.getElementById('f-note')?.value || '';
+                const dateStr = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                // Insert to surgery queue (same as the template-based path)
+                const queuePayload = petSurgeries
+                    .filter(ps => ps.surgery && ps.surgery !== '-')
+                    .map(ps => ({
+                        animal_id: ps.id, pet_name: ps.name,
+                        owner_name: currentOwner.owner_name,
+                        procedures: ps.surgery,
+                        status: 'รอผ่าตัด', created_at: new Date().toISOString()
+                    }));
+                if (queuePayload.length > 0) {
+                    db.from('surgery_queue').insert(queuePayload).then(({ error }) => {
+                        if (error) console.error('Error inserting to surgery queue for owner:', currentOwner.owner_name, error);
+                    });
+                }
+
+                const petMap  = new Map(ownerPets.map(p => [p.id.toString(), p]));
+                const petRows = petSurgeries.map(ps => {
+                    const pet     = petMap.get(ps.id.toString());
+                    const species = pet ? `${pet.pet_type}${pet.breed ? '/' + pet.breed : ''}` : '-';
+                    const gender  = pet?.gender || '-';
+                    const weight  = pet?.weight ? ` / ${pet.weight} กก.` : '';
+                    return `<tr>
+                      <td style="padding:6px 10px; border:1px solid #ccc;">${ps.name}</td>
+                      <td style="padding:6px 10px; border:1px solid #ccc;">${species} / ${gender}${weight}</td>
+                      <td style="padding:6px 10px; border:1px solid #ccc;">${ps.surgery}</td>
+                    </tr>`;
+                }).join('');
+
+                const win = window.open('', '_blank');
+                win.document.write(`<html><head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
+  * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
+  body { margin: 0; padding: 18mm 18mm; background: white; color: #111; font-size: 11pt; }
+  h1 { font-size: 18pt; font-weight: 800; margin: 0 0 4px; }
+  h2 { font-size: 14pt; font-weight: 700; margin: 0 0 10px; }
+  .header { border-bottom: 3px solid #0891b2; padding-bottom: 10px; margin-bottom: 14px; }
+  .clinic { font-size: 9pt; color: #555; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  td { padding: 6px 10px; border: 1px solid #ccc; vertical-align: top; }
+  td.label { font-weight: 700; background: #f0f9ff; width: 34%; color: #0369a1; white-space: nowrap; }
+  .section-title { font-size: 9.5pt; font-weight: 800; color: #0891b2; text-transform: uppercase; letter-spacing: 0.08em; margin: 12px 0 3px; border-left: 3px solid #0891b2; padding-left: 6px; }
+  .consent-text { font-size: 10pt; line-height: 1.7; color: #333; }
+  .consent-text ul { margin: 4px 0 8px; padding-left: 18px; }
+  .consent-text li { margin-bottom: 3px; }
+  .signature-row { display: flex; justify-content: space-between; margin-top: 28px; }
+  .signature-block { text-align: center; width: 45%; }
+  .sig-line { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; font-size: 9pt; }
+  @media print { @page { size: A4; margin: 0; } body { padding: 18mm 18mm; } }
+</style>
+</head><body>
+  <div class="header">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        <h1>ใบยินยอมทำหัตถการ/วางยาสลบ</h1>
+        <h2>Anesthesia &amp; Surgical Consent Form</h2>
+        <div class="clinic">PK-VMS Animal Clinic | 123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:9pt; color:#555;">วันที่: ${dateStr}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">1. ข้อมูลเจ้าของสัตว์</div>
+  <table>
+    <tr><td class="label">ชื่อ-นามสกุล</td><td>${currentOwner?.owner_name || '-'} (HN: ${currentOwner?.hn || '-'})</td></tr>
+    <tr><td class="label">เบอร์โทรศัพท์</td><td>${currentOwner?.phone || '-'}</td></tr>
+    <tr><td class="label">ที่อยู่</td><td>${currentOwner?.address || '-'}</td></tr>
+  </table>
+
+  <div class="section-title">2. รายการหัตถการ/วางยาสลบ</div>
+  <table>
+    <thead>
+      <tr style="background:#f0f9ff;">
+        <th style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#0369a1; width:20%;">สัตว์เลี้ยง</th>
+        <th style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#0369a1; width:30%;">ชนิด / เพศ / น้ำหนัก</th>
+        <th style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#0369a1; width:50%;">หัตถการที่จะทำ</th>
+      </tr>
+    </thead>
+    <tbody>${petRows}</tbody>
+  </table>
+
+  <div class="section-title">3. ข้อตกลงและการยินยอม</div>
+  <div class="consent-text">
+    <p>ข้าพเจ้าในฐานะเจ้าของสัตว์เลี้ยง ขอให้ความยินยอมสำหรับการทำหัตถการ/วางยาสลบดังกล่าว โดยได้รับทราบและเข้าใจความเสี่ยงต่อไปนี้แล้ว</p>
+    <ul>
+      <li>การใช้ยาสลบมีความเสี่ยงต่อชีวิตสัตว์ แม้ในกรณีที่สัตว์มีสุขภาพดี</li>
+      <li>อาจเกิดภาวะแทรกซ้อนก่อน ระหว่าง หรือหลังการวางยาสลบและผ่าตัด</li>
+      <li>สัตวแพทย์จะพยายามป้องกันและจัดการภาวะแทรกซ้อนอย่างเต็มความสามารถ</li>
+    </ul>
+    ${note ? `<p><strong>หมายเหตุ:</strong> ${note}</p>` : ''}
+  </div>
+
+  <div class="signature-row">
+    <div class="signature-block">
+      <div style="height:30px;"></div>
+      <div class="sig-line">ลายมือชื่อเจ้าของสัตว์</div>
+      <div style="font-size:9pt;">(${currentOwner?.owner_name || ''})</div>
+    </div>
+    <div class="signature-block">
+      <div style="height:30px;"></div>
+      <div class="sig-line">ลายมือชื่อสัตวแพทย์</div>
+      <div style="font-size:9pt;">(${VET_NAME})</div>
+    </div>
+  </div>
+<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>
+</body></html>`);
+                win.document.close();
+                return;
+            }
+
             if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
             
             const config = template.config;
