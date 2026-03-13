@@ -126,14 +126,23 @@
             receipt_no: "RC-25001", total_price: "785.00", discount_val: "0.00", net_total: "785.00",
             received_amount: "800.00", change_amount: "15.00", date: "12/03/2568", time: "14:30",
             appointment_date_1: "19/03/2568", appointment_note_1: "ฉีดวัคซีนประจำปี",
-            appointment_date_2: "26/03/2568", appointment_note_2: "ตรวจติดตามอาการ"
+            appointment_date_2: "26/03/2568", appointment_note_2: "ตรวจติดตามอาการ",
+            history: "ไอ มีน้ำมูก ไข้ต่ำ 3 วัน",
+            clinical_exam: "T: 39.5°C, P: 120 bpm, R: 30 cpm ไม่พบ lymphadenopathy",
+            other_exam: "CBC: ปกติ, Blood chemistry: ปกติ",
+            preliminary_diagnosis: "Canine distemper (suspected)",
+            treatment: "ให้ยาลดไข้ Dipyrone 10 mg/kg IM ครั้งเดียว",
+            referral_reason: "เพื่อตรวจวินิจฉัยและรักษาเพิ่มเติม",
+            vet_name: "ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล",
+            vet_license: "01-6186/2550"
         };
         const varGroups = {
     "🏥 คลินิก": ["clinic_name", "clinic_address", "phone", "tax_id"],
     "🐾 สัตว์/เจ้าของ": ["owner_name", "owner_phone", "pet_name", "species", "sex", "hn", "weight", "breed", "owner_address", "pet_surgery_list"],
     "💊 ข้อมูลยา": ["drug_name", "drug_name_th", "dose_per_time", "unit", "frequency", "meal_timing", "day_timing", "duration_days", "total_qty", "warning"],
     "💰 การเงิน": ["receipt_no", "items_list", "total_price", "discount_val", "net_total", "received_amount", "change_amount", "date", "time"],
-    "📅 การนัดหมาย": ["appointment_date_1", "appointment_note_1", "appointment_date_2", "appointment_note_2"]
+    "📅 การนัดหมาย": ["appointment_date_1", "appointment_note_1", "appointment_date_2", "appointment_note_2"],
+    "📋 ใบส่งตัวสัตว์ป่วย": ["history", "clinical_exam", "other_exam", "preliminary_diagnosis", "treatment", "referral_reason", "referral_date", "referral_time", "vet_name", "vet_license"]
 };
         const PALETTE = [
             '#000000','#1e293b','#334155','#475569','#64748b','#94a3b8','#cbd5e1','#f1f5f9','#ffffff',
@@ -151,8 +160,15 @@
                     ${mockItems.map(item => `<tr><td style="padding:2px 4px;">${item.name}</td><td style="text-align:center; padding:2px 4px;">${item.qty} ${item.unit}</td><td style="text-align:right; padding:2px 4px;">${item.price.toFixed(2)}</td></tr>`).join('')}
                 </table>`;
             }
+            const now = new Date();
             return text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
                 const k = key.trim();
+                if (k === 'referral_date') {
+                    return now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                }
+                if (k === 'referral_time') {
+                    return now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                }
                 return (mockData[k] !== undefined ? mockData[k] : match);
             });
         }
