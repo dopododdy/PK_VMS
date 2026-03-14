@@ -569,79 +569,9 @@
                 if (phoneRows?.length > 0) ownerPhone = phoneRows[0].phone_number;
             } catch(e) {}
 
-            const examDate = formatThaiDate(new Date());
             const petAge = currentAnimal.birth_date ? (() => { const y = (new Date() - new Date(currentAnimal.birth_date)) / (1000*60*60*24*365.25); return y < 1 ? Math.round(y*12) + ' เดือน' : y.toFixed(1) + ' ปี'; })() : '-';
 
-            // สร้างสรุป findings จากค่าที่กรอก
-            const findingParts = [];
-            if (ecValues.bw) findingParts.push(`BW ${ecValues.bw} kg`);
-            if (ecValues.ivsd) findingParts.push(`IVSd ${ecValues.ivsd}`);
-            if (ecValues.lvidd) findingParts.push(`LVIDd ${ecValues.lvidd}`);
-            if (ecValues.pwd) findingParts.push(`PWd ${ecValues.pwd}`);
-            if (ecValues.la) findingParts.push(`LA ${ecValues.la}`);
-            if (ecValues.ao) findingParts.push(`Ao ${ecValues.ao}`);
-            if (ecValues.ivss) findingParts.push(`IVSs ${ecValues.ivss}`);
-            if (ecValues.lvids) findingParts.push(`LVIDs ${ecValues.lvids}`);
-            if (ecValues.pws) findingParts.push(`PWs ${ecValues.pws}`);
-            if (ecValues.me) findingParts.push(`Mitral E ${ecValues.me}`);
-            if (ecValues.ma) findingParts.push(`Mitral A ${ecValues.ma}`);
-            if (ecValues.lvot) findingParts.push(`LVOT ${ecValues.lvot}`);
-            if (ecValues.rvot) findingParts.push(`RVOT ${ecValues.rvot}`);
-            const echoFindings = findingParts.join(', ') || '-';
-
-            const printData = {
-                pet_name: currentAnimal.pet_name || '-',
-                hn: currentAnimal.owner_hn || '-',
-                species: currentAnimal.pet_type || '-',
-                breed: currentAnimal.breed || '-',
-                sex: currentAnimal.gender || '-',
-                weight: (currentAnimal.weight || 0) + ' kg',
-                age: petAge,
-                owner_name: ownerName,
-                owner_phone: ownerPhone,
-                echo_exam_date: examDate,
-                echo_findings: echoFindings,
-                echo_impression: note || '-',
-                echo_conclusion: note || '-',
-                echo_vet_name: 'สพ.',
-                echo_clinic_name: 'PK Animal Clinic'
-            };
-
-            // ลองโหลด template doc_echo จาก DB ก่อน
-            let tpl = null;
-            try {
-                const { data } = await db.from('print_templates').select('config').eq('template_type', 'doc_echo').maybeSingle();
-                tpl = data;
-            } catch(e) { console.warn('doc_echo template load error, using fallback:', e); }
-            if (tpl?.config) {
-                // ใช้ template จาก DB
-                const config = tpl.config;
-                const px = 3.78;
-                const pw = window.open('', '_blank');
-                if (!pw) return alert("กรุณาอนุญาต Popup เพื่อพิมพ์รายงาน");
-                let html = `<html><head>
-                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-                    <style>
-                        body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
-                        .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; }
-                        .elem { position:absolute; color:black; line-height:1.2; }
-                        @page { size:${config.width}mm ${config.height}mm; margin:0; }
-                    </style>
-                </head><body><div class="sticker">`;
-                (config.lines || []).forEach(l => {
-                    let txt = (l.text || '').replace(/\{\{(.*?)\}\}/g, (m, k) => escapeHtml(printData[k.trim()] !== undefined ? printData[k.trim()] : ''));
-                    let style = `top:${l.y * px}px; font-family:'Sarabun', sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'};`;
-                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
-                    else if (l.align === 'right') style += `right:${l.x * px}px; text-align:right;`;
-                    else style += `left:${l.x * px}px;`;
-                    html += `<div class="elem" style="${style}">${txt}</div>`;
-                });
-                html += `</div></body><script>window.onload=()=>{setTimeout(()=>{window.print();},800);};<\/script></html>`;
-                pw.document.write(html); pw.document.close();
-                return;
-            }
-
-            // Fallback: สร้างรายงานแบบ built-in
+            // สร้างรายงานแบบ built-in อัตโนมัติ (ไม่ใช้ template doc_echo)
             const pw = window.open('', '_blank');
             if (!pw) return alert("กรุณาอนุญาต Popup เพื่อพิมพ์รายงาน");
 
