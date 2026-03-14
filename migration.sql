@@ -15,3 +15,16 @@ ALTER TABLE medical_records
 UPDATE medical_records
   SET net_amount = total_cost
   WHERE net_amount IS NULL;
+
+-- ═══════════════════════════════════════════════════════════════
+-- เพิ่ม updated_at Column ที่ขาดหายในตาราง owners, animals และ mas_lab_parameters
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE owners
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE animals
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE mas_lab_parameters
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
