@@ -180,8 +180,9 @@ $$;</code>
                 </div>
             </div>
             <p class="text-xs text-gray-400 mb-3 leading-relaxed">
-                หากพบ Error <code class="bg-white/10 px-1 rounded text-red-300">Could not find the 'discount' column of 'medical_records'</code>
-                ใน หน้า POS ให้รัน SQL ด้านล่างนี้ใน
+                หากพบ Error เช่น <code class="bg-white/10 px-1 rounded text-red-300">Could not find the 'discount' column of 'medical_records'</code>
+                หรือ <code class="bg-white/10 px-1 rounded text-red-300">Could not find the 'updated_at' column of 'owners'</code>
+                ให้รัน SQL ด้านล่างนี้ใน
                 <strong class="text-white">Supabase → SQL Editor</strong> เพื่อเพิ่ม Column ที่ขาดหายไป
             </p>
             <pre id="migration-sql" class="bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-teal-300 whitespace-pre-wrap overflow-x-auto leading-relaxed">ALTER TABLE medical_records
@@ -193,7 +194,16 @@ $$;</code>
 
 UPDATE medical_records
   SET net_amount = total_cost
-  WHERE net_amount IS NULL;</pre>
+  WHERE net_amount IS NULL;
+
+ALTER TABLE owners
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE animals
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE mas_lab_parameters
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();</pre>
             <button onclick="copyMigrationSQL()" class="btn-secondary mt-3 text-sm">
                 📋 คัดลอก SQL
             </button>
