@@ -708,11 +708,22 @@
             const selectedPet = ownerPets.find(p => selectedPetIds.has(p.id.toString()));
             const petInfo = selectedPet ? `${selectedPet.pet_name} (${selectedPet.pet_type}${selectedPet.breed ? '/' + selectedPet.breed : ''}, ${selectedPet.gender}${selectedPet.weight ? ', ' + selectedPet.weight + ' กก.' : ''})` : '-';
             const _now = new Date();
+            function calcPetAge(birthDateStr) {
+                if (!birthDateStr) return '-';
+                const b = new Date(birthDateStr);
+                let y = _now.getFullYear() - b.getFullYear();
+                let m = _now.getMonth() - b.getMonth();
+                if (_now.getDate() < b.getDate()) m--;
+                if (m < 0) { y--; m += 12; }
+                return y > 0 ? `${y} ปี ${m} เดือน` : `${m} เดือน`;
+            }
             const dataMap = {
                 clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
                 phone: CLINIC_PHONE, tax_id: CLINIC_TAX_ID,
                 owner_name: currentOwner?.owner_name || "-", owner_address: currentOwner?.address || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-",
                 pet_name: selectedPet?.pet_name || '-', species: selectedPet?.pet_type || '-', sex: selectedPet?.gender || '-',
+                pet_type: selectedPet?.pet_type || '-', gender: selectedPet?.gender || '-',
+                age: calcPetAge(selectedPet?.birth_date),
                 weight: selectedPet?.weight ? selectedPet.weight + ' กก.' : '-', breed: selectedPet?.breed || '-',
                 pet_info: petInfo,
                 vet_name: VET_NAME, vet_license: VET_LICENSE,
