@@ -367,33 +367,47 @@
             }
 
             try {
-                const { error: ownerErr } = await db.from('owners').upsert({ hn, owner_name: name, address: document.getElementById('f_address').value }, { onConflict: 'hn' });
-                if (ownerErr) throw ownerErr;
+                console.log('[saveAllData] เริ่มบันทึกข้อมูล HN:', hn);
+
+                const { error: ownerErr } = await db.from('owners').upsert(
+                    { hn, owner_name: name, address: document.getElementById('f_address').value, updated_at: new Date().toISOString() },
+                    { onConflict: 'hn' }
+                );
+                if (ownerErr) throw new Error(`บันทึกเจ้าของล้มเหลว: ${ownerErr.message}`);
+                console.log('[saveAllData] บันทึกเจ้าของสำเร็จ');
 
                 const { error: delErr } = await db.from('owner_phones').delete().eq('owner_hn', hn);
-                if (delErr) throw delErr;
+                if (delErr) throw new Error(`ลบเบอร์โทรเดิมล้มเหลว: ${delErr.message}`);
+                console.log('[saveAllData] ลบเบอร์โทรเดิมสำเร็จ');
 
                 const pList = [{ owner_hn: hn, phone_number: p1, label: 'เบอร์หลัก' }];
                 const p2 = document.getElementById('f_phone2').value.trim();
-                if(p2) pList.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
+                if (p2) pList.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
                 const { error: phoneErr } = await db.from('owner_phones').insert(pList);
-                if (phoneErr) throw phoneErr;
+                if (phoneErr) throw new Error(`บันทึกเบอร์โทรล้มเหลว: ${phoneErr.message}`);
+                console.log('[saveAllData] บันทึกเบอร์โทรสำเร็จ', pList.length, 'รายการ');
                 
                 const petNodes = document.querySelectorAll('.zone-pet');
                 for (const node of petNodes) {
                     const petName = node.querySelector('.p_name').value;
                     if (!petName) continue;
+                    console.log('[saveAllData] บันทึกสัตว์:', petName);
                     const { error: petErr } = await db.from('animals').upsert({
                         id: node.getAttribute('data-pet-id') || undefined,
                         owner_hn: hn, pet_name: petName, pet_type: node.querySelector('.p_type').value || 'อื่นๆ',
                         breed: node.querySelector('.p_breed').value, gender: node.querySelector('.p_gender').value,
                         weight: parseFloat(node.querySelector('.p_weight').value) || 0, birth_date: node.querySelector('.datepicker-thai').value || null,
-                        microchip_number: node.querySelector('.p_microchip').value, congenital_disease: node.querySelector('.p_congenital').value, updated_at: new Date()
+                        microchip_number: node.querySelector('.p_microchip').value, congenital_disease: node.querySelector('.p_congenital').value,
+                        updated_at: new Date().toISOString()
                     });
-                    if (petErr) throw petErr;
+                    if (petErr) throw new Error(`บันทึกข้อมูลสัตว์ "${petName}" ล้มเหลว: ${petErr.message}`);
                 }
+                console.log('[saveAllData] บันทึกข้อมูลทั้งหมดสำเร็จ');
                 alert("✅ บันทึกสำเร็จ"); await loadData(); editOwner(hn);
-            } catch (err) { alert(err.message); }
+            } catch (err) {
+                console.error('[saveAllData] เกิดข้อผิดพลาด:', err);
+                alert("❌ " + err.message);
+            }
         }
 
         async function deleteOwner(hn, name) {
