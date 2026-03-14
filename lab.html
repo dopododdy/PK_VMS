@@ -174,7 +174,8 @@
                         <h3 class="text-2xl font-black text-white italic">Echocardiography Data</h3>
                         <div class="flex gap-3">
                             <button onclick="printEchoReport()" class="bg-purple-700 hover:bg-purple-600 px-8 py-3 rounded-xl font-black transition shadow-lg flex items-center gap-2">🖨️ พิมพ์รายงานผล</button>
-                            <button onclick="saveEchoResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-3 rounded-xl font-black transition shadow-lg">💾 บันทึกผล Echo</button>
+                            <button id="btn-cancel-echo" onclick="cancelEditEcho()" class="hidden bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-xl font-black transition text-white">ยกเลิก</button>
+                            <button id="btn-save-echo" onclick="saveEchoResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-3 rounded-xl font-black transition shadow-lg">💾 บันทึกผล Echo</button>
                         </div>
                     </div>
 
@@ -269,6 +270,10 @@
         let masterParams = [], currentAnimal = null, labHistory = [], imagingHistory = [];
         let currentAgeYears = 0;
         let editingLabSession = null;
+        let editingEchoRecord = null;
+
+        const VET_NAME = 'ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล';
+        const THAI_MONTHS_LONG = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
         // ✅ อัปเดตลำดับที่ถูกต้องตามตารางอ้างอิงใหม่
         const PARAM_ORDER = [
@@ -460,6 +465,7 @@
         ${sortedTs.map(ts => `
         <th class="text-center">
             <div class="flex justify-center gap-3 mb-1">
+                <button onclick="printBloodReport('${ts}')" class="text-purple-400 hover:text-purple-300 text-xs">🖨️ Print</button>
                 <button onclick="editSession('${ts}')" class="text-blue-500 hover:text-blue-400 text-xs">✏️ Edit</button>
                 <button onclick="deleteSession('${ts}')" class="text-red-500 hover:text-red-400 text-xs">✕ Del</button>
             </div>
@@ -534,9 +540,20 @@
         async function saveEchoResults() {
             const data = {};
             document.querySelectorAll('.ec-in, #ec-bw').forEach(i => data[i.id.replace('ec-', '')] = parseFloat(i.value) || 0);
-            const payload = { animal_id: currentAnimal.id, exam_type: 'Echocardiography', findings: data, impression: document.getElementById('ec-note').value, created_at: new Date().toISOString() };
+            const ts = editingEchoRecord ? editingEchoRecord.created_at : new Date().toISOString();
+            const payload = { animal_id: currentAnimal.id, exam_type: 'Echocardiography', findings: data, impression: document.getElementById('ec-note').value, created_at: ts };
+
+            if (editingEchoRecord) {
+                const { error: delError } = await db.from('imaging_results').delete().eq('id', editingEchoRecord.id);
+                if (delError) { alert("เกิดข้อผิดพลาด: " + delError.message); return; }
+            }
+
             const { error } = await db.from('imaging_results').insert([payload]);
-            if (!error) { alert("บันทึก Echo สำเร็จ"); await fetchImagingHistory(currentAnimal.id); }
+            if (!error) {
+                alert(editingEchoRecord ? "อัปเดต Echo สำเร็จ" : "บันทึก Echo สำเร็จ");
+                cancelEditEcho();
+                await fetchImagingHistory(currentAnimal.id);
+            }
         }
 
         function escapeHtml(str) {
@@ -623,9 +640,8 @@
 
             // วันที่และเวลา
             const now = new Date();
-            const thaiMonths = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-            const examDateTime = `${now.getDate()} ${thaiMonths[now.getMonth()]} ${now.getFullYear() + 543} เวลา ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
-            const vetName = 'ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล';
+            const examDateTime = `${now.getDate()} ${THAI_MONTHS_LONG[now.getMonth()]} ${now.getFullYear() + 543} เวลา ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
+            const vetName = VET_NAME;
 
             const reportHtml = `<!DOCTYPE html><html lang="th"><head>
             <meta charset="UTF-8">
@@ -867,9 +883,18 @@
             imgList.innerHTML = imgs.map(item => `<div class="section-card border-l-4 border-teal-500 relative group"><button onclick="deleteImaging('${item.id}')" class="absolute top-6 right-6 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"><i data-lucide="trash-2" class="w-5 h-5"></i></button><div class="flex justify-between mb-4"><div><span class="px-3 py-1 bg-teal-500/10 text-teal-500 text-[10px] rounded-full font-black uppercase tracking-tighter border border-teal-500/20">${item.exam_type}</span><h4 class="text-2xl font-black text-white mt-2">${item.region || 'Study'}</h4></div><div class="text-right text-xs text-gray-500">${formatThaiDate(new Date(item.created_at))}</div></div><p class="text-gray-300 text-sm whitespace-pre-line leading-relaxed mb-4">${item.findings}</p><p class="text-teal-400 font-bold italic">"${item.impression}"</p></div>`).join('');
             
             echoList.innerHTML = echos.map(item => `
-                <div class="p-3 bg-white/5 border border-white/5 rounded-xl cursor-pointer hover:bg-teal-500/10 transition flex justify-between items-center" onclick="loadEchoRecord(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                    <div><div class="text-white font-bold text-sm">${formatThaiDate(new Date(item.created_at))}</div><div class="text-[10px] text-gray-500 uppercase">Weight: ${item.findings.bw} kg</div></div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-teal-500"></i>
+                <div class="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-teal-500/10 transition">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-white font-bold text-sm">${formatThaiDate(new Date(item.created_at))}</div>
+                            <div class="text-[10px] text-gray-500 uppercase">Weight: ${item.findings.bw} kg</div>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <button onclick="printEchoRecordReport('${item.id}')" class="text-purple-400 hover:text-purple-300 text-xs">🖨️ Print</button>
+                            <button onclick="editEchoRecord('${item.id}')" class="text-blue-500 hover:text-blue-400 text-xs">✏️ Edit</button>
+                            <button onclick="deleteEchoRecord('${item.id}')" class="text-red-500 hover:text-red-400 text-xs">✕ Del</button>
+                        </div>
+                    </div>
                 </div>`).join('');
             lucide.createIcons();
         }
@@ -969,6 +994,248 @@
         
 
         async function deleteSession(ts) { if (confirm("ลบผลเลือดชุดนี้ทิ้งอย่างถาวร?")) { await db.from('lab_results').delete().eq('animal_id', currentAnimal.id).eq('created_at', ts); fetchLabHistory(currentAnimal.id); } }
+
+        // ---- Echo Edit / Delete helpers ----
+        function editEchoRecord(id) {
+            const item = imagingHistory.find(i => i.id == id);
+            if (!item) return;
+            editingEchoRecord = item;
+            loadEchoRecord(item);
+            const saveBtn = document.getElementById('btn-save-echo');
+            saveBtn.innerHTML = '💾 อัปเดตผล Echo';
+            saveBtn.classList.remove('bg-teal-600', 'hover:bg-teal-500');
+            saveBtn.classList.add('bg-blue-600', 'hover:bg-blue-500');
+            document.getElementById('btn-cancel-echo').classList.remove('hidden');
+            switchTab('echo', document.getElementById('tab-echo'));
+        }
+
+        function cancelEditEcho() {
+            editingEchoRecord = null;
+            document.querySelectorAll('.ec-in, #ec-bw').forEach(i => i.value = '');
+            document.getElementById('ec-note').value = '';
+            runEchoCalc();
+            const saveBtn = document.getElementById('btn-save-echo');
+            saveBtn.innerHTML = '💾 บันทึกผล Echo';
+            saveBtn.classList.add('bg-teal-600', 'hover:bg-teal-500');
+            saveBtn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
+            document.getElementById('btn-cancel-echo').classList.add('hidden');
+        }
+
+        async function deleteEchoRecord(id) { if (confirm("ลบผล Echo นี้ทิ้งอย่างถาวร?")) { await db.from('imaging_results').delete().eq('id', id); fetchImagingHistory(currentAnimal.id); } }
+
+        // ---- Blood Report (auto-generate, no template) ----
+        async function printBloodReport(ts) {
+            if (!currentAnimal) return alert("กรุณาเลือกสัตว์ก่อน");
+            const sessionData = labHistory.filter(r => r.created_at === ts);
+            if (sessionData.length === 0) return alert("ไม่พบข้อมูลผลเลือด");
+
+            let ownerName = '-', ownerPhone = '-';
+            try {
+                const { data: ownerData } = await db.from('owners').select('owner_name').eq('hn', currentAnimal.owner_hn).maybeSingle();
+                if (ownerData) ownerName = ownerData.owner_name;
+                const { data: phoneRows } = await db.from('owner_phones').select('phone_number').eq('owner_hn', currentAnimal.owner_hn).limit(1);
+                if (phoneRows?.length > 0) ownerPhone = phoneRows[0].phone_number;
+            } catch(e) {}
+
+            const examDate = new Date(ts);
+            const examDateTime = `${examDate.getDate()} ${THAI_MONTHS_LONG[examDate.getMonth()]} ${examDate.getFullYear() + 543} เวลา ${String(examDate.getHours()).padStart(2,'0')}:${String(examDate.getMinutes()).padStart(2,'0')} น.`;
+            const now = new Date();
+            const printDateTime = `${now.getDate()} ${THAI_MONTHS_LONG[now.getMonth()]} ${now.getFullYear() + 543} เวลา ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
+
+            const petAge = currentAnimal.birth_date ? (() => { const y = (examDate - new Date(currentAnimal.birth_date)) / (1000*60*60*24*365.25); return y < 1 ? Math.round(y*12) + ' เดือน' : y.toFixed(1) + ' ปี'; })() : '-';
+            const refInfo = getAgeReferenceMode(currentAnimal.birth_date, ts);
+
+            const dataMap = {};
+            sessionData.forEach(r => dataMap[r.parameter_name] = r.test_value);
+
+            const calcColor = (val, min, max) => { if (min===null||max===null) return '#333'; if (val>max) return '#cc0000'; if (val<min) return '#0055cc'; return '#007700'; };
+            const calcBg = (val, min, max) => { if (min===null||max===null) return 'transparent'; if (val>max) return '#fff0f0'; if (val<min) return '#f0f4ff'; return '#f0fff4'; };
+            const statusLabel = (val, min, max) => { if (min===null||max===null) return ''; if (val>max) return '<span style="color:#cc0000;font-size:9pt;font-weight:700;">▲ สูง</span>'; if (val<min) return '<span style="color:#0055cc;font-size:9pt;font-weight:700;">▼ ต่ำ</span>'; return '<span style="color:#007700;font-size:9pt;font-weight:700;">✓ ปกติ</span>'; };
+
+            const makeRows = (params) => params.map(p => {
+                const { min, max } = getRefRange(p, refInfo.mode, refInfo.isDog);
+                const val = dataMap[p.parameter_name];
+                if (val === undefined) return '';
+                const refStr = (min !== null && max !== null) ? `${min} – ${max}` : '-';
+                return `<tr><td class="param-name">${escapeHtml(p.parameter_name)}</td><td style="text-align:center;color:#555;">${escapeHtml(p.unit||'-')}</td><td class="ref-cell" style="text-align:center;">${escapeHtml(refStr)}</td><td style="color:${calcColor(val,min,max)};background:${calcBg(val,min,max)};font-weight:800;text-align:center;font-size:11pt;">${escapeHtml(String(val))}</td><td style="text-align:center;">${statusLabel(val,min,max)}</td></tr>`;
+            }).filter(r => r !== '').join('');
+
+            const cbcRows = makeRows(masterParams.filter(p => p.category === 'CBC'));
+            const chemRows = makeRows(masterParams.filter(p => p.category !== 'CBC'));
+
+            const tableHead = `<thead><tr><th style="width:28%;">พารามิเตอร์</th><th class="center" style="width:14%;">หน่วย</th><th class="center" style="width:22%;">ค่าอ้างอิง</th><th class="center" style="width:22%;">ค่าที่วัดได้</th><th class="center" style="width:14%;">ผล</th></tr></thead>`;
+            const sharedCss = `* { font-family: 'Sarabun', sans-serif; box-sizing: border-box; margin: 0; padding: 0; } body { background: #fff; color: #111; font-size: 11pt; } .report-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 16mm 14mm 16mm; background: #fff; } .header { text-align: center; border-bottom: 3px double #1a2a4a; padding-bottom: 10px; margin-bottom: 12px; } .header .clinic-name { font-size: 17pt; font-weight: 900; color: #1a2a4a; letter-spacing: 0.5px; } .header .form-title { font-size: 13pt; font-weight: 700; color: #1a6a9a; margin-top: 4px; } .header .exam-date { font-size: 10pt; color: #555; margin-top: 3px; } .title-banner { background: #1a2a4a; color: #fff; text-align: center; padding: 7px 12px; font-size: 13pt; font-weight: 900; letter-spacing: 1px; margin-bottom: 10px; border-radius: 3px; } .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin-bottom: 10px; border: 1px solid #bbb; padding: 8px 12px; border-radius: 3px; background: #f9fafb; } .info-row { display: flex; gap: 6px; font-size: 10pt; padding: 2px 0; } .info-label { font-weight: 700; color: #333; min-width: 105px; } .info-val { color: #111; } .section-title { font-size: 10.5pt; font-weight: 900; background: #e8f4f8; border-left: 5px solid #1a6a9a; padding: 5px 10px; margin: 10px 0 6px; color: #1a2a4a; } table { width: 100%; border-collapse: collapse; font-size: 10pt; } th { background: #1a2a4a; color: white; padding: 5px 8px; text-align: left; font-weight: 700; font-size: 9.5pt; } th.center { text-align: center; } td { padding: 4px 8px; border-bottom: 1px solid #e0e0e0; vertical-align: middle; } tr:nth-child(even) td { background: #f5f9fc; } .param-name { font-weight: 700; color: #1a2a4a; } .ref-cell { color: #1a6a9a; font-family: monospace; font-size: 9.5pt; } .footer { margin-top: 16px; border-top: 2px solid #1a2a4a; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; } .footer-info { font-size: 9pt; color: #777; line-height: 1.5; } .sign-block { text-align: center; min-width: 180px; } .sign-line { border-top: 1px solid #333; margin: 36px auto 4px; width: 160px; } .sign-name { font-size: 10.5pt; font-weight: 800; color: #1a2a4a; } .sign-label { font-size: 9pt; font-weight: 700; color: #555; } @page { size: A4; margin: 0; } @media print { body { margin: 0; } .report-page { width: 210mm; min-height: 297mm; padding: 12mm 14mm; box-shadow: none; } }`;
+
+            const pw = window.open('', '_blank');
+            if (!pw) return alert("กรุณาอนุญาต Popup เพื่อพิมพ์รายงาน");
+            const reportHtml = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานผลเลือด - ${escapeHtml(currentAnimal.pet_name)}</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"><style>${sharedCss}</style></head><body><div class="report-page"><div class="header"><div class="clinic-name">คลินิกรักษาสัตว์หมอปิติพัฒน์</div><div class="form-title">รายงานผลการตรวจเลือด (Blood Test Report)</div><div class="exam-date">วันที่และเวลาตรวจ: <strong>${escapeHtml(examDateTime)}</strong></div></div><div class="title-banner">🩸 BLOOD TEST REPORT</div><div class="info-grid"><div class="info-row"><span class="info-label">ชื่อสัตว์:</span><span class="info-val"><strong>${escapeHtml(currentAnimal.pet_name)}</strong></span></div><div class="info-row"><span class="info-label">เจ้าของ:</span><span class="info-val">${escapeHtml(ownerName)}</span></div><div class="info-row"><span class="info-label">HN:</span><span class="info-val">${escapeHtml(currentAnimal.owner_hn||'-')}</span></div><div class="info-row"><span class="info-label">เบอร์โทร:</span><span class="info-val">${escapeHtml(ownerPhone)}</span></div><div class="info-row"><span class="info-label">ชนิด / สายพันธุ์:</span><span class="info-val">${escapeHtml(currentAnimal.pet_type||'-')} / ${escapeHtml(currentAnimal.breed||'-')}</span></div><div class="info-row"><span class="info-label">เพศ / อายุ:</span><span class="info-val">${escapeHtml(currentAnimal.gender||'-')} / ${escapeHtml(petAge)}</span></div><div class="info-row"><span class="info-label">ช่วงอ้างอิง:</span><span class="info-val">${escapeHtml(refInfo.modeName)}</span></div></div>${cbcRows?`<div class="section-title">🔬 Complete Blood Count (CBC)</div><table>${tableHead}<tbody>${cbcRows}</tbody></table>`:''}${chemRows?`<div class="section-title">🧪 Chemistry &amp; Electrolytes</div><table>${tableHead}<tbody>${chemRows}</tbody></table>`:''}<div class="footer"><div class="footer-info"><div>คลินิกรักษาสัตว์หมอปิติพัฒน์</div><div>วันที่พิมพ์รายงาน: ${escapeHtml(printDateTime)}</div><div style="margin-top:4px;font-size:8pt;color:#aaa;">รายงานนี้สร้างโดยระบบ PK-VMS อัตโนมัติ</div></div><div class="sign-block"><div class="sign-line"></div><div class="sign-name">${escapeHtml(VET_NAME)}</div><div class="sign-label">สัตวแพทย์ผู้ตรวจ</div></div></div></div><script>window.onload=()=>{setTimeout(()=>{window.print();},900);};<\/script></body></html>`;
+            pw.document.write(reportHtml);
+            pw.document.close();
+        }
+
+        // ---- Echo Report from saved record ----
+        async function printEchoRecordReport(id) {
+            if (!currentAnimal) return alert("กรุณาเลือกสัตว์ก่อน");
+            const item = imagingHistory.find(i => i.id == id);
+            if (!item) return alert("ไม่พบข้อมูล Echo");
+            const ecValues = {};
+            const ecFields = { bw: 'BW (kg)', ivsd: 'IVSd (cm)', lvidd: 'LVIDd (cm)', pwd: 'PWd (cm)', la: 'LA (cm)', ivss: 'IVSs (cm)', lvids: 'LVIDs (cm)', pws: 'PWs (cm)', ao: 'Ao (cm)', me: 'Mitral E (cm/s)', ma: 'Mitral A (cm/s)', lvot: 'LVOT (cm/s)', rvot: 'RVOT (cm/s)', te: 'Tricuspid E (cm/s)', ta: 'Tricuspid A (cm/s)' };
+            Object.keys(ecFields).forEach(k => { const v = item.findings[k]; ecValues[k] = (v !== undefined && v !== 0 && v !== null) ? String(v) : ''; });
+            const note = item.impression || '';
+
+            const bw = parseFloat(ecValues.bw)||0, lvidd = parseFloat(ecValues.lvidd)||0, lvids = parseFloat(ecValues.lvids)||0;
+            const ivsd = parseFloat(ecValues.ivsd)||0, pwd = parseFloat(ecValues.pwd)||0;
+            const la = parseFloat(ecValues.la)||0, ao = parseFloat(ecValues.ao)||0;
+            const fs = lvidd>0 ? ((lvidd-lvids)/lvidd)*100 : 0;
+            const laao = ao>0 ? la/ao : 0;
+            const edv = (7/(2.4+lvidd))*Math.pow(lvidd,3);
+            const esv = (7/(2.4+lvids))*Math.pow(lvids,3);
+            const ef = edv>0 ? ((edv-esv)/edv)*100 : 0;
+            const calcN = (val, exp) => (bw>0&&val>0) ? (val/Math.pow(bw,exp)).toFixed(2) : '-';
+            const nIvsd = calcN(ivsd,0.24), nLvidd = calcN(lvidd,0.294), nPwd = calcN(pwd,0.232), nLvids = calcN(lvids,0.315);
+            const laaoStr = laao>0 ? laao.toFixed(2) : '-';
+            const fsStr = fs>0 ? fs.toFixed(1)+' %' : '-';
+            const efStr = ef>0 ? ef.toFixed(1)+' %' : '-';
+
+            let ownerName = '-', ownerPhone = '-';
+            try {
+                const { data: ownerData } = await db.from('owners').select('owner_name').eq('hn', currentAnimal.owner_hn).maybeSingle();
+                if (ownerData) ownerName = ownerData.owner_name;
+                const { data: phoneRows } = await db.from('owner_phones').select('phone_number').eq('owner_hn', currentAnimal.owner_hn).limit(1);
+                if (phoneRows?.length > 0) ownerPhone = phoneRows[0].phone_number;
+            } catch(e) {}
+
+            const examDate = new Date(item.created_at);
+            const examDateTime = `${examDate.getDate()} ${THAI_MONTHS_LONG[examDate.getMonth()]} ${examDate.getFullYear()+543} เวลา ${String(examDate.getHours()).padStart(2,'0')}:${String(examDate.getMinutes()).padStart(2,'0')} น.`;
+            const now = new Date();
+            const printDateTime = `${now.getDate()} ${THAI_MONTHS_LONG[now.getMonth()]} ${now.getFullYear()+543} เวลา ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
+            const petAge = currentAnimal.birth_date ? (() => { const y=(examDate-new Date(currentAnimal.birth_date))/(1000*60*60*24*365.25); return y<1?Math.round(y*12)+' เดือน':y.toFixed(1)+' ปี'; })() : '-';
+
+            const calcColor = (val, min, max) => { if(!val||val==='-') return '#333'; const n=parseFloat(val); if(isNaN(n)) return '#333'; if(n>max) return '#cc0000'; if(n<min) return '#0055cc'; return '#007700'; };
+            const calcBg = (val, min, max) => { if(!val||val==='-') return 'transparent'; const n=parseFloat(val); if(isNaN(n)) return 'transparent'; if(n>max) return '#fff0f0'; if(n<min) return '#f0f4ff'; return '#f0fff4'; };
+            const rowStyle = (val, min, max) => `color:${calcColor(val,min,max)};background:${calcBg(val,min,max)};font-weight:800;text-align:center;`;
+            const statusLabel = (val, min, max) => { if(!val||val==='-') return ''; const n=parseFloat(val); if(isNaN(n)) return ''; if(n>max) return '<span style="color:#cc0000;font-size:9pt;font-weight:700;">▲ สูง</span>'; if(n<min) return '<span style="color:#0055cc;font-size:9pt;font-weight:700;">▼ ต่ำ</span>'; return '<span style="color:#007700;font-size:9pt;font-weight:700;">✓ ปกติ</span>'; };
+            const nIvsdNum=parseFloat(nIvsd), nLviddNum=parseFloat(nLvidd), nPwdNum=parseFloat(nPwd), nLvidsNum=parseFloat(nLvids);
+            const laaoNum=parseFloat(laaoStr), fsNum=parseFloat(fsStr), efNum=parseFloat(efStr);
+
+            const ecRefs = {
+                ivsd:{ref:'0.44 – 0.91',min:0.44,max:0.91,unit:'cm'},lvidd:{ref:'2.56 – 4.08',min:2.56,max:4.08,unit:'cm'},
+                pwd:{ref:'0.43 – 0.76',min:0.43,max:0.76,unit:'cm'},la:{ref:'1.20 – 2.50',min:1.20,max:2.50,unit:'cm'},
+                ivss:{ref:'0.76 – 1.28',min:0.76,max:1.28,unit:'cm'},lvids:{ref:'1.39 – 2.75',min:1.39,max:2.75,unit:'cm'},
+                pws:{ref:'0.78 – 1.30',min:0.78,max:1.30,unit:'cm'},ao:{ref:'1.20 – 2.00',min:1.20,max:2.00,unit:'cm'},
+                me:{ref:'50 – 150',min:50,max:150,unit:'cm/s'},ma:{ref:'50 – 100',min:50,max:100,unit:'cm/s'},
+                lvot:{ref:'50 – 150',min:50,max:150,unit:'cm/s'},rvot:{ref:'50 – 100',min:50,max:100,unit:'cm/s'},
+                te:{ref:'40 – 100',min:40,max:100,unit:'cm/s'},ta:{ref:'30 – 80',min:30,max:80,unit:'cm/s'},
+            };
+
+            const pw = window.open('', '_blank');
+            if (!pw) return alert("กรุณาอนุญาต Popup เพื่อพิมพ์รายงาน");
+
+            const reportHtml = `<!DOCTYPE html><html lang="th"><head>
+            <meta charset="UTF-8">
+            <title>แบบฟอร์มรายงานผลการตรวจ Echocardiogram - ${escapeHtml(currentAnimal.pet_name)}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+            <style>
+                * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+                body { background: #fff; color: #111; font-size: 11pt; }
+                .report-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 16mm 14mm 16mm; background: #fff; }
+                .page-break { page-break-before: always; break-before: page; }
+                .header { text-align: center; border-bottom: 3px double #1a2a4a; padding-bottom: 10px; margin-bottom: 12px; }
+                .header .clinic-name { font-size: 17pt; font-weight: 900; color: #1a2a4a; letter-spacing: 0.5px; line-height: 1.3; }
+                .header .form-title { font-size: 13pt; font-weight: 700; color: #1a6a9a; margin-top: 4px; }
+                .header .exam-date { font-size: 10pt; color: #555; margin-top: 3px; }
+                .header-small { text-align: center; border-bottom: 2px solid #1a2a4a; padding-bottom: 6px; margin-bottom: 10px; }
+                .header-small .clinic-name { font-size: 13pt; font-weight: 900; color: #1a2a4a; }
+                .header-small .form-title { font-size: 10.5pt; font-weight: 700; color: #1a6a9a; margin-top: 2px; }
+                .title-banner { background: #1a2a4a; color: #fff; text-align: center; padding: 7px 12px; font-size: 13pt; font-weight: 900; letter-spacing: 1px; margin-bottom: 10px; border-radius: 3px; }
+                .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin-bottom: 10px; border: 1px solid #bbb; padding: 8px 12px; border-radius: 3px; background: #f9fafb; }
+                .info-row { display: flex; gap: 6px; font-size: 10pt; padding: 2px 0; }
+                .info-label { font-weight: 700; color: #333; min-width: 105px; }
+                .info-val { color: #111; }
+                .section-title { font-size: 10.5pt; font-weight: 900; background: #e8f4f8; border-left: 5px solid #1a6a9a; padding: 5px 10px; margin: 10px 0 6px; letter-spacing: 0.3px; color: #1a2a4a; }
+                table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+                th { background: #1a2a4a; color: white; padding: 5px 8px; text-align: left; font-weight: 700; font-size: 9.5pt; }
+                th.center { text-align: center; }
+                td { padding: 4px 8px; border-bottom: 1px solid #e0e0e0; vertical-align: middle; }
+                tr:nth-child(even) td { background: #f5f9fc; }
+                .param-name { font-weight: 700; color: #1a2a4a; }
+                .ref-cell { color: #1a6a9a; font-family: monospace; font-size: 9.5pt; }
+                .val-cell { font-weight: 800; font-size: 11pt; text-align: center; }
+                .status-cell { text-align: center; font-size: 9pt; }
+                .calc-val { font-weight: 800; font-size: 11pt; text-align: center; }
+                .note-box { border: 1px solid #bbb; border-radius: 3px; padding: 8px 12px; min-height: 52px; background: #fffef0; font-size: 11pt; line-height: 1.6; white-space: pre-wrap; }
+                .footer { margin-top: 16px; border-top: 2px solid #1a2a4a; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
+                .footer-info { font-size: 9pt; color: #777; line-height: 1.5; }
+                .sign-block { text-align: center; min-width: 180px; }
+                .sign-line { border-top: 1px solid #333; margin: 36px auto 4px; width: 160px; }
+                .sign-name { font-size: 10.5pt; font-weight: 800; color: #1a2a4a; }
+                .sign-label { font-size: 9pt; font-weight: 700; color: #555; }
+                @page { size: A4; margin: 0; }
+                @media print { body { margin: 0; } .report-page { width: 210mm; min-height: 297mm; padding: 12mm 14mm; box-shadow: none; } .page-break { page-break-before: always; break-before: page; } }
+            </style>
+            </head><body>
+            <div class="report-page">
+                <div class="header">
+                    <div class="clinic-name">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+                    <div class="form-title">แบบฟอร์มรายงานผลการตรวจ Echocardiogram</div>
+                    <div class="exam-date">วันที่และเวลาตรวจ: <strong>${escapeHtml(examDateTime)}</strong></div>
+                </div>
+                <div class="title-banner">💓 ECHOCARDIOGRAPHY REPORT</div>
+                <div class="info-grid">
+                    <div class="info-row"><span class="info-label">ชื่อสัตว์:</span><span class="info-val"><strong>${escapeHtml(currentAnimal.pet_name)}</strong></span></div>
+                    <div class="info-row"><span class="info-label">เจ้าของ:</span><span class="info-val">${escapeHtml(ownerName)}</span></div>
+                    <div class="info-row"><span class="info-label">HN:</span><span class="info-val">${escapeHtml(currentAnimal.owner_hn||'-')}</span></div>
+                    <div class="info-row"><span class="info-label">เบอร์โทร:</span><span class="info-val">${escapeHtml(ownerPhone)}</span></div>
+                    <div class="info-row"><span class="info-label">ชนิด / สายพันธุ์:</span><span class="info-val">${escapeHtml(currentAnimal.pet_type||'-')} / ${escapeHtml(currentAnimal.breed||'-')}</span></div>
+                    <div class="info-row"><span class="info-label">เพศ / อายุ:</span><span class="info-val">${escapeHtml(currentAnimal.gender||'-')} / ${escapeHtml(petAge)}</span></div>
+                    <div class="info-row"><span class="info-label">น้ำหนัก (BW):</span><span class="info-val"><strong>${escapeHtml(ecValues.bw ? ecValues.bw+' kg' : (currentAnimal.weight||'-')+' kg')}</strong></span></div>
+                </div>
+                <div class="section-title">📐 ค่าตรวจ Dimensions &amp; Doppler</div>
+                <table style="margin-top:5px;">
+                    <thead><tr><th style="width:28%;">พารามิเตอร์</th><th class="center" style="width:14%;">หน่วย</th><th class="center" style="width:22%;">ค่าอ้างอิง</th><th class="center" style="width:22%;">ค่าที่วัดได้</th><th class="center" style="width:14%;">ผล</th></tr></thead>
+                    <tbody>
+                        ${[['ivsd','IVSd (ความหนา IVS ช่วง Diastole)'],['lvidd','LVIDd (เส้นผ่าศูนย์กลาง LV ช่วง Diastole)'],['pwd','PWd (ความหนา PW ช่วง Diastole)'],['la','LA (Left Atrium)'],['ivss','IVSs (ความหนา IVS ช่วง Systole)'],['lvids','LVIDs (เส้นผ่าศูนย์กลาง LV ช่วง Systole)'],['pws','PWs (ความหนา PW ช่วง Systole)'],['ao','Ao (Aorta)'],['me','Mitral E (ความเร็วไหลผ่าน Mitral ช่วง E)'],['ma','Mitral A (ความเร็วไหลผ่าน Mitral ช่วง A)'],['lvot','LVOT (Left Ventricular Outflow Tract)'],['rvot','RVOT (Right Ventricular Outflow Tract)'],['te','Tricuspid E (ความเร็วไหลผ่าน Tricuspid ช่วง E)'],['ta','Tricuspid A (ความเร็วไหลผ่าน Tricuspid ช่วง A)']].map(([k,label]) => {
+                            const r=ecRefs[k]; const v=ecValues[k];
+                            return `<tr><td class="param-name">${escapeHtml(label)}</td><td style="text-align:center;color:#555;">${r.unit}</td><td class="ref-cell" style="text-align:center;">${r.ref}</td><td class="val-cell" style="${v?rowStyle(parseFloat(v),r.min,r.max):''}">${v?escapeHtml(v):'<span style="color:#bbb;">-</span>'}</td><td class="status-cell">${v?statusLabel(parseFloat(v),r.min,r.max):''}</td></tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <div class="footer">
+                    <div class="footer-info"><div>คลินิกรักษาสัตว์หมอปิติพัฒน์</div><div>วันที่พิมพ์รายงาน: ${escapeHtml(printDateTime)}</div><div style="margin-top:4px;font-size:8pt;color:#aaa;">รายงานนี้สร้างโดยระบบ PK-VMS อัตโนมัติ</div></div>
+                    <div class="sign-block"><div class="sign-line"></div><div class="sign-name">${escapeHtml(VET_NAME)}</div><div class="sign-label">สัตวแพทย์ผู้ตรวจ (Cardiac Sonographer)</div></div>
+                </div>
+            </div>
+            <div class="report-page page-break">
+                <div class="header-small">
+                    <div class="clinic-name">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+                    <div class="form-title">แบบฟอร์มรายงานผลการตรวจ Echocardiogram — ${escapeHtml(currentAnimal.pet_name)} &nbsp;|&nbsp; ${escapeHtml(examDateTime)}</div>
+                </div>
+                <div class="section-title">🧮 ค่าคำนวณ Echo Calculation</div>
+                <table>
+                    <thead><tr><th style="width:32%;">พารามิเตอร์</th><th class="center" style="width:26%;">ค่าอ้างอิง</th><th class="center" style="width:24%;">ค่าที่คำนวณได้</th><th class="center" style="width:18%;">ผล</th></tr></thead>
+                    <tbody>
+                        <tr><td class="param-name">LA/Ao Ratio</td><td class="ref-cell" style="text-align:center;">&lt; 1.6</td><td class="calc-val" style="${rowStyle(laaoNum,0,1.6)}">${escapeHtml(laaoStr)}</td><td class="status-cell">${statusLabel(laaoNum,0,1.6)}</td></tr>
+                        <tr><td class="param-name">FS % (Fractional Shortening)</td><td class="ref-cell" style="text-align:center;">25 – 45 %</td><td class="calc-val" style="${rowStyle(fsNum,25,45)}">${escapeHtml(fsStr)}</td><td class="status-cell">${statusLabel(fsNum,25,45)}</td></tr>
+                        <tr><td class="param-name">EF % (Ejection Fraction, Teichholz)</td><td class="ref-cell" style="text-align:center;">&gt; 50 %</td><td class="calc-val" style="${rowStyle(efNum,50,999)}">${escapeHtml(efStr)}</td><td class="status-cell">${statusLabel(efNum,50,999)}</td></tr>
+                        <tr><td class="param-name">n-IVSd (Normalized)</td><td class="ref-cell" style="text-align:center;">0.32 – 0.54</td><td class="calc-val" style="${rowStyle(nIvsdNum,0.32,0.54)}">${escapeHtml(nIvsd)}</td><td class="status-cell">${statusLabel(nIvsdNum,0.32,0.54)}</td></tr>
+                        <tr><td class="param-name">n-LVIDd (Normalized)</td><td class="ref-cell" style="text-align:center;">1.27 – 1.85</td><td class="calc-val" style="${rowStyle(nLviddNum,1.27,1.85)}">${escapeHtml(nLvidd)}</td><td class="status-cell">${statusLabel(nLviddNum,1.27,1.85)}</td></tr>
+                        <tr><td class="param-name">n-PWd (Normalized)</td><td class="ref-cell" style="text-align:center;">0.32 – 0.54</td><td class="calc-val" style="${rowStyle(nPwdNum,0.32,0.54)}">${escapeHtml(nPwd)}</td><td class="status-cell">${statusLabel(nPwdNum,0.32,0.54)}</td></tr>
+                        <tr><td class="param-name">n-LVIDs (Normalized)</td><td class="ref-cell" style="text-align:center;">0.71 – 1.26</td><td class="calc-val" style="${rowStyle(nLvidsNum,0.71,1.26)}">${escapeHtml(nLvids)}</td><td class="status-cell">${statusLabel(nLvidsNum,0.71,1.26)}</td></tr>
+                    </tbody>
+                </table>
+                <div class="section-title">📝 Impression / บทสรุปและข้อสังเกต (Notes)</div>
+                <div class="note-box">${escapeHtml(note)||'(ไม่มีบันทึก)'}</div>
+                <div class="footer">
+                    <div class="footer-info"><div>คลินิกรักษาสัตว์หมอปิติพัฒน์</div><div>วันที่พิมพ์รายงาน: ${escapeHtml(printDateTime)}</div><div style="margin-top:4px;font-size:8pt;color:#aaa;">รายงานนี้สร้างโดยระบบ PK-VMS อัตโนมัติ</div></div>
+                    <div class="sign-block"><div class="sign-line"></div><div class="sign-name">${escapeHtml(VET_NAME)}</div><div class="sign-label">สัตวแพทย์ผู้ตรวจ (Cardiac Sonographer)</div></div>
+                </div>
+            </div>
+            <script>window.onload=()=>{setTimeout(()=>{window.print();},900);};<\/script>
+            </body></html>`;
+            pw.document.write(reportHtml);
+            pw.document.close();
+        }
+
         function switchTab(tab, el) { document.querySelectorAll('.lab-tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); ['input', 'imaging', 'echo', 'trends'].forEach(v => document.getElementById('view-'+v).classList.add('hidden')); document.getElementById('view-' + tab).classList.remove('hidden'); lucide.createIcons(); }
         function formatThaiDate(d) { const m = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]; return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear() + 543}`; }
     </script>
