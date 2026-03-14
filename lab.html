@@ -625,6 +625,7 @@
             const now = new Date();
             const thaiMonths = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
             const examDateTime = `${now.getDate()} ${thaiMonths[now.getMonth()]} ${now.getFullYear() + 543} เวลา ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
+            const vetName = 'ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล';
 
             const reportHtml = `<!DOCTYPE html><html lang="th"><head>
             <meta charset="UTF-8">
@@ -634,11 +635,15 @@
                 * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
                 body { background: #fff; color: #111; font-size: 11pt; }
                 .report-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 16mm 14mm 16mm; background: #fff; }
+                .page-break { page-break-before: always; break-before: page; }
                 /* Header */
                 .header { text-align: center; border-bottom: 3px double #1a2a4a; padding-bottom: 10px; margin-bottom: 12px; }
                 .header .clinic-name { font-size: 17pt; font-weight: 900; color: #1a2a4a; letter-spacing: 0.5px; line-height: 1.3; }
                 .header .form-title { font-size: 13pt; font-weight: 700; color: #1a6a9a; margin-top: 4px; }
                 .header .exam-date { font-size: 10pt; color: #555; margin-top: 3px; }
+                .header-small { text-align: center; border-bottom: 2px solid #1a2a4a; padding-bottom: 6px; margin-bottom: 10px; }
+                .header-small .clinic-name { font-size: 13pt; font-weight: 900; color: #1a2a4a; }
+                .header-small .form-title { font-size: 10.5pt; font-weight: 700; color: #1a6a9a; margin-top: 2px; }
                 /* Title Banner */
                 .title-banner { background: #1a2a4a; color: #fff; text-align: center; padding: 7px 12px; font-size: 13pt; font-weight: 900; letter-spacing: 1px; margin-bottom: 10px; border-radius: 3px; }
                 /* Info Grid */
@@ -668,23 +673,21 @@
                 .footer-info { font-size: 9pt; color: #777; line-height: 1.5; }
                 .sign-block { text-align: center; min-width: 180px; }
                 .sign-line { border-top: 1px solid #333; margin: 36px auto 4px; width: 160px; }
-                .sign-label { font-size: 10pt; font-weight: 700; }
-                /* Legend */
-                .legend { display: flex; gap: 16px; font-size: 8.5pt; margin-top: 6px; }
-                .leg-item { display: flex; align-items: center; gap: 4px; }
-                .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+                .sign-name { font-size: 10.5pt; font-weight: 800; color: #1a2a4a; }
+                .sign-label { font-size: 9pt; font-weight: 700; color: #555; }
                 /* Print */
                 @page { size: A4; margin: 0; }
                 @media print {
                     body { margin: 0; }
                     .report-page { width: 210mm; min-height: 297mm; padding: 12mm 14mm; box-shadow: none; }
+                    .page-break { page-break-before: always; break-before: page; }
                 }
             </style>
             </head><body>
             <div class="report-page">
 
                 <div class="header">
-                    <div class="clinic-name">🏥 คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+                    <div class="clinic-name">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
                     <div class="form-title">แบบฟอร์มรายงานผลการตรวจ Echocardiogram</div>
                     <div class="exam-date">วันที่และเวลาตรวจ: <strong>${escapeHtml(examDateTime)}</strong></div>
                 </div>
@@ -702,11 +705,6 @@
                 </div>
 
                 <div class="section-title">📐 ค่าตรวจ Dimensions &amp; Doppler</div>
-                <div class="legend">
-                    <div class="leg-item"><span class="leg-dot" style="background:#007700;"></span> ปกติ</div>
-                    <div class="leg-item"><span class="leg-dot" style="background:#cc0000;"></span> สูงกว่าปกติ</div>
-                    <div class="leg-item"><span class="leg-dot" style="background:#0055cc;"></span> ต่ำกว่าปกติ</div>
-                </div>
                 <table style="margin-top:5px;">
                     <thead>
                         <tr>
@@ -748,6 +746,28 @@
                         }).join('')}
                     </tbody>
                 </table>
+
+                <div class="footer">
+                    <div class="footer-info">
+                        <div>คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+                        <div>วันที่พิมพ์รายงาน: ${escapeHtml(examDateTime)}</div>
+                        <div style="margin-top:4px; font-size:8pt; color:#aaa;">รายงานนี้สร้างโดยระบบ PK-VMS อัตโนมัติ</div>
+                    </div>
+                    <div class="sign-block">
+                        <div class="sign-line"></div>
+                        <div class="sign-name">${escapeHtml(vetName)}</div>
+                        <div class="sign-label">สัตวแพทย์ผู้ตรวจ (Cardiac Sonographer)</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="report-page page-break">
+
+                <div class="header-small">
+                    <div class="clinic-name">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+                    <div class="form-title">แบบฟอร์มรายงานผลการตรวจ Echocardiogram — ${escapeHtml(currentAnimal.pet_name)} &nbsp;|&nbsp; ${escapeHtml(examDateTime)}</div>
+                </div>
 
                 <div class="section-title">🧮 ค่าคำนวณ Echo Calculation</div>
                 <table>
@@ -816,8 +836,8 @@
                     </div>
                     <div class="sign-block">
                         <div class="sign-line"></div>
-                        <div class="sign-label">สัตวแพทย์ผู้ตรวจ</div>
-                        <div style="font-size:9pt; color:#777; margin-top:2px;">Veterinarian Signature</div>
+                        <div class="sign-name">${escapeHtml(vetName)}</div>
+                        <div class="sign-label">สัตวแพทย์ผู้ตรวจ (Cardiac Sonographer)</div>
                     </div>
                 </div>
 
