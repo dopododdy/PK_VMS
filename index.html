@@ -221,15 +221,14 @@
         async function fetchStats() {
             try {
                 if (typeof db !== 'undefined') {
-                    // ดึงจำนวนสัตว์ที่มีการบันทึก medical record ในวันที่ปัจจุบัน
+                    // ดึงจำนวนสัตว์ที่ลงทะเบียนใหม่ในวันที่ปัจจุบัน
                     const todayStart = new Date();
                     todayStart.setHours(0, 0, 0, 0); // เที่ยงคืนตามเวลาท้องถิ่น
-                    const { data: medRecData } = await db
-                        .from('medical_records')
-                        .select('animal_id')
+                    const { count: newAnimalCount } = await db
+                        .from('animals')
+                        .select('*', { count: 'exact', head: true })
                         .gte('created_at', todayStart.toISOString());
-                    const uniqueAnimals = new Set((medRecData || []).map(r => r.animal_id));
-                    document.getElementById('animal-count').innerText = `${uniqueAnimals.size} ราย`;
+                    document.getElementById('animal-count').innerText = `${newAnimalCount || 0} ราย`;
 
                     // ดึงจำนวนรายการรอคิดเงิน (medical records ที่ยังไม่ได้ชำระเงิน)
                     const { count: pendingCount, error: posError } = await db
