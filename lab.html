@@ -608,12 +608,17 @@
             };
 
             // ลองโหลด template doc_echo จาก DB ก่อน
-            const { data: tpl } = await db.from('print_templates').select('config').eq('template_type', 'doc_echo').single();
+            let tpl = null;
+            try {
+                const { data } = await db.from('print_templates').select('config').eq('template_type', 'doc_echo').maybeSingle();
+                tpl = data;
+            } catch(e) { console.warn('doc_echo template load error, using fallback:', e); }
             if (tpl?.config) {
                 // ใช้ template จาก DB
                 const config = tpl.config;
                 const px = 3.78;
                 const pw = window.open('', '_blank');
+                if (!pw) return alert("กรุณาอนุญาต Popup เพื่อพิมพ์รายงาน");
                 let html = `<html><head>
                     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
                     <style>
@@ -623,7 +628,7 @@
                         @page { size:${config.width}mm ${config.height}mm; margin:0; }
                     </style>
                 </head><body><div class="sticker">`;
-                config.lines.forEach(l => {
+                (config.lines || []).forEach(l => {
                     let txt = (l.text || '').replace(/\{\{(.*?)\}\}/g, (m, k) => escapeHtml(printData[k.trim()] !== undefined ? printData[k.trim()] : ''));
                     let style = `top:${l.y * px}px; font-family:'Sarabun', sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'};`;
                     if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
