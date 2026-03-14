@@ -28,3 +28,10 @@ ALTER TABLE animals
 
 ALTER TABLE mas_lab_parameters
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- ═══════════════════════════════════════════════════════════════
+-- เพิ่ม Template สำหรับ doc_echo (Echocardiography)
+-- ═══════════════════════════════════════════════════════════════
+INSERT INTO public.print_templates (template_type, config)
+VALUES ('doc_echo', '{"width": 210, "height": 297, "lines": []}')
+ON CONFLICT (template_type) DO NOTHING;
