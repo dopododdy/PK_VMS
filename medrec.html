@@ -303,7 +303,8 @@
             if (confirm(`คัดลอกยาเดิม (${rxItems.length} รายการ)?`)) {
                 editingId = null;
                 selectedItems = rxItems.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
-                ['cc','hx','pe','dx','plan','appointment','app_note','appointment_2','app_note_2'].forEach(f => { if(document.getElementById('f_'+f)) document.getElementById('f_'+f).value = ''; });
+                ['cc','hx','pe','dx','plan','app_note','app_note_2'].forEach(f => { if(document.getElementById('f_'+f)) document.getElementById('f_'+f).value = ''; });
+                ['appointment','appointment_2'].forEach(f => { const el = document.getElementById('f_'+f); if(el) { if(el._flatpickr) el._flatpickr.clear(); else el.value = ''; } });
                 document.getElementById('f_cost').value = selectedItems.reduce((sum, i) => sum + i.price, 0).toFixed(2);
                 updateFormUI(); showFormView();
                 document.getElementById('form-title').innerText = "🏥 บันทึกการรักษา (จ่ายยาเดิม)";
@@ -474,7 +475,8 @@
         async function editRecord(id) {
             const rec = records.find(r => r.id === id); if (!rec) return;
             editingId = id; document.getElementById('f_weight').value = rec.weight || 0;
-            [['cc','cc'],['hx','hx'],['pe','pe'],['dx','dx'],['plan','plan'],['appointment','appointment'],['app_note','appointment_note'],['appointment_2','appointment_2'],['app_note_2','appointment_note_2']].forEach(([elSuffix,dbCol]) => { const el = document.getElementById('f_'+elSuffix); if(el) el.value = rec[dbCol] || ''; });
+            [['cc','cc'],['hx','hx'],['pe','pe'],['dx','dx'],['plan','plan'],['app_note','appointment_note'],['app_note_2','appointment_note_2']].forEach(([elSuffix,dbCol]) => { const el = document.getElementById('f_'+elSuffix); if(el) el.value = rec[dbCol] || ''; });
+            [['appointment','appointment'],['appointment_2','appointment_2']].forEach(([elSuffix,dbCol]) => { const el = document.getElementById('f_'+elSuffix); if(el) { if(el._flatpickr) { el._flatpickr.setDate(rec[dbCol] || null); } else { el.value = rec[dbCol] || ''; } } });
             document.getElementById('f_cost').value = rec.total_cost || 0;
             selectedItems = rec.medical_record_items.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
             updateFormUI(); showFormView();
