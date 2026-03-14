@@ -172,7 +172,10 @@
                 <div id="view-echo" class="hidden space-y-6 pb-20">
                     <div class="flex justify-between items-center">
                         <h3 class="text-2xl font-black text-white italic">Echocardiography Data</h3>
-                        <button onclick="saveEchoResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-3 rounded-xl font-black transition shadow-lg">💾 บันทึกผล Echo</button>
+                        <div class="flex gap-3">
+                            <button onclick="printEchoReport()" class="bg-purple-700 hover:bg-purple-600 px-8 py-3 rounded-xl font-black transition shadow-lg flex items-center gap-2">🖨️ พิมพ์รายงานผล</button>
+                            <button onclick="saveEchoResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-3 rounded-xl font-black transition shadow-lg">💾 บันทึกผล Echo</button>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -534,6 +537,207 @@
             const payload = { animal_id: currentAnimal.id, exam_type: 'Echocardiography', findings: data, impression: document.getElementById('ec-note').value, created_at: new Date().toISOString() };
             const { error } = await db.from('imaging_results').insert([payload]);
             if (!error) { alert("บันทึก Echo สำเร็จ"); await fetchImagingHistory(currentAnimal.id); }
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        async function printEchoReport() {
+            if (!currentAnimal) return alert("กรุณาเลือกสัตว์ก่อน");
+
+            // รวบรวมข้อมูล Echo จากฟอร์ม
+            const ecFields = { bw: 'BW (kg)', ivsd: 'IVSd (cm)', lvidd: 'LVIDd (cm)', pwd: 'PWd (cm)', la: 'LA (cm)', ivss: 'IVSs (cm)', lvids: 'LVIDs (cm)', pws: 'PWs (cm)', ao: 'Ao (cm)', me: 'Mitral E (cm/s)', ma: 'Mitral A (cm/s)', lvot: 'LVOT (cm/s)', rvot: 'RVOT (cm/s)', te: 'Tricuspid E (cm/s)', ta: 'Tricuspid A (cm/s)' };
+            const ecValues = {};
+            Object.keys(ecFields).forEach(k => { ecValues[k] = document.getElementById('ec-' + k)?.value || ''; });
+
+            const note = document.getElementById('ec-note')?.value || '';
+            const laao = document.getElementById('res-laao')?.innerText || '-';
+            const fs = document.getElementById('res-fs')?.innerText || '-';
+            const ef = document.getElementById('res-ef')?.innerText || '-';
+            const nIvsd = document.getElementById('res-nivsd')?.innerText || '-';
+            const nLvidd = document.getElementById('res-nlvidd')?.innerText || '-';
+            const nPwd = document.getElementById('res-npwd')?.innerText || '-';
+            const nLvids = document.getElementById('res-nlvids')?.innerText || '-';
+
+            // ดึงข้อมูลเจ้าของ
+            let ownerName = '-', ownerPhone = '-';
+            try {
+                const { data: ownerData } = await db.from('owners').select('owner_name').eq('hn', currentAnimal.owner_hn).maybeSingle();
+                if (ownerData) ownerName = ownerData.owner_name;
+                const { data: phoneRows } = await db.from('owner_phones').select('phone_number').eq('owner_hn', currentAnimal.owner_hn).limit(1);
+                if (phoneRows?.length > 0) ownerPhone = phoneRows[0].phone_number;
+            } catch(e) {}
+
+            const examDate = formatThaiDate(new Date());
+            const petAge = currentAnimal.birth_date ? (() => { const y = (new Date() - new Date(currentAnimal.birth_date)) / (1000*60*60*24*365.25); return y < 1 ? Math.round(y*12) + ' เดือน' : y.toFixed(1) + ' ปี'; })() : '-';
+
+            // สร้างสรุป findings จากค่าที่กรอก
+            const findingParts = [];
+            if (ecValues.bw) findingParts.push(`BW ${ecValues.bw} kg`);
+            if (ecValues.ivsd) findingParts.push(`IVSd ${ecValues.ivsd}`);
+            if (ecValues.lvidd) findingParts.push(`LVIDd ${ecValues.lvidd}`);
+            if (ecValues.pwd) findingParts.push(`PWd ${ecValues.pwd}`);
+            if (ecValues.la) findingParts.push(`LA ${ecValues.la}`);
+            if (ecValues.ao) findingParts.push(`Ao ${ecValues.ao}`);
+            if (ecValues.ivss) findingParts.push(`IVSs ${ecValues.ivss}`);
+            if (ecValues.lvids) findingParts.push(`LVIDs ${ecValues.lvids}`);
+            if (ecValues.pws) findingParts.push(`PWs ${ecValues.pws}`);
+            if (ecValues.me) findingParts.push(`Mitral E ${ecValues.me}`);
+            if (ecValues.ma) findingParts.push(`Mitral A ${ecValues.ma}`);
+            if (ecValues.lvot) findingParts.push(`LVOT ${ecValues.lvot}`);
+            if (ecValues.rvot) findingParts.push(`RVOT ${ecValues.rvot}`);
+            const echoFindings = findingParts.join(', ') || '-';
+
+            const printData = {
+                pet_name: currentAnimal.pet_name || '-',
+                hn: currentAnimal.owner_hn || '-',
+                species: currentAnimal.pet_type || '-',
+                breed: currentAnimal.breed || '-',
+                sex: currentAnimal.gender || '-',
+                weight: (currentAnimal.weight || 0) + ' kg',
+                age: petAge,
+                owner_name: ownerName,
+                owner_phone: ownerPhone,
+                echo_exam_date: examDate,
+                echo_findings: echoFindings,
+                echo_impression: note || '-',
+                echo_conclusion: note || '-',
+                echo_vet_name: 'สพ.',
+                echo_clinic_name: 'PK Animal Clinic'
+            };
+
+            // ลองโหลด template doc_echo จาก DB ก่อน
+            const { data: tpl } = await db.from('print_templates').select('config').eq('template_type', 'doc_echo').single();
+            if (tpl?.config) {
+                // ใช้ template จาก DB
+                const config = tpl.config;
+                const px = 3.78;
+                const pw = window.open('', '_blank');
+                let html = `<html><head>
+                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                    <style>
+                        body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
+                        .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; }
+                        .elem { position:absolute; color:black; line-height:1.2; }
+                        @page { size:${config.width}mm ${config.height}mm; margin:0; }
+                    </style>
+                </head><body><div class="sticker">`;
+                config.lines.forEach(l => {
+                    let txt = (l.text || '').replace(/\{\{(.*?)\}\}/g, (m, k) => escapeHtml(printData[k.trim()] !== undefined ? printData[k.trim()] : ''));
+                    let style = `top:${l.y * px}px; font-family:'Sarabun', sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'};`;
+                    if (l.align === 'center') style += `left:0; width:100%; text-align:center;`;
+                    else if (l.align === 'right') style += `right:${l.x * px}px; text-align:right;`;
+                    else style += `left:${l.x * px}px;`;
+                    html += `<div class="elem" style="${style}">${txt}</div>`;
+                });
+                html += `</div></body><script>window.onload=()=>{setTimeout(()=>{window.print();},800);};<\/script></html>`;
+                pw.document.write(html); pw.document.close();
+                return;
+            }
+
+            // Fallback: สร้างรายงานแบบ built-in
+            const pw = window.open('', '_blank');
+            const calcColor = (val, min, max) => {
+                if (!val || val === '-') return '#333';
+                const n = parseFloat(val);
+                if (isNaN(n)) return '#333';
+                if (n > max) return '#cc0000';
+                if (n < min) return '#0055cc';
+                return '#007700';
+            };
+            const rowStyle = (val, min, max) => `color:${calcColor(val, min, max)}; font-weight:700;`;
+            const nIvsdNum = parseFloat(nIvsd), nLviddNum = parseFloat(nLvidd), nPwdNum = parseFloat(nPwd), nLvidsNum = parseFloat(nLvids);
+            const laaoNum = parseFloat(laao), fsNum = parseFloat(fs), efNum = parseFloat(ef);
+
+            const reportHtml = `<!DOCTYPE html><html lang="th"><head>
+            <meta charset="UTF-8">
+            <title>รายงานผล Echocardiography - ${escapeHtml(currentAnimal.pet_name)}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+            <style>
+                * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
+                body { margin: 0; padding: 20px; background: #fff; color: #111; font-size: 13pt; }
+                .report-page { max-width: 800px; margin: 0 auto; padding: 30px; border: 2px solid #333; }
+                .header { text-align: center; border-bottom: 3px double #333; padding-bottom: 14px; margin-bottom: 18px; }
+                .header h1 { margin: 0 0 4px; font-size: 20pt; font-weight: 900; letter-spacing: 1px; }
+                .header p { margin: 2px 0; font-size: 11pt; color: #555; }
+                .title-row { background: #1a2a4a; color: white; text-align: center; padding: 10px; font-size: 16pt; font-weight: 900; letter-spacing: 1px; margin-bottom: 16px; border-radius: 4px; }
+                .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin-bottom: 16px; border: 1px solid #ccc; padding: 12px; border-radius: 4px; background: #f9f9f9; }
+                .info-row { display: flex; gap: 6px; font-size: 11pt; padding: 3px 0; }
+                .info-label { font-weight: 700; color: #444; min-width: 110px; }
+                .info-val { color: #111; }
+                .section-title { font-size: 12pt; font-weight: 900; background: #e8f4f8; border-left: 5px solid #1a6a9a; padding: 7px 12px; margin: 14px 0 8px; letter-spacing: 0.5px; }
+                table { width: 100%; border-collapse: collapse; font-size: 11pt; }
+                th { background: #1a2a4a; color: white; padding: 7px 10px; text-align: left; font-weight: 700; font-size: 10pt; }
+                td { padding: 6px 10px; border-bottom: 1px solid #ddd; }
+                tr:nth-child(even) td { background: #f5f9fc; }
+                .calc-table td:last-child { font-weight: 800; font-size: 13pt; }
+                .normal { color: #007700; } .high { color: #cc0000; } .low { color: #0055cc; }
+                .note-box { border: 1px solid #ccc; border-radius: 4px; padding: 12px 16px; min-height: 60px; background: #fffef0; font-size: 12pt; line-height: 1.6; white-space: pre-wrap; }
+                .footer { margin-top: 28px; border-top: 2px solid #333; padding-top: 14px; display: flex; justify-content: space-between; align-items: flex-end; }
+                .sign-block { text-align: center; min-width: 200px; }
+                .sign-line { border-top: 1px solid #333; margin: 40px auto 4px; width: 180px; }
+                @media print { body { padding: 0; margin: 0; } .report-page { border: none; padding: 10px; max-width: 100%; } }
+            </style>
+            </head><body>
+            <div class="report-page">
+                <div class="header">
+                    <h1>🏥 PK Animal Clinic</h1>
+                    <p>รายงานผลการตรวจ Echocardiography</p>
+                    <p>วันที่ตรวจ: <strong>${escapeHtml(examDate)}</strong></p>
+                </div>
+                <div class="title-row">💓 ECHOCARDIOGRAPHY REPORT</div>
+                <div class="info-grid">
+                    <div class="info-row"><span class="info-label">ชื่อสัตว์:</span><span class="info-val"><strong>${escapeHtml(currentAnimal.pet_name)}</strong></span></div>
+                    <div class="info-row"><span class="info-label">เจ้าของ:</span><span class="info-val">${escapeHtml(ownerName)}</span></div>
+                    <div class="info-row"><span class="info-label">HN:</span><span class="info-val">${escapeHtml(currentAnimal.owner_hn)}</span></div>
+                    <div class="info-row"><span class="info-label">เบอร์โทร:</span><span class="info-val">${escapeHtml(ownerPhone)}</span></div>
+                    <div class="info-row"><span class="info-label">ชนิด/สายพันธุ์:</span><span class="info-val">${escapeHtml(currentAnimal.pet_type || '-')} / ${escapeHtml(currentAnimal.breed || '-')}</span></div>
+                    <div class="info-row"><span class="info-label">เพศ / อายุ:</span><span class="info-val">${escapeHtml(currentAnimal.gender || '-')} / ${escapeHtml(petAge)}</span></div>
+                    <div class="info-row"><span class="info-label">น้ำหนัก:</span><span class="info-val">${escapeHtml(ecValues.bw ? ecValues.bw + ' kg' : (currentAnimal.weight || '-') + ' kg')}</span></div>
+                </div>
+
+                <div class="section-title">📐 ค่าตรวจ Dimensions &amp; Doppler</div>
+                <table>
+                    <thead><tr><th>พารามิเตอร์</th><th>ค่าที่วัดได้</th><th>หน่วย</th></tr></thead>
+                    <tbody>
+                        ${Object.entries(ecFields).map(([k, label]) => ecValues[k] ? `<tr><td>${escapeHtml(label)}</td><td style="font-weight:700; font-size:13pt;">${escapeHtml(ecValues[k])}</td><td style="color:#666;">${label.includes('cm/s') ? 'cm/s' : 'cm'}</td></tr>` : '').filter(Boolean).join('') || '<tr><td colspan="3" style="text-align:center; color:#999;">ไม่มีข้อมูลการวัด</td></tr>'}
+                    </tbody>
+                </table>
+
+                <div class="section-title">🧮 ค่าคำนวณ Echo Calculation</div>
+                <table class="calc-table">
+                    <thead><tr><th>พารามิเตอร์</th><th>เกณฑ์อ้างอิง</th><th>ค่าที่คำนวณได้</th></tr></thead>
+                    <tbody>
+                        <tr><td>LA/Ao Ratio</td><td>&lt; 1.6</td><td style="${rowStyle(laaoNum, 0, 1.6)}">${escapeHtml(laao)}</td></tr>
+                        <tr><td>FS %</td><td>25 – 45 %</td><td style="${rowStyle(fsNum, 25, 45)}">${escapeHtml(fs)}</td></tr>
+                        <tr><td>EF % (Teichholz)</td><td>ค่าปกติ &gt; 50%</td><td style="font-weight:700;">${escapeHtml(ef)}</td></tr>
+                        <tr><td>n-IVSd</td><td>0.32 – 0.54</td><td style="${rowStyle(nIvsdNum, 0.32, 0.54)}">${escapeHtml(nIvsd)}</td></tr>
+                        <tr><td>n-LVIDd</td><td>1.27 – 1.85</td><td style="${rowStyle(nLviddNum, 1.27, 1.85)}">${escapeHtml(nLvidd)}</td></tr>
+                        <tr><td>n-PWd</td><td>0.32 – 0.54</td><td style="${rowStyle(nPwdNum, 0.32, 0.54)}">${escapeHtml(nPwd)}</td></tr>
+                        <tr><td>n-LVIDs</td><td>0.71 – 1.26</td><td style="${rowStyle(nLvidsNum, 0.71, 1.26)}">${escapeHtml(nLvids)}</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="section-title">📝 Impression / บทสรุปและข้อสังเกต</div>
+                <div class="note-box">${escapeHtml(note) || '(ไม่มีบันทึก)'}</div>
+
+                <div class="footer">
+                    <div style="font-size:10pt; color:#777;">
+                        <div>รายงานนี้สร้างโดยระบบ PK-VMS</div>
+                        <div>วันที่พิมพ์: ${escapeHtml(examDate)}</div>
+                    </div>
+                    <div class="sign-block">
+                        <div class="sign-line"></div>
+                        <div style="font-size:11pt; font-weight:700;">สัตวแพทย์ผู้ตรวจ</div>
+                    </div>
+                </div>
+            </div>
+            <script>window.onload = () => { setTimeout(() => { window.print(); }, 800); };<\/script>
+            </body></html>`;
+
+            pw.document.write(reportHtml);
+            pw.document.close();
         }
 
         function loadEchoRecord(item) {
