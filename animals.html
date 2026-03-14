@@ -131,21 +131,48 @@
                     primaryPhoneMap.set(p.owner_hn, p.phone_number);
                 }
             });
-            const sorted = [...allAnimals].sort((a, b) => parseInt(b.owner_hn) - parseInt(a.owner_hn));
-            const filtered = sorted.filter(pet => {
-                const owner = ownerMap.get(pet.owner_hn);
-                return pet.pet_name.toLowerCase().includes(term) || pet.owner_hn.includes(term) || owner?.owner_name.toLowerCase().includes(term);
+
+            // Owners who have no pets yet
+            const ownersWithPets = new Set(allAnimals.map(a => a.owner_hn));
+            const ownerOnlyEntries = allOwners
+                .filter(o => !ownersWithPets.has(o.hn))
+                .map(o => ({ _ownerOnly: true, owner_hn: o.hn }));
+
+            // Merge pets and owner-only entries, sorted by owner_hn descending
+            const allItems = [...allAnimals, ...ownerOnlyEntries]
+                .sort((a, b) => parseInt(b.owner_hn) - parseInt(a.owner_hn));
+
+            const filtered = allItems.filter(item => {
+                const owner = ownerMap.get(item.owner_hn);
+                if (item._ownerOnly) {
+                    return item.owner_hn.includes(term) || owner?.owner_name.toLowerCase().includes(term);
+                }
+                return item.pet_name.toLowerCase().includes(term) || item.owner_hn.includes(term) || owner?.owner_name.toLowerCase().includes(term);
             });
 
-            container.innerHTML = filtered.map(pet => {
-                const owner = ownerMap.get(pet.owner_hn);
-                const p1 = primaryPhoneMap.get(pet.owner_hn) || '-';
-                const typeIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
+            container.innerHTML = filtered.map(item => {
+                const owner = ownerMap.get(item.owner_hn);
+                const p1 = primaryPhoneMap.get(item.owner_hn) || '-';
+                if (item._ownerOnly) {
+                    return `
+                        <div class="pet-card" onclick="editOwner('${item.owner_hn}')" id="owner-${item.owner_hn}">
+                            <div class="hn-col">#${item.owner_hn}</div>
+                            <div class="flex flex-col justify-center min-w-0 px-2">
+                                <span class="pet-main-name truncate text-slate-400">ยังไม่มีสัตว์เลี้ยง</span>
+                                <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
+                                <span class="phone-badge">📞 ${p1}</span>
+                            </div>
+                            <div class="flex items-center justify-end gap-1 text-2xl pr-2">
+                                <span>👤</span>
+                            </div>
+                        </div>`;
+                }
+                const typeIcon = item.pet_type === 'สุนัข' ? '🐶' : (item.pet_type === 'แมว' ? '🐱' : '🐾');
                 return `
-                    <div class="pet-card" onclick="editOwner('${pet.owner_hn}')" id="pet-${pet.id}">
-                        <div class="hn-col">#${pet.owner_hn}</div>
+                    <div class="pet-card" onclick="editOwner('${item.owner_hn}')" id="pet-${item.id}">
+                        <div class="hn-col">#${item.owner_hn}</div>
                         <div class="flex flex-col justify-center min-w-0 px-2">
-                            <span class="pet-main-name truncate">${pet.pet_name}</span>
+                            <span class="pet-main-name truncate">${item.pet_name}</span>
                             <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
                             <span class="phone-badge">📞 ${p1}</span>
                         </div>
