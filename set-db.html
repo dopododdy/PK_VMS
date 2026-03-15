@@ -305,9 +305,12 @@ ALTER TABLE mas_lab_parameters
                             <p class="text-[10px] text-gray-500 uppercase tracking-wider">Table</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="text-xl font-black ${error ? 'text-red-400' : 'text-teal-400'}">${error ? 'N/A' : (count ?? 0).toLocaleString()}</p>
-                        <p class="text-[10px] text-gray-500">rows</p>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <p class="text-xl font-black ${error ? 'text-red-400' : 'text-teal-400'}">${error ? 'N/A' : (count ?? 0).toLocaleString()}</p>
+                            <p class="text-[10px] text-gray-500">rows</p>
+                        </div>
+                        <button onclick="deleteTableData('${tableName}')" class="btn-danger !py-1.5 !px-3 !text-xs">🗑️ Del</button>
                     </div>`;
                 tableList.appendChild(card);
             }
@@ -483,6 +486,25 @@ ALTER TABLE mas_lab_parameters
                 }
                 checkConnection();
             }, 1500);
+        }
+
+        async function deleteTableData(tableName) {
+            const pwd = prompt(`⚠️ ยืนยันการลบข้อมูลทั้งหมดในตาราง "${tableName}"\n\nกรุณาใส่รหัสผ่าน:`);
+            if (pwd === null) return;
+            if (pwd !== '044641460') {
+                alert('❌ รหัสผ่านไม่ถูกต้อง');
+                return;
+            }
+            if (!confirm(`⚠️ คุณแน่ใจหรือไม่ที่จะลบข้อมูลทั้งหมดใน "${tableName}"?\nการกระทำนี้ไม่สามารถย้อนกลับได้!`)) return;
+            try {
+                const pkField = tableName === 'owners' ? 'hn' : 'id';
+                const { error } = await db.from(tableName).delete().not(pkField, 'is', null);
+                if (error) throw error;
+                alert(`✅ ลบข้อมูลทั้งหมดใน "${tableName}" สำเร็จ`);
+                loadTableStats();
+            } catch (err) {
+                alert('❌ เกิดข้อผิดพลาด: ' + err.message);
+            }
         }
 
         window.onload = checkConnection;
