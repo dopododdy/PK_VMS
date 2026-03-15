@@ -3,6 +3,25 @@
 -- รันใน Supabase SQL Editor เพื่อเพิ่ม Column ที่ขาดหายใน medical_records
 -- ═══════════════════════════════════════════════════════════════
 
+-- ═══════════════════════════════════════════════════════════════
+-- สร้างตาราง clinic_table_db สำหรับนำเข้าข้อมูลจาก ClinicDB.mdb
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS clinic_table_db (
+  id          BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  rec_id      VARCHAR(255) UNIQUE,
+  animal_id   VARCHAR(255),
+  animal_name VARCHAR(255),
+  animal_spp  VARCHAR(255),
+  animal_tag  VARCHAR(255),
+  owner_name  VARCHAR(255),
+  animal_dob  DATE,
+  phone_no    VARCHAR(20),
+  medrec      TEXT,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- เพิ่ม Column สำหรับระบบ POS ใน medical_records
 ALTER TABLE medical_records
   ADD COLUMN IF NOT EXISTS discount        NUMERIC(12,2) NOT NULL DEFAULT 0,
