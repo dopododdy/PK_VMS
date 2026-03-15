@@ -98,7 +98,11 @@
   medrec      TEXT,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);</div>
+);
+
+-- แก้ไข phone_no สำหรับฐานข้อมูลเดิมที่สร้างด้วย VARCHAR(20)
+ALTER TABLE IF EXISTS clinic_table_db
+  ALTER COLUMN phone_no TYPE VARCHAR(50);</div>
             <div class="flex items-center gap-3 mt-3">
                 <button onclick="copySQL()" class="btn-secondary text-sm">📋 คัดลอก SQL</button>
                 <span id="copy-ok" class="text-xs text-teal-400 hidden">✅ คัดลอกแล้ว!</span>
@@ -543,6 +547,7 @@
                 titleEl.textContent = `⚠️ นำเข้าเสร็จ แต่มีบางแถวที่เกิดข้อผิดพลาด`;
             }
 
+            const hasTooLong = errors.some(e => e.includes('value too long for type character varying'));
             bodyEl.innerHTML = `
                 <p class="text-gray-300">✅ นำเข้าสำเร็จ: <strong class="text-green-400">${importedCount.toLocaleString()} แถว</strong></p>
                 ${skippedCount > 0 ? `<p class="text-amber-400">⏭️ ข้ามแถวที่ไม่มี RecID: <strong>${skippedCount} แถว</strong> — กรุณาตรวจสอบว่าฟิลด์ RecID ในไฟล์ XML ไม่ว่างเปล่า</p>` : ''}
@@ -552,6 +557,7 @@
                         ${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
                     </ul>
                     <p class="text-xs text-gray-400 mt-2">💡 หากเจอ Error "relation does not exist" กรุณารัน SQL ในขั้นตอนที่ 1 ก่อน</p>
+                    ${hasTooLong ? `<p class="text-xs text-amber-300 mt-1">💡 หากเจอ Error "value too long for type character varying" กรุณารัน SQL ในขั้นตอนที่ 1 อีกครั้ง (มี ALTER TABLE สำหรับขยาย phone_no เป็น VARCHAR(50))</p>` : ''}
                 ` : ''}
             `;
 
