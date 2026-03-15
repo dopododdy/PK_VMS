@@ -110,19 +110,18 @@
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-2xl">📁</div>
                 <div>
-                    <h3 class="text-white font-bold text-base">ขั้นตอนที่ 2 — ส่งออก CSV จาก Microsoft Access</h3>
-                    <p class="text-xs text-gray-500">ส่งออกตาราง ClinicTableDB เป็นไฟล์ CSV (UTF-8)</p>
+                    <h3 class="text-white font-bold text-base">ขั้นตอนที่ 2 — ส่งออก XML จาก Microsoft Access</h3>
+                    <p class="text-xs text-gray-500">ส่งออกตาราง ClinicTableDB เป็นไฟล์ XML</p>
                 </div>
             </div>
             <ol class="list-decimal list-inside space-y-1.5 text-sm text-gray-300 leading-relaxed">
                 <li>เปิดไฟล์ <span class="text-teal-300 font-mono">ClinicDB.mdb</span> ใน Microsoft Access</li>
-                <li>คลิกขวาที่ตาราง <span class="text-teal-300 font-mono">ClinicTableDB</span> → <strong>Export</strong> → <strong>Text File</strong></li>
-                <li>เลือก <strong>Delimited</strong> (comma) และ <strong>First Row Contains Field Names</strong></li>
-                <li>ตั้ง Encoding เป็น <strong>UTF-8</strong> เพื่อรองรับภาษาไทย</li>
-                <li>บันทึกเป็นไฟล์ <span class="text-teal-300 font-mono">.csv</span></li>
+                <li>คลิกขวาที่ตาราง <span class="text-teal-300 font-mono">ClinicTableDB</span> → <strong>Export</strong> → <strong>XML File</strong></li>
+                <li>เลือกส่งออก <strong>Data (XML)</strong> เท่านั้น (ไม่ต้องรวม Schema หรือ Presentation)</li>
+                <li>บันทึกเป็นไฟล์ <span class="text-teal-300 font-mono">.xml</span></li>
             </ol>
             <div class="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400">
-                <strong>หัว Column ที่ต้องการ:</strong> RecID, AnimalID, AnimalName, AnimalSpp, AnimalTag, OwnerName, AnimalDOB, PhoneNo, Medrec
+                <strong>ฟิลด์ที่ต้องการ:</strong> RecID, AnimalID, AnimalName, AnimalSpp, AnimalTag, OwnerName, AnimalDOB, PhoneNo, Medrec
             </div>
         </div>
 
@@ -131,19 +130,19 @@
             <div class="flex items-center gap-3 mb-5">
                 <div class="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-2xl">⬆️</div>
                 <div>
-                    <h3 class="text-white font-bold text-base">ขั้นตอนที่ 3 — อัปโหลดไฟล์ CSV</h3>
-                    <p class="text-xs text-gray-500">เลือกไฟล์ CSV ที่ส่งออกจาก Access</p>
+                    <h3 class="text-white font-bold text-base">ขั้นตอนที่ 3 — อัปโหลดไฟล์ XML</h3>
+                    <p class="text-xs text-gray-500">เลือกไฟล์ XML ที่ส่งออกจาก Access</p>
                 </div>
             </div>
 
             <!-- Drop Zone -->
-            <label class="drop-zone" id="drop-zone" for="csv-input">
-                <input type="file" id="csv-input" accept=".csv,text/csv" onchange="handleFileSelect(event)">
+            <label class="drop-zone" id="drop-zone" for="xml-input">
+                <input type="file" id="xml-input" accept=".xml,text/xml,application/xml" onchange="handleFileSelect(event)">
                 <div id="drop-zone-content">
                     <p class="text-4xl mb-3">📄</p>
-                    <p class="text-white font-bold text-lg">ลากไฟล์ CSV มาวางที่นี่</p>
+                    <p class="text-white font-bold text-lg">ลากไฟล์ XML มาวางที่นี่</p>
                     <p class="text-gray-400 text-sm mt-1">หรือคลิกเพื่อเลือกไฟล์</p>
-                    <p class="text-xs text-gray-500 mt-3">รองรับเฉพาะไฟล์ .csv</p>
+                    <p class="text-xs text-gray-500 mt-3">รองรับเฉพาะไฟล์ .xml</p>
                 </div>
             </label>
 
@@ -247,7 +246,7 @@
 
         const BATCH_SIZE = 100;
         let parsedRows = [];
-        let csvHeaders = [];
+        let xmlHeaders = [];
 
         /* ══════════════════════════════════════════
            Copy SQL
@@ -285,8 +284,8 @@
 
         function clearFile() {
             parsedRows = [];
-            csvHeaders = [];
-            document.getElementById('csv-input').value = '';
+            xmlHeaders = [];
+            document.getElementById('xml-input').value = '';
             document.getElementById('file-info').classList.add('hidden');
             document.getElementById('preview-section').classList.add('hidden');
             document.getElementById('import-section').style.display = 'none';
@@ -297,11 +296,11 @@
         }
 
         /* ══════════════════════════════════════════
-           CSV Parsing
+           XML Parsing
            ══════════════════════════════════════════ */
         function processFile(file) {
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                alert('⚠️ กรุณาเลือกไฟล์ .csv เท่านั้น');
+            if (!file.name.toLowerCase().endsWith('.xml')) {
+                alert('⚠️ กรุณาเลือกไฟล์ .xml เท่านั้น');
                 return;
             }
 
@@ -309,8 +308,8 @@
             reader.onload = (e) => {
                 try {
                     const text = e.target.result;
-                    const result = parseCSV(text);
-                    csvHeaders = result.headers;
+                    const result = parseXML(text);
+                    xmlHeaders = result.headers;
                     parsedRows = result.rows;
 
                     // Show file info
@@ -325,49 +324,34 @@
                     document.getElementById('btn-import').disabled = false;
                     document.getElementById('btn-import').innerHTML = '🚀 เริ่มนำเข้าข้อมูล';
                 } catch (err) {
-                    alert('❌ ไม่สามารถอ่านไฟล์ CSV ได้: ' + err.message);
+                    alert('❌ ไม่สามารถอ่านไฟล์ XML ได้: ' + err.message);
                 }
             };
             reader.readAsText(file, 'UTF-8');
         }
 
-        function parseCSV(text) {
-            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
-            if (lines.length < 2) throw new Error('ไฟล์ CSV ต้องมีอย่างน้อย 1 แถวหัวตารางและ 1 แถวข้อมูล');
+        function parseXML(text) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/xml');
 
-            const headers = splitCSVLine(lines[0]);
-            const rows = [];
+            const parseError = doc.querySelector('parsererror');
+            if (parseError) throw new Error('ไฟล์ XML ไม่ถูกต้อง: ' + (parseError.textContent.trim().slice(0, 200) + (parseError.textContent.trim().length > 200 ? '...' : '')));
 
-            for (let i = 1; i < lines.length; i++) {
-                const values = splitCSVLine(lines[i]);
-                if (values.every(v => !v.trim())) continue; // skip empty rows
+            const root = doc.documentElement;
+            const records = Array.from(root.children);
+
+            if (records.length === 0) throw new Error('ไฟล์ XML ต้องมีอย่างน้อย 1 แถวข้อมูล');
+
+            const headers = Array.from(records[0].children).map(el => el.tagName);
+            const rows = records.map(record => {
                 const row = {};
-                headers.forEach((h, idx) => { row[h.trim()] = (values[idx] || '').trim(); });
-                rows.push(row);
-            }
+                Array.from(record.children).forEach(el => {
+                    row[el.tagName] = el.textContent.trim();
+                });
+                return row;
+            });
 
             return { headers, rows };
-        }
-
-        function splitCSVLine(line) {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-
-            for (let i = 0; i < line.length; i++) {
-                const ch = line[i];
-                if (ch === '"') {
-                    if (inQuotes && i + 1 < line.length && line[i + 1] === '"') { current += '"'; i++; }
-                    else { inQuotes = !inQuotes; }
-                } else if (ch === ',' && !inQuotes) {
-                    result.push(current);
-                    current = '';
-                } else {
-                    current += ch;
-                }
-            }
-            result.push(current);
-            return result;
         }
 
         function formatFileSize(bytes) {
@@ -385,8 +369,8 @@
 
             // Validation badges
             const knownFields = Object.keys(FIELD_MAP);
-            const detectedFields = csvHeaders.filter(h => knownFields.includes(h.trim()));
-            const missingFields  = knownFields.filter(k => !csvHeaders.map(h => h.trim()).includes(k));
+            const detectedFields = xmlHeaders.filter(h => knownFields.includes(h.trim()));
+            const missingFields  = knownFields.filter(k => !xmlHeaders.map(h => h.trim()).includes(k));
 
             const badges = document.getElementById('validation-badges');
             badges.innerHTML = '';
@@ -403,7 +387,7 @@
             // Field mapping display
             const mappingEl = document.getElementById('field-mapping');
             mappingEl.innerHTML = Object.entries(FIELD_MAP).map(([src, dst]) => {
-                const found = csvHeaders.map(h => h.trim()).includes(src);
+                const found = xmlHeaders.map(h => h.trim()).includes(src);
                 return `<div class="flex items-center gap-1 ${found ? 'text-teal-400' : 'text-red-400'}">
                     <span>${found ? '✅' : '❌'}</span>
                     <span class="font-mono">${src}</span>
@@ -486,7 +470,7 @@
            ══════════════════════════════════════════ */
         async function startImport() {
             if (parsedRows.length === 0) {
-                alert('⚠️ ไม่มีข้อมูลให้นำเข้า กรุณาเลือกไฟล์ CSV ก่อน');
+                alert('⚠️ ไม่มีข้อมูลให้นำเข้า กรุณาเลือกไฟล์ XML ก่อน');
                 return;
             }
 
@@ -561,7 +545,7 @@
 
             bodyEl.innerHTML = `
                 <p class="text-gray-300">✅ นำเข้าสำเร็จ: <strong class="text-green-400">${importedCount.toLocaleString()} แถว</strong></p>
-                ${skippedCount > 0 ? `<p class="text-amber-400">⏭️ ข้ามแถวที่ไม่มี RecID: <strong>${skippedCount} แถว</strong> — กรุณาตรวจสอบว่าคอลัมน์ RecID ในไฟล์ CSV ไม่ว่างเปล่า</p>` : ''}
+                ${skippedCount > 0 ? `<p class="text-amber-400">⏭️ ข้ามแถวที่ไม่มี RecID: <strong>${skippedCount} แถว</strong> — กรุณาตรวจสอบว่าฟิลด์ RecID ในไฟล์ XML ไม่ว่างเปล่า</p>` : ''}
                 ${errors.length > 0 ? `
                     <p class="text-red-400 font-bold mt-2">❌ ข้อผิดพลาด (${errors.length}):</p>
                     <ul class="list-disc list-inside text-red-300 text-xs space-y-1 mt-1">
