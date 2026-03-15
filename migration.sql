@@ -16,11 +16,15 @@ CREATE TABLE IF NOT EXISTS clinic_table_db (
   animal_tag  VARCHAR(255),
   owner_name  VARCHAR(255),
   animal_dob  DATE,
-  phone_no    VARCHAR(20),
+  phone_no    VARCHAR(50),
   medrec      TEXT,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- แก้ไข phone_no ให้รองรับหมายเลขโทรศัพท์ที่ยาวกว่า 20 ตัวอักษร (สำหรับฐานข้อมูลเดิม)
+ALTER TABLE IF EXISTS clinic_table_db
+  ALTER COLUMN phone_no TYPE VARCHAR(50);
 
 -- เพิ่ม Column สำหรับระบบ POS ใน medical_records
 ALTER TABLE medical_records
