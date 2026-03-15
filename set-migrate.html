@@ -463,10 +463,81 @@ ALTER TABLE IF EXISTS clinic_table_db
             // Try native Date parsing as last resort
             const dt = new Date(s);
             if (!isNaN(dt.getTime())) {
-                return dt.toISOString().slice(0, 10);
+                const y = dt.getFullYear();
+                if (y < 1900 || y > 2100) return null; // reject unreasonable years (avoids "+0YYYY-MM" overflow)
+                const mm = String(dt.getMonth() + 1).padStart(2, '0');
+                const dd = String(dt.getDate()).padStart(2, '0');
+                return `${y}-${mm}-${dd}`;
             }
 
             return null; // Cannot parse — store as null
+        }
+
+        /* ══════════════════════════════════════════
+           Sync imported rows → owners / animals / owner_phones
+           ══════════════════════════════════════════ */
+        async function syncToVMSTables(rowsToSync) {
+            // ── 1. Load existing owners ──────────────────────────────
+            const { data: existingOwners } = await db.from('owners').select('hn, owner_name');
+            const ownerByName = new Map((existingOwners || []).map(o => [o.owner_name, o.hn]));
+            const existingHNs = (existingOwners || []).map(o => parseInt(o.hn)).filter(n => !isNaN(n));
+            let nextHN = Math.max(...existingHNs, 690000) + 1; // 690000 is the baseline so auto-generated HNs start at ≥ 690001
+
+            // ── 2. Collect new owners (deduplicated by owner_name) ───
+            const newOwners = [];
+            const newPhones = [];
+            for (const row of rowsToSync) {
+                if (!row.owner_name) continue;
+                if (!ownerByName.has(row.owner_name)) {
+                    const hn = (nextHN++).toString().padStart(6, '0');
+                    ownerByName.set(row.owner_name, hn);
+                    newOwners.push({ hn, owner_name: row.owner_name, address: '' });
+                    if (row.phone_no) {
+                        newPhones.push({ owner_hn: hn, phone_number: row.phone_no, label: 'เบอร์หลัก' });
+                    }
+                }
+            }
+
+            if (newOwners.length > 0) {
+                await db.from('owners').upsert(newOwners, { onConflict: 'hn' });
+            }
+            if (newPhones.length > 0) {
+                await db.from('owner_phones').insert(newPhones);
+            }
+
+            // ── 3. Load existing animals (to skip duplicates) ────────
+            const { data: existingAnimals } = await db.from('animals').select('owner_hn, pet_name, birth_date');
+            const animalSet = new Set(
+                (existingAnimals || []).map(a => `${a.owner_hn}|${(a.pet_name || '').toLowerCase()}|${a.birth_date || ''}`)
+            );
+
+            // ── 4. Collect new animals ────────────────────────────────
+            const newAnimals = [];
+            for (const row of rowsToSync) {
+                if (!row.animal_name || !row.owner_name) continue;
+                const hn = ownerByName.get(row.owner_name);
+                if (!hn) continue;
+                const key = `${hn}|${row.animal_name.toLowerCase()}|${row.animal_dob || ''}`;
+                if (!animalSet.has(key)) {
+                    animalSet.add(key);
+                    newAnimals.push({
+                        owner_hn: hn,
+                        pet_name: row.animal_name,
+                        pet_type: row.animal_spp || 'อื่นๆ',
+                        birth_date: row.animal_dob || null,
+                        microchip_number: row.animal_tag || '',
+                        updated_at: new Date().toISOString(),
+                    });
+                }
+            }
+
+            if (newAnimals.length > 0) {
+                for (let i = 0; i < newAnimals.length; i += BATCH_SIZE) {
+                    await db.from('animals').insert(newAnimals.slice(i, i + BATCH_SIZE));
+                }
+            }
+
+            return { owners: newOwners.length, animals: newAnimals.length };
         }
 
         /* ══════════════════════════════════════════
@@ -532,12 +603,28 @@ ALTER TABLE IF EXISTS clinic_table_db
             pctEl.textContent = '100%';
             statusEl.textContent = 'เสร็จสิ้น!';
 
+            // ── Sync to owners / animals / owner_phones ──────────────
+            let syncResult = null;
+            let syncError  = null;
+            if (importedCount > 0) {
+                try {
+                    statusEl.textContent = 'กำลังซิงค์ไปยัง VMS...';
+                    detailEl.textContent = 'สร้าง owners และ animals...';
+                    const allTransformed = parsedRows.map(transformRow).filter(r => r.rec_id);
+                    syncResult = await syncToVMSTables(allTransformed);
+                } catch (err) {
+                    syncError = err.message;
+                }
+            }
+            statusEl.textContent = 'เสร็จสิ้น!';
+            detailEl.textContent = '';
+
             // Show result
             resultEl.classList.remove('hidden');
             const titleEl = document.getElementById('import-result-title');
             const bodyEl  = document.getElementById('import-result-body');
 
-            if (errors.length === 0) {
+            if (errors.length === 0 && !syncError) {
                 resultEl.className = 'mb-5 p-4 rounded-xl border border-green-500/30 bg-green-500/10';
                 titleEl.className  = 'font-bold text-base text-green-400';
                 titleEl.textContent = '✅ นำเข้าข้อมูลสำเร็จ!';
@@ -551,6 +638,9 @@ ALTER TABLE IF EXISTS clinic_table_db
             bodyEl.innerHTML = `
                 <p class="text-gray-300">✅ นำเข้าสำเร็จ: <strong class="text-green-400">${importedCount.toLocaleString()} แถว</strong></p>
                 ${skippedCount > 0 ? `<p class="text-amber-400">⏭️ ข้ามแถวที่ไม่มี RecID: <strong>${skippedCount} แถว</strong> — กรุณาตรวจสอบว่าฟิลด์ RecID ในไฟล์ XML ไม่ว่างเปล่า</p>` : ''}
+                ${syncResult ? `
+                    <p class="text-teal-400 mt-1">📥 ซิงค์ไปยัง VMS: เจ้าของใหม่ <strong>${syncResult.owners}</strong> ราย · สัตว์ใหม่ <strong>${syncResult.animals}</strong> ตัว</p>
+                ` : ''}
                 ${errors.length > 0 ? `
                     <p class="text-red-400 font-bold mt-2">❌ ข้อผิดพลาด (${errors.length}):</p>
                     <ul class="list-disc list-inside text-red-300 text-xs space-y-1 mt-1">
@@ -559,6 +649,7 @@ ALTER TABLE IF EXISTS clinic_table_db
                     <p class="text-xs text-gray-400 mt-2">💡 หากเจอ Error "relation does not exist" กรุณารัน SQL ในขั้นตอนที่ 1 ก่อน</p>
                     ${hasTooLong ? `<p class="text-xs text-amber-300 mt-1">💡 หากเจอ Error "value too long for type character varying" กรุณารัน SQL ในขั้นตอนที่ 1 อีกครั้ง (มี ALTER TABLE สำหรับขยาย phone_no เป็น VARCHAR(50))</p>` : ''}
                 ` : ''}
+                ${syncError ? `<p class="text-red-300 text-xs mt-2">⚠️ ซิงค์ไปยัง VMS ล้มเหลว: ${escapeHtml(syncError)}</p>` : ''}
             `;
 
             btnImport.disabled = false;
