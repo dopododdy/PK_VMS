@@ -270,6 +270,7 @@
                                 <option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>♂️ ผู้</option>
                                 <option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>✂️♂️ ผู้ตอน</option>
                                 <option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>✂️♀️ เมียหมัน</option>
+                                <option value="ไม่ระบุเพศ" ${pet.gender==='ไม่ระบุเพศ'?'selected':''}>❓ ไม่ระบุเพศ</option>
                             </select>
                         </div>
                         <div class="col-span-2"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="p_weight input-box text-center text-yellow-400 font-black text-xl" value="${pet.weight || ''}"></div>
@@ -282,6 +283,12 @@
                 </div>`;
         }
 
+        function updateCalendarYearToBE(instance) {
+            if (!instance.calendarContainer) return;
+            const yearInput = instance.calendarContainer.querySelector('.cur-year');
+            if (yearInput) yearInput.value = instance.currentYear + 543;
+        }
+
         function initAllPickers() {
             flatpickr(".datepicker-thai", {
                 locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y",
@@ -291,6 +298,16 @@
                         const yearBE = new Date(dateStr).getFullYear() + 543;
                         altInp.value = altInp.value.replace(new Date(dateStr).getFullYear(), yearBE);
                     }
+                    updateCalendarYearToBE(instance);
+                },
+                onOpen: (selectedDates, dateStr, instance) => {
+                    updateCalendarYearToBE(instance);
+                },
+                onMonthChange: (selectedDates, dateStr, instance) => {
+                    updateCalendarYearToBE(instance);
+                },
+                onYearChange: (selectedDates, dateStr, instance) => {
+                    updateCalendarYearToBE(instance);
                 },
                 onChange: (selectedDates, dateStr, instance) => {
                     const row = instance.element.closest('.zone-pet');
@@ -331,6 +348,7 @@
             const speciesId = selectedOption ? selectedOption.getAttribute('data-id') : null;
             let filteredBreeds = speciesId ? masterBreeds.filter(b => b.species_id === speciesId) : [];
             breedSelect.innerHTML = '<option value="">-- เลือกสายพันธุ์ --</option>' + filteredBreeds.map(b => `<option value="${b.name}" ${b.name === savedVal ? 'selected' : ''}>${b.name}</option>`).join('');
+            if (!breedSelect.value && filteredBreeds.some(b => b.name === 'ไทย')) breedSelect.value = 'ไทย';
         }
 
         function addNewPetRow() {
