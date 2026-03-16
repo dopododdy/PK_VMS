@@ -177,15 +177,44 @@
             if (!dateString) return "-";
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-            const monthsLong = ["มีนาคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const monthsLong = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
             const d = date.getDate(), m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()], y = date.getFullYear() + 543;
             return `${d} ${m} ${y}`;
         }
 
+        function updateCalendarYearToBE(instance) {
+            if (!instance.calendarContainer) return;
+            const yearInput = instance.calendarContainer.querySelector('.cur-year');
+            if (yearInput) yearInput.value = instance.currentYear + 543;
+        }
+
+        function makeDatePickerConfig(extra = {}) {
+            return {
+                locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y",
+                onReady: (selectedDates, dateStr, instance) => {
+                    if (dateStr && instance.altInput) {
+                        const y = new Date(dateStr).getFullYear();
+                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
+                    }
+                    updateCalendarYearToBE(instance);
+                },
+                onOpen: (_, __, instance) => updateCalendarYearToBE(instance),
+                onMonthChange: (_, __, instance) => updateCalendarYearToBE(instance),
+                onYearChange: (_, __, instance) => updateCalendarYearToBE(instance),
+                onChange: (selectedDates, dateStr, instance) => {
+                    if (dateStr && instance.altInput) {
+                        const y = new Date(dateStr).getFullYear();
+                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
+                    }
+                },
+                ...extra
+            };
+        }
+
         window.onload = async () => {
             if (!animalId || !ownerHN) return location.href='animals.html';
-            flatpickr(".datepicker", { locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y" });
-            flatpickr("#f_visit_date", { locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y", defaultDate: "today" });
+            flatpickr(".datepicker", makeDatePickerConfig());
+            flatpickr("#f_visit_date", makeDatePickerConfig({ defaultDate: "today" }));
             await fetchInfo(); await fetchRecords();
         };
 

@@ -86,12 +86,18 @@
                 <i data-lucide="search" class="absolute left-4 top-4 w-5 h-5 text-gray-500"></i>
             </div>
         </div>
-        <div class="flex-1 overflow-hidden flex flex-col gap-5">
-            <div class="flex flex-col h-1/2">
+        <div class="flex-1 overflow-hidden flex flex-col gap-4">
+            <div class="flex flex-col" style="max-height:33%">
+                <span class="txt-label mb-3">รายการรอชำระเงิน (<span id="count-pending">0</span>)</span>
+                <div id="pending-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2">
+                    <p class="text-gray-500 text-center py-4 text-sm">กำลังโหลด...</p>
+                </div>
+            </div>
+            <div class="flex flex-col" style="max-height:33%; border-top: 1px solid rgba(255,255,255,0.08); padding-top:12px">
                 <span class="txt-label mb-3">รายชื่อคนไข้ (<span id="count-hn">0</span>)</span>
                 <div id="patient-list" class="flex-1 overflow-y-auto custom-scroll space-y-3 pr-2"></div>
             </div>
-            <div class="flex flex-col h-1/2 border-t border-white/10 pt-5">
+            <div class="flex flex-col flex-1 border-t border-white/10 pt-4">
                 <span class="txt-label mb-3">ประวัติการชำระเงิน</span>
                 <div id="payment-history" class="flex-1 overflow-y-auto custom-scroll space-y-3 pr-2">
                     <p class="text-gray-500 text-center py-10 text-sm">เลือกคนไข้เพื่อดูประวัติ</p>
@@ -228,6 +234,7 @@
         let allPatients = [], activeRecordId = null, activePatient = null;
         let currentRecordData = null; 
         let masterCatalog = [], displayedCatalog = [], currentCatType = 'rx';
+        let pendingRecordsMap = {};
 
         const SCHEMA_MIGRATION_MSG = '⚠️ ฐานข้อมูลยังไม่ได้รัน Migration SQL\n\nกรุณาไปที่ Settings (set-db.html) → อัปเดต Schema ฐานข้อมูล แล้ว Copy SQL ไปรันใน Supabase → SQL Editor';
 
@@ -241,7 +248,8 @@
 
         // ✅ แก้ไขฟังก์ชัน onload เพื่อเช็ค HN อัตโนมัติ
         window.onload = async () => { 
-            await fetchPatients(); 
+            await fetchPatients();
+            await fetchPendingPayments();
 
             const urlParams = new URLSearchParams(window.location.search);
             const hnFromUrl = urlParams.get('hn');
@@ -282,13 +290,47 @@
 
         function renderPatientList(list) {
             document.getElementById('patient-list').innerHTML = list.map(p => `
-                <div class="glass-card" onclick="loadPatientHistory('${p.owner_hn}', '${p.pet_name}', '${p.owners?.owner_name}')">
+                <div class="glass-card" onclick="loadPatientHistory('${p.owner_hn}', '${p.pet_name}', '${p.owners?.owner_name}')" ondblclick="document.getElementById('main-search').value='${p.owner_hn}'; filterPatients()">
                     <div class="flex justify-between items-center mb-1"><span class="text-teal-400 font-bold text-sm">${p.owner_hn}</span><span class="text-white font-bold text-base">🐾 ${p.pet_name}</span></div>
                     <div class="text-gray-400 text-xs truncate">เจ้าของ: ${p.owners?.owner_name || '-'}</div>
                 </div>`).join('');
         }
 
-        async function loadPatientHistory(hn, petName, ownerName) {
+        async function fetchPendingPayments() {
+            const { data } = await db.from('medical_records')
+                .select('id, owner_hn, created_at, total_cost, net_amount')
+                .eq('payment_status', 'pending')
+                .order('created_at', { ascending: true });
+            const list = (data || []).map(r => {
+                const patient = allPatients.find(p => p.owner_hn === r.owner_hn);
+                return { ...r, pet_name: patient?.pet_name || '-', owner_name: patient?.owners?.owner_name || '-' };
+            });
+            pendingRecordsMap = {};
+            list.forEach(r => { pendingRecordsMap[r.id] = r; });
+            document.getElementById('count-pending').innerText = list.length;
+            const container = document.getElementById('pending-list');
+            if (list.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">ไม่มีรายการรอชำระ</p>';
+                return;
+            }
+            container.innerHTML = list.map(r => `
+                <div class="glass-card border-l-4 border-l-amber-500" onclick="loadPendingRecord('${r.id}')">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-amber-400 font-bold text-sm">🐾 ${r.pet_name}</span>
+                        <span class="text-amber-400 font-bold text-sm">฿${parseFloat(r.net_amount || r.total_cost || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="text-gray-400 text-[11px]">${r.owner_hn} | ${formatThaiDate(r.created_at, 'short')}</div>
+                </div>`).join('');
+        }
+
+        async function loadPendingRecord(recordId) {
+            const r = pendingRecordsMap[recordId];
+            if (!r) return;
+            await loadPatientHistory(r.owner_hn, r.pet_name, r.owner_name);
+            await viewRecordDetail(recordId, 'pending');
+        }
+
+
             activePatient = { hn, petName, ownerName };
             document.getElementById('display-pet-name').innerText = `คนไข้: ${petName}`;
             document.getElementById('display-owner-info').innerText = `HN: ${hn} | เจ้าของ: ${ownerName}`;
@@ -475,6 +517,7 @@
             alert("ชำระเงินสำเร็จ!");
             printReceipt(activeRecordId);
             loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
+            fetchPendingPayments();
         }
 
         async function printReceipt(recordId) {
