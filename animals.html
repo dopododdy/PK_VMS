@@ -93,6 +93,7 @@
         let allPhones = [];
         let masterSpecies = [];
         let masterBreeds = [];
+        let petCollapseCount = 0;
 
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
@@ -197,6 +198,7 @@
         function renderForm(owner, pets, phones = []) {
             const formView = document.getElementById('form-view');
             const isNew = owner.hn === '';
+            const sortedPets = [...pets].sort((a, b) => (a.pet_name || '').localeCompare(b.pet_name || '', 'th'));
             formView.innerHTML = `
                 <div class="max-w-5xl mx-auto pb-32">
                     <div class="bg-slate-800/40 p-10 rounded-[40px] border border-white/5 mb-8 shadow-2xl">
@@ -227,7 +229,7 @@
                     </div>
 
                     <div id="pets-container" class="space-y-8">
-                        ${pets.map(p => petRowHtml(p)).join('')}
+                        ${sortedPets.map(p => petRowHtml(p)).join('')}
                         <button onclick="addNewPetRow()" class="w-full border-4 border-dashed border-white/5 py-6 rounded-3xl text-slate-500 hover:text-teal-400 transition-all font-black text-xl">+ เพิ่มสัตว์เลี้ยงรายการใหม่ให้เจ้าของนี้</button>
                     </div>
 
@@ -239,48 +241,68 @@
             document.querySelectorAll('.zone-pet').forEach(el => updateBreedOptions(el.querySelector('.p_type')));
         }
 
-        function petRowHtml(pet) {
+        function petRowHtml(pet, startExpanded = false) {
+            petCollapseCount++;
+            const collapseId = 'pet-body-' + petCollapseCount;
             const ageInfo = getAgeDetail(pet.birth_date);
-            const headIcon = pet.pet_type === 'สุนัข' ? '🐶' : (pet.pet_type === 'แมว' ? '🐱' : '🐾');
-            const speciesOptions = masterSpecies.map(s => `<option value="${s.name}" data-id="${s.id}" ${pet.pet_type === s.name ? 'selected' : ''}>${s.name}</option>`).join('');
+            const effectiveType = pet.pet_type || 'แมว';
+            const headIcon = effectiveType === 'สุนัข' ? '🐶' : (effectiveType === 'แมว' ? '🐱' : '🐾');
+            const speciesOptions = masterSpecies.map(s => `<option value="${s.name}" data-id="${s.id}" ${effectiveType === s.name ? 'selected' : ''}>${s.name}</option>`).join('');
+            const effectiveGender = pet.gender || 'ไม่ระบุเพศ';
+            const bodyDisplay = startExpanded ? '' : 'style="display:none"';
+            const chevronStyle = startExpanded ? 'style="transform:rotate(180deg)"' : '';
             return `
                 <div class="zone-pet border-l-[12px] border-teal-500 shadow-2xl" data-pet-id="${pet.id || ''}">
-                    <div class="flex justify-between items-center mb-8">
+                    <div class="flex justify-between items-center cursor-pointer select-none" tabindex="0" onclick="togglePetCollapse(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePetCollapse(this);}"  role="button" aria-expanded="${startExpanded}">
                         <h4 class="text-3xl font-black text-white">${headIcon} ${pet.pet_name || 'ข้อมูลสัตว์ใหม่'}</h4>
-                        <div class="flex gap-3">
-                            ${pet.id ? `
-                                <button onclick="printPetLabel('${pet.id}')" class="btn-base btn-gray">🖨️ Label</button>
-                                <button onclick="goToConsent('${pet.owner_hn}', '${pet.id}')" class="btn-base btn-orange">📋 ใบยินยอม</button>
-                                <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติ</button>
-                            ` : ''}
-                            <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red">🗑️ ลบ</button>
+                        <div class="flex gap-3 items-center">
+                            <div class="flex gap-3" onclick="event.stopPropagation()">
+                                ${pet.id ? `
+                                    <button onclick="printPetLabel('${pet.id}')" class="btn-base btn-gray">🖨️ Label</button>
+                                    <button onclick="goToConsent('${pet.owner_hn}', '${pet.id}')" class="btn-base btn-orange">📋 ใบยินยอม</button>
+                                    <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal">🏥 ประวัติ</button>
+                                ` : ''}
+                                <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red">🗑️ ลบ</button>
+                            </div>
+                            <span class="chevron-icon text-teal-400 text-xl transition-all duration-200" ${chevronStyle}>▼</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-12 gap-5">
-                        <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-black text-xl" value="${pet.pet_name || ''}"></div>
-                        <div class="col-span-2"><label class="label-text">ชนิด</label>
-                            <select class="p_type input-box" onchange="updateBreedOptions(this)">
-                                <option value="">-- เลือกชนิด --</option>${speciesOptions}
-                            </select>
+                    <div class="pet-collapse-body mt-8" id="${collapseId}" ${bodyDisplay}>
+                        <div class="grid grid-cols-12 gap-5">
+                            <div class="col-span-3"><label class="label-text">ชื่อสัตว์</label><input type="text" class="p_name input-box font-black text-xl" value="${pet.pet_name || ''}"></div>
+                            <div class="col-span-2"><label class="label-text">ชนิด</label>
+                                <select class="p_type input-box" onchange="updateBreedOptions(this)">
+                                    <option value="">-- เลือกชนิด --</option>${speciesOptions}
+                                </select>
+                            </div>
+                            <div class="col-span-3"><label class="label-text">สายพันธุ์</label><select class="p_breed input-box" data-val="${pet.breed || ''}"></select></div>
+                            <div class="col-span-2"><label class="label-text">เพศ</label>
+                                <select class="p_gender input-box">
+                                    <option value="เมีย" ${effectiveGender==='เมีย'?'selected':''}>♀️ เมีย</option>
+                                    <option value="ผู้" ${effectiveGender==='ผู้'?'selected':''}>♂️ ผู้</option>
+                                    <option value="ผู้ตอน" ${effectiveGender==='ผู้ตอน'?'selected':''}>✂️♂️ ผู้ตอน</option>
+                                    <option value="เมียหมัน" ${effectiveGender==='เมียหมัน'?'selected':''}>✂️♀️ เมียหมัน</option>
+                                    <option value="ไม่ระบุเพศ" ${effectiveGender==='ไม่ระบุเพศ'?'selected':''}>❓ ไม่ระบุเพศ</option>
+                                </select>
+                            </div>
+                            <div class="col-span-2"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="p_weight input-box text-center text-yellow-400 font-black text-xl" value="${pet.weight || ''}"></div>
+                            <div class="col-span-4"><label class="label-text">วดป. เกิด</label><input type="text" class="p_dob input-box datepicker-thai" value="${pet.birth_date || ''}" placeholder="เลือกวันที่..."></div>
+                            <div class="col-span-2"><label class="label-text">อายุ (ปี)</label><input type="number" class="p_age_years input-box text-center font-bold" value="${ageInfo.y}" oninput="syncFromAge(this)"></div>
+                            <div class="col-span-2"><label class="label-text">อายุ (เดือน)</label><input type="number" class="p_age_months input-box text-center font-bold" value="${ageInfo.m}" oninput="syncFromAge(this)"></div>
+                            <div class="col-span-4"><label class="label-text">เลขไมโครชิพ</label><input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}"></div>
+                            <div class="col-span-12"><label class="label-text text-red-400 font-bold">🚨 ข้อควรระวัง / ประวัติแพ้ยา</label><textarea class="p_congenital input-box critical-box h-[80px]">${pet.congenital_disease || ''}</textarea></div>
                         </div>
-                        <div class="col-span-3"><label class="label-text">สายพันธุ์</label><select class="p_breed input-box" data-val="${pet.breed || ''}"></select></div>
-                        <div class="col-span-2"><label class="label-text">เพศ</label>
-                            <select class="p_gender input-box">
-                                <option value="เมีย" ${pet.gender==='เมีย'?'selected':''}>♀️ เมีย</option>
-                                <option value="ผู้" ${pet.gender==='ผู้'?'selected':''}>♂️ ผู้</option>
-                                <option value="ผู้ตอน" ${pet.gender==='ผู้ตอน'?'selected':''}>✂️♂️ ผู้ตอน</option>
-                                <option value="เมียหมัน" ${pet.gender==='เมียหมัน'?'selected':''}>✂️♀️ เมียหมัน</option>
-                                <option value="ไม่ระบุเพศ" ${pet.gender==='ไม่ระบุเพศ'?'selected':''}>❓ ไม่ระบุเพศ</option>
-                            </select>
-                        </div>
-                        <div class="col-span-2"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="p_weight input-box text-center text-yellow-400 font-black text-xl" value="${pet.weight || ''}"></div>
-                        <div class="col-span-4"><label class="label-text">วดป. เกิด</label><input type="text" class="p_dob input-box datepicker-thai" value="${pet.birth_date || ''}" placeholder="เลือกวันที่..."></div>
-                        <div class="col-span-2"><label class="label-text">อายุ (ปี)</label><input type="number" class="p_age_years input-box text-center font-bold" value="${ageInfo.y}" oninput="syncFromAge(this)"></div>
-                        <div class="col-span-2"><label class="label-text">อายุ (เดือน)</label><input type="number" class="p_age_months input-box text-center font-bold" value="${ageInfo.m}" oninput="syncFromAge(this)"></div>
-                        <div class="col-span-4"><label class="label-text">เลขไมโครชิพ</label><input type="text" class="p_microchip input-box" value="${pet.microchip_number || ''}"></div>
-                        <div class="col-span-12"><label class="label-text text-red-400 font-bold">🚨 ข้อควรระวัง / ประวัติแพ้ยา</label><textarea class="p_congenital input-box critical-box h-[80px]">${pet.congenital_disease || ''}</textarea></div>
                     </div>
                 </div>`;
+        }
+
+        function togglePetCollapse(headerEl) {
+            const body = headerEl.nextElementSibling;
+            const chevron = headerEl.querySelector('.chevron-icon');
+            const isHidden = body.style.display === 'none';
+            body.style.display = isHidden ? '' : 'none';
+            headerEl.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
         }
 
         function updateCalendarYearToBE(instance) {
@@ -353,10 +375,11 @@
 
         function addNewPetRow() {
             const div = document.createElement('div');
-            div.innerHTML = petRowHtml({});
-            document.getElementById('pets-container').insertBefore(div.firstElementChild, document.querySelector('button[onclick="addNewPetRow()"]'));
+            div.innerHTML = petRowHtml({}, true);
+            const newPetEl = div.firstElementChild;
+            document.getElementById('pets-container').insertBefore(newPetEl, document.querySelector('button[onclick="addNewPetRow()"]'));
             initAllPickers();
-            updateBreedOptions(div.querySelector('.p_type'));
+            updateBreedOptions(newPetEl.querySelector('.p_type'));
         }
 
         async function readSmartCard() {
