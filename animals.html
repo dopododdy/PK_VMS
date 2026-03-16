@@ -69,7 +69,7 @@
                     <h2 class="text-2xl font-black text-white">เวชระเบียนสัตว์</h2>
                     <a href="index.html" class="text-3xl opacity-60 hover:opacity-100 transition-all">🏠</a>
                 </div>
-                <input type="text" id="search-box" class="input-box" placeholder="ค้นหาชื่อสัตว์, HN, เจ้าของ..." oninput="renderSidebar()">
+                <input type="text" id="search-box" class="input-box" placeholder="ค้นหา HN, ชื่อ, เบอร์โทร, ที่อยู่, บันทึกการรักษา..." oninput="renderSidebar()">
             </div>
             <div id="owner-list" class="flex-1 overflow-y-auto px-2 pb-10 custom-scroll"></div>
             <div class="p-5">
@@ -93,6 +93,12 @@
         let allPhones = [];
         let masterSpecies = [];
         let masterBreeds = [];
+        let allMedRecs = [];
+        let allMedItems = [];
+        // Precomputed lookup maps – rebuilt whenever data is refreshed
+        let _primaryPhoneMap = new Map();
+        let _allPhonesMap = new Map();
+        let _medTextByAnimalId = new Map();
         let petCollapseCount = 0;
 
         function formatThaiDate(dateString, format = 'long') {
@@ -107,31 +113,58 @@
         }
 
         async function loadData() {
-            const [resO, resA, resP, resSpecies, resBreeds] = await Promise.all([
+            const [resO, resA, resP, resSpecies, resBreeds, resMedRecs, resMedItems] = await Promise.all([
                 db.from('owners').select('*'),
                 db.from('animals').select('*'),
                 db.from('owner_phones').select('*'),
                 db.from('mas_species').select('*').order('name'),
-                db.from('mas_breeds').select('*').order('name')
+                db.from('mas_breeds').select('*').order('name'),
+                db.from('medical_records').select('id, animal_id, owner_hn, created_at, cc, hx, pe, dx'),
+                db.from('medical_record_items').select('record_id, item_name')
             ]);
             allOwners = resO.data || [];
             allAnimals = resA.data || [];
             allPhones = resP.data || [];
             masterSpecies = resSpecies.data || [];
             masterBreeds = resBreeds.data || [];
+            allMedRecs = resMedRecs.data || [];
+            allMedItems = resMedItems.data || [];
+            buildLookupMaps();
             renderSidebar();
+        }
+
+        function buildLookupMaps() {
+            _primaryPhoneMap = new Map();
+            _allPhonesMap = new Map();
+            allPhones.forEach(p => {
+                if (p.label === 'เบอร์หลัก' && !_primaryPhoneMap.has(p.owner_hn)) {
+                    _primaryPhoneMap.set(p.owner_hn, p.phone_number);
+                }
+                if (!_allPhonesMap.has(p.owner_hn)) _allPhonesMap.set(p.owner_hn, []);
+                _allPhonesMap.get(p.owner_hn).push(p.phone_number);
+            });
+
+            const medItemMap = new Map();
+            allMedItems.forEach(mi => {
+                if (!medItemMap.has(mi.record_id)) medItemMap.set(mi.record_id, []);
+                medItemMap.get(mi.record_id).push((mi.item_name || '').toLowerCase());
+            });
+
+            _medTextByAnimalId = new Map();
+            allMedRecs.forEach(rec => {
+                const dateStr = (rec.created_at || '').slice(0, 10);
+                const items = medItemMap.get(rec.id) || [];
+                const text = [dateStr, rec.cc, rec.hx, rec.pe, rec.dx, ...items]
+                    .filter(Boolean).join(' ').toLowerCase();
+                const prev = _medTextByAnimalId.get(rec.animal_id) || '';
+                _medTextByAnimalId.set(rec.animal_id, prev + ' ' + text);
+            });
         }
 
         function renderSidebar() {
             const term = document.getElementById('search-box').value.toLowerCase();
             const container = document.getElementById('owner-list');
             const ownerMap = new Map(allOwners.map(o => [o.hn, o]));
-            const primaryPhoneMap = new Map();
-            allPhones.forEach(p => {
-                if (p.label === 'เบอร์หลัก' && !primaryPhoneMap.has(p.owner_hn)) {
-                    primaryPhoneMap.set(p.owner_hn, p.phone_number);
-                }
-            });
 
             // Owners who have no pets yet
             const ownersWithPets = new Set(allAnimals.map(a => a.owner_hn));
@@ -143,17 +176,23 @@
             const allItems = [...allAnimals, ...ownerOnlyEntries]
                 .sort((a, b) => parseInt(b.owner_hn) - parseInt(a.owner_hn));
 
-            const filtered = allItems.filter(item => {
+            const filtered = !term ? allItems : allItems.filter(item => {
                 const owner = ownerMap.get(item.owner_hn);
+                const phones = _allPhonesMap.get(item.owner_hn) || [];
+                const address = (owner?.address || '').toLowerCase();
+                const ownerName = (owner?.owner_name || '').toLowerCase();
+                const basicMatch = item.owner_hn.includes(term) || ownerName.includes(term) ||
+                    phones.some(p => p.includes(term)) || address.includes(term);
                 if (item._ownerOnly) {
-                    return item.owner_hn.includes(term) || owner?.owner_name.toLowerCase().includes(term);
+                    return basicMatch;
                 }
-                return item.pet_name.toLowerCase().includes(term) || item.owner_hn.includes(term) || owner?.owner_name.toLowerCase().includes(term);
+                const medText = _medTextByAnimalId.get(item.id) || '';
+                return basicMatch || item.pet_name.toLowerCase().includes(term) || medText.includes(term);
             });
 
             container.innerHTML = filtered.map(item => {
                 const owner = ownerMap.get(item.owner_hn);
-                const p1 = primaryPhoneMap.get(item.owner_hn) || '-';
+                const p1 = _primaryPhoneMap.get(item.owner_hn) || '-';
                 if (item._ownerOnly) {
                     return `
                         <div class="pet-card" onclick="editOwner('${item.owner_hn}')" ondblclick="document.getElementById('search-box').value='${item.owner_hn}'; renderSidebar()" id="owner-${item.owner_hn}">
