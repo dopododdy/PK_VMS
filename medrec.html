@@ -884,9 +884,9 @@
             pw.document.close();
         }
         const OPD_LINE_H = 5;   // mm per line (shared by printBlankOPD and printHistoryToCard)
-        const OPD_HDR_H  = 22;  // mm header height (shared)
-        const OPD_PAGE_W = 210; // mm A5 landscape width
-        const OPD_PAGE_H = 148; // mm A5 landscape height
+        const OPD_HDR_H  = 28;  // mm header height (shared)
+        const OPD_PAGE_W = 148; // mm A5 portrait width
+        const OPD_PAGE_H = 210; // mm A5 portrait height
 
         function escapeHtml(str) {
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -904,8 +904,8 @@
             const PAGE_W = OPD_PAGE_W;
             const TOTAL_LINES = Math.floor((PAGE_H - HDR_H) / LINE_H);
 
-            // Column guide dividers
-            const colDividers = [70, 80, 140, 150].map(x =>
+            // Column guide dividers (portrait A5: columns A=8-52mm, B=56-100mm, C=104-143mm)
+            const colDividers = [52, 56, 100, 104].map(x =>
                 `<div style="position:absolute;left:${x}mm;top:${HDR_H}mm;height:${PAGE_H - HDR_H}mm;border-left:0.3pt dashed #bbb;"></div>`
             ).join('');
 
@@ -913,21 +913,21 @@
             let hLines = '';
             for (let i = 1; i <= TOTAL_LINES; i++) {
                 const y = HDR_H + (i - 1) * LINE_H;
-                hLines += `<div style="position:absolute;left:10mm;top:${y}mm;width:200mm;border-top:0.2pt dotted #e0e0e0;"></div>`;
+                hLines += `<div style="position:absolute;left:8mm;top:${y}mm;width:135mm;border-top:0.2pt dotted #e0e0e0;"></div>`;
             }
 
-            // Line numbers on left margin
+            // Line numbers on left margin (4mm from edge = safe from printer clip zone)
             let lineNumsHtml = '';
             for (let i = 1; i <= TOTAL_LINES; i++) {
                 const y = HDR_H + (i - 1) * LINE_H;
-                lineNumsHtml += `<div style="position:absolute;left:1mm;top:${y}mm;font-size:5pt;color:#aaa;line-height:1;">${i}</div>`;
+                lineNumsHtml += `<div style="position:absolute;left:4mm;top:${y}mm;font-size:5pt;color:#aaa;line-height:1;">${i}</div>`;
             }
 
             // Column labels
             const colLabels = [
-                `<div style="position:absolute;left:10mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">A</div>`,
-                `<div style="position:absolute;left:80mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">B</div>`,
-                `<div style="position:absolute;left:150mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">C</div>`
+                `<div style="position:absolute;left:8mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">A</div>`,
+                `<div style="position:absolute;left:56mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">B</div>`,
+                `<div style="position:absolute;left:104mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">C</div>`
             ].join('');
 
             const pw = window.open('', '_blank');
@@ -941,17 +941,14 @@
                 </style>
             </head><body>
                 <div class="page">
-                    <div style="position:absolute;top:2mm;left:10mm;right:2mm;height:18mm;border:0.7pt solid #333;display:flex;align-items:center;padding:0 3mm;box-sizing:border-box;">
-                        <table style="width:100%;font-size:7.5pt;border-collapse:collapse;">
-                            <tr>
-                                <td style="padding:0 2mm;white-space:nowrap;"><b>เจ้าของ:</b> ${escapeHtml(ownerName)}</td>
-                                <td style="padding:0 2mm;white-space:nowrap;"><b>โทร:</b> ${escapeHtml(ownerPhone)}</td>
-                                <td style="padding:0 2mm;white-space:nowrap;"><b>ชนิด:</b> ${escapeHtml(petType)}</td>
-                                <td style="padding:0 2mm;white-space:nowrap;"><b>เพศ:</b> ${escapeHtml(petGender)}</td>
-                                <td style="padding:0 2mm;white-space:nowrap;"><b>ชื่อสัตว์:</b> ${escapeHtml(petName)}</td>
-                                <td style="padding:0 2mm;white-space:nowrap;"><b>HN:</b> ${escapeHtml(hn)}</td>
-                            </tr>
-                        </table>
+                    <div style="position:absolute;top:5mm;left:8mm;right:4mm;height:19mm;border:0.7pt solid #333;box-sizing:border-box;padding:2mm 3mm;">
+                        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                            <span style="font-size:18pt;font-weight:bold;color:#00008B;">${escapeHtml(petName)}</span>
+                            <span style="font-size:18pt;font-weight:bold;color:#cc0000;">${escapeHtml(hn)}</span>
+                        </div>
+                        <div style="font-size:7.5pt;color:#333;margin-top:1mm;">
+                            <b>เจ้าของ:</b> ${escapeHtml(ownerName)} &nbsp;|&nbsp; <b>โทร:</b> ${escapeHtml(ownerPhone)} &nbsp;|&nbsp; <b>ชนิด:</b> ${escapeHtml(petType)} &nbsp;|&nbsp; <b>เพศ:</b> ${escapeHtml(petGender)}
+                        </div>
                     </div>
                     ${colDividers}
                     ${hLines}
@@ -988,7 +985,7 @@
             const PAGE_W = OPD_PAGE_W;
             const PAGE_H = OPD_PAGE_H;
 
-            const colStartX = { A: 10, B: 80, C: 150 }[column] || 10;
+            const colStartX = { A: 8, B: 56, C: 104 }[column] || 8;
             const startY = HDR_H + (lineNo - 1) * LINE_H;
 
             const labItems = rec.medical_record_items.filter(i => i.item_type === 'Lab');
@@ -998,13 +995,22 @@
             const dateStr = formatThaiDate(rec.created_at, 'short');
 
             const contentLines = [];
-            contentLines.push(`${dateStr}  ${rec.weight || '-'} กก.`);
-            if (rec.cc)              contentLines.push(`CC: ${rec.cc}`);
-            if (rec.dx)              contentLines.push(`Dx: ${rec.dx}`);
-            if (labItems.length > 0) contentLines.push(`Lab: ${labItems.map(i => i.item_name).join(', ')}`);
-            if (txItems.length > 0)  contentLines.push(`Tx: ${txItems.map(i => i.item_name).join(', ')}`);
-            if (rxItems.length > 0)  contentLines.push(`Rx: ${rxItems.map(i => i.dose_per_time ? `${i.item_name} (${i.dose_per_time} ${i.unit || ''})` : i.item_name).join(', ')}`);
-            if (rec.plan)            contentLines.push(`Plan: ${rec.plan}`);
+            contentLines.push(`<div style="color:#cc0000;font-weight:bold;">${escapeHtml(dateStr)}</div>`);
+            if (rec.weight)          contentLines.push(`<div style="color:#0000cc;">${escapeHtml(String(rec.weight))} กก.</div>`);
+            if (rec.cc)              contentLines.push(`<div>CC: ${escapeHtml(rec.cc)}</div>`);
+            if (rec.dx)              contentLines.push(`<div>Dx: ${escapeHtml(rec.dx)}</div>`);
+            if (labItems.length > 0) contentLines.push(`<div style="color:#800080;">Lab: ${labItems.map(i => escapeHtml(i.item_name)).join(', ')}</div>`);
+            if (txItems.length > 0)  contentLines.push(`<div style="color:#8B4513;">Tx: ${txItems.map(i => escapeHtml(i.item_name)).join(', ')}</div>`);
+            if (rxItems.length > 0)  contentLines.push(`<div style="color:#006400;">Rx: ${rxItems.map(i => i.dose_per_time ? `${escapeHtml(i.item_name)} (${escapeHtml(i.dose_per_time)} ${escapeHtml(i.unit || '')})` : escapeHtml(i.item_name)).join(', ')}</div>`);
+            if (rec.plan)            contentLines.push(`<div>Plan: ${escapeHtml(rec.plan)}</div>`);
+            if (rec.appointment) {
+                const apptNote = rec.appointment_note ? ` เพื่อ ${escapeHtml(rec.appointment_note)}` : '';
+                contentLines.push(`<div style="color:#000000;">นัด ${escapeHtml(formatThaiDate(rec.appointment, 'short'))}${apptNote}</div>`);
+            }
+            if (rec.appointment_2) {
+                const apptNote2 = rec.appointment_note_2 ? ` เพื่อ ${escapeHtml(rec.appointment_note_2)}` : '';
+                contentLines.push(`<div style="color:#000000;">นัด(2) ${escapeHtml(formatThaiDate(rec.appointment_2, 'short'))}${apptNote2}</div>`);
+            }
 
             const pw = window.open('', '_blank');
             const html = `<html><head>
@@ -1013,13 +1019,13 @@
                     * { font-family:'Sarabun',sans-serif; }
                     body { margin:0; padding:0; background:white; }
                     .page { width:${PAGE_W}mm; height:${PAGE_H}mm; position:relative; overflow:hidden; }
-                    .content-block { position:absolute; width:60mm; font-size:7.5pt; line-height:${LINE_H}mm; word-wrap:break-word; overflow-wrap:break-word; color:#000; }
+                    .content-block { position:absolute; width:43mm; font-size:7.5pt; line-height:${LINE_H}mm; word-wrap:break-word; overflow-wrap:break-word; }
                     @page { size:${PAGE_W}mm ${PAGE_H}mm; margin:0; }
                 </style>
             </head><body>
                 <div class="page">
                     <div class="content-block" style="left:${colStartX}mm;top:${startY}mm;">
-                        ${contentLines.map(line => `<div>${escapeHtml(line)}</div>`).join('')}
+                        ${contentLines.join('')}
                     </div>
                 </div>
             </body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},800);};<\/script></html>`;
@@ -1044,8 +1050,8 @@
                 </div>
                 <div>
                     <label class="label-clinical">เริ่มบรรทัดที่</label>
-                    <input type="number" id="opd-print-line" class="input-box" value="1" min="1" max="25">
-                    <p class="text-xs text-gray-500 mt-1">กระดาษ A5 แนวนอน มีพื้นที่พิมพ์ 25 บรรทัดต่อ column</p>
+                    <input type="number" id="opd-print-line" class="input-box" value="1" min="1" max="36">
+                    <p class="text-xs text-gray-500 mt-1">กระดาษ A5 แนวตั้ง มีพื้นที่พิมพ์ 36 บรรทัดต่อ column</p>
                 </div>
             </div>
             <div class="p-6 border-t border-white/10 flex gap-3">
