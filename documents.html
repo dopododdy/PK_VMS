@@ -38,6 +38,24 @@
 
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        .btn-base { padding: 8px 16px; border-radius: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; border: none; cursor: pointer; color: white; font-size: 0.9rem; }
+
+        /* DLD Report table styles */
+        .dld-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .dld-table th { background: rgba(0,0,0,0.4); padding: 6px 8px; text-align: center; border: 1px solid var(--border); font-weight: 700; font-size: 0.75rem; }
+        .dld-table td { padding: 5px 8px; border: 1px solid var(--border); text-align: center; }
+        .dld-table td:first-child { text-align: left; font-weight: 600; white-space: nowrap; }
+        .dld-table tr:hover td { background: rgba(255,255,255,0.03); }
+        .dld-table .col-dog { color: #60a5fa; }
+        .dld-table .col-cat { color: #f472b6; }
+        .dld-table .total-row td { background: rgba(20,184,177,0.1); font-weight: 800; color: #14b8b1; }
+        @media print {
+            aside, nav { display: none !important; }
+            #dld-report-container { display: block !important; }
+            #editor-container, #no-selection { display: none !important; }
+            body { overflow: auto; }
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -66,12 +84,32 @@
             <div class="doc-tab active" data-type="doc_consent" onclick="switchDocType('doc_consent')">📋 ใบยินยอมหัตถการ</div>
             <div class="doc-tab" data-type="doc_lab" onclick="switchDocType('doc_lab')">🔬 รายงานผล Lab</div>
             <div class="doc-tab" data-type="doc_referral" onclick="switchDocType('doc_referral')">📨 ใบส่งตัว</div>
+            <div class="doc-tab" data-type="doc_dld" onclick="switchDocType('doc_dld')">📊 รายงานกรมปศุสัตว์</div>
         </nav>
 
         <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-[#020617]">
             <div id="no-selection" class="h-full flex flex-col items-center justify-center opacity-20">
                 <i data-lucide="file-text" class="w-32 h-32 mb-4"></i>
                 <h2 class="text-3xl font-bold uppercase tracking-widest">กรุณาเลือกเจ้าของสัตว์</h2>
+            </div>
+
+            <!-- DLD Report Container (shown when doc_dld tab is active, independent of owner) -->
+            <div id="dld-report-container" class="hidden w-full pb-32">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+                    <div>
+                        <h1 class="text-4xl font-black text-white">📊 รายงานสรุปประจำปี</h1>
+                        <p class="text-purple-400 font-bold mt-2">สำหรับรายงานต่อกรมปศุสัตว์ (DLD Annual Report)</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <select id="dld-year-select" class="input-box w-32" onchange="loadDldReport()"></select>
+                        <button onclick="loadDldReport()" class="btn-base bg-purple-700 hover:bg-purple-600 text-sm px-5 py-3">🔄 โหลดข้อมูล</button>
+                        <button onclick="printDldReport()" class="btn-base bg-teal-700 hover:bg-teal-600 text-sm px-5 py-3">🖨️ พิมพ์/PDF</button>
+                        <button onclick="exportDldCsv()" class="btn-base bg-green-700 hover:bg-green-600 text-sm px-5 py-3">📥 CSV</button>
+                        <button onclick="exportDldXls()" class="btn-base bg-blue-700 hover:bg-blue-600 text-sm px-5 py-3">📊 XLS</button>
+                    </div>
+                </div>
+                <div id="dld-loading" class="hidden text-center py-20 text-gray-500 animate-pulse">กำลังโหลดข้อมูล...</div>
+                <div id="dld-report-body" class="space-y-10"></div>
             </div>
 
             <div id="editor-container" class="hidden max-w-4xl mx-auto space-y-8 pb-32">
@@ -287,6 +325,30 @@
             activeDocType = type;
             document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
+
+            const dldContainer = document.getElementById('dld-report-container');
+            const editorContainer = document.getElementById('editor-container');
+            const noSelection = document.getElementById('no-selection');
+
+            if (type === 'doc_dld') {
+                dldContainer.classList.remove('hidden');
+                editorContainer.classList.add('hidden');
+                noSelection.classList.add('hidden');
+                initDldYearSelect();
+                lucide.createIcons();
+                return;
+            }
+
+            // Non-DLD: hide DLD container, show normal editor flow
+            dldContainer.classList.add('hidden');
+            if (currentOwner) {
+                editorContainer.classList.remove('hidden');
+                noSelection.classList.add('hidden');
+            } else {
+                editorContainer.classList.add('hidden');
+                noSelection.classList.remove('hidden');
+            }
+
             const form = document.getElementById('dynamic-form');
             const title = document.getElementById('doc-title');
             if (type === 'doc_consent') {
@@ -392,6 +454,339 @@
             }
             lucide.createIcons();
         }
+
+        // ─── DLD Annual Report Functions ────────────────────────────────────────────
+
+        const DLD_DEF = {
+            vaccine: {
+                label: "1. วัคซีน", color: "#16a34a",
+                items: ["Rabies", "Canine Distemper", "Canine Parvovirus", "Canine Coronavirus",
+                        "Feline Panleukopenia", "Feline Leukemia", "FIP (Feline Infectious Peritonitis)"]
+            },
+            medical: {
+                label: "2. การรักษาทางอายุรกรรม", color: "#2563eb",
+                items: ["ผิวหนัง", "ทางเดินหายใจ", "ทางเดินอาหาร", "ทางเดินปัสสาวะ",
+                        "ระบบโครงสร้าง", "ระบบประสาท", "ระบบสืบพันธุ์", "โรคตา", "โรคหู"]
+            },
+            surgical: {
+                label: "3. การรักษาทางศัลยกรรม", color: "#7c3aed",
+                items: ["ทำหมันผู้", "ทำหมันเมีย", "ผิวหนัง", "ทางเดินหายใจ", "ทางเดินอาหาร",
+                        "ทางเดินปัสสาวะ", "ระบบโครงสร้าง", "ระบบประสาท", "ระบบสืบพันธุ์"]
+            }
+        };
+
+        const MONTH_LABELS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        let dldReportData = null;
+
+        function initDldYearSelect() {
+            const sel = document.getElementById('dld-year-select');
+            if (!sel || sel.options.length > 1) return;
+            const currentYear = new Date().getFullYear();
+            sel.innerHTML = '';
+            for (let y = currentYear; y >= currentYear - 5; y--) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y + 543; // Buddhist Era
+                sel.appendChild(opt);
+            }
+        }
+
+        async function loadDldReport() {
+            const sel = document.getElementById('dld-year-select');
+            const year = parseInt(sel?.value || new Date().getFullYear());
+            const loading = document.getElementById('dld-loading');
+            const body = document.getElementById('dld-report-body');
+            loading.classList.remove('hidden');
+            body.innerHTML = '';
+
+            try {
+                // Fetch all records in the year with non-empty dld_categories
+                const startDate = `${year}-01-01`;
+                const endDate = `${year + 1}-01-01`;
+                const { data: records, error } = await db
+                    .from('medical_records')
+                    .select('created_at, dld_categories, animal_id')
+                    .gte('created_at', startDate)
+                    .lt('created_at', endDate)
+                    .not('dld_categories', 'is', null);
+
+                if (error) throw error;
+
+                const filtered = (records || []).filter(r => Array.isArray(r.dld_categories) && r.dld_categories.length > 0);
+
+                if (filtered.length === 0) {
+                    body.innerHTML = `<div class="text-center py-20 text-gray-500 italic">ไม่พบข้อมูลรายงาน DLD ในปี ${year + 543}<br><span class="text-sm">กรุณาบันทึกการรักษาพร้อมเลือกหมวดหมู่กรมปศุสัตว์ใน medrec.html</span></div>`;
+                    loading.classList.add('hidden');
+                    return;
+                }
+
+                // Get pet types for all involved animal IDs
+                const animalIds = [...new Set(filtered.map(r => r.animal_id))];
+                const { data: animals } = await db.from('animals').select('id, pet_type').in('id', animalIds);
+                const petTypeMap = {};
+                (animals || []).forEach(a => { petTypeMap[a.id] = a.pet_type; });
+
+                // Build aggregation structure: { mainCat: { item: { month: { dog, cat } } } }
+                const agg = {};
+                Object.keys(DLD_DEF).forEach(mainCat => {
+                    agg[mainCat] = {};
+                    DLD_DEF[mainCat].items.forEach(item => {
+                        agg[mainCat][item] = {};
+                        for (let m = 1; m <= 12; m++) agg[mainCat][item][m] = { dog: 0, cat: 0 };
+                    });
+                });
+
+                filtered.forEach(rec => {
+                    const month = new Date(rec.created_at).getMonth() + 1;
+                    const petType = petTypeMap[rec.animal_id] || '';
+                    const isDog = petType === 'สุนัข';
+                    rec.dld_categories.forEach(key => {
+                        const colonIdx = key.indexOf(':');
+                        if (colonIdx === -1) return;
+                        const main = key.substring(0, colonIdx);
+                        const item = key.substring(colonIdx + 1);
+                        if (agg[main] && agg[main][item]) {
+                            if (isDog) agg[main][item][month].dog++;
+                            else agg[main][item][month].cat++;
+                        }
+                    });
+                });
+
+                dldReportData = { year, agg };
+                renderDldTables(year, agg);
+            } catch (err) {
+                body.innerHTML = `<div class="text-red-400 text-center py-10">เกิดข้อผิดพลาด: ${err.message}</div>`;
+            }
+            loading.classList.add('hidden');
+        }
+
+        function renderDldTables(year, agg) {
+            const body = document.getElementById('dld-report-body');
+            const yearBE = year + 543;
+            let html = `<div class="text-center mb-6 text-gray-400 text-sm">คลินิกรักษาสัตว์หมอปิติพัฒน์ | รายงานสรุปประจำปี พ.ศ. ${yearBE}</div>`;
+
+            Object.entries(DLD_DEF).forEach(([mainCat, def]) => {
+                html += `
+                <div class="section-card overflow-x-auto mb-8" id="dld-table-${mainCat}">
+                    <h3 class="text-xl font-black mb-4" style="color:${def.color}">${def.label} — ปี พ.ศ. ${yearBE}</h3>
+                    <table class="dld-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="text-align:left; min-width:140px;">ประเภท</th>
+                                ${MONTH_LABELS_SHORT.map(m => `<th colspan="2">${m}</th>`).join('')}
+                                <th colspan="2">รวม</th>
+                            </tr>
+                            <tr>
+                                ${MONTH_LABELS_SHORT.map(() => `<th class="col-dog">🐶</th><th class="col-cat">🐱</th>`).join('')}
+                                <th class="col-dog">🐶</th><th class="col-cat">🐱</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                let totalDog = new Array(12).fill(0);
+                let totalCat = new Array(12).fill(0);
+
+                def.items.forEach(item => {
+                    const rowDog = [], rowCat = [];
+                    let sumDog = 0, sumCat = 0;
+                    for (let m = 1; m <= 12; m++) {
+                        const d = agg[mainCat][item][m].dog;
+                        const c = agg[mainCat][item][m].cat;
+                        rowDog.push(d); rowCat.push(c);
+                        sumDog += d; sumCat += c;
+                        totalDog[m - 1] += d; totalCat[m - 1] += c;
+                    }
+                    const hasData = sumDog + sumCat > 0;
+                    html += `<tr style="${hasData ? '' : 'opacity:0.3'}">
+                        <td>${item}</td>
+                        ${rowDog.map((d, i) => `<td class="col-dog">${d || ''}</td><td class="col-cat">${rowCat[i] || ''}</td>`).join('')}
+                        <td class="col-dog font-bold">${sumDog || ''}</td><td class="col-cat font-bold">${sumCat || ''}</td>
+                    </tr>`;
+                });
+
+                // Total row
+                const grandDog = totalDog.reduce((a, b) => a + b, 0);
+                const grandCat = totalCat.reduce((a, b) => a + b, 0);
+                html += `<tr class="total-row">
+                    <td>รวม</td>
+                    ${totalDog.map((d, i) => `<td>${d || ''}</td><td>${totalCat[i] || ''}</td>`).join('')}
+                    <td>${grandDog || ''}</td><td>${grandCat || ''}</td>
+                </tr>`;
+
+                html += `</tbody></table></div>`;
+            });
+
+            body.innerHTML = html;
+        }
+
+        function printDldReport() {
+            if (!dldReportData) return alert("กรุณาโหลดข้อมูลก่อนพิมพ์");
+            const { year, agg } = dldReportData;
+            const yearBE = year + 543;
+
+            let tableHtml = '';
+            Object.entries(DLD_DEF).forEach(([mainCat, def]) => {
+                tableHtml += `<h3 style="color:${def.color}; margin:20px 0 8px;">${def.label} — ปี พ.ศ. ${yearBE}</h3>
+                <table style="width:100%; border-collapse:collapse; font-size:8pt; margin-bottom:16px;">
+                    <thead>
+                        <tr style="background:#f0f9ff;">
+                            <th rowspan="2" style="border:1px solid #ccc; padding:4px 6px; text-align:left;">ประเภท</th>
+                            ${MONTH_LABELS_SHORT.map(m => `<th colspan="2" style="border:1px solid #ccc; padding:4px 2px; text-align:center;">${m}</th>`).join('')}
+                            <th colspan="2" style="border:1px solid #ccc; padding:4px 6px; text-align:center;">รวม</th>
+                        </tr>
+                        <tr style="background:#f0f9ff;">
+                            ${MONTH_LABELS_SHORT.map(() => `<th style="border:1px solid #ccc; padding:2px; text-align:center; color:#2563eb;">🐶</th><th style="border:1px solid #ccc; padding:2px; text-align:center; color:#db2777;">🐱</th>`).join('')}
+                            <th style="border:1px solid #ccc; padding:4px; color:#2563eb;">🐶</th>
+                            <th style="border:1px solid #ccc; padding:4px; color:#db2777;">🐱</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                def.items.forEach(item => {
+                    tableHtml += `<tr><td style="border:1px solid #ccc; padding:3px 6px;">${item}</td>`;
+                    let sumDog = 0, sumCat = 0;
+                    for (let m = 1; m <= 12; m++) {
+                        const d = agg[mainCat][item][m].dog;
+                        const c = agg[mainCat][item][m].cat;
+                        sumDog += d; sumCat += c;
+                        tableHtml += `<td style="border:1px solid #ccc; padding:3px; text-align:center;">${d || ''}</td><td style="border:1px solid #ccc; padding:3px; text-align:center;">${c || ''}</td>`;
+                    }
+                    tableHtml += `<td style="border:1px solid #ccc; padding:3px; text-align:center; font-weight:bold;">${sumDog || ''}</td><td style="border:1px solid #ccc; padding:3px; text-align:center; font-weight:bold;">${sumCat || ''}</td></tr>`;
+                });
+
+                // Total row
+                let totalDogCells = '', sumAllDog = 0, sumAllCat = 0;
+                for (let m = 1; m <= 12; m++) {
+                    let md = 0, mc = 0;
+                    def.items.forEach(item => { md += agg[mainCat][item][m].dog; mc += agg[mainCat][item][m].cat; });
+                    sumAllDog += md; sumAllCat += mc;
+                    totalDogCells += `<td style="border:1px solid #ccc; padding:3px; text-align:center; font-weight:bold; background:#e0f2fe;">${md || ''}</td><td style="border:1px solid #ccc; padding:3px; text-align:center; font-weight:bold; background:#fce7f3;">${mc || ''}</td>`;
+                }
+                tableHtml += `<tr style="background:#f0fdf4;"><td style="border:1px solid #ccc; padding:4px 6px; font-weight:bold;">รวม</td>${totalDogCells}
+                    <td style="border:1px solid #ccc; padding:4px; text-align:center; font-weight:bold;">${sumAllDog || ''}</td>
+                    <td style="border:1px solid #ccc; padding:4px; text-align:center; font-weight:bold;">${sumAllCat || ''}</td></tr>`;
+                tableHtml += `</tbody></table>`;
+            });
+
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
+  * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
+  body { margin: 0; padding: 12mm 16mm; background: white; color: #111; font-size: 10pt; }
+  h1 { font-size: 16pt; font-weight: 800; margin: 0 0 4px; }
+  .header { border-bottom: 3px solid #0891b2; padding-bottom: 8px; margin-bottom: 16px; }
+  @media print { @page { size: A4 landscape; margin: 10mm; } }
+</style>
+</head><body>
+<div class="header">
+  <h1>รายงานสรุปประจำปี พ.ศ. ${yearBE}</h1>
+  <div style="font-size:9pt; color:#555;">คลินิกรักษาสัตว์หมอปิติพัฒน์ | ${VET_NAME} ใบอนุญาต ${VET_LICENSE}</div>
+</div>
+${tableHtml}
+<script>window.onload=()=>{ setTimeout(()=>{ window.print(); }, 800); };<\/script>
+</body></html>`);
+            win.document.close();
+        }
+
+        function buildDldCsvData() {
+            if (!dldReportData) return null;
+            const { year, agg } = dldReportData;
+            const yearBE = year + 543;
+            let csv = `\uFEFF`; // BOM for Thai charset in Excel
+            csv += `รายงานสรุปประจำปี พ.ศ. ${yearBE} — คลินิกรักษาสัตว์หมอปิติพัฒน์\n\n`;
+
+            Object.entries(DLD_DEF).forEach(([mainCat, def]) => {
+                csv += `${def.label}\n`;
+                csv += `ประเภท,` + MONTH_LABELS_SHORT.flatMap(m => [`${m}(🐶)`, `${m}(🐱)`]).join(',') + `,รวม(🐶),รวม(🐱)\n`;
+
+                def.items.forEach(item => {
+                    let row = `"${item}",`;
+                    let sumDog = 0, sumCat = 0;
+                    for (let m = 1; m <= 12; m++) {
+                        const d = agg[mainCat][item][m].dog;
+                        const c = agg[mainCat][item][m].cat;
+                        sumDog += d; sumCat += c;
+                        row += `${d},${c},`;
+                    }
+                    csv += row + `${sumDog},${sumCat}\n`;
+                });
+
+                // Total row
+                let totalRow = 'รวม,';
+                let grandDog = 0, grandCat = 0;
+                for (let m = 1; m <= 12; m++) {
+                    let md = 0, mc = 0;
+                    def.items.forEach(item => { md += agg[mainCat][item][m].dog; mc += agg[mainCat][item][m].cat; });
+                    grandDog += md; grandCat += mc;
+                    totalRow += `${md},${mc},`;
+                }
+                csv += totalRow + `${grandDog},${grandCat}\n\n`;
+            });
+            return csv;
+        }
+
+        function exportDldCsv() {
+            const csv = buildDldCsvData();
+            if (!csv) return alert("กรุณาโหลดข้อมูลก่อน");
+            const year = dldReportData.year + 543;
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `DLD_Report_${year}.csv`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        function exportDldXls() {
+            if (!dldReportData) return alert("กรุณาโหลดข้อมูลก่อน");
+            const { year, agg } = dldReportData;
+            const yearBE = year + 543;
+
+            let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"><style>th,td{border:1px solid #ccc;padding:4px 8px;font-family:Sarabun,sans-serif;}th{background:#e0f2fe;}</style></head><body>`;
+            tableHtml += `<h3>รายงานสรุปประจำปี พ.ศ. ${yearBE} — คลินิกรักษาสัตว์หมอปิติพัฒน์</h3>`;
+
+            Object.entries(DLD_DEF).forEach(([mainCat, def]) => {
+                tableHtml += `<h4>${def.label}</h4><table>
+                    <tr><th rowspan="2">ประเภท</th>${MONTH_LABELS_SHORT.map(m => `<th colspan="2">${m}</th>`).join('')}<th colspan="2">รวม</th></tr>
+                    <tr>${MONTH_LABELS_SHORT.map(() => `<th>🐶</th><th>🐱</th>`).join('')}<th>🐶</th><th>🐱</th></tr>`;
+
+                def.items.forEach(item => {
+                    tableHtml += `<tr><td>${item}</td>`;
+                    let sumDog = 0, sumCat = 0;
+                    for (let m = 1; m <= 12; m++) {
+                        const d = agg[mainCat][item][m].dog;
+                        const c = agg[mainCat][item][m].cat;
+                        sumDog += d; sumCat += c;
+                        tableHtml += `<td>${d || 0}</td><td>${c || 0}</td>`;
+                    }
+                    tableHtml += `<td><b>${sumDog}</b></td><td><b>${sumCat}</b></td></tr>`;
+                });
+
+                // Total row
+                tableHtml += `<tr style="background:#f0fdf4;"><td><b>รวม</b></td>`;
+                let gd = 0, gc = 0;
+                for (let m = 1; m <= 12; m++) {
+                    let md = 0, mc = 0;
+                    def.items.forEach(item => { md += agg[mainCat][item][m].dog; mc += agg[mainCat][item][m].cat; });
+                    gd += md; gc += mc;
+                    tableHtml += `<td><b>${md}</b></td><td><b>${mc}</b></td>`;
+                }
+                tableHtml += `<td><b>${gd}</b></td><td><b>${gc}</b></td></tr></table><br>`;
+            });
+
+            tableHtml += `</body></html>`;
+            const blob = new Blob(['\uFEFF' + tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `DLD_Report_${yearBE}.xls`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        // ─── End DLD Functions ──────────────────────────────────────────────────────
 
         function syncUrgency() {
             document.querySelectorAll('[id^="urgency-"]').forEach(l => l.classList.remove('active'));

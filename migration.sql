@@ -53,6 +53,14 @@ ALTER TABLE mas_lab_parameters
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- ═══════════════════════════════════════════════════════════════
+-- เพิ่ม dld_categories สำหรับรายงานกรมปศุสัตว์ (DLD Annual Report)
+-- เก็บเป็น JSON array เช่น ["vaccine:Rabies","medical:ผิวหนัง"]
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE medical_records
+  ADD COLUMN IF NOT EXISTS dld_categories JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- ═══════════════════════════════════════════════════════════════
 -- เพิ่ม Template สำหรับ doc_echo (Echocardiography)
 -- ═══════════════════════════════════════════════════════════════
 INSERT INTO public.print_templates (template_type, config)
