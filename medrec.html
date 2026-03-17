@@ -135,7 +135,7 @@
                     <div class="col-span-12 md:col-span-3"><label class="label-text text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-3xl font-black text-yellow-400" value="0" step="0.01"></div>
                 </div>
                 <div class="flex gap-4 mt-10">
-                    <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-2xl py-5 shadow-2xl" id="btn-save-main">💾 บันทึกการรักษา</button>
+                    <button onclick="openDldModal()" class="btn-base btn-teal flex-1 text-2xl py-5 shadow-2xl" id="btn-save-main">💾 บันทึกการรักษา</button>
                     <button onclick="showHistoryView()" class="btn-base btn-red px-10">ยกเลิก</button>
                 </div>
             </div>
@@ -167,11 +167,138 @@
         </div>
     </div>
 
+    <!-- DLD Report Modal -->
+    <div id="dld-modal" class="modal-overlay" style="z-index: 160;">
+        <div class="modal-content !max-w-3xl">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-purple-900/20">
+                <div>
+                    <h3 class="text-2xl font-bold text-purple-300">📋 รายงานกรมปศุสัตว์</h3>
+                    <p class="text-sm text-gray-400 mt-1">เลือกหมวดหมู่ที่เกี่ยวข้องเพื่อรวมในรายงานประจำปี (สามารถข้ามได้)</p>
+                </div>
+                <button onclick="document.getElementById('dld-modal').style.display='none'" class="text-3xl text-gray-400 hover:text-white">✕</button>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-1 space-y-5">
+                <!-- Main category toggle buttons -->
+                <div class="flex gap-3 flex-wrap">
+                    <button id="dld-btn-vaccine" onclick="setDldMain('vaccine')"
+                        class="btn-base bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-green-900/30">💉 วัคซีน</button>
+                    <button id="dld-btn-medical" onclick="setDldMain('medical')"
+                        class="btn-base bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-blue-900/30">🩺 อายุรกรรม</button>
+                    <button id="dld-btn-surgical" onclick="setDldMain('surgical')"
+                        class="btn-base bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-purple-900/30">🔪 ศัลยกรรม</button>
+                </div>
+
+                <!-- Sub-category pills -->
+                <div id="dld-sub-items" class="flex flex-wrap gap-2 min-h-[44px] p-3 bg-black/20 rounded-2xl border border-white/5"></div>
+
+                <!-- Selected tags -->
+                <div>
+                    <label class="label-text mb-2">✅ ที่เลือกแล้ว</label>
+                    <div id="dld-selected-display" class="flex flex-wrap gap-2 min-h-[36px]">
+                        <span class="text-gray-600 text-sm italic">ยังไม่ได้เลือก...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="saveMedicalRecord()" class="btn-base bg-slate-600 hover:bg-slate-500 px-6 text-sm">ข้ามขั้นตอนนี้</button>
+                <button onclick="saveMedicalRecord()" class="btn-base btn-teal flex-1 text-xl py-4">💾 บันทึกพร้อมข้อมูล DLD</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
         let selectedItems = [], petType = 'สุนัข', editingId = null;
+        let selectedDldCategories = [], activeDldMain = null;
+
+        const DLD_CATEGORIES = {
+            vaccine: {
+                label: "💉 วัคซีน", emoji: "💉", colorClass: "bg-green-600",
+                items: ["Rabies", "Canine Distemper", "Canine Parvovirus", "Canine Coronavirus",
+                        "Feline Panleukopenia", "Feline Leukemia", "FIP (Feline Infectious Peritonitis)"]
+            },
+            medical: {
+                label: "🩺 อายุรกรรม", emoji: "🩺", colorClass: "bg-blue-600",
+                items: ["ผิวหนัง", "ทางเดินหายใจ", "ทางเดินอาหาร", "ทางเดินปัสสาวะ",
+                        "ระบบโครงสร้าง", "ระบบประสาท", "ระบบสืบพันธุ์", "โรคตา", "โรคหู"]
+            },
+            surgical: {
+                label: "🔪 ศัลยกรรม", emoji: "🔪", colorClass: "bg-purple-600",
+                items: ["ทำหมันผู้", "ทำหมันเมีย", "ผิวหนัง", "ทางเดินหายใจ", "ทางเดินอาหาร",
+                        "ทางเดินปัสสาวะ", "ระบบโครงสร้าง", "ระบบประสาท", "ระบบสืบพันธุ์"]
+            }
+        };
+
+        function openDldModal() {
+            selectedDldCategories = [];
+            activeDldMain = null;
+            renderDldButtons();
+            document.getElementById('dld-modal').style.display = 'flex';
+        }
+
+        function setDldMain(main) {
+            activeDldMain = activeDldMain === main ? null : main;
+            renderDldButtons();
+        }
+
+        function toggleDldItem(main, item) {
+            const key = `${main}:${item}`;
+            const idx = selectedDldCategories.indexOf(key);
+            if (idx > -1) selectedDldCategories.splice(idx, 1);
+            else selectedDldCategories.push(key);
+            renderDldButtons();
+        }
+
+        function removeDldItem(key) {
+            const idx = selectedDldCategories.indexOf(key);
+            if (idx > -1) selectedDldCategories.splice(idx, 1);
+            renderDldButtons();
+        }
+
+        function renderDldButtons() {
+            ['vaccine', 'medical', 'surgical'].forEach(main => {
+                const btn = document.getElementById(`dld-btn-${main}`);
+                if (!btn) return;
+                const hasSelected = selectedDldCategories.some(k => k.startsWith(`${main}:`));
+                const colorMap = { vaccine: 'bg-green-700 text-white', medical: 'bg-blue-700 text-white', surgical: 'bg-purple-700 text-white' };
+                const activeMap = { vaccine: 'bg-green-600 text-white shadow-lg', medical: 'bg-blue-600 text-white shadow-lg', surgical: 'bg-purple-600 text-white shadow-lg' };
+                if (activeDldMain === main) btn.className = `btn-base ${activeMap[main]} text-sm`;
+                else if (hasSelected) btn.className = `btn-base ${colorMap[main]} text-sm opacity-80`;
+                else btn.className = `btn-base bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10`;
+            });
+
+            const subContainer = document.getElementById('dld-sub-items');
+            if (activeDldMain && DLD_CATEGORIES[activeDldMain]) {
+                const cat = DLD_CATEGORIES[activeDldMain];
+                subContainer.innerHTML = cat.items.map(item => {
+                    const key = `${activeDldMain}:${item}`;
+                    const isActive = selectedDldCategories.includes(key);
+                    return `<button onclick="toggleDldItem('${activeDldMain}','${item.replace(/'/g,"\\'")}');event.stopPropagation()"
+                        class="btn-base text-sm px-4 py-2 ${isActive ? cat.colorClass + ' text-white shadow-md' : 'bg-white/5 border border-white/10 text-gray-300 hover:bg-white/15'}">${item}</button>`;
+                }).join('');
+            } else {
+                subContainer.innerHTML = '<span class="text-gray-600 text-sm italic p-1">กดเลือกหมวดหมู่ด้านบน...</span>';
+            }
+
+            const displayContainer = document.getElementById('dld-selected-display');
+            if (selectedDldCategories.length > 0) {
+                displayContainer.innerHTML = selectedDldCategories.map(key => {
+                    const [main, item] = key.split(':');
+                    const cat = DLD_CATEGORIES[main] || { emoji: '?', colorClass: 'bg-slate-600' };
+                    const safeKey = key.replace(/'/g, "\\'");
+                    return `<span class="${cat.colorClass} text-white text-xs px-3 py-1 rounded-full flex items-center gap-1.5 font-bold">
+                        ${cat.emoji} ${item}
+                        <span onclick="removeDldItem('${safeKey}')" class="cursor-pointer opacity-70 hover:opacity-100 ml-1 font-bold">✕</span>
+                    </span>`;
+                }).join('');
+            } else {
+                displayContainer.innerHTML = '<span class="text-gray-600 text-sm italic">ยังไม่ได้เลือก...</span>';
+            }
+        }
 
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
@@ -529,8 +656,9 @@
 
         async function saveMedicalRecord() {
             try {
+                document.getElementById('dld-modal').style.display = 'none';
                 const visitDate = document.getElementById('f_visit_date').value || new Date().toISOString().split('T')[0];
-                const headerData = { animal_id: animalId, owner_hn: ownerHN, created_at: visitDate, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: selectedItems.length > 0 ? 'pending' : 'no_charge' };
+                const headerData = { animal_id: animalId, owner_hn: ownerHN, created_at: visitDate, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: selectedItems.length > 0 ? 'pending' : 'no_charge', dld_categories: selectedDldCategories };
                 let currentRecordId = editingId;
                 if (editingId) { await db.from('medical_records').update(headerData).eq('id', editingId); await db.from('medical_record_items').delete().eq('record_id', editingId); }
                 else { const { data: record } = await db.from('medical_records').insert([headerData]).select().single(); currentRecordId = record.id; }
@@ -548,6 +676,8 @@
             [['appointment','appointment'],['appointment_2','appointment_2']].forEach(([elSuffix,dbCol]) => { const el = document.getElementById('f_'+elSuffix); if(el) { if(el._flatpickr) { el._flatpickr.setDate(rec[dbCol] || null); } else { el.value = rec[dbCol] || ''; } } });
             document.getElementById('f_cost').value = rec.total_cost || 0;
             selectedItems = rec.medical_record_items.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
+            selectedDldCategories = Array.isArray(rec.dld_categories) ? rec.dld_categories : [];
+            activeDldMain = null;
             updateFormUI(); showFormView();
         }
 
