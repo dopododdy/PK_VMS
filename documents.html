@@ -555,7 +555,18 @@
                 dldReportData = { year, agg };
                 renderDldTables(year, agg);
             } catch (err) {
-                body.innerHTML = `<div class="text-red-400 text-center py-10">เกิดข้อผิดพลาด: ${err.message}</div>`;
+                const isDldColumnMissing = err.message && err.message.includes('dld_categories') && err.message.includes('does not exist');
+                if (isDldColumnMissing) {
+                    body.innerHTML = `<div class="text-center py-12 px-4">
+                        <div class="text-4xl mb-4">⚠️</div>
+                        <p class="text-amber-400 font-bold text-base mb-2">ยังไม่ได้อัปเดต Schema ฐานข้อมูล</p>
+                        <p class="text-gray-400 text-sm mb-4">Column <code class="bg-white/10 px-1 rounded text-red-300">dld_categories</code> ยังไม่มีในตาราง <code class="bg-white/10 px-1 rounded text-red-300">medical_records</code></p>
+                        <p class="text-gray-400 text-sm mb-5">กรุณารัน SQL Migration ใน <strong class="text-white">Supabase → SQL Editor</strong> เพื่อเพิ่ม Column ที่ขาดหายไป</p>
+                        <a href="set-db.html" class="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-500 text-white font-bold px-5 py-2.5 rounded-xl transition text-sm">🛠️ ไปที่หน้าจัดการฐานข้อมูล</a>
+                    </div>`;
+                } else {
+                    body.innerHTML = `<div class="text-red-400 text-center py-10">เกิดข้อผิดพลาด: ${err.message}</div>`;
+                }
             }
             loading.classList.add('hidden');
         }
