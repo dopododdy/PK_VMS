@@ -94,6 +94,7 @@
                     ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
                 </h3>
                 <div class="flex gap-3">
+                    <button onclick="printBlankOPD()" class="btn-base bg-green-700 hover:bg-green-600 shadow-lg text-xs">📄 พิมพ์ OPD เปล่า</button>
                     <button onclick="goToPOS()" class="btn-base bg-blue-600 hover:bg-blue-500 shadow-lg text-xs">💰 คิดเงิน</button>
                     <button onclick="printBothLabels(animalId)" class="btn-base bg-emerald-600 hover:bg-emerald-500 shadow-lg text-xs">🖨️ ข้อมูลสัตว์ + นัดหมาย</button>
                     <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-xs">🪪 บัตรประจำตัวสัตว์</button>
@@ -212,7 +213,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
-        let selectedItems = [], petType = 'สุนัข', editingId = null;
+        let selectedItems = [], petType = 'สุนัข', petGender = '-', editingId = null;
         let selectedDldCategories = [], activeDldMain = null;
 
         const DLD_CATEGORIES = {
@@ -353,6 +354,7 @@
             ]);
             if (owner && pet) {
                 petType = pet.pet_type;
+                petGender = pet.gender || '-';
                 document.getElementById('info-owner-name').innerText = owner.owner_name;
                 document.getElementById('info-owner-phone').innerText = phones?.[0]?.phone_number || '-';
                 document.getElementById('info-owner-address').innerText = owner.address || '-';
@@ -459,6 +461,9 @@
 
                         <div class="mt-4">
                             <span class="data-label">📌 Plan</span><div class="data-value italic">${rec.plan || '-'}</div>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <button onclick="event.stopPropagation(); showOpdPrintModal('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์ประวัติลงกระดาษ</button>
                         </div>
                     </div>
                 </div>`;
@@ -878,6 +883,177 @@
             pw.document.write(html); 
             pw.document.close();
         }
-    </script>
+        const OPD_LINE_H = 5;   // mm per line (shared by printBlankOPD and printHistoryToCard)
+        const OPD_HDR_H  = 22;  // mm header height (shared)
+        const OPD_PAGE_W = 210; // mm A5 landscape width
+        const OPD_PAGE_H = 148; // mm A5 landscape height
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function printBlankOPD() {
+            const ownerName = document.getElementById('info-owner-name').innerText;
+            const ownerPhone = document.getElementById('info-owner-phone').innerText;
+            const petName = document.getElementById('v-pet-name').innerText;
+            const hn = document.getElementById('head-hn').innerText.replace('HN: ', '');
+
+            const LINE_H = OPD_LINE_H;
+            const HDR_H  = OPD_HDR_H;
+            const PAGE_H = OPD_PAGE_H;
+            const PAGE_W = OPD_PAGE_W;
+            const TOTAL_LINES = Math.floor((PAGE_H - HDR_H) / LINE_H);
+
+            // Column guide dividers
+            const colDividers = [70, 80, 140, 150].map(x =>
+                `<div style="position:absolute;left:${x}mm;top:${HDR_H}mm;height:${PAGE_H - HDR_H}mm;border-left:0.3pt dashed #bbb;"></div>`
+            ).join('');
+
+            // Horizontal guide lines
+            let hLines = '';
+            for (let i = 1; i <= TOTAL_LINES; i++) {
+                const y = HDR_H + (i - 1) * LINE_H;
+                hLines += `<div style="position:absolute;left:10mm;top:${y}mm;width:200mm;border-top:0.2pt dotted #e0e0e0;"></div>`;
+            }
+
+            // Line numbers on left margin
+            let lineNumsHtml = '';
+            for (let i = 1; i <= TOTAL_LINES; i++) {
+                const y = HDR_H + (i - 1) * LINE_H;
+                lineNumsHtml += `<div style="position:absolute;left:1mm;top:${y}mm;font-size:5pt;color:#aaa;line-height:1;">${i}</div>`;
+            }
+
+            // Column labels
+            const colLabels = [
+                `<div style="position:absolute;left:10mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">A</div>`,
+                `<div style="position:absolute;left:80mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">B</div>`,
+                `<div style="position:absolute;left:150mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">C</div>`
+            ].join('');
+
+            const pw = window.open('', '_blank');
+            const html = `<html><head>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                <style>
+                    * { font-family:'Sarabun',sans-serif; }
+                    body { margin:0; padding:0; }
+                    .page { width:${PAGE_W}mm; height:${PAGE_H}mm; position:relative; overflow:hidden; }
+                    @page { size:${PAGE_W}mm ${PAGE_H}mm; margin:0; }
+                </style>
+            </head><body>
+                <div class="page">
+                    <div style="position:absolute;top:2mm;left:10mm;right:2mm;height:18mm;border:0.7pt solid #333;display:flex;align-items:center;padding:0 3mm;box-sizing:border-box;">
+                        <table style="width:100%;font-size:7.5pt;border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:0 2mm;white-space:nowrap;"><b>เจ้าของ:</b> ${escapeHtml(ownerName)}</td>
+                                <td style="padding:0 2mm;white-space:nowrap;"><b>โทร:</b> ${escapeHtml(ownerPhone)}</td>
+                                <td style="padding:0 2mm;white-space:nowrap;"><b>ชนิด:</b> ${escapeHtml(petType)}</td>
+                                <td style="padding:0 2mm;white-space:nowrap;"><b>เพศ:</b> ${escapeHtml(petGender)}</td>
+                                <td style="padding:0 2mm;white-space:nowrap;"><b>ชื่อสัตว์:</b> ${escapeHtml(petName)}</td>
+                                <td style="padding:0 2mm;white-space:nowrap;"><b>HN:</b> ${escapeHtml(hn)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    ${colDividers}
+                    ${hLines}
+                    ${lineNumsHtml}
+                    ${colLabels}
+                </div>
+            </body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},800);};<\/script></html>`;
+
+            pw.document.write(html);
+            pw.document.close();
+        }
+
+        let opdPrintRecordId = null;
+
+        function showOpdPrintModal(recordId) {
+            opdPrintRecordId = recordId;
+            document.getElementById('opd-print-line').value = 1;
+            document.getElementById('opd-print-col').value = 'A';
+            document.getElementById('opd-print-modal').style.display = 'flex';
+        }
+
+        function confirmOpdPrint() {
+            const col = document.getElementById('opd-print-col').value;
+            const lineNo = parseInt(document.getElementById('opd-print-line').value) || 1;
+            document.getElementById('opd-print-modal').style.display = 'none';
+            const rec = records.find(r => r.id === opdPrintRecordId);
+            if (!rec) return alert("ไม่พบข้อมูลประวัติ");
+            printHistoryToCard(rec, col, lineNo);
+        }
+
+        function printHistoryToCard(rec, column, lineNo) {
+            const LINE_H = OPD_LINE_H;
+            const HDR_H  = OPD_HDR_H;
+            const PAGE_W = OPD_PAGE_W;
+            const PAGE_H = OPD_PAGE_H;
+
+            const colStartX = { A: 10, B: 80, C: 150 }[column] || 10;
+            const startY = HDR_H + (lineNo - 1) * LINE_H;
+
+            const labItems = rec.medical_record_items.filter(i => i.item_type === 'Lab');
+            const txItems  = rec.medical_record_items.filter(i => i.item_type === 'Tx');
+            const rxItems  = rec.medical_record_items.filter(i => i.item_type === 'Rx');
+
+            const dateStr = formatThaiDate(rec.created_at, 'short');
+
+            const contentLines = [];
+            contentLines.push(`${dateStr}  ${rec.weight || '-'} กก.`);
+            if (rec.cc)              contentLines.push(`CC: ${rec.cc}`);
+            if (rec.dx)              contentLines.push(`Dx: ${rec.dx}`);
+            if (labItems.length > 0) contentLines.push(`Lab: ${labItems.map(i => i.item_name).join(', ')}`);
+            if (txItems.length > 0)  contentLines.push(`Tx: ${txItems.map(i => i.item_name).join(', ')}`);
+            if (rxItems.length > 0)  contentLines.push(`Rx: ${rxItems.map(i => i.dose_per_time ? `${i.item_name} (${i.dose_per_time} ${i.unit || ''})` : i.item_name).join(', ')}`);
+            if (rec.plan)            contentLines.push(`Plan: ${rec.plan}`);
+
+            const pw = window.open('', '_blank');
+            const html = `<html><head>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                <style>
+                    * { font-family:'Sarabun',sans-serif; }
+                    body { margin:0; padding:0; background:white; }
+                    .page { width:${PAGE_W}mm; height:${PAGE_H}mm; position:relative; overflow:hidden; }
+                    .content-block { position:absolute; width:60mm; font-size:7.5pt; line-height:${LINE_H}mm; word-wrap:break-word; overflow-wrap:break-word; color:#000; }
+                    @page { size:${PAGE_W}mm ${PAGE_H}mm; margin:0; }
+                </style>
+            </head><body>
+                <div class="page">
+                    <div class="content-block" style="left:${colStartX}mm;top:${startY}mm;">
+                        ${contentLines.map(line => `<div>${escapeHtml(line)}</div>`).join('')}
+                    </div>
+                </div>
+            </body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},800);};<\/script></html>`;
+
+            pw.document.write(html);
+            pw.document.close();
+        }
+    </script>    <div id="opd-print-modal" class="modal-overlay" style="z-index: 170;">
+        <div class="modal-content !max-w-sm">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30">
+                <h4 class="text-2xl font-bold text-teal-400">🖨️ พิมพ์ประวัติลงกระดาษ OPD</h4>
+                <p class="text-sm text-gray-400 mt-1">กำหนดตำแหน่งเริ่มพิมพ์บนกระดาษ เช่น Column A บรรทัดที่ 1</p>
+            </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="label-clinical">Column</label>
+                    <select id="opd-print-col" class="input-box w-full">
+                        <option value="A">A (ซ้าย)</option>
+                        <option value="B">B (กลาง)</option>
+                        <option value="C">C (ขวา)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-clinical">เริ่มบรรทัดที่</label>
+                    <input type="number" id="opd-print-line" class="input-box" value="1" min="1" max="25">
+                    <p class="text-xs text-gray-500 mt-1">กระดาษ A5 แนวนอน มีพื้นที่พิมพ์ 25 บรรทัดต่อ column</p>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="document.getElementById('opd-print-modal').style.display='none'" class="btn-base btn-red px-6">ยกเลิก</button>
+                <button onclick="confirmOpdPrint()" class="btn-base btn-teal flex-1 text-lg">🖨️ พิมพ์</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
