@@ -963,10 +963,20 @@
 
         let opdPrintRecordId = null;
 
+        function selectOpdCol(col) {
+            document.getElementById('opd-print-col').value = col;
+            ['A','B','C'].forEach(c => {
+                const btn = document.getElementById('col-btn-' + c);
+                if (btn) btn.className = c === col
+                    ? 'btn-base btn-teal flex-1'
+                    : 'btn-base flex-1 bg-white/10 text-gray-400';
+            });
+        }
+
         function showOpdPrintModal(recordId) {
             opdPrintRecordId = recordId;
             document.getElementById('opd-print-line').value = 1;
-            document.getElementById('opd-print-col').value = 'A';
+            selectOpdCol('A');
             document.getElementById('opd-print-modal').style.display = 'flex';
         }
 
@@ -984,9 +994,14 @@
             const HDR_H  = OPD_HDR_H;
             const PAGE_W = OPD_PAGE_W;
             const PAGE_H = OPD_PAGE_H;
+            const MAX_LINE = 24; // lines 1-24 are safely within the printable area
 
-            const colStartX = { A: 8, B: 74, C: 140 }[column] || 8;
-            const startY = HDR_H + (lineNo - 1) * LINE_H;
+            const colStartX = { A: 8, B: 74, C: 140 };
+            const colOrder  = ['A', 'B', 'C'];
+
+            // Clamp inputs to valid ranges
+            const startCol = colOrder.includes(column) ? column : 'A';
+            const startLine = Math.min(Math.max(parseInt(lineNo) || 1, 1), MAX_LINE);
 
             const labItems = rec.medical_record_items.filter(i => i.item_type === 'Lab');
             const txItems  = rec.medical_record_items.filter(i => i.item_type === 'Tx');
@@ -1002,8 +1017,17 @@
             if (rec.pe)              contentLines.push(`<div><span style="color:#0000cc;">PE:</span> ${escapeHtml(rec.pe)}</div>`);
             if (labItems.length > 0) contentLines.push(`<div><span style="color:#0000cc;">Lab:</span> ${labItems.map(i => escapeHtml(i.item_name)).join(', ')}</div>`);
             if (rec.dx)              contentLines.push(`<div><span style="color:#0000cc;">Dx:</span> ${escapeHtml(rec.dx)}</div>`);
-            if (txItems.length > 0)  contentLines.push(`<div><span style="color:#0000cc;">Tx:</span> ${txItems.map(i => escapeHtml(i.item_name)).join(', ')}</div>`);
-            if (rxItems.length > 0)  contentLines.push(`<div><span style="color:#0000cc;">Rx:</span> ${rxItems.map(i => i.dose_per_time ? `${escapeHtml(i.item_name)} (${escapeHtml(i.dose_per_time)} ${escapeHtml(i.unit || '')})` : escapeHtml(i.item_name)).join(', ')}</div>`);
+            if (txItems.length > 0) {
+                contentLines.push(`<div><span style="color:#0000cc;">Tx:</span></div>`);
+                txItems.forEach(i => contentLines.push(`<div>- ${escapeHtml(i.item_name)}</div>`));
+            }
+            if (rxItems.length > 0) {
+                contentLines.push(`<div><span style="color:#0000cc;">Rx:</span></div>`);
+                rxItems.forEach(i => {
+                    const detail = i.dose_per_time ? ` ${escapeHtml(i.dose_per_time)} ${escapeHtml(i.unit || '')}` : '';
+                    contentLines.push(`<div>- ${escapeHtml(i.item_name)}${detail}</div>`);
+                });
+            }
             if (rec.plan)            contentLines.push(`<div><span style="color:#0000cc;">Plan:</span> ${escapeHtml(rec.plan)}</div>`);
             if (rec.appointment) {
                 const apptNote = rec.appointment_note ? ` เพื่อ ${escapeHtml(rec.appointment_note)}` : '';
@@ -1013,6 +1037,26 @@
                 const apptNote2 = rec.appointment_note_2 ? ` เพื่อ ${escapeHtml(rec.appointment_note_2)}` : '';
                 contentLines.push(`<div><span style="color:#0000cc;">App(2):</span> ${escapeHtml(formatThaiDate(rec.appointment_2, 'short'))}${apptNote2}</div>`);
             }
+
+            // Distribute content lines across columns (overflow A→B→C at line 24)
+            const segments = [];
+            let remaining = [...contentLines];
+            let curColIdx = colOrder.indexOf(startCol);
+            let curLineNo = startLine;
+            while (remaining.length > 0 && curColIdx < colOrder.length) {
+                const available = MAX_LINE - curLineNo + 1;
+                if (available <= 0) { curColIdx++; curLineNo = 1; continue; }
+                const chunk = remaining.splice(0, available);
+                segments.push({ col: colOrder[curColIdx], line: curLineNo, lines: chunk });
+                curColIdx++;
+                curLineNo = 1;
+            }
+
+            const allBlocksHtml = segments.map(seg => {
+                const x = colStartX[seg.col];
+                const y = HDR_H + (seg.line - 1) * LINE_H;
+                return `<div class="content-block" style="left:${x}mm;top:${y}mm;">${seg.lines.join('')}</div>`;
+            }).join('');
 
             const pw = window.open('', '_blank');
             const html = `<html><head>
@@ -1026,9 +1070,7 @@
                 </style>
             </head><body>
                 <div class="page">
-                    <div class="content-block" style="left:${colStartX}mm;top:${startY}mm;">
-                        ${contentLines.join('')}
-                    </div>
+                    ${allBlocksHtml}
                 </div>
             </body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},800);};<\/script></html>`;
 
@@ -1044,16 +1086,17 @@
             <div class="p-6 space-y-5">
                 <div>
                     <label class="label-clinical">Column</label>
-                    <select id="opd-print-col" class="input-box w-full">
-                        <option value="A">A (ซ้าย)</option>
-                        <option value="B">B (กลาง)</option>
-                        <option value="C">C (ขวา)</option>
-                    </select>
+                    <div class="flex gap-2 mt-1">
+                        <button id="col-btn-A" onclick="selectOpdCol('A')" class="btn-base btn-teal flex-1">A</button>
+                        <button id="col-btn-B" onclick="selectOpdCol('B')" class="btn-base flex-1 bg-white/10 text-gray-400">B</button>
+                        <button id="col-btn-C" onclick="selectOpdCol('C')" class="btn-base flex-1 bg-white/10 text-gray-400">C</button>
+                    </div>
+                    <input type="hidden" id="opd-print-col" value="A">
                 </div>
                 <div>
                     <label class="label-clinical">เริ่มบรรทัดที่</label>
-                    <input type="number" id="opd-print-line" class="input-box" value="1" min="1" max="36">
-                    <p class="text-xs text-gray-500 mt-1">กระดาษ A5 แนวตั้ง มีพื้นที่พิมพ์ 36 บรรทัดต่อ column</p>
+                    <input type="number" id="opd-print-line" class="input-box" value="1" min="1" max="24">
+                    <p class="text-xs text-gray-500 mt-1">พิมพ์ได้ปลอดภัย 24 บรรทัดต่อคอลัมน์ (ล้นอัตโนมัติไปคอลัมน์ถัดไป)</p>
                 </div>
             </div>
             <div class="p-6 border-t border-white/10 flex gap-3">
