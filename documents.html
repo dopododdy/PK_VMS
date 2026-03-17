@@ -118,9 +118,14 @@
                         <h1 class="text-4xl font-black text-white" id="doc-title">ใบยินยอมผ่าตัด/วางยาสลบ</h1>
                         <p class="text-teal-500 font-bold mt-2 bg-teal-500/10 px-4 py-1 rounded-full inline-block" id="owner-info">-</p>
                     </div>
-                    <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
-                        <i data-lucide="printer"></i> พิมพ์เอกสาร
-                    </button>
+                    <div class="flex gap-3 items-center">
+                        <button id="btn-print-queue" onclick="printQueueCard()" class="hidden bg-orange-700 hover:bg-orange-600 px-6 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
+                            🎫 พิมพ์บัตรคิว
+                        </button>
+                        <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
+                            <i data-lucide="printer"></i> พิมพ์เอกสาร
+                        </button>
+                    </div>
                 </div>
 
                 <div class="section-card">
@@ -142,6 +147,8 @@
         const VET_LICENSE = "01-6186/2550";
         const CLINIC_PHONE = "02-123-4567";
         const CLINIC_TAX_ID = "0105560001234";
+        const CLINIC_NAME = "PK-VMS Animal Clinic";
+        const CLINIC_ADDRESS = "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000";
 
         const COMMON_PROCEDURES = [
             'วางยาสลบ', 'ทำหมันเมีย', 'ตอน (เพศผู้)', 
@@ -325,6 +332,8 @@
             activeDocType = type;
             document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`[data-type="${type}"]`)?.classList.add('active');
+            const btnQueue = document.getElementById('btn-print-queue');
+            if (btnQueue) { if (type === 'doc_consent') btnQueue.classList.remove('hidden'); else btnQueue.classList.add('hidden'); }
 
             const dldContainer = document.getElementById('dld-report-container');
             const editorContainer = document.getElementById('editor-container');
@@ -827,7 +836,10 @@ ${tableHtml}
 
                 html += `
                     <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
-                        <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type} / ${pet.gender})</div>
+                        <div class="flex items-center justify-between">
+                            <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type} / ${pet.gender})</div>
+                            <button onclick="printCageLabel('${pet.id}')" class="bg-sky-700 hover:bg-sky-600 px-4 py-2 rounded-xl font-black text-sm flex items-center gap-2 transition-all">🏷️ ใบติดกรง</button>
+                        </div>
                         <div class="flex flex-wrap gap-2">
                             ${filteredOptions.map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
@@ -1242,6 +1254,95 @@ if (activeDocType === 'doc_consent') {
             const win = window.open('', '_blank');
             win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');body { margin: 0; padding: 0; background: white; }.page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }@media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style></head><body><div class="page">${printContent}</div><script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body></html>`);
             win.document.close();
+        }
+        async function printQueueCard() {
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_queue').single();
+            if (!template) return alert('❌ ไม่พบรูปแบบพิมพ์ "thermal_queue"');
+            const config = template.config;
+            const pw = parseFloat(config.width) || 58;
+            const ph = parseFloat(config.height) || 150;
+            const _now = new Date();
+            const surgeryInputs = document.querySelectorAll('.surgery-input');
+            const petSurgeries = Array.from(surgeryInputs).map(i => ({ name: i.dataset.petName, surgery: i.value || '-' }));
+            const petSurgeryList = petSurgeries.map(ps => `${ps.name}: ${ps.surgery}`).join('\n');
+            const firstPetId = Array.from(selectedPetIds)[0];
+            const firstPet = ownerPets.find(p => p.id.toString() === firstPetId.toString());
+            const dataMap = {
+                clinic_name: CLINIC_NAME, clinic_address: CLINIC_ADDRESS,
+                phone: CLINIC_PHONE, tax_id: CLINIC_TAX_ID,
+                owner_name: currentOwner?.owner_name || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-",
+                pet_name: firstPet?.pet_name || '-', species: firstPet?.pet_type || '-', pet_type: firstPet?.pet_type || '-',
+                sex: firstPet?.gender || '-', gender: firstPet?.gender || '-',
+                weight: firstPet?.weight ? firstPet.weight + ' กก.' : '-', breed: firstPet?.breed || '-',
+                pet_surgery_list: petSurgeryList,
+                date: _now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
+                time: _now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+            };
+            executeThermalPrint(config, pw, ph, dataMap);
+        }
+
+        async function printCageLabel(petId) {
+            const pet = ownerPets.find(p => p.id.toString() === petId.toString());
+            if (!pet) return;
+            const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_cage').single();
+            if (!template) return alert('❌ ไม่พบรูปแบบพิมพ์ "thermal_cage"');
+            const config = template.config;
+            const pw = parseFloat(config.width) || 58;
+            const ph = parseFloat(config.height) || 80;
+            const _now = new Date();
+            const surgeryText = document.getElementById(`text-${petId}`)?.value || '';
+            // Filter out blood-test checkbox items; show only surgical procedures
+            const petSurgery = surgeryText
+                .split(/[,،]/)
+                .map(s => s.trim())
+                .filter(s => s && !s.includes('ตรวจเลือด'))
+                .join(', ') || '-';
+            const dataMap = {
+                clinic_name: CLINIC_NAME, clinic_address: CLINIC_ADDRESS,
+                phone: CLINIC_PHONE, tax_id: CLINIC_TAX_ID,
+                owner_name: currentOwner?.owner_name || "-", owner_phone: currentOwner?.phone || "-", hn: currentOwner?.hn || "-",
+                pet_name: pet.pet_name || '-', species: pet.pet_type || '-', pet_type: pet.pet_type || '-',
+                sex: pet.gender || '-', gender: pet.gender || '-',
+                weight: pet.weight ? pet.weight + ' กก.' : '-', breed: pet.breed || '-',
+                pet_surgery: petSurgery, pet_surgery_list: petSurgery,
+                date: _now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
+                time: _now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+            };
+            executeThermalPrint(config, pw, ph, dataMap);
+        }
+
+        function executeThermalPrint(config, pw, ph, dataMap) {
+            const elements = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
+                const base = `position:absolute; top:${parseFloat(l.y)}mm; left:${l.x}mm;`;
+                if (l.type === 'image') {
+                    return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                } else if (l.type === 'rect') {
+                    return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
+                } else {
+                    const content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => { const val = dataMap[k.trim()]; return val !== undefined ? val : m; });
+                    const fw = l.bold ? 'font-weight:bold;' : '';
+                    const fs = l.italic ? 'font-style:italic;' : '';
+                    const td = l.underline ? 'text-decoration:underline;' : '';
+                    const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' :
+                                       l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
+                    const widthStyle = alignStyle ? '' : `width:${pw - parseFloat(l.x)}mm;`;
+                    return `<div style="${base} ${widthStyle} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
+                }
+            }).join('');
+            const iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
+            document.body.appendChild(iframe);
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`);
+            iframeDoc.close();
+            iframe.contentWindow.document.fonts.ready.then(function() {
+                iframe.contentWindow.addEventListener('afterprint', function() {
+                    try { document.body.removeChild(iframe); } catch(e) { console.warn(e); }
+                }, { once: true });
+                iframe.contentWindow.print();
+            });
         }
     </script>
 </body>
