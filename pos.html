@@ -258,22 +258,28 @@
             } else {
                 customerWindow.focus();
             }
-            // Send item data if a record is active
-            if (activeRecordId) {
-                const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', activeRecordId);
-                const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
-                // Delay to allow pos-customer.html to load and register its BroadcastChannel listener
+            // If no record is active, or the active record is already paid → return to ads
+            const isPaidMode = currentRecordData && currentRecordData.payment_status === 'paid';
+            if (!activeRecordId || isPaidMode) {
                 setTimeout(() => {
-                    sendToCustomerDisplay({
-                        type: 'show_items',
-                        petName: activePatient?.petName || '—',
-                        hn: activePatient?.hn || '',
-                        ownerName: activePatient?.ownerName || '',
-                        net,
-                        items: items || []
-                    });
+                    sendToCustomerDisplay({ type: 'show_ads' });
                 }, 800);
+                return;
             }
+            // Send item data for the active pending record
+            const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', activeRecordId);
+            const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
+            // Delay to allow pos-customer.html to load and register its BroadcastChannel listener
+            setTimeout(() => {
+                sendToCustomerDisplay({
+                    type: 'show_items',
+                    petName: activePatient?.petName || '—',
+                    hn: activePatient?.hn || '',
+                    ownerName: activePatient?.ownerName || '',
+                    net,
+                    items: items || []
+                });
+            }, 800);
         }
 
         function formatThaiDate(dateString, format = 'long') {
