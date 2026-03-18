@@ -85,6 +85,7 @@
             <div class="doc-tab" data-type="doc_lab" onclick="switchDocType('doc_lab')">🔬 รายงานผล Lab</div>
             <div class="doc-tab" data-type="doc_referral" onclick="switchDocType('doc_referral')">📨 ใบส่งตัว</div>
             <div class="doc-tab" data-type="doc_dld" onclick="switchDocType('doc_dld')">📊 รายงานกรมปศุสัตว์</div>
+            <div class="doc-tab" data-type="doc_history" onclick="switchDocType('doc_history')">📋 ประวัติการรักษา</div>
         </nav>
 
         <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-[#020617]">
@@ -246,6 +247,7 @@
             else { selectedPetIds.add(id.toString()); card.classList.add('selected'); }
             if (activeDocType === 'doc_consent') refreshSurgeryRows();
             if (activeDocType === 'doc_lab') refreshLabPicker();
+            if (activeDocType === 'doc_history') refreshHistoryPreview();
         }
 
         function clearReferralPetFields() {
@@ -460,6 +462,16 @@
                     document.getElementById('urgency-normal')?.classList.add('active');
                     lucide.createIcons();
                 }, 50);
+            } else if (type === 'doc_history') {
+                title.innerText = "ประวัติการรักษา";
+                form.innerHTML = `
+                    <div class="section-card space-y-4">
+                        <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">เลือกสัตว์เพื่อดูประวัติการรักษา</h3>
+                        <div id="history-preview-area">
+                            <p class="text-gray-500 italic text-sm">กรุณาเลือกสัตว์เลี้ยงด้านบน...</p>
+                        </div>
+                    </div>`;
+                if (selectedPetIds.size > 0) refreshHistoryPreview();
             }
             lucide.createIcons();
         }
@@ -890,8 +902,139 @@ ${tableHtml}
             container.innerHTML = html;
         }
 
+        async function refreshHistoryPreview() {
+            const container = document.getElementById('history-preview-area');
+            if (!container) return;
+            if (selectedPetIds.size === 0) { container.innerHTML = '<p class="text-gray-500 italic">กรุณาเลือกสัตว์เพื่อดูประวัติการรักษา...</p>'; return; }
+            container.innerHTML = '<p class="text-gray-500 animate-pulse">กำลังโหลดประวัติการรักษา...</p>';
+            const petId = Array.from(selectedPetIds)[0];
+            const pet = ownerPets.find(p => p.id.toString() === petId.toString());
+            const { data: records } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', petId).order('id', { ascending: true });
+            if (!records || records.length === 0) {
+                container.innerHTML = '<p class="text-gray-600 italic py-6 text-center">ไม่พบประวัติการรักษา</p>';
+                return;
+            }
+            const rows = records.map(rec => {
+                const d = new Date(rec.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                const txItems = (rec.medical_record_items||[]).filter(i=>i.item_type==='Tx').map(i=>i.item_name).join(', ');
+                const rxItems = (rec.medical_record_items||[]).filter(i=>i.item_type==='Rx').map(i=>i.item_name).join(', ');
+                return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td class="py-2 pr-4 text-teal-400 font-bold whitespace-nowrap text-sm">${d}</td>
+                    <td class="py-2 pr-3 text-yellow-300 text-sm">${rec.cc||''}</td>
+                    <td class="py-2 pr-3 text-blue-300 text-sm">${rec.dx||''}</td>
+                    <td class="py-2 pr-3 text-pink-300 text-sm">${txItems}</td>
+                    <td class="py-2 text-emerald-300 text-sm">${rxItems}</td>
+                </tr>`;
+            }).join('');
+            container.innerHTML = `
+                <div class="text-sm text-gray-400 mb-3">พบ <b class="text-white">${records.length}</b> ครั้ง | สัตว์: <b class="text-teal-400">${pet?.pet_name||''}</b></div>
+                <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead><tr class="text-left text-[10px] font-black text-gray-500 uppercase border-b border-white/10">
+                        <th class="pb-2 pr-4">วันที่</th><th class="pb-2 pr-3">CC</th><th class="pb-2 pr-3">Dx</th><th class="pb-2 pr-3">Tx</th><th class="pb-2">Rx</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table></div>`;
+        }
+
+        async function printTreatmentHistory() {
+            if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+            const petId = Array.from(selectedPetIds)[0];
+            const pet = ownerPets.find(p => p.id.toString() === petId.toString());
+            const { data: records } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', petId).order('id', { ascending: true });
+            if (!records || records.length === 0) return alert("ไม่พบประวัติการรักษาสำหรับสัตว์นี้");
+
+            const petInfo = pet ? `${pet.pet_name} (${pet.pet_type||''}${pet.breed ? '/' + pet.breed : ''}, ${pet.gender||''}, ${pet.weight ? pet.weight + ' กก.' : ''})` : '-';
+            const congenital = pet?.congenital_disease || 'ไม่มี';
+            const ownerName = currentOwner?.owner_name || '-';
+            const ownerHnStr = currentOwner?.hn || '-';
+            const ownerPhone = currentOwner?.phone || '-';
+            const dateStr = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const rows = records.map(rec => {
+                const d = new Date(rec.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                const txItems = (rec.medical_record_items||[]).filter(i=>i.item_type==='Tx');
+                const rxItems = (rec.medical_record_items||[]).filter(i=>i.item_type==='Rx');
+                const labItems = (rec.medical_record_items||[]).filter(i=>i.item_type==='Lab');
+                const txText = txItems.map(i=>i.item_name).join(', ');
+                const rxText = rxItems.map(i => {
+                    let s = i.item_name;
+                    if (i.dose_per_time) s += ` ${i.dose_per_time}${i.unit||''}`;
+                    if (i.frequency) s += ` ${i.frequency}`;
+                    if (i.duration_days) s += ` ${i.duration_days} วัน`;
+                    return s;
+                }).join('; ');
+                const labText = labItems.map(i=>i.item_name).join(', ');
+                return `<tr style="border-bottom:1pt solid #e5e7eb; page-break-inside:avoid;">
+                    <td style="padding:5pt 6pt; vertical-align:top; font-weight:bold; white-space:nowrap; color:#0369a1; border:1pt solid #d1d5db;">${d}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${rec.cc||''}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; color:#1d4ed8; font-weight:bold; border:1pt solid #d1d5db;">${rec.dx||''}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${labText ? '<span style="color:#6d28d9;">Lab: </span>'+labText+'<br>' : ''}${txText ? '<span style="color:#db2777;">Tx: </span>'+txText : ''}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; color:#059669; border:1pt solid #d1d5db;">${rxText||''}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; color:#78716c; border:1pt solid #d1d5db;">${rec.weight ? rec.weight + ' กก.' : ''}</td>
+                </tr>`;
+            }).join('');
+
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
+  * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
+  body { margin: 0; padding: 15mm 15mm; background: white; color: #111; font-size: 9.5pt; }
+  h1 { font-size: 16pt; font-weight: 800; margin: 0 0 3px; color: #0369a1; }
+  .header { border-bottom: 2pt solid #0369a1; padding-bottom: 8pt; margin-bottom: 10pt; }
+  .info-row { display: flex; gap: 20pt; flex-wrap: wrap; font-size: 9pt; margin-bottom: 4pt; }
+  .info-label { font-weight: 700; color: #555; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  th { background: #eff6ff; padding: 5pt 6pt; text-align: left; font-weight: 800; font-size: 8pt; border: 1pt solid #d1d5db; color: #1e40af; }
+  td { padding: 5pt 6pt; vertical-align: top; border: 1pt solid #d1d5db; }
+  .warning { background: #fef2f2; border: 1pt solid #fca5a5; border-radius: 4pt; padding: 4pt 8pt; font-size: 8.5pt; color: #dc2626; font-weight: 700; margin-bottom: 8pt; }
+  @media print { @page { size: A4 portrait; margin: 0; } body { padding: 15mm 15mm; } }
+</style>
+</head><body>
+  <div class="header">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        <h1>ประวัติการรักษา</h1>
+        <div style="font-size:8.5pt; color:#555; margin-top:2pt;">PK-VMS Animal Clinic</div>
+      </div>
+      <div style="text-align:right; font-size:8.5pt; color:#555;">วันที่พิมพ์: ${dateStr}</div>
+    </div>
+  </div>
+  <div class="info-row">
+    <span><span class="info-label">เจ้าของ:</span> ${ownerName}</span>
+    <span><span class="info-label">HN:</span> ${ownerHnStr}</span>
+    <span><span class="info-label">โทร:</span> ${ownerPhone}</span>
+  </div>
+  <div class="info-row" style="margin-bottom:6pt;">
+    <span><span class="info-label">สัตว์:</span> ${petInfo}</span>
+  </div>
+  ${congenital && congenital !== 'ไม่มี' ? `<div class="warning">⚠️ แพ้ยา/ข้อควรระวัง: ${congenital}</div>` : ''}
+  <table>
+    <thead><tr>
+      <th style="width:12%;">วันที่</th>
+      <th style="width:18%;">CC (อาการสำคัญ)</th>
+      <th style="width:18%;">Dx (วินิจฉัย)</th>
+      <th style="width:28%;">Lab / Tx (หัตถการ)</th>
+      <th style="width:18%;">Rx (ยา)</th>
+      <th style="width:6%;">น้ำหนัก</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div style="margin-top:10pt; font-size:7.5pt; color:#9ca3af; text-align:right;">รวม ${records.length} ครั้ง | สร้างโดย PK-VMS Pro</div>
+<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>
+</body></html>`);
+            win.document.close();
+        }
+
         async function printCurrentDoc() {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
+
+            // ประวัติการรักษา: print full treatment history on A4
+            if (activeDocType === 'doc_history') {
+                return printTreatmentHistory();
+            }
 
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
 
