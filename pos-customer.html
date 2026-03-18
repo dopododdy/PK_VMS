@@ -353,11 +353,12 @@
                     </div>`;
                 } else {
                     const bg = slide.bg || 'var(--navy)';
-                    const titleColor = slide.titleColor || 'var(--teal)';
                     const subtitleLines = (slide.subtitle || '').split('\n').join('<br>');
+                    const titleStyle = buildTextStyle(slide.titleColor || 'var(--teal)', slide.titleSize);
+                    const subtitleStyle = buildTextStyle(slide.subtitleColor, slide.subtitleSize);
                     return `<div class="ad-slide${i===0?' active':''}" id="slide-${i}" style="background:${bg};">
-                        <div class="ad-text-title" style="color:${escHtml(titleColor)};">${escHtml(slide.title || '')}</div>
-                        <div class="ad-text-subtitle">${subtitleLines}</div>
+                        <div class="ad-text-title" style="${titleStyle}">${escHtml(slide.title || '')}</div>
+                        <div class="ad-text-subtitle"${subtitleStyle ? ` style="${subtitleStyle}"` : ''}>${subtitleLines}</div>
                     </div>`;
                 }
             }).join('');
@@ -366,6 +367,14 @@
 
         function escHtml(str) {
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function buildTextStyle(color, size) {
+            let style = '';
+            if (color) style += `color:${escHtml(String(color))};`;
+            const px = parseInt(size);
+            if (!isNaN(px) && px > 0) style += `font-size:${px}px;`;
+            return style;
         }
 
         function goToSlide(idx) {
