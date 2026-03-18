@@ -346,9 +346,12 @@
             const container = document.getElementById('ad-slides-container');
             const dots = document.getElementById('ad-dots');
             container.innerHTML = adSlides.map((slide, i) => {
-                if (slide.type === 'image' && slide.url) {
+                if ((slide.type === 'image' && slide.url) || (slide.type === 'upload' && slide.dataUrl)) {
+                    // For 'upload' type, dataUrl is a base64 data: URL stored in localStorage (no external input).
+                    // For 'image' type, escHtml is applied to the URL. Both are rendered in an img src attribute.
+                    const imgSrc = slide.type === 'upload' ? slide.dataUrl : escHtml(slide.url);
                     return `<div class="ad-slide${i===0?' active':''}" id="slide-${i}">
-                        <img src="${escHtml(slide.url)}" alt="โฆษณา ${i+1}">
+                        <img src="${imgSrc}" alt="โฆษณา ${i+1}">
                         ${slide.caption ? `<p class="ad-text-subtitle" style="color:#e2e8f0;margin-top:16px;">${escHtml(slide.caption)}</p>` : ''}
                     </div>`;
                 } else {

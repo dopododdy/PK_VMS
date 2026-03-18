@@ -179,7 +179,7 @@
         <!-- Ad Slides Section -->
         <div class="settings-section">
             <div class="section-title">🎞️ สไลด์โฆษณา</div>
-            <p class="text-sm text-gray-500 mb-4">เพิ่มสไลด์โฆษณาที่จะแสดงบนหน้าจอที่ 2 เมื่อไม่มีลูกค้า (รองรับ: ข้อความ / รูปภาพ URL)</p>
+            <p class="text-sm text-gray-500 mb-4">เพิ่มสไลด์โฆษณาที่จะแสดงบนหน้าจอที่ 2 เมื่อไม่มีลูกค้า (รองรับ: ข้อความ / รูปภาพ URL / รูปภาพ Upload)</p>
 
             <div id="ad-slides-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
 
@@ -188,7 +188,10 @@
                     <span>✏️</span> เพิ่มสไลด์ข้อความ
                 </button>
                 <button onclick="addSlide('image')" class="btn-secondary flex items-center gap-2">
-                    <span>🖼️</span> เพิ่มสไลด์รูปภาพ
+                    <span>🖼️</span> เพิ่มสไลด์รูปภาพ (URL)
+                </button>
+                <button onclick="addSlide('upload')" class="btn-secondary flex items-center gap-2">
+                    <span>📤</span> เพิ่มสไลด์รูปภาพ (Upload)
                 </button>
             </div>
         </div>
@@ -286,7 +289,7 @@
                 </div>
             </div>
 
-            <!-- Image fields -->
+            <!-- Image fields (URL) -->
             <div id="modal-image-fields" class="hidden">
                 <div class="mb-4">
                     <label>URL รูปภาพ</label>
@@ -295,6 +298,23 @@
                 <div class="mb-4">
                     <label>คำบรรยายใต้ภาพ (ถ้ามี)</label>
                     <input type="text" id="modal-img-caption" class="input-field" placeholder="คำบรรยาย">
+                </div>
+            </div>
+
+            <!-- Upload fields -->
+            <div id="modal-upload-fields" class="hidden">
+                <div class="mb-4">
+                    <label>เลือกไฟล์รูปภาพ</label>
+                    <input type="file" id="modal-upload-file" accept="image/*" class="input-field" style="cursor:pointer;padding:8px;">
+                    <p class="text-xs text-gray-500 mt-1">รองรับ JPG, PNG, GIF, WebP — แนะนำขนาดไม่เกิน 3 MB</p>
+                </div>
+                <div id="modal-upload-preview-wrap" class="mb-4 hidden">
+                    <label>ตัวอย่างรูปภาพ</label>
+                    <img id="modal-upload-preview" src="" alt="preview" style="max-height:160px;border-radius:10px;border:1px solid var(--border);object-fit:contain;">
+                </div>
+                <div class="mb-4">
+                    <label>คำบรรยายใต้ภาพ (ถ้ามี)</label>
+                    <input type="text" id="modal-upload-caption" class="input-field" placeholder="คำบรรยาย">
                 </div>
             </div>
 
@@ -337,6 +357,24 @@
             custom.classList.toggle('hidden', this.value !== 'custom');
         });
 
+        // File upload preview
+        document.getElementById('modal-upload-file').addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+            if (file.size > 3 * 1024 * 1024) {
+                alert('ไฟล์ใหญ่เกิน 3 MB กรุณาเลือกไฟล์ที่เล็กกว่า');
+                this.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const preview = document.getElementById('modal-upload-preview');
+                preview.src = ev.target.result;
+                document.getElementById('modal-upload-preview-wrap').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+
         // ── Load ───────────────────────────────────────────
         function loadSettings() {
             try {
@@ -353,8 +391,13 @@
             renderSlideList();
         }
 
-        // ── Save ───────────────────────────────────────────
-        function saveSettings() {
+        // ── Auto-save helpers ──────────────────────────────
+        function autoSaveSlides() {
+            localStorage.setItem('pos_display2_ads', JSON.stringify(slides));
+            channel.postMessage({ type: 'reload_settings' });
+        }
+
+        function autoSaveSettings() {
             const settings = {
                 adInterval: parseInt(document.getElementById('cfg-interval').value) || 5,
                 clinicName: document.getElementById('cfg-clinic-name').value.trim(),
@@ -362,8 +405,19 @@
                 fontSize: document.getElementById('cfg-font-size').value
             };
             localStorage.setItem('pos_display2_settings', JSON.stringify(settings));
-            localStorage.setItem('pos_display2_ads', JSON.stringify(slides));
             channel.postMessage({ type: 'reload_settings' });
+        }
+
+        // Auto-save general settings when inputs change
+        ['cfg-interval', 'cfg-clinic-name', 'cfg-theme', 'cfg-font-size'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', autoSaveSettings);
+        });
+
+        // ── Save ───────────────────────────────────────────
+        function saveSettings() {
+            autoSaveSettings();
+            autoSaveSlides();
             showToast('บันทึกการตั้งค่าสำเร็จ ✓');
         }
 
@@ -374,6 +428,8 @@
             document.getElementById('cfg-clinic-name').value = 'PK-VMS Animal Clinic';
             document.getElementById('cfg-theme').value = 'dark';
             document.getElementById('cfg-font-size').value = 'normal';
+            autoSaveSettings();
+            autoSaveSlides();
             renderSlideList();
             showToast('รีเซ็ตค่าเรียบร้อย');
         }
@@ -386,16 +442,24 @@
                 return;
             }
             el.innerHTML = slides.map((s, i) => {
-                const previewStyle = s.type === 'image'
-                    ? `background:url('${escHtml(s.url||'')}') center/cover; color:white;`
-                    : `background:${s.bg || '#0f172a'}; color:${s.titleColor || '#14b8b1'};`;
-                const previewContent = s.type === 'image'
-                    ? `<span style="background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;">${s.caption || 'Image Slide'}</span>`
-                    : `<span style="padding:8px;font-size:0.95rem;line-height:1.3;">${escHtml(s.title || '')}</span>`;
+                let previewStyle, previewContent, typeLabel;
+                if (s.type === 'image') {
+                    previewStyle = `background:url('${escHtml(s.url||'')}') center/cover; color:white;`;
+                    previewContent = `<span style="background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;">${escHtml(s.caption || 'Image Slide')}</span>`;
+                    typeLabel = '🖼️ รูปภาพ URL';
+                } else if (s.type === 'upload') {
+                    previewStyle = s.dataUrl ? `background:url('${s.dataUrl}') center/cover; color:white;` : `background:#1e293b; color:white;`;
+                    previewContent = `<span style="background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;">${escHtml(s.caption || 'Upload Slide')}</span>`;
+                    typeLabel = '📤 รูปภาพ Upload';
+                } else {
+                    previewStyle = `background:${s.bg || '#0f172a'}; color:${s.titleColor || '#14b8b1'};`;
+                    previewContent = `<span style="padding:8px;font-size:0.95rem;line-height:1.3;">${escHtml(s.title || '')}</span>`;
+                    typeLabel = '✏️ ข้อความ';
+                }
                 return `<div class="ad-card">
                     <div class="ad-preview" style="${previewStyle}">${previewContent}</div>
                     <div class="flex justify-between items-center gap-2">
-                        <span class="text-sm text-gray-400 font-bold">${s.type === 'image' ? '🖼️ รูปภาพ' : '✏️ ข้อความ'} — สไลด์ ${i+1}</span>
+                        <span class="text-sm text-gray-400 font-bold">${typeLabel} — สไลด์ ${i+1}</span>
                         <div class="flex gap-2">
                             <button onclick="moveSlide(${i}, -1)" class="btn-secondary" style="padding:5px 10px;" title="เลื่อนขึ้น">↑</button>
                             <button onclick="moveSlide(${i}, 1)" class="btn-secondary" style="padding:5px 10px;" title="เลื่อนลง">↓</button>
@@ -415,12 +479,14 @@
             const newIdx = idx + dir;
             if (newIdx < 0 || newIdx >= slides.length) return;
             [slides[idx], slides[newIdx]] = [slides[newIdx], slides[idx]];
+            autoSaveSlides();
             renderSlideList();
         }
 
         function deleteSlide(idx) {
             if (!confirm('ลบสไลด์นี้?')) return;
             slides.splice(idx, 1);
+            autoSaveSlides();
             renderSlideList();
         }
 
@@ -437,8 +503,14 @@
             document.getElementById('modal-slide-idx').value = idx;
             document.getElementById('modal-slide-type').value = type;
             document.getElementById('modal-title').textContent = idx === -1 ? 'เพิ่มสไลด์ใหม่' : 'แก้ไขสไลด์';
-            document.getElementById('modal-text-fields').classList.toggle('hidden', type === 'image');
-            document.getElementById('modal-image-fields').classList.toggle('hidden', type === 'text');
+            document.getElementById('modal-text-fields').classList.toggle('hidden', type !== 'text');
+            document.getElementById('modal-image-fields').classList.toggle('hidden', type !== 'image');
+            document.getElementById('modal-upload-fields').classList.toggle('hidden', type !== 'upload');
+
+            // Reset upload state
+            document.getElementById('modal-upload-file').value = '';
+            document.getElementById('modal-upload-preview').src = '';
+            document.getElementById('modal-upload-preview-wrap').classList.add('hidden');
 
             if (idx >= 0 && idx < slides.length) {
                 const s = slides[idx];
@@ -456,9 +528,15 @@
                     for (const opt of presets.options) { if (opt.value === s.bg) { presets.value = s.bg; found = true; break; } }
                     if (!found) { presets.value = 'custom'; document.getElementById('modal-bg-custom').value = s.bg || ''; document.getElementById('modal-bg-custom').classList.remove('hidden'); }
                     else { document.getElementById('modal-bg-custom').classList.add('hidden'); }
-                } else {
+                } else if (type === 'image') {
                     document.getElementById('modal-img-url').value = s.url || '';
                     document.getElementById('modal-img-caption').value = s.caption || '';
+                } else if (type === 'upload') {
+                    document.getElementById('modal-upload-caption').value = s.caption || '';
+                    if (s.dataUrl) {
+                        document.getElementById('modal-upload-preview').src = s.dataUrl;
+                        document.getElementById('modal-upload-preview-wrap').classList.remove('hidden');
+                    }
                 }
             } else {
                 document.getElementById('modal-title-text').value = '';
@@ -471,6 +549,7 @@
                 document.getElementById('modal-subtitle-size').value = '';
                 document.getElementById('modal-img-url').value = '';
                 document.getElementById('modal-img-caption').value = '';
+                document.getElementById('modal-upload-caption').value = '';
             }
 
             document.getElementById('slide-modal').style.display = 'flex';
@@ -499,16 +578,30 @@
                     subtitleSize: isNaN(subtitleSizeVal) ? undefined : subtitleSizeVal,
                     bg: bg || 'linear-gradient(135deg, #020617 0%, #0f172a 100%)'
                 };
-            } else {
+            } else if (type === 'image') {
                 slide = {
                     type: 'image',
                     url: document.getElementById('modal-img-url').value.trim(),
                     caption: document.getElementById('modal-img-caption').value.trim()
                 };
                 if (!slide.url) { alert('กรุณาใส่ URL รูปภาพ'); return; }
+            } else if (type === 'upload') {
+                const fileInput = document.getElementById('modal-upload-file');
+                const previewImg = document.getElementById('modal-upload-preview');
+                const existingDataUrl = idx >= 0 && slides[idx] ? slides[idx].dataUrl : null;
+                // Use newly uploaded file if available (src will be a data: URL after FileReader loads it)
+                const newDataUrl = previewImg.src && previewImg.src.startsWith('data:') ? previewImg.src : null;
+                const dataUrl = (fileInput.files.length > 0 && newDataUrl) ? newDataUrl : existingDataUrl;
+                if (!dataUrl) { alert('กรุณาเลือกไฟล์รูปภาพ'); return; }
+                slide = {
+                    type: 'upload',
+                    dataUrl: dataUrl,
+                    caption: document.getElementById('modal-upload-caption').value.trim()
+                };
             }
             if (idx === -1) slides.push(slide);
             else slides[idx] = slide;
+            autoSaveSlides();
             closeModal();
             renderSlideList();
         }
