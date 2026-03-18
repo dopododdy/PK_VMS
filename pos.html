@@ -158,7 +158,10 @@
                 </div>
             </div>
         </div>
-        <button id="btn-pay" onclick="processPayment()" class="w-full h-20 bg-teal-500 rounded-xl text-navy-dark font-black text-xl hover:bg-teal-400 transition-all flex items-center justify-center gap-3 mt-4">
+        <button id="btn-show-customer" onclick="showCustomerDisplay()" class="w-full h-14 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white font-bold text-base transition-all flex items-center justify-center gap-2 mt-4">
+            <i data-lucide="monitor" class="w-5 h-5"></i><span>แสดงรายการแก่ลูกค้า</span>
+        </button>
+        <button id="btn-pay" onclick="processPayment()" class="w-full h-20 bg-teal-500 rounded-xl text-navy-dark font-black text-xl hover:bg-teal-400 transition-all flex items-center justify-center gap-3 mt-2">
             <i data-lucide="check-circle" class="w-6 h-6" id="btn-icon"></i><span id="btn-text">ยืนยันการชำระเงิน</span>
         </button>
     </div>
@@ -236,8 +239,42 @@
         let currentRecordData = null; 
         let masterCatalog = [], displayedCatalog = [], currentCatType = 'rx';
         let pendingRecordsMap = {};
+        let customerWindow = null;
+        const customerChannel = new BroadcastChannel('pos_customer');
 
         const SCHEMA_MIGRATION_MSG = '⚠️ ฐานข้อมูลยังไม่ได้รัน Migration SQL\n\nกรุณาไปที่ Settings (set-db.html) → อัปเดต Schema ฐานข้อมูล แล้ว Copy SQL ไปรันใน Supabase → SQL Editor';
+
+        function sendToCustomerDisplay(msg) {
+            customerChannel.postMessage(msg);
+            // localStorage fallback for cross-origin windows
+            try { localStorage.setItem('pos_customer_msg', JSON.stringify({...msg, _t: Date.now()})); } catch(e) {}
+        }
+
+        async function showCustomerDisplay() {
+            // Open the window if not already open
+            if (!customerWindow || customerWindow.closed) {
+                customerWindow = window.open('pos-customer.html', 'pos_customer_window',
+                    'toolbar=no,menubar=no,scrollbars=no,location=no,status=no');
+            } else {
+                customerWindow.focus();
+            }
+            // Send item data if a record is active
+            if (activeRecordId) {
+                const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', activeRecordId);
+                const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
+                // Delay to allow pos-customer.html to load and register its BroadcastChannel listener
+                setTimeout(() => {
+                    sendToCustomerDisplay({
+                        type: 'show_items',
+                        petName: activePatient?.petName || '—',
+                        hn: activePatient?.hn || '',
+                        ownerName: activePatient?.ownerName || '',
+                        net,
+                        items: items || []
+                    });
+                }, 800);
+            }
+        }
 
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
@@ -516,6 +553,7 @@
                 return alert(error.message);
             }
             alert("ชำระเงินสำเร็จ!");
+            sendToCustomerDisplay({ type: 'payment_done' });
             printReceipt(activeRecordId);
             loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
             fetchPendingPayments();

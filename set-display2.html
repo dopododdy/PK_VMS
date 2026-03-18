@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>ตั้งค่าหน้าจอที่ 2 | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --navy:     #020617;
+            --navy-mid: #0f172a;
+            --teal:     #14b8b1;
+            --border:   rgba(255, 255, 255, 0.1);
+        }
+        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; min-height: 100vh; }
+        * { font-family: "Sarabun", sans-serif; }
+        html { font-size: var(--base-font-size, 14px); }
+
+        .mesh-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%); }
+
+        .settings-section {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.75rem 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .input-field {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            outline: none;
+            color: #e2e8f0;
+            font-size: 1rem;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { border-color: var(--teal); }
+
+        .btn-primary {
+            background: var(--teal);
+            color: #020617;
+            font-weight: 800;
+            border-radius: 12px;
+            padding: 12px 28px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+        }
+        .btn-primary:hover { background: #0d9488; }
+
+        .btn-danger {
+            background: rgba(239,68,68,0.1);
+            color: #f87171;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 8px 18px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+        .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #e2e8f0;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 8px 18px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+
+        .ad-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            transition: 0.2s;
+        }
+        .ad-card:hover { border-color: rgba(20,184,177,0.4); }
+
+        .ad-preview {
+            width: 100%;
+            height: 120px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #0d9488;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            z-index: 200;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+
+        label { font-weight: 600; color: #94a3b8; font-size: 0.9rem; display: block; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+    </script>
+
+    <div class="mesh-bg"></div>
+    <div class="toast" id="toast">บันทึกสำเร็จ ✓</div>
+
+    <header class="p-6 border-b border-white/5 bg-navy/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex items-center gap-4">
+            <a href="settings.html" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-teal-500/20 hover:text-teal-400 transition-all text-gray-300 font-bold text-sm">
+                <span class="text-xl">⚙️</span><span>ตั้งค่าระบบ</span>
+            </a>
+            <div class="flex items-center gap-3 border-l pl-4 border-white/20">
+                <span class="text-4xl">📺</span>
+                <h1 class="text-xl font-bold text-white">ตั้งค่าหน้าจอที่ 2</h1>
+            </div>
+            <div class="ml-auto">
+                <button onclick="openDisplay2()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/40 text-teal-400 font-bold text-sm transition-all">
+                    <span>🖥️</span><span>เปิดหน้าจอที่ 2</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-6">
+        <p class="text-gray-400 mb-8">กำหนดการแสดงโฆษณา และการแสดงรายการค่ารักษาสำหรับหน้าจอที่ 2 (Customer Display)</p>
+
+        <!-- General Settings -->
+        <div class="settings-section">
+            <div class="section-title">⚙️ ตั้งค่าทั่วไป</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label>ระยะเวลาต่อสไลด์ (วินาที)</label>
+                    <input type="number" id="cfg-interval" class="input-field" min="2" max="60" value="5" placeholder="5">
+                </div>
+                <div>
+                    <label>ชื่อคลินิก (แสดงบนหน้าจอ)</label>
+                    <input type="text" id="cfg-clinic-name" class="input-field" value="PK-VMS Animal Clinic" placeholder="ชื่อคลินิก">
+                </div>
+            </div>
+        </div>
+
+        <!-- Ad Slides Section -->
+        <div class="settings-section">
+            <div class="section-title">🎞️ สไลด์โฆษณา</div>
+            <p class="text-sm text-gray-500 mb-4">เพิ่มสไลด์โฆษณาที่จะแสดงบนหน้าจอที่ 2 เมื่อไม่มีลูกค้า (รองรับ: ข้อความ / รูปภาพ URL)</p>
+
+            <div id="ad-slides-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
+
+            <div class="flex gap-3 flex-wrap">
+                <button onclick="addSlide('text')" class="btn-secondary flex items-center gap-2">
+                    <span>✏️</span> เพิ่มสไลด์ข้อความ
+                </button>
+                <button onclick="addSlide('image')" class="btn-secondary flex items-center gap-2">
+                    <span>🖼️</span> เพิ่มสไลด์รูปภาพ
+                </button>
+            </div>
+        </div>
+
+        <!-- Display Settings -->
+        <div class="settings-section">
+            <div class="section-title">🧾 การแสดงรายการค่ารักษา</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label>ธีมสี</label>
+                    <select id="cfg-theme" class="input-field" style="cursor:pointer;">
+                        <option value="dark">Dark (พื้นหลังดำ)</option>
+                        <option value="light">Light (พื้นหลังขาว)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>ขนาดตัวอักษรรายการ</label>
+                    <select id="cfg-font-size" class="input-field" style="cursor:pointer;">
+                        <option value="normal">ปกติ</option>
+                        <option value="large">ใหญ่</option>
+                        <option value="xlarge">ใหญ่มาก</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save -->
+        <div class="flex justify-between items-center mt-4">
+            <button onclick="resetToDefaults()" class="btn-danger">รีเซ็ตค่าเริ่มต้น</button>
+            <div class="flex gap-3">
+                <button onclick="previewSend()" class="btn-secondary flex items-center gap-2">
+                    <span>📡</span> ส่งข้อมูลทดสอบ
+                </button>
+                <button onclick="saveSettings()" class="btn-primary flex items-center gap-2">
+                    <span>💾</span> บันทึกการตั้งค่า
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Slide Edit Modal -->
+    <div id="slide-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;align-items:center;justify-content:center;padding:20px;" class="flex">
+        <div style="background:#0f172a;border:1px solid var(--border);border-radius:24px;width:100%;max-width:560px;padding:32px;">
+            <h3 class="text-xl font-bold text-white mb-6" id="modal-title">แก้ไขสไลด์</h3>
+            <input type="hidden" id="modal-slide-idx" value="-1">
+            <input type="hidden" id="modal-slide-type" value="text">
+
+            <!-- Text fields -->
+            <div id="modal-text-fields">
+                <div class="mb-4">
+                    <label>หัวข้อ (Title)</label>
+                    <input type="text" id="modal-title-text" class="input-field" placeholder="เช่น 🐾 ยินดีต้อนรับ">
+                </div>
+                <div class="mb-4">
+                    <label>คำบรรยาย (Subtitle) — ขึ้นบรรทัดใหม่ด้วย \n</label>
+                    <textarea id="modal-subtitle-text" class="input-field" rows="3" placeholder="บรรยายเพิ่มเติม"></textarea>
+                </div>
+                <div class="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <label>สีหัวข้อ</label>
+                        <div class="flex gap-2 items-center">
+                            <input type="color" id="modal-title-color" value="#14b8b1" class="h-10 w-16 rounded cursor-pointer bg-transparent border border-white/20">
+                            <input type="text" id="modal-title-color-txt" class="input-field" value="#14b8b1" style="font-family:monospace;">
+                        </div>
+                    </div>
+                    <div>
+                        <label>สีพื้นหลัง (Gradient)</label>
+                        <select id="modal-bg-preset" class="input-field" style="cursor:pointer;">
+                            <option value="linear-gradient(135deg, #020617 0%, #0f172a 100%)">Navy (ค่าเริ่มต้น)</option>
+                            <option value="linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)">Navy Blue</option>
+                            <option value="linear-gradient(135deg, #0f172a 0%, #1a2744 100%)">Deep Blue</option>
+                            <option value="linear-gradient(135deg, #0f172a 0%, #1a1a3e 100%)">Deep Purple</option>
+                            <option value="linear-gradient(135deg, #020617 0%, #0d2020 100%)">Dark Teal</option>
+                            <option value="custom">กำหนดเอง...</option>
+                        </select>
+                        <input type="text" id="modal-bg-custom" class="input-field mt-2 hidden" placeholder="เช่น linear-gradient(...)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image fields -->
+            <div id="modal-image-fields" class="hidden">
+                <div class="mb-4">
+                    <label>URL รูปภาพ</label>
+                    <input type="url" id="modal-img-url" class="input-field" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="mb-4">
+                    <label>คำบรรยายใต้ภาพ (ถ้ามี)</label>
+                    <input type="text" id="modal-img-caption" class="input-field" placeholder="คำบรรยาย">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal()" class="btn-secondary">ยกเลิก</button>
+                <button onclick="saveSlide()" class="btn-primary">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const channel = new BroadcastChannel('pos_customer');
+
+        let slides = [];
+        const DEFAULT_SLIDES = [
+            { type:'text', title:'🐾 PK-VMS Animal Clinic', subtitle:'ดูแลสัตว์เลี้ยงของคุณด้วยความใส่ใจ\nWe care for your beloved pets', bg:'linear-gradient(135deg, #020617 0%, #0f172a 100%)', titleColor:'#14b8b1' },
+            { type:'text', title:'💉 บริการฉีดวัคซีน', subtitle:'ป้องกันโรคร้าย ดูแลสุขภาพสัตว์เลี้ยงของคุณ\nVaccination services available', bg:'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', titleColor:'#60a5fa' },
+            { type:'text', title:'🔬 ห้องแล็บ & ตรวจสุขภาพ', subtitle:'ตรวจเลือด ตรวจสุขภาพประจำปี X-Ray และอื่นๆ\nLaboratory & health check services', bg:'linear-gradient(135deg, #0f172a 0%, #1a2744 100%)', titleColor:'#a78bfa' }
+        ];
+
+        // ── Color sync ─────────────────────────────────────
+        document.getElementById('modal-title-color').addEventListener('input', function() {
+            document.getElementById('modal-title-color-txt').value = this.value;
+        });
+        document.getElementById('modal-title-color-txt').addEventListener('input', function() {
+            if (/^#[0-9a-fA-F]{6}$/.test(this.value)) {
+                document.getElementById('modal-title-color').value = this.value;
+            }
+        });
+        document.getElementById('modal-bg-preset').addEventListener('change', function() {
+            const custom = document.getElementById('modal-bg-custom');
+            custom.classList.toggle('hidden', this.value !== 'custom');
+        });
+
+        // ── Load ───────────────────────────────────────────
+        function loadSettings() {
+            try {
+                const raw = localStorage.getItem('pos_display2_ads');
+                slides = raw ? JSON.parse(raw) : [...DEFAULT_SLIDES];
+            } catch(e) { slides = [...DEFAULT_SLIDES]; }
+            try {
+                const s = JSON.parse(localStorage.getItem('pos_display2_settings') || '{}');
+                document.getElementById('cfg-interval').value = s.adInterval || 5;
+                document.getElementById('cfg-clinic-name').value = s.clinicName || 'PK-VMS Animal Clinic';
+                document.getElementById('cfg-theme').value = s.theme || 'dark';
+                document.getElementById('cfg-font-size').value = s.fontSize || 'normal';
+            } catch(e) {}
+            renderSlideList();
+        }
+
+        // ── Save ───────────────────────────────────────────
+        function saveSettings() {
+            const settings = {
+                adInterval: parseInt(document.getElementById('cfg-interval').value) || 5,
+                clinicName: document.getElementById('cfg-clinic-name').value.trim(),
+                theme: document.getElementById('cfg-theme').value,
+                fontSize: document.getElementById('cfg-font-size').value
+            };
+            localStorage.setItem('pos_display2_settings', JSON.stringify(settings));
+            localStorage.setItem('pos_display2_ads', JSON.stringify(slides));
+            channel.postMessage({ type: 'reload_settings' });
+            showToast('บันทึกการตั้งค่าสำเร็จ ✓');
+        }
+
+        function resetToDefaults() {
+            if (!confirm('รีเซ็ตค่าทั้งหมดเป็นค่าเริ่มต้น?')) return;
+            slides = [...DEFAULT_SLIDES];
+            document.getElementById('cfg-interval').value = 5;
+            document.getElementById('cfg-clinic-name').value = 'PK-VMS Animal Clinic';
+            document.getElementById('cfg-theme').value = 'dark';
+            document.getElementById('cfg-font-size').value = 'normal';
+            renderSlideList();
+            showToast('รีเซ็ตค่าเรียบร้อย');
+        }
+
+        // ── Slide List Render ──────────────────────────────
+        function renderSlideList() {
+            const el = document.getElementById('ad-slides-list');
+            if (!slides.length) {
+                el.innerHTML = '<p class="text-gray-500 text-sm col-span-2">ยังไม่มีสไลด์</p>';
+                return;
+            }
+            el.innerHTML = slides.map((s, i) => {
+                const previewStyle = s.type === 'image'
+                    ? `background:url('${escHtml(s.url||'')}') center/cover; color:white;`
+                    : `background:${s.bg || '#0f172a'}; color:${s.titleColor || '#14b8b1'};`;
+                const previewContent = s.type === 'image'
+                    ? `<span style="background:rgba(0,0,0,0.5);padding:4px 10px;border-radius:6px;">${s.caption || 'Image Slide'}</span>`
+                    : `<span style="padding:8px;font-size:0.95rem;line-height:1.3;">${escHtml(s.title || '')}</span>`;
+                return `<div class="ad-card">
+                    <div class="ad-preview" style="${previewStyle}">${previewContent}</div>
+                    <div class="flex justify-between items-center gap-2">
+                        <span class="text-sm text-gray-400 font-bold">${s.type === 'image' ? '🖼️ รูปภาพ' : '✏️ ข้อความ'} — สไลด์ ${i+1}</span>
+                        <div class="flex gap-2">
+                            <button onclick="moveSlide(${i}, -1)" class="btn-secondary" style="padding:5px 10px;" title="เลื่อนขึ้น">↑</button>
+                            <button onclick="moveSlide(${i}, 1)" class="btn-secondary" style="padding:5px 10px;" title="เลื่อนลง">↓</button>
+                            <button onclick="editSlide(${i})" class="btn-secondary" style="padding:5px 14px;">แก้ไข</button>
+                            <button onclick="deleteSlide(${i})" class="btn-danger" style="padding:5px 14px;">ลบ</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function escHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function moveSlide(idx, dir) {
+            const newIdx = idx + dir;
+            if (newIdx < 0 || newIdx >= slides.length) return;
+            [slides[idx], slides[newIdx]] = [slides[newIdx], slides[idx]];
+            renderSlideList();
+        }
+
+        function deleteSlide(idx) {
+            if (!confirm('ลบสไลด์นี้?')) return;
+            slides.splice(idx, 1);
+            renderSlideList();
+        }
+
+        function addSlide(type) {
+            openModal(type, -1);
+        }
+
+        function editSlide(idx) {
+            openModal(slides[idx].type, idx);
+        }
+
+        // ── Modal ──────────────────────────────────────────
+        function openModal(type, idx) {
+            document.getElementById('modal-slide-idx').value = idx;
+            document.getElementById('modal-slide-type').value = type;
+            document.getElementById('modal-title').textContent = idx === -1 ? 'เพิ่มสไลด์ใหม่' : 'แก้ไขสไลด์';
+            document.getElementById('modal-text-fields').classList.toggle('hidden', type === 'image');
+            document.getElementById('modal-image-fields').classList.toggle('hidden', type === 'text');
+
+            if (idx >= 0 && idx < slides.length) {
+                const s = slides[idx];
+                if (type === 'text') {
+                    document.getElementById('modal-title-text').value = s.title || '';
+                    document.getElementById('modal-subtitle-text').value = (s.subtitle || '').replace(/<br>/g, '\n');
+                    document.getElementById('modal-title-color').value = s.titleColor || '#14b8b1';
+                    document.getElementById('modal-title-color-txt').value = s.titleColor || '#14b8b1';
+                    const presets = document.getElementById('modal-bg-preset');
+                    let found = false;
+                    for (const opt of presets.options) { if (opt.value === s.bg) { presets.value = s.bg; found = true; break; } }
+                    if (!found) { presets.value = 'custom'; document.getElementById('modal-bg-custom').value = s.bg || ''; document.getElementById('modal-bg-custom').classList.remove('hidden'); }
+                    else { document.getElementById('modal-bg-custom').classList.add('hidden'); }
+                } else {
+                    document.getElementById('modal-img-url').value = s.url || '';
+                    document.getElementById('modal-img-caption').value = s.caption || '';
+                }
+            } else {
+                document.getElementById('modal-title-text').value = '';
+                document.getElementById('modal-subtitle-text').value = '';
+                document.getElementById('modal-title-color').value = '#14b8b1';
+                document.getElementById('modal-title-color-txt').value = '#14b8b1';
+                document.getElementById('modal-img-url').value = '';
+                document.getElementById('modal-img-caption').value = '';
+            }
+
+            document.getElementById('slide-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('slide-modal').style.display = 'none';
+        }
+
+        function saveSlide() {
+            const idx = parseInt(document.getElementById('modal-slide-idx').value);
+            const type = document.getElementById('modal-slide-type').value;
+            let slide;
+            if (type === 'text') {
+                const bgPreset = document.getElementById('modal-bg-preset').value;
+                const bg = bgPreset === 'custom' ? document.getElementById('modal-bg-custom').value : bgPreset;
+                slide = {
+                    type: 'text',
+                    title: document.getElementById('modal-title-text').value.trim(),
+                    subtitle: document.getElementById('modal-subtitle-text').value,
+                    titleColor: document.getElementById('modal-title-color').value,
+                    bg: bg || 'linear-gradient(135deg, #020617 0%, #0f172a 100%)'
+                };
+            } else {
+                slide = {
+                    type: 'image',
+                    url: document.getElementById('modal-img-url').value.trim(),
+                    caption: document.getElementById('modal-img-caption').value.trim()
+                };
+                if (!slide.url) { alert('กรุณาใส่ URL รูปภาพ'); return; }
+            }
+            if (idx === -1) slides.push(slide);
+            else slides[idx] = slide;
+            closeModal();
+            renderSlideList();
+        }
+
+        // ── Preview send ───────────────────────────────────
+        function previewSend() {
+            channel.postMessage({
+                type: 'show_items',
+                petName: 'น้องโกลด์ 🐕',
+                hn: 'HN-0001',
+                ownerName: 'คุณสมชาย',
+                net: 850,
+                items: [
+                    { item_name: 'วัคซีน 5 โรค', quantity: 1, total_price: 450 },
+                    { item_name: 'ค่าตรวจสุขภาพ', quantity: 1, total_price: 200 },
+                    { item_name: 'ยาถ่ายพยาธิ', quantity: 2, total_price: 200 }
+                ]
+            });
+            showToast('ส่งข้อมูลทดสอบแล้ว 📡');
+        }
+
+        function openDisplay2() {
+            window.open('pos-customer.html', 'pos_customer_window', 'toolbar=no,menubar=no,scrollbars=no,location=no,status=no');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        loadSettings();
+    </script>
+</body>
+</html>
