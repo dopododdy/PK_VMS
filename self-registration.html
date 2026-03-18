@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ลงทะเบียนด้วยตนเอง | PK-VMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <style>
+        :root {
+            --teal:   #0d9488;
+            --teal-l: #14b8b1;
+            --blue:   #2563eb;
+            --navy:   #0f172a;
+        }
+        * { font-family: "Sarabun", sans-serif !important; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; background: #f1f5f9; min-height: 100vh; }
+
+        /* ─── Screens ─────────────────────────────── */
+        .screen { display: none; flex-direction: column; min-height: 100vh; }
+        .screen.active { display: flex; }
+
+        /* ─── Top Bar ─────────────────────────────── */
+        .top-bar {
+            background: white;
+            padding: 14px 18px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky; top: 0; z-index: 10;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .top-bar-back {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #f1f5f9; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        .top-bar-back:active { background: #e2e8f0; }
+        .top-bar-title { font-size: 1.15rem; font-weight: 800; color: var(--navy); flex: 1; }
+        .clinic-logo { font-size: 1.5rem; }
+
+        /* ─── Step Dots ───────────────────────────── */
+        .step-dots { display: flex; gap: 6px; }
+        .step-dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; transition: 0.3s; }
+        .step-dot.active { background: var(--teal); width: 22px; border-radius: 4px; }
+        .step-dot.done { background: var(--teal); }
+
+        /* ─── Content Area ────────────────────────── */
+        .content { flex: 1; padding: 20px 16px 32px; overflow-y: auto; }
+
+        /* ─── Welcome Cards ───────────────────────── */
+        .welcome-card {
+            background: white; border-radius: 24px;
+            padding: 32px 24px; margin-bottom: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            border: 2px solid transparent;
+            cursor: pointer; transition: all 0.25s;
+            display: flex; align-items: center; gap: 20px;
+            text-decoration: none;
+        }
+        .welcome-card:active { transform: scale(0.97); }
+        .welcome-card.teal { border-color: var(--teal); }
+        .welcome-card.blue  { border-color: var(--blue); }
+        .welcome-card-icon { font-size: 3.5rem; line-height: 1; flex-shrink: 0; }
+        .welcome-card-text .title { font-size: 1.35rem; font-weight: 800; color: var(--navy); margin-bottom: 4px; }
+        .welcome-card-text .desc  { font-size: 0.9rem; color: #64748b; line-height: 1.4; }
+
+        /* ─── Form Elements ───────────────────────── */
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; font-size: 0.9rem; font-weight: 700; color: #475569; margin-bottom: 6px; }
+        .form-label .required { color: #ef4444; margin-left: 2px; }
+        .form-input {
+            width: 100%; padding: 14px 16px; border-radius: 14px;
+            border: 2px solid #e2e8f0; font-size: 1rem; color: var(--navy);
+            background: white; outline: none; transition: border-color 0.2s;
+            appearance: none;
+        }
+        .form-input:focus { border-color: var(--teal); }
+        .form-input::placeholder { color: #94a3b8; }
+        .form-input.error { border-color: #ef4444; }
+        select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 44px; }
+
+        /* ─── Buttons ─────────────────────────────── */
+        .btn {
+            width: 100%; padding: 16px; border-radius: 16px;
+            font-size: 1.1rem; font-weight: 800; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-teal    { background: var(--teal); color: white; }
+        .btn-teal:hover { background: #0f766e; }
+        .btn-blue    { background: var(--blue); color: white; }
+        .btn-blue:hover { background: #1d4ed8; }
+        .btn-outline { background: white; color: var(--teal); border: 2px solid var(--teal); }
+        .btn-outline:hover { background: #f0fdf4; }
+        .btn-gray    { background: #e2e8f0; color: #475569; }
+        .btn-gray:hover { background: #cbd5e1; }
+        .btn-sm { padding: 10px 16px; border-radius: 12px; font-size: 0.9rem; font-weight: 700; width: auto; display: inline-flex; }
+
+        /* ─── Section Card ────────────────────────── */
+        .section-card {
+            background: white; border-radius: 20px;
+            padding: 20px; margin-bottom: 16px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+        }
+        .section-title {
+            font-size: 1rem; font-weight: 800; color: var(--navy);
+            margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* ─── Pet Card ────────────────────────────── */
+        .pet-card-item {
+            background: #f8fafc; border-radius: 16px;
+            border: 2px solid #e2e8f0; margin-bottom: 12px; overflow: hidden;
+        }
+        .pet-card-header {
+            padding: 14px 16px; display: flex; align-items: center;
+            justify-content: space-between; cursor: pointer;
+        }
+        .pet-card-name { font-size: 1.05rem; font-weight: 800; color: var(--navy); }
+        .pet-card-sub  { font-size: 0.82rem; color: #64748b; margin-top: 2px; }
+        .pet-card-body { padding: 0 16px 16px; border-top: 1px solid #e2e8f0; }
+
+        /* ─── Search Result ───────────────────────── */
+        .search-result-item {
+            background: white; border-radius: 16px;
+            padding: 16px; margin-bottom: 10px;
+            border: 2px solid #e2e8f0; cursor: pointer;
+            transition: all 0.2s; display: flex; align-items: center; gap: 14px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .search-result-item:active { background: #f0fdf4; border-color: var(--teal); }
+        .search-result-hn { background: var(--navy); color: #60a5fa; font-weight: 900; border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; flex-shrink: 0; line-height: 1.2; text-align: center; }
+        .search-result-name { font-size: 1.05rem; font-weight: 800; color: var(--navy); }
+        .search-result-phone { font-size: 0.9rem; color: #64748b; margin-top: 2px; }
+        .search-result-pets  { font-size: 0.82rem; color: var(--teal); margin-top: 3px; font-weight: 700; }
+
+        /* ─── Success Screen ──────────────────────── */
+        .success-icon { font-size: 5rem; text-align: center; margin-bottom: 16px; }
+        .success-title { font-size: 1.6rem; font-weight: 800; color: var(--navy); text-align: center; margin-bottom: 8px; }
+        .success-sub   { font-size: 1rem; color: #64748b; text-align: center; line-height: 1.5; }
+
+        /* ─── Info Badge ──────────────────────────── */
+        .info-box { background: #eff6ff; border-radius: 14px; padding: 14px 16px; border-left: 4px solid var(--blue); margin-bottom: 18px; }
+        .info-box p { margin: 0; font-size: 0.9rem; color: #1e40af; line-height: 1.5; }
+
+        /* ─── Loading ─────────────────────────────── */
+        .loading-overlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.85);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999;
+        }
+        .spinner {
+            width: 48px; height: 48px; border-radius: 50%;
+            border: 4px solid #e2e8f0; border-top-color: var(--teal);
+            animation: spin 0.8s linear infinite; margin-bottom: 14px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Toast ───────────────────────────────── */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: var(--navy); color: white; padding: 12px 24px; border-radius: 50px;
+            font-size: 0.95rem; font-weight: 700; white-space: nowrap; z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* ─── Divider ─────────────────────────────── */
+        .divider { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+
+        /* ─── Welcome Banner ──────────────────────── */
+        .welcome-banner {
+            background: linear-gradient(135deg, var(--teal) 0%, #0369a1 100%);
+            color: white; padding: 40px 24px 36px; text-align: center;
+        }
+        .welcome-banner .clinic-name { font-size: 1.3rem; font-weight: 800; opacity: 0.9; margin-bottom: 4px; }
+        .welcome-banner .welcome-text { font-size: 1.7rem; font-weight: 800; margin-bottom: 6px; }
+        .welcome-banner .welcome-sub  { font-size: 1rem; opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     LOADING OVERLAY
+════════════════════════════════════════ -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <div style="color:#475569; font-weight:700;">กำลังโหลด...</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     TOAST
+════════════════════════════════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 1: WELCOME
+════════════════════════════════════════ -->
+<div class="screen active" id="screen-welcome">
+    <!-- Banner -->
+    <div class="welcome-banner">
+        <div class="text-4xl mb-3">🐾</div>
+        <div class="clinic-name">คลินิกสัตว์</div>
+        <div class="welcome-text">ยินดีต้อนรับ</div>
+        <div class="welcome-sub">กรุณาเลือกประเภทการลงทะเบียน</div>
+    </div>
+
+    <div class="content" style="padding-top:28px;">
+        <!-- ลูกค้าใหม่ -->
+        <div class="welcome-card teal" onclick="goToNewOwner()">
+            <div class="welcome-card-icon">✨</div>
+            <div class="welcome-card-text">
+                <div class="title" style="color:var(--teal);">ลูกค้าใหม่</div>
+                <div class="desc">ไม่เคยมีประวัติกับคลินิกแห่งนี้<br>ลงทะเบียนเพื่อสร้างประวัติใหม่</div>
+            </div>
+        </div>
+
+        <!-- ลูกค้าเดิม -->
+        <div class="welcome-card blue" onclick="goToSearch()">
+            <div class="welcome-card-icon">🔍</div>
+            <div class="welcome-card-text">
+                <div class="title" style="color:var(--blue);">ลูกค้าเดิม</div>
+                <div class="desc">เคยมีประวัติสัตว์กับคลินิกแห่งนี้<br>ค้นหาและแก้ไขข้อมูลได้เลย</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 2: ข้อมูลเจ้าของ (ลูกค้าใหม่)
+════════════════════════════════════════ -->
+<div class="screen" id="screen-new-owner">
+    <div class="top-bar">
+        <button class="top-bar-back" onclick="showScreen('screen-welcome')">←</button>
+        <div class="top-bar-title">ลูกค้าใหม่ · ข้อมูลเจ้าของ</div>
+        <div class="step-dots">
+            <div class="step-dot active"></div>
+            <div class="step-dot"></div>
+            <div class="step-dot"></div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="section-card">
+            <div class="section-title">👤 ข้อมูลเจ้าของสัตว์</div>
+            <div class="form-group">
+                <label class="form-label">ชื่อ-นามสกุล <span class="required">*</span></label>
+                <input type="text" id="new_owner_name" class="form-input" placeholder="ชื่อ นามสกุล" autocomplete="name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">เบอร์โทรศัพท์ <span class="required">*</span></label>
+                <input type="tel" id="new_phone1" class="form-input" placeholder="0xx-xxx-xxxx" autocomplete="tel" inputmode="tel">
+            </div>
+            <div class="form-group">
+                <label class="form-label">เบอร์โทรศัพท์สำรอง</label>
+                <input type="tel" id="new_phone2" class="form-input" placeholder="(ถ้ามี)" autocomplete="tel" inputmode="tel">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">ที่อยู่</label>
+                <input type="text" id="new_address" class="form-input" placeholder="ที่อยู่ปัจจุบัน" autocomplete="street-address">
+            </div>
+        </div>
+        <button class="btn btn-teal" onclick="goToNewPet()">ถัดไป → ข้อมูลสัตว์เลี้ยง</button>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 3: ข้อมูลสัตว์ (ลูกค้าใหม่)
+════════════════════════════════════════ -->
+<div class="screen" id="screen-new-pet">
+    <div class="top-bar">
+        <button class="top-bar-back" onclick="showScreen('screen-new-owner')">←</button>
+        <div class="top-bar-title">ลูกค้าใหม่ · ข้อมูลสัตว์</div>
+        <div class="step-dots">
+            <div class="step-dot done"></div>
+            <div class="step-dot active"></div>
+            <div class="step-dot"></div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="info-box">
+            <p>💡 กรุณากรอกข้อมูลสัตว์เลี้ยงของท่าน สามารถเพิ่มได้หลายตัว</p>
+        </div>
+        <div id="new-pets-container"></div>
+        <button class="btn btn-outline mb-4" onclick="addNewPetForm()">+ เพิ่มสัตว์เลี้ยงอีกตัว</button>
+        <button class="btn btn-teal" onclick="saveNewCustomer()">💾 ยืนยันลงทะเบียน</button>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 4: ค้นหาลูกค้าเดิม
+════════════════════════════════════════ -->
+<div class="screen" id="screen-search">
+    <div class="top-bar">
+        <button class="top-bar-back" onclick="showScreen('screen-welcome')">←</button>
+        <div class="top-bar-title">ลูกค้าเดิม · ค้นหา</div>
+    </div>
+    <div class="content">
+        <div class="section-card">
+            <div class="section-title">🔍 ค้นหาประวัติ</div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <input type="search" id="search-input" class="form-input" placeholder="ชื่อเจ้าของ, เบอร์โทร, หรือหมายเลข HN"
+                    inputmode="search" autocomplete="off"
+                    oninput="searchOwner()">
+            </div>
+            <p style="font-size:0.85rem; color:#94a3b8; margin:0;">พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหา</p>
+        </div>
+        <div id="search-results"></div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 5: แก้ไขข้อมูลลูกค้าเดิม
+════════════════════════════════════════ -->
+<div class="screen" id="screen-existing">
+    <div class="top-bar">
+        <button class="top-bar-back" onclick="showScreen('screen-search')">←</button>
+        <div class="top-bar-title">แก้ไขข้อมูล</div>
+    </div>
+    <div class="content">
+        <!-- ข้อมูลเจ้าของ -->
+        <div class="section-card" id="existing-owner-section">
+            <div class="section-title">👤 ข้อมูลเจ้าของสัตว์</div>
+            <div class="form-group">
+                <label class="form-label">HN</label>
+                <input type="text" id="ex_hn" class="form-input" readonly style="background:#f8fafc; color:#64748b;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">ชื่อ-นามสกุล <span class="required">*</span></label>
+                <input type="text" id="ex_owner_name" class="form-input" placeholder="ชื่อ นามสกุล" autocomplete="name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">เบอร์โทรศัพท์หลัก <span class="required">*</span></label>
+                <input type="tel" id="ex_phone1" class="form-input" placeholder="0xx-xxx-xxxx" autocomplete="tel" inputmode="tel">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">เบอร์โทรศัพท์สำรอง</label>
+                <input type="tel" id="ex_phone2" class="form-input" placeholder="(ถ้ามี)" autocomplete="tel" inputmode="tel">
+            </div>
+            <div class="form-group" style="margin-bottom:0; margin-top:14px;">
+                <label class="form-label">ที่อยู่</label>
+                <input type="text" id="ex_address" class="form-input" placeholder="ที่อยู่ปัจจุบัน" autocomplete="street-address">
+            </div>
+        </div>
+
+        <!-- ข้อมูลสัตว์ -->
+        <div class="section-card">
+            <div class="section-title">🐾 ข้อมูลสัตว์เลี้ยง</div>
+            <div id="existing-pets-container"></div>
+            <button class="btn btn-outline btn-sm mt-2" onclick="addExistingPetForm()">+ เพิ่มสัตว์ตัวใหม่</button>
+        </div>
+
+        <button class="btn btn-teal" onclick="saveExistingCustomer()">💾 บันทึกการแก้ไข</button>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN 6: สำเร็จ
+════════════════════════════════════════ -->
+<div class="screen" id="screen-success">
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px;">
+        <div class="success-icon">✅</div>
+        <div class="success-title" id="success-title">ลงทะเบียนสำเร็จ!</div>
+        <div class="success-sub" id="success-sub">ขอบคุณที่ไว้วางใจ<br>เราจะดูแลสัตว์เลี้ยงของท่านอย่างดีที่สุด 🐾</div>
+        <div id="success-hn-badge" style="display:none; margin-top:24px; background:#f0fdf4; border:2px solid var(--teal); border-radius:16px; padding:16px 24px; text-align:center;">
+            <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">หมายเลข HN ของท่าน</div>
+            <div id="success-hn" style="font-size:2rem; font-weight:900; color:var(--teal);"></div>
+        </div>
+        <div style="height:40px;"></div>
+        <button class="btn btn-teal" style="max-width:320px;" onclick="goHome()">🏠 กลับหน้าหลัก</button>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script>
+/* ─── State ────────────────────────────────────── */
+let masterSpecies = [];
+let masterBreeds  = [];
+let allOwners     = [];
+let allPhones     = [];
+let allAnimals    = [];
+let currentHn     = '';   // HN ของลูกค้าเดิมที่เลือก
+
+/* ─── Init ─────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', async () => {
+    await loadMasterData();
+    hideLoading();
+    addNewPetForm();  // เริ่มต้นด้วยฟอร์มสัตว์ 1 ตัว สำหรับลูกค้าใหม่
+});
+
+async function loadMasterData() {
+    try {
+        const [resSpecies, resBreeds, resOwners, resPhones, resAnimals] = await Promise.all([
+            db.from('mas_species').select('id, name').order('name'),
+            db.from('mas_breeds').select('id, name, species_id').order('name'),
+            db.from('owners').select('hn, owner_name, address'),
+            db.from('owner_phones').select('owner_hn, phone_number, label'),
+            db.from('animals').select('id, owner_hn, pet_name, pet_type, breed, gender, weight, birth_date, microchip_number, congenital_disease')
+        ]);
+        masterSpecies = resSpecies.data || [];
+        masterBreeds  = resBreeds.data  || [];
+        allOwners     = resOwners.data   || [];
+        allPhones     = resPhones.data   || [];
+        allAnimals    = resAnimals.data  || [];
+    } catch (e) {
+        console.error('loadMasterData error:', e);
+    }
+}
+
+/* ─── Screen Routing ───────────────────────────── */
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+}
+
+function goHome() { showScreen('screen-welcome'); }
+
+function goToNewOwner() { showScreen('screen-new-owner'); }
+
+function goToSearch() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-results').innerHTML = '';
+    showScreen('screen-search');
+}
+
+function goToNewPet() {
+    const name  = document.getElementById('new_owner_name').value.trim();
+    const phone = document.getElementById('new_phone1').value.trim();
+    if (!name)  { shakeInput('new_owner_name'); return showToast('❌ กรุณากรอกชื่อ-นามสกุล'); }
+    if (!phone) { shakeInput('new_phone1'); return showToast('❌ กรุณากรอกเบอร์โทรศัพท์'); }
+    showScreen('screen-new-pet');
+}
+
+/* ─── Pet Form Builder ─────────────────────────── */
+let petFormCount = 0;
+
+function buildPetForm(pet = {}) {
+    petFormCount++;
+    const fid = `pf${petFormCount}`;
+    const speciesOpts = masterSpecies.map(s =>
+        `<option value="${s.name}" data-id="${s.id}" ${pet.pet_type === s.name ? 'selected' : ''}>${s.name}</option>`
+    ).join('');
+    const genderOpts = [
+        ['เมีย', '♀️ เมีย'], ['ผู้', '♂️ ผู้'], ['ผู้ตอน', '✂️♂️ ผู้ตอน'],
+        ['เมียหมัน', '✂️♀️ เมียหมัน'], ['ไม่ระบุเพศ', '❓ ไม่ระบุเพศ']
+    ].map(([v, t]) => `<option value="${v}" ${(pet.gender || 'ไม่ระบุเพศ') === v ? 'selected' : ''}>${t}</option>`).join('');
+
+    const canRemove = !pet.id; // ลบได้เฉพาะสัตว์ที่ยังไม่บันทึก
+    const removeBtn = canRemove ? `<button type="button" onclick="removePetForm('${fid}')" class="btn btn-sm btn-gray ml-2" style="background:#fee2e2;color:#dc2626;">✕ ลบ</button>` : '';
+
+    const collapseId = `pet-body-${fid}`;
+    const isNew = !pet.id;
+    const petLabel = pet.pet_name || 'สัตว์ตัวใหม่';
+    const specieLabel = pet.pet_type ? ` · ${pet.pet_type}` : '';
+
+    return `
+    <div class="pet-card-item" id="wrap-${fid}" data-pet-id="${pet.id || ''}">
+        <div class="pet-card-header" onclick="toggleCard('${collapseId}', this)">
+            <div>
+                <div class="pet-card-name" id="label-${fid}">${isNew ? '🐾 ' : ''}${petLabel}${specieLabel}</div>
+                <div class="pet-card-sub">แตะเพื่อ${isNew ? 'กรอก' : 'แก้ไข'}ข้อมูล</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+                ${removeBtn}
+                <span class="chevron" style="color:#94a3b8; transition:0.3s; display:inline-block;" id="chev-${fid}">▼</span>
+            </div>
+        </div>
+        <div class="pet-card-body" id="${collapseId}" style="${isNew ? '' : 'display:none;'}">
+            <div class="form-group" style="margin-top:14px;">
+                <label class="form-label">ชื่อสัตว์ <span class="required">*</span></label>
+                <input type="text" id="${fid}_name" class="form-input" value="${pet.pet_name || ''}"
+                    placeholder="ชื่อสัตว์เลี้ยง"
+                    oninput="document.getElementById('label-${fid}').textContent=this.value||'สัตว์ตัวใหม่'">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">ชนิด</label>
+                    <select id="${fid}_type" class="form-input" onchange="updateBreeds('${fid}')">
+                        <option value="">-- เลือก --</option>${speciesOpts}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">สายพันธุ์</label>
+                    <select id="${fid}_breed" class="form-input" data-val="${pet.breed || ''}">
+                        <option value="">-- เลือก --</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">เพศ</label>
+                    <select id="${fid}_gender" class="form-input">${genderOpts}</select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">น้ำหนัก (กก.)</label>
+                    <input type="number" id="${fid}_weight" class="form-input" step="0.1" min="0" value="${pet.weight || ''}" placeholder="0.0" inputmode="decimal">
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">อายุ (ปี)</label>
+                    <input type="number" id="${fid}_age_y" class="form-input" min="0" value="${getAgeYears(pet.birth_date)}" placeholder="0" inputmode="numeric" oninput="syncBirthDate('${fid}')">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">อายุ (เดือน)</label>
+                    <input type="number" id="${fid}_age_m" class="form-input" min="0" max="11" value="${getAgeMonths(pet.birth_date)}" placeholder="0" inputmode="numeric" oninput="syncBirthDate('${fid}')">
+                </div>
+            </div>
+            <input type="hidden" id="${fid}_birth" value="${pet.birth_date || ''}">
+        </div>
+    </div>`;
+}
+
+function toggleCard(bodyId, headerEl) {
+    const body  = document.getElementById(bodyId);
+    const fid   = bodyId.replace('pet-body-', '');
+    const chev  = document.getElementById('chev-' + fid);
+    const shown = body.style.display !== 'none';
+    body.style.display = shown ? 'none' : '';
+    if (chev) chev.style.transform = shown ? '' : 'rotate(180deg)';
+}
+
+function updateBreeds(fid) {
+    const typeEl  = document.getElementById(`${fid}_type`);
+    const breedEl = document.getElementById(`${fid}_breed`);
+    const savedVal = breedEl.getAttribute('data-val') || '';
+    const opt = typeEl.options[typeEl.selectedIndex];
+    const speciesId = opt ? opt.getAttribute('data-id') : null;
+    const filtered = speciesId ? masterBreeds.filter(b => b.species_id === speciesId) : [];
+    breedEl.innerHTML = '<option value="">-- เลือกสายพันธุ์ --</option>' +
+        filtered.map(b => `<option value="${b.name}" ${b.name === savedVal ? 'selected' : ''}>${b.name}</option>`).join('');
+    if (!breedEl.value && filtered.some(b => b.name === 'ไทย')) breedEl.value = 'ไทย';
+}
+
+function removePetForm(fid) {
+    document.getElementById(`wrap-${fid}`)?.remove();
+}
+
+function syncBirthDate(fid) {
+    const y = parseInt(document.getElementById(`${fid}_age_y`).value) || 0;
+    const m = parseInt(document.getElementById(`${fid}_age_m`).value) || 0;
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - y);
+    d.setMonth(d.getMonth() - m);
+    const dateStr = d.toISOString().split('T')[0];
+    document.getElementById(`${fid}_birth`).value = dateStr;
+}
+
+function getAgeYears(dob) {
+    if (!dob) return '';
+    const b = new Date(dob), n = new Date();
+    let y = n.getFullYear() - b.getFullYear();
+    if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) y--;
+    return y >= 0 ? y : '';
+}
+function getAgeMonths(dob) {
+    if (!dob) return '';
+    const b = new Date(dob), n = new Date();
+    let m = n.getMonth() - b.getMonth();
+    if (m < 0) m += 12;
+    return m;
+}
+
+/* ─── New Customer Flow ────────────────────────── */
+function addNewPetForm() {
+    const container = document.getElementById('new-pets-container');
+    container.insertAdjacentHTML('beforeend', buildPetForm());
+    // อัปเดต breed ของฟอร์มล่าสุด
+    const wraps = container.querySelectorAll('.pet-card-item');
+    if (wraps.length > 0) {
+        const lastWrap = wraps[wraps.length - 1];
+        const typeEl = lastWrap.querySelector('select[id$="_type"]');
+        if (typeEl) {
+            const fid = typeEl.id.replace('_type', '');
+            updateBreeds(fid);
+        }
+    }
+}
+
+function collectPetData(container) {
+    const pets = [];
+    container.querySelectorAll('.pet-card-item').forEach(wrap => {
+        const fid = wrap.id.replace('wrap-', '');
+        const nameEl = document.getElementById(`${fid}_name`);
+        if (!nameEl) return;
+        const name = nameEl.value.trim();
+        if (!name) return;
+        pets.push({
+            id:        wrap.getAttribute('data-pet-id') || null,
+            pet_name:  name,
+            pet_type:  document.getElementById(`${fid}_type`)?.value || 'อื่นๆ',
+            breed:     document.getElementById(`${fid}_breed`)?.value || '',
+            gender:    document.getElementById(`${fid}_gender`)?.value || 'ไม่ระบุเพศ',
+            weight:    parseFloat(document.getElementById(`${fid}_weight`)?.value) || 0,
+            birth_date: document.getElementById(`${fid}_birth`)?.value || null,
+        });
+    });
+    return pets;
+}
+
+async function saveNewCustomer() {
+    const name  = document.getElementById('new_owner_name').value.trim();
+    const phone = document.getElementById('new_phone1').value.trim();
+    if (!name || !phone) return showToast('❌ กรุณากรอกชื่อและเบอร์โทร');
+
+    const pets = collectPetData(document.getElementById('new-pets-container'));
+
+    showLoading('กำลังบันทึก...');
+    try {
+        // สร้าง HN อัตโนมัติ (เริ่มต้นที่ 690001 เพื่อต่อจากเลขฐานที่กำหนดไว้)
+        const hns = allOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
+        const hn  = (Math.max(...hns, 690000) + 1).toString().padStart(6, '0');
+
+        const ownerData = {
+            hn,
+            owner_name: name,
+            address: document.getElementById('new_address').value.trim() || ''
+        };
+        const { error: ownerErr } = await db.from('owners').insert(ownerData);
+        if (ownerErr) throw ownerErr;
+
+        const phoneList = [{ owner_hn: hn, phone_number: phone, label: 'เบอร์หลัก' }];
+        const p2 = document.getElementById('new_phone2').value.trim();
+        if (p2) phoneList.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
+        const { error: phoneErr } = await db.from('owner_phones').insert(phoneList);
+        if (phoneErr) throw phoneErr;
+
+        for (const pet of pets) {
+            const { error: petErr } = await db.from('animals').insert({
+                owner_hn: hn, pet_name: pet.pet_name, pet_type: pet.pet_type || 'อื่นๆ',
+                breed: pet.breed, gender: pet.gender, weight: pet.weight,
+                birth_date: pet.birth_date || null, updated_at: new Date().toISOString()
+            });
+            if (petErr) throw petErr;
+        }
+
+        // รีโหลดข้อมูลใน memory
+        allOwners.push(ownerData);
+
+        hideLoading();
+        document.getElementById('success-title').textContent = 'ลงทะเบียนสำเร็จ!';
+        document.getElementById('success-sub').innerHTML = `ยินดีต้อนรับ คุณ${name}<br>ขอบคุณที่ไว้วางใจคลินิกของเรา 🐾`;
+        document.getElementById('success-hn').textContent = `HN ${hn}`;
+        document.getElementById('success-hn-badge').style.display = '';
+        // รีเซ็ตฟอร์มใหม่
+        resetNewForms();
+        showScreen('screen-success');
+    } catch (err) {
+        hideLoading();
+        showToast('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+    }
+}
+
+function resetNewForms() {
+    ['new_owner_name', 'new_phone1', 'new_phone2', 'new_address'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('new-pets-container').innerHTML = '';
+    addNewPetForm();
+}
+
+/* ─── Existing Customer Flow ───────────────────── */
+function searchOwner() {
+    const term = document.getElementById('search-input').value.trim().toLowerCase();
+    const container = document.getElementById('search-results');
+    if (term.length < 2) { container.innerHTML = ''; return; }
+
+    const matched = allOwners.filter(o => {
+        const phones = allPhones.filter(p => p.owner_hn === o.hn).map(p => p.phone_number);
+        return (o.owner_name || '').toLowerCase().includes(term) ||
+               (o.hn || '').includes(term) ||
+               phones.some(p => p.includes(term));
+    });
+
+    if (matched.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:32px; color:#94a3b8;">
+            <div style="font-size:2.5rem; margin-bottom:8px;">🔍</div>
+            <div style="font-weight:700;">ไม่พบข้อมูล</div>
+            <div style="font-size:0.85rem; margin-top:4px;">ลองค้นหาด้วยชื่อหรือเบอร์โทร</div>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = matched.slice(0, 20).map(o => {
+        const p1 = allPhones.find(p => p.owner_hn === o.hn && p.label === 'เบอร์หลัก')?.phone_number ||
+                   allPhones.find(p => p.owner_hn === o.hn)?.phone_number || '-';
+        const petList = allAnimals.filter(a => a.owner_hn === o.hn);
+        const petNames = petList.slice(0,3).map(a => {
+            const icon = a.pet_type === 'สุนัข' ? '🐶' : a.pet_type === 'แมว' ? '🐱' : '🐾';
+            return `${icon} ${a.pet_name}`;
+        }).join('  ');
+        return `
+        <div class="search-result-item" onclick="loadExistingCustomer('${o.hn}')">
+            <div class="search-result-hn">HN<br>${o.hn}</div>
+            <div style="flex:1; min-width:0;">
+                <div class="search-result-name">${o.owner_name || '-'}</div>
+                <div class="search-result-phone">📞 ${p1}</div>
+                ${petNames ? `<div class="search-result-pets">${petNames}</div>` : ''}
+            </div>
+            <div style="color:#94a3b8; font-size:1.3rem;">›</div>
+        </div>`;
+    }).join('');
+}
+
+async function loadExistingCustomer(hn) {
+    showLoading('กำลังโหลดข้อมูล...');
+    try {
+        // โหลดข้อมูลสดจาก DB
+        const [resO, resP, resA] = await Promise.all([
+            db.from('owners').select('*').eq('hn', hn).single(),
+            db.from('owner_phones').select('*').eq('owner_hn', hn),
+            db.from('animals').select('*').eq('owner_hn', hn)
+        ]);
+        const owner  = resO.data;
+        const phones = resP.data || [];
+        const pets   = resA.data || [];
+
+        if (!owner) { hideLoading(); return showToast('❌ ไม่พบข้อมูล'); }
+
+        currentHn = hn;
+        document.getElementById('ex_hn').value         = hn;
+        document.getElementById('ex_owner_name').value = owner.owner_name || '';
+        document.getElementById('ex_address').value    = owner.address || '';
+        document.getElementById('ex_phone1').value     = phones.find(p => p.label === 'เบอร์หลัก')?.phone_number || '';
+        document.getElementById('ex_phone2').value     = phones.find(p => p.label === 'เบอร์สำรอง')?.phone_number || '';
+
+        // สร้างฟอร์มสัตว์
+        const pContainer = document.getElementById('existing-pets-container');
+        pContainer.innerHTML = '';
+        pets.forEach(pet => pContainer.insertAdjacentHTML('beforeend', buildPetForm(pet)));
+        // อัปเดต breed options ทุกตัว
+        pContainer.querySelectorAll('.pet-card-item').forEach(wrap => {
+            const fid = wrap.id.replace('wrap-', '');
+            updateBreeds(fid);
+        });
+
+        hideLoading();
+        showScreen('screen-existing');
+    } catch (err) {
+        hideLoading();
+        showToast('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+    }
+}
+
+function addExistingPetForm() {
+    const container = document.getElementById('existing-pets-container');
+    container.insertAdjacentHTML('beforeend', buildPetForm());
+    const wraps = container.querySelectorAll('.pet-card-item');
+    if (wraps.length > 0) {
+        const lastWrap = wraps[wraps.length - 1];
+        const typeEl = lastWrap.querySelector('select[id$="_type"]');
+        if (typeEl) {
+            const fid = typeEl.id.replace('_type', '');
+            updateBreeds(fid);
+        }
+    }
+}
+
+async function saveExistingCustomer() {
+    const hn   = currentHn;
+    const name = document.getElementById('ex_owner_name').value.trim();
+    const phone1 = document.getElementById('ex_phone1').value.trim();
+    if (!name || !phone1) return showToast('❌ กรุณากรอกชื่อและเบอร์โทรหลัก');
+
+    const pets = collectPetData(document.getElementById('existing-pets-container'));
+
+    showLoading('กำลังบันทึก...');
+    try {
+        // อัปเดตเจ้าของ
+        const { error: ownerErr } = await db.from('owners').upsert(
+            { hn, owner_name: name, address: document.getElementById('ex_address').value.trim() },
+            { onConflict: 'hn' }
+        );
+        if (ownerErr) throw ownerErr;
+
+        // อัปเดตเบอร์โทร (ลบแล้วเพิ่มใหม่)
+        await db.from('owner_phones').delete().eq('owner_hn', hn);
+        const phoneList = [{ owner_hn: hn, phone_number: phone1, label: 'เบอร์หลัก' }];
+        const p2 = document.getElementById('ex_phone2').value.trim();
+        if (p2) phoneList.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
+        await db.from('owner_phones').insert(phoneList);
+
+        // บันทึกสัตว์แต่ละตัว
+        for (const pet of pets) {
+            const petData = {
+                owner_hn: hn, pet_name: pet.pet_name, pet_type: pet.pet_type || 'อื่นๆ',
+                breed: pet.breed, gender: pet.gender, weight: pet.weight,
+                birth_date: pet.birth_date || null, updated_at: new Date().toISOString()
+            };
+            if (pet.id) {
+                const { error: petErr } = await db.from('animals').update(petData).eq('id', pet.id);
+                if (petErr) throw petErr;
+            } else {
+                const { error: petErr } = await db.from('animals').insert(petData);
+                if (petErr) throw petErr;
+            }
+        }
+
+        // อัปเดต allOwners in-memory
+        const idx = allOwners.findIndex(o => o.hn === hn);
+        if (idx >= 0) allOwners[idx] = { ...allOwners[idx], owner_name: name };
+
+        hideLoading();
+        document.getElementById('success-title').textContent = 'บันทึกสำเร็จ!';
+        document.getElementById('success-sub').innerHTML = `อัปเดตข้อมูลของคุณ${name}<br>เรียบร้อยแล้ว 🐾`;
+        document.getElementById('success-hn-badge').style.display = 'none';
+        showScreen('screen-success');
+    } catch (err) {
+        hideLoading();
+        showToast('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+    }
+}
+
+/* ─── UI Helpers ───────────────────────────────── */
+function showLoading(msg = 'กำลังโหลด...') {
+    const el = document.getElementById('loading-overlay');
+    el.querySelector('div:last-child').textContent = msg;
+    el.style.display = 'flex';
+}
+function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+function showToast(msg, duration = 2500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function shakeInput(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('error');
+    el.focus();
+    setTimeout(() => el.classList.remove('error'), 2000);
+}
+</script>
+</body>
+</html>
