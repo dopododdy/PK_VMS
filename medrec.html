@@ -898,13 +898,14 @@
             const petName = document.getElementById('v-pet-name').innerText;
             const hn = document.getElementById('head-hn').innerText.replace('HN: ', '');
 
-            const LINE_H = OPD_LINE_H;
-            const HDR_H  = OPD_HDR_H;
-            const PAGE_H = OPD_PAGE_H;
-            const PAGE_W = OPD_PAGE_W;
-            const TOTAL_LINES = Math.floor((PAGE_H - HDR_H) / LINE_H);
+            // A4 portrait dimensions (separate from OPD card constants)
+            const LINE_H = 5;   // mm per line
+            const HDR_H  = 22;  // mm header height
+            const PAGE_W = 210; // mm A4 portrait width
+            const PAGE_H = 297; // mm A4 portrait height
+            const TOTAL_LINES = Math.floor((PAGE_H - HDR_H) / LINE_H); // 55 lines
 
-            // Column guide dividers (landscape A5: columns A=8-70mm, B=74-136mm, C=140-202mm)
+            // Column guide dividers (A=8-70mm, B=74-136mm, C=140-202mm)
             const colDividers = [70, 74, 136, 140].map(x =>
                 `<div style="position:absolute;left:${x}mm;top:${HDR_H}mm;height:${PAGE_H - HDR_H}mm;border-left:0.3pt dashed #bbb;"></div>`
             ).join('');
@@ -937,7 +938,7 @@
                     * { font-family:'Sarabun',sans-serif; }
                     body { margin:0; padding:0; }
                     .page { width:${PAGE_W}mm; height:${PAGE_H}mm; position:relative; overflow:hidden; }
-                    @page { size:${PAGE_W}mm ${PAGE_H}mm; margin:0; }
+                    @page { size:${PAGE_W}mm ${PAGE_H}mm portrait; margin:0; }
                 </style>
             </head><body>
                 <div class="page">
@@ -973,23 +974,63 @@
             });
         }
 
+        function buildOpdContentText(rec) {
+            const labItems = rec.medical_record_items.filter(i => i.item_type === 'Lab');
+            const txItems  = rec.medical_record_items.filter(i => i.item_type === 'Tx');
+            const rxItems  = rec.medical_record_items.filter(i => i.item_type === 'Rx');
+            const dateStr  = formatThaiDate(rec.created_at, 'short');
+
+            const lines = [];
+            lines.push(dateStr);
+            if (rec.weight)          lines.push(`${rec.weight} กก.`);
+            if (rec.cc)              lines.push(`CC: ${rec.cc}`);
+            if (rec.hx)              lines.push(`Hx: ${rec.hx}`);
+            if (rec.pe)              lines.push(`PE: ${rec.pe}`);
+            if (labItems.length > 0) lines.push(`Lab: ${labItems.map(i => i.item_name).join(', ')}`);
+            if (rec.dx)              lines.push(`Dx: ${rec.dx}`);
+            if (txItems.length > 0) {
+                lines.push('Tx:');
+                txItems.forEach(i => lines.push(`- ${i.item_name}`));
+            }
+            if (rxItems.length > 0) {
+                lines.push('Rx:');
+                rxItems.forEach(i => {
+                    const detail = i.dose_per_time ? ` ${i.dose_per_time} ${i.unit || ''}` : '';
+                    lines.push(`- ${i.item_name}${detail}`);
+                });
+            }
+            if (rec.plan)            lines.push(`Plan: ${rec.plan}`);
+            if (rec.appointment) {
+                const apptNote = rec.appointment_note ? ` เพื่อ ${rec.appointment_note}` : '';
+                lines.push(`App: ${formatThaiDate(rec.appointment, 'short')}${apptNote}`);
+            }
+            if (rec.appointment_2) {
+                const apptNote2 = rec.appointment_note_2 ? ` เพื่อ ${rec.appointment_note_2}` : '';
+                lines.push(`App(2): ${formatThaiDate(rec.appointment_2, 'short')}${apptNote2}`);
+            }
+            return lines.join('\n');
+        }
+
         function showOpdPrintModal(recordId) {
             opdPrintRecordId = recordId;
             document.getElementById('opd-print-line').value = 1;
             selectOpdCol('A');
+            const rec = records.find(r => r.id === recordId);
+            if (!rec) return alert('ไม่พบข้อมูลประวัติ');
+            document.getElementById('opd-preview-text').value = buildOpdContentText(rec);
             document.getElementById('opd-print-modal').style.display = 'flex';
         }
 
         function confirmOpdPrint() {
             const col = document.getElementById('opd-print-col').value;
             const lineNo = parseInt(document.getElementById('opd-print-line').value) || 1;
+            const editedText = document.getElementById('opd-preview-text').value;
             document.getElementById('opd-print-modal').style.display = 'none';
-            const rec = records.find(r => r.id === opdPrintRecordId);
-            if (!rec) return alert("ไม่พบข้อมูลประวัติ");
-            printHistoryToCard(rec, col, lineNo);
+            const textLines = editedText.split('\n');
+            printHistoryFromText(textLines, col, lineNo);
         }
 
-        function printHistoryToCard(rec, column, lineNo) {
+        function printHistoryFromText(textLines, column, lineNo) {
             const LINE_H = OPD_LINE_H;
             const HDR_H  = OPD_HDR_H;
             const PAGE_W = OPD_PAGE_W;
@@ -999,44 +1040,24 @@
             const colStartX = { A: 8, B: 74, C: 140 };
             const colOrder  = ['A', 'B', 'C'];
 
-            // Clamp inputs to valid ranges
-            const startCol = colOrder.includes(column) ? column : 'A';
+            const startCol  = colOrder.includes(column) ? column : 'A';
             const startLine = Math.min(Math.max(parseInt(lineNo) || 1, 1), MAX_LINE);
 
-            const labItems = rec.medical_record_items.filter(i => i.item_type === 'Lab');
-            const txItems  = rec.medical_record_items.filter(i => i.item_type === 'Tx');
-            const rxItems  = rec.medical_record_items.filter(i => i.item_type === 'Rx');
-
-            const dateStr = formatThaiDate(rec.created_at, 'short');
-
-            const contentLines = [];
-            contentLines.push(`<div style="color:#cc0000;font-weight:bold;">${escapeHtml(dateStr)}</div>`);
-            if (rec.weight)          contentLines.push(`<div>${escapeHtml(String(rec.weight))} กก.</div>`);
-            if (rec.cc)              contentLines.push(`<div><span style="color:#0000cc;">CC:</span> ${escapeHtml(rec.cc)}</div>`);
-            if (rec.hx)              contentLines.push(`<div><span style="color:#0000cc;">Hx:</span> ${escapeHtml(rec.hx)}</div>`);
-            if (rec.pe)              contentLines.push(`<div><span style="color:#0000cc;">PE:</span> ${escapeHtml(rec.pe)}</div>`);
-            if (labItems.length > 0) contentLines.push(`<div><span style="color:#0000cc;">Lab:</span> ${labItems.map(i => escapeHtml(i.item_name)).join(', ')}</div>`);
-            if (rec.dx)              contentLines.push(`<div><span style="color:#0000cc;">Dx:</span> ${escapeHtml(rec.dx)}</div>`);
-            if (txItems.length > 0) {
-                contentLines.push(`<div><span style="color:#0000cc;">Tx:</span></div>`);
-                txItems.forEach(i => contentLines.push(`<div>- ${escapeHtml(i.item_name)}</div>`));
-            }
-            if (rxItems.length > 0) {
-                contentLines.push(`<div><span style="color:#0000cc;">Rx:</span></div>`);
-                rxItems.forEach(i => {
-                    const detail = i.dose_per_time ? ` ${escapeHtml(i.dose_per_time)} ${escapeHtml(i.unit || '')}` : '';
-                    contentLines.push(`<div>- ${escapeHtml(i.item_name)}${detail}</div>`);
-                });
-            }
-            if (rec.plan)            contentLines.push(`<div><span style="color:#0000cc;">Plan:</span> ${escapeHtml(rec.plan)}</div>`);
-            if (rec.appointment) {
-                const apptNote = rec.appointment_note ? ` เพื่อ ${escapeHtml(rec.appointment_note)}` : '';
-                contentLines.push(`<div><span style="color:#0000cc;">App:</span> ${escapeHtml(formatThaiDate(rec.appointment, 'short'))}${apptNote}</div>`);
-            }
-            if (rec.appointment_2) {
-                const apptNote2 = rec.appointment_note_2 ? ` เพื่อ ${escapeHtml(rec.appointment_note_2)}` : '';
-                contentLines.push(`<div><span style="color:#0000cc;">App(2):</span> ${escapeHtml(formatThaiDate(rec.appointment_2, 'short'))}${apptNote2}</div>`);
-            }
+            const contentLines = textLines.map(line => {
+                if (!line.trim()) return `<div>&nbsp;</div>`;
+                // Date line: starts with a digit
+                if (/^\d/.test(line)) {
+                    return `<div style="color:#cc0000;font-weight:bold;">${escapeHtml(line)}</div>`;
+                }
+                // Labeled line: CC/Hx/PE/Lab/Dx/Tx/Rx/Plan/App(2)/App
+                const m = line.match(/^(CC|Hx|PE|Lab|Dx|Tx|Rx|Plan|App\(2\)|App):\s*/);
+                if (m) {
+                    const label = m[1];
+                    const rest  = line.slice(m[0].length);
+                    return `<div><span style="color:#0000cc;">${escapeHtml(label)}:</span>${rest ? ' ' + escapeHtml(rest) : ''}</div>`;
+                }
+                return `<div>${escapeHtml(line)}</div>`;
+            });
 
             // Distribute content lines across columns (overflow A→B→C at line 24)
             const segments = [];
@@ -1077,15 +1098,24 @@
             pw.document.write(html);
             pw.document.close();
         }
+
+        function printHistoryToCard(rec, column, lineNo) {
+            printHistoryFromText(buildOpdContentText(rec).split('\n'), column, lineNo);
+        }
     </script>    <div id="opd-print-modal" class="modal-overlay" style="z-index: 170;">
-        <div class="modal-content !max-w-sm">
+        <div class="modal-content !max-w-2xl">
             <div class="p-6 border-b border-white/10 bg-teal-900/30">
                 <h4 class="text-2xl font-bold text-teal-400">🖨️ พิมพ์ประวัติลงกระดาษ OPD</h4>
-                <p class="text-sm text-gray-400 mt-1">กำหนดตำแหน่งเริ่มพิมพ์บนกระดาษ เช่น Column A บรรทัดที่ 1</p>
+                <p class="text-sm text-gray-400 mt-1">แก้ไขข้อความก่อนพิมพ์ได้ตามต้องการ จากนั้นกำหนดตำแหน่งเริ่มพิมพ์</p>
             </div>
-            <div class="p-6 space-y-5">
+            <div class="p-6 space-y-5 flex-1 overflow-y-auto">
                 <div>
-                    <label class="label-clinical">Column</label>
+                    <label class="label-clinical">✏️ ตรวจสอบ/แก้ไขข้อความก่อนพิมพ์</label>
+                    <p class="text-xs text-gray-500 mb-2">แต่ละบรรทัด = 1 บรรทัดบนกระดาษ &nbsp;|&nbsp; บรรทัดว่าง = เว้น 1 บรรทัด &nbsp;|&nbsp; สามารถพิมพ์ข้อความเพิ่มเติมหรือลบได้</p>
+                    <textarea id="opd-preview-text" class="input-box" rows="12" style="font-family:monospace,sans-serif;font-size:0.85rem;line-height:1.7;resize:vertical;white-space:pre;"></textarea>
+                </div>
+                <div>
+                    <label class="label-clinical">Column เริ่มต้น</label>
                     <div class="flex gap-2 mt-1">
                         <button id="col-btn-A" onclick="selectOpdCol('A')" class="btn-base btn-teal flex-1">A</button>
                         <button id="col-btn-B" onclick="selectOpdCol('B')" class="btn-base flex-1 bg-white/10 text-gray-400">B</button>
