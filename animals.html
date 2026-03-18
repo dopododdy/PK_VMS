@@ -76,6 +76,10 @@
                 </div>
                 <input type="text" id="search-box" class="input-box" placeholder="ค้นหา HN, ชื่อ, เบอร์โทร, ที่อยู่, บันทึกการรักษา..." oninput="renderSidebar()">
             </div>
+            <div class="flex gap-2 px-4 py-2 flex-shrink-0 border-b border-white/5">
+                <button id="tab-all" onclick="switchTab('all')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-teal-500/20 text-teal-400 border border-teal-500/30">📋 เวชระเบียน</button>
+                <button id="tab-today" onclick="switchTab('today')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent relative">📅 นัดหมายวันนี้<span id="tab-today-badge" class="hidden absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center"></span></button>
+            </div>
             <div id="owner-list" class="flex-1 overflow-y-auto px-2 pb-10 custom-scroll"></div>
             <div class="p-5">
                 <button onclick="createNewForm()" class="w-full btn-base btn-teal py-4 text-xl shadow-lg">
@@ -124,7 +128,7 @@
                 db.from('owner_phones').select('*'),
                 db.from('mas_species').select('*').order('name'),
                 db.from('mas_breeds').select('*').order('name'),
-                db.from('medical_records').select('id, animal_id, owner_hn, created_at, cc, hx, pe, dx'),
+                db.from('medical_records').select('id, animal_id, owner_hn, created_at, cc, hx, pe, dx, appointment, appointment_2, appointment_note, appointment_note_2'),
                 db.from('medical_record_items').select('record_id, item_name')
             ]);
             allOwners = resO.data || [];
@@ -135,7 +139,8 @@
             allMedRecs = resMedRecs.data || [];
             allMedItems = resMedItems.data || [];
             buildLookupMaps();
-            renderSidebar();
+            if (currentSidebarTab === 'today') renderTodayAppointments();
+            else renderSidebar();
         }
 
         function buildLookupMaps() {
@@ -164,6 +169,101 @@
                 const prev = _medTextByAnimalId.get(rec.animal_id) || '';
                 _medTextByAnimalId.set(rec.animal_id, prev + ' ' + text);
             });
+            updateTodayBadge();
+        }
+
+        let currentSidebarTab = 'all';
+
+        function switchTab(tab) {
+            currentSidebarTab = tab;
+            const searchBox = document.getElementById('search-box');
+            const tabAll = document.getElementById('tab-all');
+            const tabToday = document.getElementById('tab-today');
+            if (tab === 'all') {
+                tabAll.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-teal-500/20 text-teal-400 border border-teal-500/30';
+                tabToday.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent relative';
+                searchBox.style.display = '';
+                renderSidebar();
+            } else {
+                tabAll.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent';
+                tabToday.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-orange-500/20 text-orange-400 border border-orange-500/30 relative';
+                searchBox.style.display = 'none';
+                renderTodayAppointments();
+            }
+        }
+
+        function getTodayStr() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        }
+
+        function updateTodayBadge() {
+            const today = getTodayStr();
+            const seenAnimals = new Set();
+            allMedRecs.forEach(r => {
+                if (r.appointment === today || r.appointment_2 === today) seenAnimals.add(r.animal_id);
+            });
+            const badge = document.getElementById('tab-today-badge');
+            if (!badge) return;
+            if (seenAnimals.size > 0) {
+                badge.textContent = seenAnimals.size;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function renderTodayAppointments() {
+            const today = getTodayStr();
+            const container = document.getElementById('owner-list');
+            const ownerMap = new Map(allOwners.map(o => [o.hn, o]));
+
+            // Group today's appointment records by animal_id
+            const animalApptMap = new Map();
+            allMedRecs.forEach(r => {
+                const notes = [];
+                if (r.appointment === today) notes.push(r.appointment_note || 'นัดหมาย');
+                if (r.appointment_2 === today) notes.push(r.appointment_note_2 || 'นัดหมาย');
+                if (notes.length === 0) return;
+                if (!animalApptMap.has(r.animal_id)) animalApptMap.set(r.animal_id, new Set());
+                notes.forEach(n => animalApptMap.get(r.animal_id).add(n));
+            });
+
+            const animalsWithAppt = allAnimals.filter(a => animalApptMap.has(a.id));
+
+            if (animalsWithAppt.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-16 px-4"><div class="text-5xl mb-4">📅</div><div class="font-bold text-lg">ไม่มีนัดหมายวันนี้</div></div>`;
+                return;
+            }
+
+            const todayDisplay = formatThaiDate(today);
+            container.innerHTML = `
+                <div class="px-4 py-3 text-orange-400 font-bold text-sm border-b border-white/5 flex items-center gap-2">
+                    <span>📅</span><span>นัดหมาย ${todayDisplay}</span>
+                    <span class="ml-auto bg-orange-500/20 text-orange-300 text-xs px-2 py-0.5 rounded-full border border-orange-500/30">${animalsWithAppt.length} รายการ</span>
+                </div>
+                ${animalsWithAppt.map(animal => {
+                    const owner = ownerMap.get(animal.owner_hn);
+                    const p1 = _primaryPhoneMap.get(animal.owner_hn) || '-';
+                    const typeIcon = animal.pet_type === 'สุนัข' ? '🐶' : (animal.pet_type === 'แมว' ? '🐱' : '🐾');
+                    const notes = [...animalApptMap.get(animal.id)];
+                    const apptHtml = notes.map(n =>
+                        `<span class="inline-flex items-center gap-1 bg-orange-500/20 text-orange-300 text-xs px-2 py-0.5 rounded-full font-bold border border-orange-500/30">📌 ${n}</span>`
+                    ).join('');
+                    return `
+                        <div class="pet-card" onclick="editOwner('${animal.owner_hn}')" id="appt-${animal.id}">
+                            <div class="hn-col">#${animal.owner_hn}</div>
+                            <div class="flex flex-col justify-center min-w-0 px-2 gap-1">
+                                <span class="pet-main-name truncate">${animal.pet_name}</span>
+                                <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
+                                <span class="phone-badge">📞 ${p1}</span>
+                                <div class="flex flex-wrap gap-1 mt-1">${apptHtml}</div>
+                            </div>
+                            <div class="flex items-center justify-end gap-1 text-2xl pr-2">
+                                <span>${typeIcon}</span>
+                            </div>
+                        </div>`;
+                }).join('')}`;
         }
 
         function renderSidebar() {
