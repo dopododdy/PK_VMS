@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PK-VMS | หน้าจอลูกค้า</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --navy:     #020617;
+            --navy-mid: #0f172a;
+            --teal:     #14b8b1;
+            --border:   rgba(255, 255, 255, 0.1);
+        }
+        * { font-family: "Sarabun", sans-serif !important; box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; background: var(--navy); color: #e2e8f0; overflow: hidden; }
+
+        /* ─── Screens ─────────────────────────────────────────── */
+        .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+        .screen.active { display: flex; }
+
+        /* ─── Ad Screen ───────────────────────────────────────── */
+        #screen-ad {
+            background: var(--navy);
+        }
+        .ad-slide {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 1s ease;
+            padding: 60px;
+        }
+        .ad-slide.active { opacity: 1; }
+        .ad-slide img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 24px; }
+        .ad-slide .ad-text-title {
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 800;
+            text-align: center;
+            line-height: 1.3;
+        }
+        .ad-slide .ad-text-subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.8rem);
+            font-weight: 400;
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0.7;
+        }
+        .ad-dots {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        .ad-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transition: all 0.3s;
+        }
+        .ad-dot.active { background: var(--teal); width: 28px; border-radius: 5px; }
+
+        /* Logo watermark */
+        .ad-logo {
+            position: absolute;
+            top: 30px;
+            left: 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0.6;
+        }
+        .ad-logo span { font-size: 2rem; }
+        .ad-logo-text { font-size: 1.1rem; font-weight: 700; color: var(--teal); letter-spacing: 0.05em; }
+
+        /* ─── Items Screen ────────────────────────────────────── */
+        #screen-items {
+            background: var(--navy-mid);
+            align-items: stretch;
+            padding: 0;
+        }
+        .items-header {
+            background: rgba(0,0,0,0.4);
+            border-bottom: 1px solid var(--border);
+            padding: 24px 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .items-patient-info .label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .items-patient-info .value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #fff;
+        }
+        .items-patient-info .sub {
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+        .items-logo { font-size: 2.5rem; display: flex; align-items: center; gap: 14px; }
+        .items-logo-text { font-size: 1.2rem; font-weight: 700; color: var(--teal); }
+
+        .items-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .items-body::-webkit-scrollbar { width: 6px; }
+        .items-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 22px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            gap: 20px;
+            animation: slideIn 0.3s ease forwards;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .item-name { font-size: clamp(1.1rem, 2.5vw, 1.6rem); font-weight: 600; color: #e2e8f0; flex: 1; }
+        .item-qty { font-size: clamp(1rem, 2vw, 1.3rem); color: #64748b; font-weight: 700; min-width: 60px; text-align: center; }
+        .item-price { font-size: clamp(1.1rem, 2.5vw, 1.6rem); font-weight: 800; color: var(--teal); min-width: 140px; text-align: right; }
+
+        .items-footer {
+            background: rgba(0,0,0,0.5);
+            border-top: 1px solid var(--border);
+            padding: 28px 60px;
+            flex-shrink: 0;
+        }
+        .items-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .items-total-label { font-size: 1.1rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+        .items-total-value { font-size: clamp(2rem, 4vw, 3rem); font-weight: 900; color: #fff; }
+        .items-net-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 2px solid var(--teal);
+        }
+        .items-net-label { font-size: 1.4rem; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.08em; }
+        .items-net-value { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 900; color: var(--teal); }
+
+        /* ─── Thank You Screen ────────────────────────────────── */
+        #screen-thankyou {
+            background: radial-gradient(circle at 50% 40%, rgba(20,184,177,0.25) 0%, var(--navy) 70%);
+        }
+        .thankyou-icon {
+            font-size: 8rem;
+            animation: bounceIn 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+            display: block;
+            margin-bottom: 30px;
+        }
+        .thankyou-title {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 900;
+            color: #fff;
+            text-align: center;
+            animation: fadeUp 0.8s ease 0.2s both;
+        }
+        .thankyou-subtitle {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            font-weight: 400;
+            color: var(--teal);
+            text-align: center;
+            margin-top: 20px;
+            animation: fadeUp 0.8s ease 0.4s both;
+        }
+        .thankyou-progress {
+            width: 300px;
+            height: 4px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 2px;
+            margin-top: 60px;
+            overflow: hidden;
+            animation: fadeUp 0.8s ease 0.6s both;
+        }
+        .thankyou-progress-bar {
+            height: 100%;
+            background: var(--teal);
+            border-radius: 2px;
+            width: 0%;
+        }
+        .thankyou-progress-bar.running {
+            animation: progressGrow 5s linear forwards;
+        }
+        @keyframes progressGrow {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+        @keyframes bounceIn {
+            0%   { transform: scale(0); opacity: 0; }
+            60%  { transform: scale(1.2); opacity: 1; }
+            80%  { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .teal-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(20, 184, 177, 0.2);
+            animation: ringPulse 3s ease-in-out infinite;
+        }
+        @keyframes ringPulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50%       { transform: scale(1.1); opacity: 0.2; }
+        }
+
+        /* ─── Mesh bg ─────────────────────────────────────────── */
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 20% 80%, rgba(14,165,160,0.04) 0%, transparent 60%),
+                        radial-gradient(circle at 80% 20%, rgba(99, 102, 241,0.04) 0%, transparent 60%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="mesh-bg"></div>
+
+    <!-- ① โฆษณา -->
+    <div id="screen-ad" class="screen active">
+        <div class="ad-logo">
+            <span>🐾</span>
+            <span class="ad-logo-text">PK-VMS Animal Clinic</span>
+        </div>
+        <div id="ad-slides-container" style="position:absolute;inset:0;"></div>
+        <div class="ad-dots" id="ad-dots"></div>
+    </div>
+
+    <!-- ② รายการค่ารักษา -->
+    <div id="screen-items" class="screen">
+        <div class="items-header">
+            <div class="items-patient-info">
+                <div class="label">รายการค่ารักษา</div>
+                <div class="value" id="display-pet-name">—</div>
+                <div class="sub" id="display-owner-info">—</div>
+            </div>
+            <div class="items-logo">
+                <span>🐾</span>
+                <span class="items-logo-text">PK-VMS</span>
+            </div>
+        </div>
+        <div class="items-body" id="items-list"></div>
+        <div class="items-footer">
+            <div class="items-total-row">
+                <span class="items-total-label">รวมยอดเงิน</span>
+                <span class="items-total-value" id="display-total">0.00 ฿</span>
+            </div>
+            <div class="items-net-row">
+                <span class="items-net-label">ยอดสุทธิ</span>
+                <span class="items-net-value" id="display-net">0.00 ฿</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ③ ขอบคุณที่ใช้บริการ -->
+    <div id="screen-thankyou" class="screen">
+        <div class="teal-ring" style="width:500px;height:500px;animation-delay:0s;"></div>
+        <div class="teal-ring" style="width:700px;height:700px;animation-delay:1s;"></div>
+        <div class="teal-ring" style="width:900px;height:900px;animation-delay:2s;"></div>
+        <span class="thankyou-icon">💚</span>
+        <div class="thankyou-title">ขอบคุณที่ใช้บริการ</div>
+        <div class="thankyou-subtitle">Thank you for your visit</div>
+        <div class="thankyou-progress">
+            <div class="thankyou-progress-bar" id="thankyou-bar"></div>
+        </div>
+    </div>
+
+    <script>
+        // ── BroadcastChannel ──────────────────────────────────────
+        const channel = new BroadcastChannel('pos_customer');
+
+        // ── State ─────────────────────────────────────────────────
+        let adTimer = null;
+        let currentAdIndex = 0;
+        let adSlides = [];
+        let adInterval = 5000;
+        let thankyouTimeout = null;
+
+        // ── Load settings from localStorage ──────────────────────
+        function loadSettings() {
+            try {
+                const s = JSON.parse(localStorage.getItem('pos_display2_settings') || '{}');
+                adInterval = (s.adInterval || 5) * 1000;
+            } catch(e) {}
+            try {
+                const raw = localStorage.getItem('pos_display2_ads');
+                adSlides = raw ? JSON.parse(raw) : getDefaultAds();
+            } catch(e) {
+                adSlides = getDefaultAds();
+            }
+        }
+
+        function getDefaultAds() {
+            return [
+                {
+                    type: 'text',
+                    title: '🐾 PK-VMS Animal Clinic',
+                    subtitle: 'ดูแลสัตว์เลี้ยงของคุณด้วยความใส่ใจ\nWe care for your beloved pets',
+                    bg: 'linear-gradient(135deg, #020617 0%, #0f172a 100%)',
+                    titleColor: '#14b8b1'
+                },
+                {
+                    type: 'text',
+                    title: '💉 บริการฉีดวัคซีน',
+                    subtitle: 'ป้องกันโรคร้าย ดูแลสุขภาพสัตว์เลี้ยงของคุณ\nVaccination services available',
+                    bg: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
+                    titleColor: '#60a5fa'
+                },
+                {
+                    type: 'text',
+                    title: '🔬 ห้องแล็บ & ตรวจสุขภาพ',
+                    subtitle: 'ตรวจเลือด ตรวจสุขภาพประจำปี X-Ray และอื่นๆ\nLaboratory & health check services',
+                    bg: 'linear-gradient(135deg, #0f172a 0%, #1a2744 100%)',
+                    titleColor: '#a78bfa'
+                }
+            ];
+        }
+
+        // ── Render Ad Slides ──────────────────────────────────────
+        function renderAds() {
+            if (!adSlides || adSlides.length === 0) adSlides = getDefaultAds();
+            const container = document.getElementById('ad-slides-container');
+            const dots = document.getElementById('ad-dots');
+            container.innerHTML = adSlides.map((slide, i) => {
+                if (slide.type === 'image' && slide.url) {
+                    return `<div class="ad-slide${i===0?' active':''}" id="slide-${i}">
+                        <img src="${escHtml(slide.url)}" alt="โฆษณา ${i+1}">
+                        ${slide.caption ? `<p class="ad-text-subtitle" style="color:#e2e8f0;margin-top:16px;">${escHtml(slide.caption)}</p>` : ''}
+                    </div>`;
+                } else {
+                    const bg = slide.bg || 'var(--navy)';
+                    const titleColor = slide.titleColor || 'var(--teal)';
+                    const subtitleLines = (slide.subtitle || '').split('\n').join('<br>');
+                    return `<div class="ad-slide${i===0?' active':''}" id="slide-${i}" style="background:${bg};">
+                        <div class="ad-text-title" style="color:${escHtml(titleColor)};">${escHtml(slide.title || '')}</div>
+                        <div class="ad-text-subtitle">${subtitleLines}</div>
+                    </div>`;
+                }
+            }).join('');
+            dots.innerHTML = adSlides.map((_, i) => `<div class="ad-dot${i===0?' active':''}" id="dot-${i}"></div>`).join('');
+        }
+
+        function escHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function goToSlide(idx) {
+            const prev = document.getElementById(`slide-${currentAdIndex}`);
+            const prevDot = document.getElementById(`dot-${currentAdIndex}`);
+            if (prev) prev.classList.remove('active');
+            if (prevDot) prevDot.classList.remove('active');
+            currentAdIndex = ((idx % adSlides.length) + adSlides.length) % adSlides.length;
+            const next = document.getElementById(`slide-${currentAdIndex}`);
+            const nextDot = document.getElementById(`dot-${currentAdIndex}`);
+            if (next) next.classList.add('active');
+            if (nextDot) nextDot.classList.add('active');
+        }
+
+        function startAdCycle() {
+            if (adTimer) clearInterval(adTimer);
+            if (!adSlides || adSlides.length <= 1) return;
+            adTimer = setInterval(() => goToSlide(currentAdIndex + 1), adInterval);
+        }
+
+        function stopAdCycle() {
+            if (adTimer) { clearInterval(adTimer); adTimer = null; }
+        }
+
+        // ── Switch Screens ────────────────────────────────────────
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function showAds() {
+            currentAdIndex = 0;
+            renderAds();
+            showScreen('screen-ad');
+            startAdCycle();
+        }
+
+        function showItems(data) {
+            stopAdCycle();
+            document.getElementById('display-pet-name').textContent = data.petName || '—';
+            document.getElementById('display-owner-info').textContent =
+                (data.hn ? 'HN: ' + data.hn : '') + (data.ownerName ? '  |  เจ้าของ: ' + data.ownerName : '');
+
+            const items = data.items || [];
+            const total = items.reduce((s, i) => s + parseFloat(i.total_price || 0), 0);
+            const net = parseFloat(data.net || total);
+
+            document.getElementById('items-list').innerHTML = items.map((item, idx) => `
+                <div class="item-row" style="animation-delay:${idx * 0.06}s">
+                    <span class="item-name">${escHtml(item.item_name || item.name || '-')}</span>
+                    <span class="item-qty">x ${Math.floor(item.quantity || 1)}</span>
+                    <span class="item-price">${parseFloat(item.total_price || 0).toLocaleString('th-TH', {minimumFractionDigits:2})} ฿</span>
+                </div>`).join('');
+
+            document.getElementById('display-total').textContent =
+                total.toLocaleString('th-TH', {minimumFractionDigits:2}) + ' ฿';
+            document.getElementById('display-net').textContent =
+                net.toLocaleString('th-TH', {minimumFractionDigits:2}) + ' ฿';
+
+            showScreen('screen-items');
+        }
+
+        function showThankYou() {
+            stopAdCycle();
+            showScreen('screen-thankyou');
+            // restart progress bar animation
+            const bar = document.getElementById('thankyou-bar');
+            bar.classList.remove('running');
+            void bar.offsetWidth; // Force reflow to restart CSS animation from the beginning
+            bar.classList.add('running');
+
+            if (thankyouTimeout) clearTimeout(thankyouTimeout);
+            thankyouTimeout = setTimeout(() => { showAds(); }, 5000);
+        }
+
+        // ── Listen for messages ───────────────────────────────────
+        channel.onmessage = (e) => {
+            const msg = e.data;
+            if (!msg || !msg.type) return;
+            if (msg.type === 'show_items') {
+                showItems(msg);
+            } else if (msg.type === 'payment_done') {
+                showThankYou();
+            } else if (msg.type === 'show_ads') {
+                showAds();
+            } else if (msg.type === 'reload_settings') {
+                loadSettings();
+                renderAds();
+            }
+        };
+
+        // Also listen via localStorage events (for cross-window fallback)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'pos_customer_msg') {
+                try {
+                    const msg = JSON.parse(e.newValue);
+                    if (msg && msg.type) channel.onmessage({ data: msg });
+                } catch(err) {}
+            }
+            if (e.key === 'pos_display2_ads' || e.key === 'pos_display2_settings') {
+                loadSettings();
+                if (document.getElementById('screen-ad').classList.contains('active')) {
+                    renderAds();
+                    startAdCycle();
+                }
+            }
+        });
+
+        // ── Init ──────────────────────────────────────────────────
+        loadSettings();
+        showAds();
+    </script>
+</body>
+</html>
