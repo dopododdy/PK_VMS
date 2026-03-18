@@ -248,24 +248,41 @@
                 </div>
                 <div class="mb-4 grid grid-cols-2 gap-4">
                     <div>
-                        <label>สีหัวข้อ</label>
+                        <label>สีหัวข้อ (Title)</label>
                         <div class="flex gap-2 items-center">
                             <input type="color" id="modal-title-color" value="#14b8b1" class="h-10 w-16 rounded cursor-pointer bg-transparent border border-white/20">
                             <input type="text" id="modal-title-color-txt" class="input-field" value="#14b8b1" style="font-family:monospace;">
                         </div>
                     </div>
                     <div>
-                        <label>สีพื้นหลัง (Gradient)</label>
-                        <select id="modal-bg-preset" class="input-field" style="cursor:pointer;">
-                            <option value="linear-gradient(135deg, #020617 0%, #0f172a 100%)">Navy (ค่าเริ่มต้น)</option>
-                            <option value="linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)">Navy Blue</option>
-                            <option value="linear-gradient(135deg, #0f172a 0%, #1a2744 100%)">Deep Blue</option>
-                            <option value="linear-gradient(135deg, #0f172a 0%, #1a1a3e 100%)">Deep Purple</option>
-                            <option value="linear-gradient(135deg, #020617 0%, #0d2020 100%)">Dark Teal</option>
-                            <option value="custom">กำหนดเอง...</option>
-                        </select>
-                        <input type="text" id="modal-bg-custom" class="input-field mt-2 hidden" placeholder="เช่น linear-gradient(...)">
+                        <label>ขนาดตัวอักษร Title (px)</label>
+                        <input type="number" id="modal-title-size" class="input-field" min="10" max="200" step="1" placeholder="ค่าเริ่มต้น (auto)">
                     </div>
+                </div>
+                <div class="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <label>สีคำบรรยาย (Subtitle)</label>
+                        <div class="flex gap-2 items-center">
+                            <input type="color" id="modal-subtitle-color" value="#e2e8f0" class="h-10 w-16 rounded cursor-pointer bg-transparent border border-white/20">
+                            <input type="text" id="modal-subtitle-color-txt" class="input-field" value="#e2e8f0" style="font-family:monospace;">
+                        </div>
+                    </div>
+                    <div>
+                        <label>ขนาดตัวอักษร Subtitle (px)</label>
+                        <input type="number" id="modal-subtitle-size" class="input-field" min="10" max="200" step="1" placeholder="ค่าเริ่มต้น (auto)">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label>สีพื้นหลัง (Gradient)</label>
+                    <select id="modal-bg-preset" class="input-field" style="cursor:pointer;">
+                        <option value="linear-gradient(135deg, #020617 0%, #0f172a 100%)">Navy (ค่าเริ่มต้น)</option>
+                        <option value="linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)">Navy Blue</option>
+                        <option value="linear-gradient(135deg, #0f172a 0%, #1a2744 100%)">Deep Blue</option>
+                        <option value="linear-gradient(135deg, #0f172a 0%, #1a1a3e 100%)">Deep Purple</option>
+                        <option value="linear-gradient(135deg, #020617 0%, #0d2020 100%)">Dark Teal</option>
+                        <option value="custom">กำหนดเอง...</option>
+                    </select>
+                    <input type="text" id="modal-bg-custom" class="input-field mt-2 hidden" placeholder="เช่น linear-gradient(...)">
                 </div>
             </div>
 
@@ -305,6 +322,14 @@
         document.getElementById('modal-title-color-txt').addEventListener('input', function() {
             if (/^#[0-9a-fA-F]{6}$/.test(this.value)) {
                 document.getElementById('modal-title-color').value = this.value;
+            }
+        });
+        document.getElementById('modal-subtitle-color').addEventListener('input', function() {
+            document.getElementById('modal-subtitle-color-txt').value = this.value;
+        });
+        document.getElementById('modal-subtitle-color-txt').addEventListener('input', function() {
+            if (/^#[0-9a-fA-F]{6}$/.test(this.value)) {
+                document.getElementById('modal-subtitle-color').value = this.value;
             }
         });
         document.getElementById('modal-bg-preset').addEventListener('change', function() {
@@ -422,6 +447,10 @@
                     document.getElementById('modal-subtitle-text').value = (s.subtitle || '').replace(/<br>/g, '\n');
                     document.getElementById('modal-title-color').value = s.titleColor || '#14b8b1';
                     document.getElementById('modal-title-color-txt').value = s.titleColor || '#14b8b1';
+                    document.getElementById('modal-title-size').value = s.titleSize || '';
+                    document.getElementById('modal-subtitle-color').value = s.subtitleColor || '#e2e8f0';
+                    document.getElementById('modal-subtitle-color-txt').value = s.subtitleColor || '#e2e8f0';
+                    document.getElementById('modal-subtitle-size').value = s.subtitleSize || '';
                     const presets = document.getElementById('modal-bg-preset');
                     let found = false;
                     for (const opt of presets.options) { if (opt.value === s.bg) { presets.value = s.bg; found = true; break; } }
@@ -436,6 +465,10 @@
                 document.getElementById('modal-subtitle-text').value = '';
                 document.getElementById('modal-title-color').value = '#14b8b1';
                 document.getElementById('modal-title-color-txt').value = '#14b8b1';
+                document.getElementById('modal-title-size').value = '';
+                document.getElementById('modal-subtitle-color').value = '#e2e8f0';
+                document.getElementById('modal-subtitle-color-txt').value = '#e2e8f0';
+                document.getElementById('modal-subtitle-size').value = '';
                 document.getElementById('modal-img-url').value = '';
                 document.getElementById('modal-img-caption').value = '';
             }
@@ -454,11 +487,16 @@
             if (type === 'text') {
                 const bgPreset = document.getElementById('modal-bg-preset').value;
                 const bg = bgPreset === 'custom' ? document.getElementById('modal-bg-custom').value : bgPreset;
+                const titleSizeVal = parseInt(document.getElementById('modal-title-size').value);
+                const subtitleSizeVal = parseInt(document.getElementById('modal-subtitle-size').value);
                 slide = {
                     type: 'text',
                     title: document.getElementById('modal-title-text').value.trim(),
                     subtitle: document.getElementById('modal-subtitle-text').value,
                     titleColor: document.getElementById('modal-title-color').value,
+                    titleSize: isNaN(titleSizeVal) ? undefined : titleSizeVal,
+                    subtitleColor: document.getElementById('modal-subtitle-color').value,
+                    subtitleSize: isNaN(subtitleSizeVal) ? undefined : subtitleSizeVal,
                     bg: bg || 'linear-gradient(135deg, #020617 0%, #0f172a 100%)'
                 };
             } else {
