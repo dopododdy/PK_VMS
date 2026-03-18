@@ -64,7 +64,10 @@
         </header>
 
         <div class="section-card border-l-8 border-blue-500">
-            <h3 class="text-2xl font-bold text-blue-400 mb-6 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-blue-400 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
+                <button onclick="openEditOwnerModal()" class="btn-base bg-slate-600 hover:bg-slate-500 text-xs">✏️ แก้ไข</button>
+            </div>
             <div class="grid grid-cols-12 gap-6">
                 <div class="col-span-12 md:col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><div id="info-owner-name" class="text-xl font-bold text-white">-</div></div>
                 <div class="col-span-12 md:col-span-3"><label class="label-text">เบอร์โทรศัพท์</label><div id="info-owner-phone" class="text-xl font-bold text-teal-400">-</div></div>
@@ -76,7 +79,10 @@
             <div class="section-card border-l-8 border-teal-500">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-2xl font-bold text-white flex items-center gap-2">🐾 ข้อมูลสัตว์</h3>
-                    <button onclick="showFormView()" class="btn-base btn-teal text-xl py-3 px-6 shadow-xl">+ เพิ่มประวัติการรักษา</button>
+                    <div class="flex gap-2">
+                        <button onclick="openEditAnimalModal()" class="btn-base bg-slate-600 hover:bg-slate-500 text-xs">✏️ แก้ไข</button>
+                        <button onclick="showFormView()" class="btn-base btn-teal text-xl py-3 px-6 shadow-xl">+ เพิ่มประวัติการรักษา</button>
+                    </div>
                 </div>
                 <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-6 md:col-span-2"><label class="label-text">ชื่อสัตว์</label><div id="v-pet-name" class="text-xl font-bold text-white">-</div></div>
@@ -384,7 +390,7 @@
         }
 
         async function fetchRecords() {
-            const { data, error } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', animalId).order('created_at', { ascending: false });
+            const { data, error } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', animalId).order('id', { ascending: false });
             
             // เพิ่มตัวเช็ค Error ถ้าโหลดข้อมูลไม่สำเร็จให้เด้งแจ้งเตือน
             if (error) {
@@ -443,7 +449,6 @@
                             <div>
                                 <div class="flex justify-between mb-2">
                                     <span class="data-label text-purple-400">🔬 Lab</span>
-                                    ${labItems.length > 0 ? `<button onclick="viewLabResults('${animalId}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">ผลเลือด</button>` : ''}
                                 </div>
                                 <div class="data-value text-sm">${labText || '-'}</div>
                             </div>
@@ -751,7 +756,7 @@
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
             const latestRec = records.find(r => r.appointment || r.appointment_2);
             const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
-            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, phone: (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1)).data?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment) : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2) : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
             executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }]);
         }
@@ -759,7 +764,9 @@
         async function printPetLabel(petId) {
             const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
-            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1);
+            const ownerPhone = phones?.[0]?.phone_number || '-';
+            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, phone: ownerPhone, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             await executeDynamicPrint([printData], 'sticker_pet_id');
         }
 
@@ -906,12 +913,7 @@
             const PAGE_H = 297; // mm A4 portrait height
             const TOTAL_LINES = OPD_MAX_LINE; // bottom-most line is line 24
 
-            // Column guide dividers (A=8-70mm, B=74-136mm, C=140-202mm)
-            // Dividers extend only to the last printable line (line 24)
-            const dividerH = TOTAL_LINES * LINE_H; // 120mm
-            const colDividers = [70, 74, 136, 140].map(x =>
-                `<div style="position:absolute;left:${x}mm;top:${HDR_H}mm;height:${dividerH}mm;border-left:0.3pt dashed #bbb;"></div>`
-            ).join('');
+            // Column guide dividers removed (no longer printed)
 
             // Horizontal guide lines (lines 1–24)
             let hLines = '';
@@ -930,12 +932,7 @@
                 lineNumsHtml += `<div style="position:absolute;left:4mm;top:${y}mm;font-size:5pt;color:#aaa;line-height:1;">${i}</div>`;
             }
 
-            // Column labels
-            const colLabels = [
-                `<div style="position:absolute;left:8mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">A</div>`,
-                `<div style="position:absolute;left:74mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">B</div>`,
-                `<div style="position:absolute;left:140mm;top:${HDR_H - 4}mm;font-size:6pt;color:#888;font-weight:bold;">C</div>`
-            ].join('');
+            // Column labels removed (no longer printed)
 
             const pw = window.open('', '_blank');
             const html = `<html><head>
@@ -957,10 +954,8 @@
                             <b>เจ้าของ:</b> ${escapeHtml(ownerName)} &nbsp;|&nbsp; <b>โทร:</b> ${escapeHtml(ownerPhone)} &nbsp;|&nbsp; <b>ชนิด:</b> ${escapeHtml(petType)} &nbsp;|&nbsp; <b>เพศ:</b> ${escapeHtml(petGender)}
                         </div>
                     </div>
-                    ${colDividers}
                     ${hLines}
                     ${lineNumsHtml}
-                    ${colLabels}
                 </div>
             </body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},800);};<\/script></html>`;
 
@@ -1215,17 +1210,7 @@
             ctx.font = `${8*SCALE}px sans-serif`;
             ctx.fillText('OPD', 12*SCALE, 14*SCALE);
 
-            // Column dividers (dashed)
-            ctx.strokeStyle = '#bbb';
-            ctx.lineWidth = 0.6;
-            ctx.setLineDash([4, 3]);
-            [70, 74, 136, 140].forEach(x => {
-                ctx.beginPath();
-                ctx.moveTo(x*SCALE, hdrH);
-                ctx.lineTo(x*SCALE, printEnd);
-                ctx.stroke();
-            });
-            ctx.setLineDash([]);
+            // Column dividers removed from preview
 
             // Horizontal line guides
             ctx.strokeStyle = '#e8e8e8';
@@ -1248,12 +1233,7 @@
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // Column labels A B C
-            ctx.fillStyle = '#888';
-            ctx.font = `bold ${7*SCALE}px sans-serif`;
-            [[8,'A'],[74,'B'],[140,'C']].forEach(([x, l]) => {
-                ctx.fillText(l, x*SCALE + 1, hdrH - 2*SCALE);
-            });
+            // Column labels A B C removed from preview
 
             // Line numbers
             ctx.fillStyle = '#ccc';
@@ -1310,6 +1290,60 @@
             ctx.font = `${4.5*SCALE}px sans-serif`;
             ctx.fillText('ครึ่งล่าง (ไม่พิมพ์)', 8*SCALE, printEnd + 6*SCALE);
         }
+        // ── Edit Owner/Animal modals ──────────────────────────────────────────
+        function openEditOwnerModal() {
+            document.getElementById('edit-owner-name').value = document.getElementById('info-owner-name').innerText;
+            document.getElementById('edit-owner-phone').value = document.getElementById('info-owner-phone').innerText;
+            document.getElementById('edit-owner-address').value = document.getElementById('info-owner-address').innerText;
+            document.getElementById('edit-owner-modal').style.display = 'flex';
+        }
+
+        async function saveOwnerEdit() {
+            const name    = document.getElementById('edit-owner-name').value.trim();
+            const phone   = document.getElementById('edit-owner-phone').value.trim();
+            const address = document.getElementById('edit-owner-address').value.trim();
+            if (!name) return alert('กรุณากรอกชื่อเจ้าของสัตว์');
+            const { error: ownerErr } = await db.from('owners').update({ owner_name: name, address }).eq('hn', ownerHN);
+            if (ownerErr) return alert('บันทึกข้อมูลเจ้าของไม่สำเร็จ: ' + ownerErr.message);
+            // Update or insert phone
+            const { data: existing } = await db.from('owner_phones').select('id').eq('owner_hn', ownerHN).limit(1);
+            if (existing && existing.length > 0) {
+                const { error: phoneErr } = await db.from('owner_phones').update({ phone_number: phone }).eq('id', existing[0].id);
+                if (phoneErr) return alert('บันทึกเบอร์โทรไม่สำเร็จ: ' + phoneErr.message);
+            } else if (phone) {
+                const { error: phoneInsertErr } = await db.from('owner_phones').insert({ owner_hn: ownerHN, phone_number: phone, label: 'เบอร์หลัก' });
+                if (phoneInsertErr) return alert('เพิ่มเบอร์โทรไม่สำเร็จ: ' + phoneInsertErr.message);
+            }
+            document.getElementById('info-owner-name').innerText = name;
+            document.getElementById('info-owner-phone').innerText = phone || '-';
+            document.getElementById('info-owner-address').innerText = address || '-';
+            document.getElementById('edit-owner-modal').style.display = 'none';
+            alert('✅ บันทึกข้อมูลเจ้าของสัตว์เรียบร้อย');
+        }
+
+        function openEditAnimalModal() {
+            document.getElementById('edit-pet-name').value = document.getElementById('v-pet-name').innerText;
+            document.getElementById('edit-pet-weight').value = document.getElementById('v-pet-weight').innerText;
+            document.getElementById('edit-pet-congenital').value = document.getElementById('v-pet-congenital').innerText === 'ไม่มี' ? '' : document.getElementById('v-pet-congenital').innerText;
+            document.getElementById('edit-animal-modal').style.display = 'flex';
+        }
+
+        async function saveAnimalEdit() {
+            const petName     = document.getElementById('edit-pet-name').value.trim();
+            const weight      = parseFloat(document.getElementById('edit-pet-weight').value) || 0;
+            const congenital  = document.getElementById('edit-pet-congenital').value.trim();
+            if (!petName) return alert('กรุณากรอกชื่อสัตว์');
+            const { error } = await db.from('animals').update({ pet_name: petName, weight, congenital_disease: congenital }).eq('id', animalId);
+            if (error) return alert('บันทึกข้อมูลสัตว์ไม่สำเร็จ: ' + error.message);
+            document.getElementById('v-pet-name').innerText = petName;
+            document.getElementById('v-pet-weight').innerText = weight || '0';
+            document.getElementById('v-pet-congenital').innerText = congenital || 'ไม่มี';
+            document.getElementById('head-pet-name').innerText = petName;
+            document.getElementById('f_weight').value = weight;
+            document.getElementById('edit-animal-modal').style.display = 'none';
+            alert('✅ บันทึกข้อมูลสัตว์เรียบร้อย');
+        }
+
     </script>    <div id="opd-print-modal" class="modal-overlay" style="z-index: 170;">
         <div class="modal-content !max-w-5xl">
             <div class="p-6 border-b border-white/10 bg-teal-900/30">
@@ -1386,6 +1420,43 @@
             <div class="p-6 border-t border-white/10 flex gap-3">
                 <button onclick="document.getElementById('opd-print-modal').style.display='none'" class="btn-base btn-red px-6">ยกเลิก</button>
                 <button onclick="confirmOpdPrint()" class="btn-base btn-teal flex-1 text-lg">🖨️ พิมพ์</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal: แก้ไขข้อมูลเจ้าของสัตว์ -->
+    <div id="edit-owner-modal" class="modal-overlay" style="z-index: 200;">
+        <div class="modal-content !max-w-lg">
+            <div class="p-6 border-b border-white/10 bg-blue-900/30 flex justify-between items-center">
+                <h4 class="text-2xl font-bold text-blue-400">✏️ แก้ไขข้อมูลเจ้าของสัตว์</h4>
+                <button onclick="document.getElementById('edit-owner-modal').style.display='none'" class="text-3xl text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><input type="text" id="edit-owner-name" class="input-box"></div>
+                <div><label class="label-text">เบอร์โทรศัพท์</label><input type="tel" id="edit-owner-phone" class="input-box text-teal-400 font-bold"></div>
+                <div><label class="label-text">ที่อยู่</label><input type="text" id="edit-owner-address" class="input-box"></div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="document.getElementById('edit-owner-modal').style.display='none'" class="btn-base btn-red px-6">ยกเลิก</button>
+                <button onclick="saveOwnerEdit()" class="btn-base btn-teal flex-1 text-lg">💾 บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: แก้ไขข้อมูลสัตว์ -->
+    <div id="edit-animal-modal" class="modal-overlay" style="z-index: 200;">
+        <div class="modal-content !max-w-lg">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30 flex justify-between items-center">
+                <h4 class="text-2xl font-bold text-teal-400">✏️ แก้ไขข้อมูลสัตว์</h4>
+                <button onclick="document.getElementById('edit-animal-modal').style.display='none'" class="text-3xl text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div><label class="label-text">ชื่อสัตว์</label><input type="text" id="edit-pet-name" class="input-box font-bold text-white"></div>
+                <div><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="edit-pet-weight" class="input-box text-yellow-400 font-bold"></div>
+                <div><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><textarea id="edit-pet-congenital" class="input-box h-28" placeholder="ระบุยาที่แพ้หรือข้อควรระวัง..."></textarea></div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="document.getElementById('edit-animal-modal').style.display='none'" class="btn-base btn-red px-6">ยกเลิก</button>
+                <button onclick="saveAnimalEdit()" class="btn-base btn-teal flex-1 text-lg">💾 บันทึก</button>
             </div>
         </div>
     </div>
