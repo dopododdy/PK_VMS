@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="supabase-config.js"></script>
     <style>
         :root {
@@ -204,7 +205,7 @@
     <!-- Banner -->
     <div class="welcome-banner">
         <div class="text-4xl mb-3">🐾</div>
-        <div class="clinic-name">คลินิกสัตว์</div>
+        <div class="clinic-name">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
         <div class="welcome-text">ยินดีต้อนรับ</div>
         <div class="welcome-sub">กรุณาเลือกประเภทการลงทะเบียน</div>
     </div>
@@ -362,15 +363,39 @@
 ════════════════════════════════════════ -->
 <div class="screen" id="screen-success">
     <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px;">
-        <div class="success-icon">✅</div>
-        <div class="success-title" id="success-title">ลงทะเบียนสำเร็จ!</div>
-        <div class="success-sub" id="success-sub">ขอบคุณที่ไว้วางใจ<br>เราจะดูแลสัตว์เลี้ยงของท่านอย่างดีที่สุด 🐾</div>
-        <div id="success-hn-badge" style="display:none; margin-top:24px; background:#f0fdf4; border:2px solid var(--teal); border-radius:16px; padding:16px 24px; text-align:center;">
-            <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">หมายเลข HN ของท่าน</div>
-            <div id="success-hn" style="font-size:2rem; font-weight:900; color:var(--teal);"></div>
+        <div id="success-card" style="width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; background:white; border-radius:24px; padding:32px 24px; box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+            <div class="success-icon">✅</div>
+            <div class="success-title" id="success-title">ลงทะเบียนสำเร็จ!</div>
+            <div class="success-sub" id="success-sub">ขอบคุณที่ไว้วางใจ<br>เราจะดูแลสัตว์เลี้ยงของท่านอย่างดีที่สุด 🐾</div>
+            <div id="success-hn-badge" style="display:none; margin-top:24px; background:#f0fdf4; border:2px solid var(--teal); border-radius:16px; padding:16px 28px; text-align:center; width:100%;">
+                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">หมายเลข HN ของท่าน</div>
+                <div id="success-hn" style="font-size:2.2rem; font-weight:900; color:var(--teal);"></div>
+            </div>
         </div>
-        <div style="height:40px;"></div>
-        <button class="btn btn-teal" style="max-width:320px;" onclick="goHome()">🏠 กลับหน้าหลัก</button>
+        <div id="success-save-hint" style="display:none; margin-top:18px; background:#fffbeb; border:1px solid #fcd34d; border-radius:14px; padding:12px 18px; text-align:center; max-width:360px; width:100%;">
+            <div style="font-size:0.9rem; color:#92400e; font-weight:700;">💡 กรุณาบันทึกหน้านี้เก็บไว้เป็นหลักฐาน</div>
+            <div style="font-size:0.82rem; color:#b45309; margin-top:4px;">ถ่ายภาพหน้าจอหรือกดปุ่มด้านล่างเพื่อบันทึก</div>
+        </div>
+        <div id="success-capture-btn" style="display:none; margin-top:12px; width:100%; max-width:360px;">
+            <button class="btn btn-teal" onclick="captureSuccessCard()">📷 บันทึกภาพหน้าจอ</button>
+        </div>
+        <div style="height:16px;"></div>
+        <button class="btn btn-gray" style="max-width:360px; width:100%;" onclick="goHome()">🏠 กลับหน้าหลัก</button>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     PHONE DUPLICATE MODAL
+════════════════════════════════════════ -->
+<div id="phone-dup-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:500; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:white; border-radius:24px; padding:28px 24px; max-width:380px; width:100%; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+        <div style="font-size:3rem; text-align:center; margin-bottom:10px;">⚠️</div>
+        <div style="font-size:1.15rem; font-weight:800; color:var(--navy); text-align:center; margin-bottom:8px;">พบเบอร์โทรนี้ในระบบ</div>
+        <div id="phone-dup-detail" style="font-size:0.95rem; color:#475569; text-align:center; margin-bottom:22px; line-height:1.6;"></div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn btn-blue" onclick="goToSearchFromDup()">🔍 ค้นหาลูกค้าเดิม</button>
+            <button class="btn btn-outline" onclick="continueNewRegistration()">ดำเนินการต่อ (สร้างบัญชีใหม่)</button>
+        </div>
     </div>
 </div>
 
@@ -434,6 +459,18 @@ function goToNewPet() {
     const phone = document.getElementById('new_phone1').value.trim();
     if (!name)  { shakeInput('new_owner_name'); return showToast('❌ กรุณากรอกชื่อ-นามสกุล'); }
     if (!phone) { shakeInput('new_phone1'); return showToast('❌ กรุณากรอกเบอร์โทรศัพท์'); }
+
+    // ตรวจสอบเบอร์โทรซ้ำในฐานข้อมูล
+    if (allPhones.length > 0) {
+        const existingPhone = allPhones.find(p => p.phone_number === phone);
+        if (existingPhone) {
+            const owner = allOwners.find(o => o.hn === existingPhone.owner_hn);
+            const ownerName = owner ? owner.owner_name : 'ไม่ทราบชื่อ';
+            showPhoneDupModal(phone, ownerName, existingPhone.owner_hn);
+            return;
+        }
+    }
+
     showScreen('screen-new-pet');
 }
 
@@ -648,6 +685,8 @@ async function saveNewCustomer() {
         document.getElementById('success-sub').innerHTML = `ยินดีต้อนรับ คุณ${name}<br>ขอบคุณที่ไว้วางใจคลินิกของเรา 🐾`;
         document.getElementById('success-hn').textContent = `HN ${hn}`;
         document.getElementById('success-hn-badge').style.display = '';
+        document.getElementById('success-save-hint').style.display = '';
+        document.getElementById('success-capture-btn').style.display = '';
         // รีเซ็ตฟอร์มใหม่
         resetNewForms();
         showScreen('screen-success');
@@ -811,10 +850,52 @@ async function saveExistingCustomer() {
         document.getElementById('success-title').textContent = 'บันทึกสำเร็จ!';
         document.getElementById('success-sub').innerHTML = `อัปเดตข้อมูลของคุณ${name}<br>เรียบร้อยแล้ว 🐾`;
         document.getElementById('success-hn-badge').style.display = 'none';
+        document.getElementById('success-save-hint').style.display = 'none';
+        document.getElementById('success-capture-btn').style.display = 'none';
         showScreen('screen-success');
     } catch (err) {
         hideLoading();
         showToast('❌ ' + (err.message || 'เกิดข้อผิดพลาด'));
+    }
+}
+
+/* ─── Phone Duplicate Modal ─────────────────────── */
+function showPhoneDupModal(phone, ownerName, hn) {
+    document.getElementById('phone-dup-detail').innerHTML =
+        `หมายเลข <strong>${phone}</strong> มีอยู่ในระบบแล้ว<br>ชื่อ: <strong>${ownerName}</strong> (HN: ${hn})<br><br>ต้องการค้นหาข้อมูลลูกค้าเดิมแทนหรือไม่?`;
+    document.getElementById('phone-dup-modal').style.display = 'flex';
+}
+
+function hidePhoneDupModal() {
+    document.getElementById('phone-dup-modal').style.display = 'none';
+}
+
+function goToSearchFromDup() {
+    hidePhoneDupModal();
+    const phone = document.getElementById('new_phone1').value.trim();
+    document.getElementById('search-input').value = phone;
+    searchOwner();
+    showScreen('screen-search');
+}
+
+function continueNewRegistration() {
+    hidePhoneDupModal();
+    showScreen('screen-new-pet');
+}
+
+/* ─── Screen Capture ───────────────────────────── */
+async function captureSuccessCard() {
+    const el = document.getElementById('success-card');
+    try {
+        const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+        const hnText = (document.getElementById('success-hn').textContent || 'HN').replace(/[^a-zA-Z0-9\u0E00-\u0E7F_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const link = document.createElement('a');
+        link.download = `${hnText}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('📥 บันทึกภาพสำเร็จ!');
+    } catch (e) {
+        showToast('❌ ไม่สามารถบันทึกภาพได้ กรุณาถ่ายภาพหน้าจอด้วยตนเอง');
     }
 }
 
