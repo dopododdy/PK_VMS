@@ -756,7 +756,7 @@
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
             const latestRec = records.find(r => r.appointment || r.appointment_2);
             const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
-            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, phone: (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1)).data?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1)).data?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment) : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2) : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
             executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }]);
         }
@@ -766,7 +766,7 @@
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
             const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1);
             const ownerPhone = phones?.[0]?.phone_number || '-';
-            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, phone: ownerPhone, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: ownerPhone, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             await executeDynamicPrint([printData], 'sticker_pet_id');
         }
 
