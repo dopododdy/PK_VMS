@@ -909,7 +909,8 @@ ${tableHtml}
             container.innerHTML = '<p class="text-gray-500 animate-pulse">กำลังโหลดประวัติการรักษา...</p>';
             const petId = Array.from(selectedPetIds)[0];
             const pet = ownerPets.find(p => p.id.toString() === petId.toString());
-            const { data: records } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', petId).order('id', { ascending: true });
+            const { data: records, error: histErr } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', petId).order('id', { ascending: true });
+            if (histErr) { container.innerHTML = `<p class="text-red-400 py-6 text-center">เกิดข้อผิดพลาด: ${histErr.message}</p>`; return; }
             if (!records || records.length === 0) {
                 container.innerHTML = '<p class="text-gray-600 italic py-6 text-center">ไม่พบประวัติการรักษา</p>';
                 return;
@@ -941,7 +942,8 @@ ${tableHtml}
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             const petId = Array.from(selectedPetIds)[0];
             const pet = ownerPets.find(p => p.id.toString() === petId.toString());
-            const { data: records } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', petId).order('id', { ascending: true });
+            const { data: records, error: printHistErr } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', petId).order('id', { ascending: true });
+            if (printHistErr) return alert('โหลดประวัติการรักษาไม่สำเร็จ: ' + printHistErr.message);
             if (!records || records.length === 0) return alert("ไม่พบประวัติการรักษาสำหรับสัตว์นี้");
 
             const petInfo = pet ? `${pet.pet_name} (${pet.pet_type||''}${pet.breed ? '/' + pet.breed : ''}, ${pet.gender||''}, ${pet.weight ? pet.weight + ' กก.' : ''})` : '-';

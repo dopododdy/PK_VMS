@@ -756,7 +756,7 @@
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
             const latestRec = records.find(r => r.appointment || r.appointment_2);
             const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
-            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, phone: document.getElementById('info-owner-phone').innerText, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, phone: (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1)).data?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment) : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2) : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
             executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }]);
         }
@@ -764,7 +764,8 @@
         async function printPetLabel(petId) {
             const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
-            const ownerPhone = document.getElementById('info-owner-phone').innerText;
+            const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1);
+            const ownerPhone = phones?.[0]?.phone_number || '-';
             const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, phone: ownerPhone, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             await executeDynamicPrint([printData], 'sticker_pet_id');
         }
@@ -1307,9 +1308,11 @@
             // Update or insert phone
             const { data: existing } = await db.from('owner_phones').select('id').eq('owner_hn', ownerHN).limit(1);
             if (existing && existing.length > 0) {
-                await db.from('owner_phones').update({ phone_number: phone }).eq('id', existing[0].id);
+                const { error: phoneErr } = await db.from('owner_phones').update({ phone_number: phone }).eq('id', existing[0].id);
+                if (phoneErr) return alert('บันทึกเบอร์โทรไม่สำเร็จ: ' + phoneErr.message);
             } else if (phone) {
-                await db.from('owner_phones').insert({ owner_hn: ownerHN, phone_number: phone, label: 'เบอร์หลัก' });
+                const { error: phoneInsertErr } = await db.from('owner_phones').insert({ owner_hn: ownerHN, phone_number: phone, label: 'เบอร์หลัก' });
+                if (phoneInsertErr) return alert('เพิ่มเบอร์โทรไม่สำเร็จ: ' + phoneInsertErr.message);
             }
             document.getElementById('info-owner-name').innerText = name;
             document.getElementById('info-owner-phone').innerText = phone || '-';
