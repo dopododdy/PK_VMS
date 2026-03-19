@@ -250,6 +250,17 @@
             try { localStorage.setItem('pos_customer_msg', JSON.stringify({...msg, _t: Date.now()})); } catch(e) {}
         }
 
+        async function enrichItemsWithThaiNames(items) {
+            const nonLabItemNames = (items || []).filter(i => i.item_type !== 'Lab').map(i => i.item_name);
+            const labItemNames = (items || []).filter(i => i.item_type === 'Lab').map(i => i.item_name);
+            const { data: pharmacyData } = nonLabItemNames.length > 0 ? await db.from('pharmacy').select('item_name, name_th').in('item_name', nonLabItemNames) : { data: [] };
+            const { data: servicesData } = labItemNames.length > 0 ? await db.from('services').select('service_name, name_th').in('service_name', labItemNames) : { data: [] };
+            const nameTh = {};
+            (pharmacyData || []).forEach(p => { if (p.name_th) nameTh[p.item_name] = p.name_th; });
+            (servicesData || []).forEach(s => { if (s.name_th) nameTh[s.service_name] = s.name_th; });
+            return { nameTh, itemsWithTh: (items || []).map(i => ({ ...i, name_th: nameTh[i.item_name] || null })) };
+        }
+
         async function showCustomerDisplay() {
             // Open the window if not already open
             if (!customerWindow || customerWindow.closed) {
@@ -267,6 +278,7 @@
             }
             // Send item data for the active pending record
             const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', activeRecordId);
+            const { itemsWithTh } = await enrichItemsWithThaiNames(items || []);
             const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
             // Delay to allow pos-customer.html to load and register its BroadcastChannel listener
             setTimeout(() => {
@@ -276,7 +288,7 @@
                     hn: activePatient?.hn || '',
                     ownerName: activePatient?.ownerName || '',
                     net,
-                    items: items || []
+                    items: itemsWithTh
                 });
             }, 800);
         }
@@ -428,16 +440,20 @@
 
         async function refreshCartDisplay(recordId, isPaid = false) {
             const { data: itms } = await db.from('medical_record_items').select('*').eq('record_id', recordId);
-            document.getElementById('cart-items').innerHTML = (itms || []).map(i => `
+            const { nameTh } = await enrichItemsWithThaiNames(itms || []);
+            document.getElementById('cart-items').innerHTML = (itms || []).map(i => {
+                const displayName = nameTh[i.item_name] ? `${i.item_name} (${nameTh[i.item_name]})` : i.item_name;
+                return `
                 <div class="grid grid-cols-12 p-5 items-center group">
                     <div class="col-span-1 text-center">
                         ${!isPaid ? `<i data-lucide="trash-2" class="btn-remove" onclick="removeItemFromDB('${i.id}')"></i>` : ''}
                     </div>
-                    <div class="col-span-5"><div class="txt-body font-bold text-white text-base">${i.item_name}</div></div>
+                    <div class="col-span-5"><div class="txt-body font-bold text-white text-base">${displayName}</div></div>
                     <div class="col-span-2 text-center txt-body text-base">${i.quantity}</div>
                     <div class="col-span-2 text-right txt-body text-gray-400 text-base">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                     <div class="col-span-2 text-right txt-body font-bold text-white text-lg">${parseFloat(i.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
             lucide.createIcons();
         }
 
@@ -478,9 +494,10 @@
                     if (matchedTier) displayPrice = matchedTier.price;
                     else if (tiers.length > 0) displayPrice = tiers[tiers.length - 1].price;
                 }
+                const catalogDisplayName = i.data.name_th ? `${i.name} (${i.data.name_th})` : i.name;
                 return `
                 <div class="glass-card flex flex-col justify-between h-32" onclick="addItemToDB('${i.type}', '${i.name}', ${JSON.stringify(i.data)})">
-                    <div class="font-bold text-white text-sm line-clamp-2">${i.data.name_th || i.name}</div>
+                    <div class="font-bold text-white text-sm line-clamp-2">${catalogDisplayName}</div>
                     <div class="text-teal-400 font-black text-right">฿${displayPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                 </div>`;
             }).join('');
