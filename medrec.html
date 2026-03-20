@@ -679,7 +679,9 @@
         }
 
         async function editRecord(id) {
-            const rec = records.find(r => r.id === id); if (!rec) return;
+            const { data: rec, error } = await db.from('medical_records').select('*, medical_record_items(*)').eq('id', id).single();
+            if (error || !rec) { console.error('โหลดข้อมูลไม่สำเร็จ:', error); return; }
+            const recIndex = records.findIndex(r => r.id === id); if (recIndex !== -1) records[recIndex] = rec;
             editingId = id; document.getElementById('f_weight').value = rec.weight || 0;
             const visitEl = document.getElementById('f_visit_date'); if (visitEl && visitEl._flatpickr) { visitEl._flatpickr.setDate(rec.created_at ? new Date(rec.created_at) : new Date()); } else if (visitEl) { visitEl.value = rec.created_at ? rec.created_at.split('T')[0] : ''; }
             [['cc','cc'],['hx','hx'],['pe','pe'],['dx','dx'],['plan','plan'],['app_note','appointment_note'],['app_note_2','appointment_note_2']].forEach(([elSuffix,dbCol]) => { const el = document.getElementById('f_'+elSuffix); if(el) el.value = rec[dbCol] || ''; });
