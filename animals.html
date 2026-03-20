@@ -70,6 +70,16 @@
         .animal-checkbox-row:hover { background:rgba(20,184,177,0.08); border-color:rgba(20,184,177,0.3); }
         .animal-checkbox-row input[type=checkbox] { width:18px; height:18px; accent-color:#14b8b1; cursor:pointer; flex-shrink:0; }
         .label-clinical-bulk { color:#14b8b1; font-weight:800; font-size:1rem; margin-bottom:4px; display:block; }
+        /* ─── Bulk OPD sub-modals (catalog / Rx / Tx / Lab price) ─── */
+        .bulk-sub-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px); z-index:310; display:none; align-items:center; justify-content:center; padding:20px; }
+        .bulk-sub-content { background:#0f172a; border:1px solid rgba(255,255,255,0.1); border-radius:24px; width:100%; max-width:800px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; }
+        .bulk-list-box { background:rgba(20,184,177,0.05); border:1.5px dashed #14b8b1; border-radius:12px; min-height:70px; padding:10px; cursor:pointer; transition:0.2s; }
+        .bulk-list-box:hover { background:rgba(20,184,177,0.1); }
+        .bulk-bullet-list { list-style:none; padding:0; margin:0; }
+        .bulk-bullet-list li { padding:3px 0; color:#e2e8f0; font-size:0.9rem; display:flex; align-items:center; gap:6px; }
+        .bulk-bullet-list li::before { content:"•"; color:#14b8b1; font-weight:900; }
+        .bulk-route-opt { font-weight:700; color:#cbd5e1; }
+        .bulk-label-clinical { color:#14b8b1; font-weight:800; font-size:1rem; margin-bottom:4px; display:block; }
     </style>
 </head>
 <body>
@@ -783,40 +793,42 @@
                     </div>
                 </div>
 
+                <!-- Reference weight for price calculation -->
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-4">
+                        <label class="label-clinical-bulk text-yellow-300">⚖️ น้ำหนักอ้างอิง (กก.) <span class="text-xs text-gray-400 font-normal">สำหรับคำนวณราคา</span></label>
+                        <input type="number" id="bulk-weight" class="input-box font-bold text-yellow-300 text-xl" step="0.1" placeholder="0.0" oninput="renderBulkCatalog()">
+                    </div>
+                </div>
+
                 <!-- Lab items -->
                 <div>
                     <label class="label-clinical-bulk text-purple-300">🔬 Lab / หัตถการ</label>
-                    <div class="flex gap-2 mb-2">
-                        <input type="text" id="bulk-lab-input" class="input-box flex-1" placeholder="พิมพ์ชื่อรายการ Lab แล้วกด Enter…" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkItem('Lab','bulk-lab-input','bulk-lab-tags')}">
-                        <button onclick="addBulkItem('Lab','bulk-lab-input','bulk-lab-tags')" class="btn-base" style="background:#6d28d9 !important;white-space:nowrap">+ เพิ่ม</button>
-                    </div>
-                    <div id="bulk-lab-tags" class="flex flex-wrap gap-2 min-h-[36px] p-2 bg-black/20 rounded-xl border border-white/5"></div>
+                    <div id="bulk-lab-display" class="bulk-list-box overflow-y-auto max-h-36" onclick="openBulkCatalog('lab')"><span class="text-gray-500 text-sm">คลิกเพื่อเลือก Lab / หัตถการ…</span></div>
                 </div>
 
                 <!-- Tx items -->
                 <div>
                     <label class="label-clinical-bulk text-pink-300">💉 Tx (ยาฉีด / หัตถการ)</label>
-                    <div class="flex gap-2 mb-2">
-                        <input type="text" id="bulk-tx-input" class="input-box flex-1" placeholder="พิมพ์ชื่อรายการ Tx แล้วกด Enter…" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkItem('Tx','bulk-tx-input','bulk-tx-tags')}">
-                        <button onclick="addBulkItem('Tx','bulk-tx-input','bulk-tx-tags')" class="btn-base" style="background:#be185d !important;white-space:nowrap">+ เพิ่ม</button>
-                    </div>
-                    <div id="bulk-tx-tags" class="flex flex-wrap gap-2 min-h-[36px] p-2 bg-black/20 rounded-xl border border-white/5"></div>
+                    <div id="bulk-tx-display" class="bulk-list-box overflow-y-auto max-h-36" onclick="openBulkCatalog('tx')"><span class="text-gray-500 text-sm">คลิกเพื่อเลือก Tx…</span></div>
                 </div>
 
                 <!-- Rx items -->
                 <div>
                     <label class="label-clinical-bulk text-green-300">💊 Rx (ยากลับบ้าน)</label>
-                    <div class="flex gap-2 mb-2">
-                        <input type="text" id="bulk-rx-input" class="input-box flex-1" placeholder="พิมพ์ชื่อรายการ Rx แล้วกด Enter…" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkItem('Rx','bulk-rx-input','bulk-rx-tags')}">
-                        <button onclick="addBulkItem('Rx','bulk-rx-input','bulk-rx-tags')" class="btn-base" style="background:#047857 !important;white-space:nowrap">+ เพิ่ม</button>
-                    </div>
-                    <div id="bulk-rx-tags" class="flex flex-wrap gap-2 min-h-[36px] p-2 bg-black/20 rounded-xl border border-white/5"></div>
+                    <div id="bulk-rx-display" class="bulk-list-box border-blue-500/50 overflow-y-auto max-h-36" onclick="openBulkCatalog('rx')"><span class="text-gray-500 text-sm">คลิกเพื่อเลือก Rx…</span></div>
                 </div>
 
                 <!-- Plan -->
                 <div>
                     <label class="label-clinical-bulk">Plan (แผนการรักษาต่อ)</label>
                     <input type="text" id="bulk-plan" class="input-box" placeholder="แผนการรักษาต่อ...">
+                </div>
+
+                <!-- Total cost display -->
+                <div class="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 text-right">
+                    <span class="label-clinical-bulk text-yellow-300">รวมค่ารักษา (ต่อตัว) ฿</span>
+                    <span id="bulk-total-display" class="text-3xl font-black text-white ml-3">0.00</span>
                 </div>
 
             </div><!-- end body -->
@@ -827,38 +839,234 @@
                 <button onclick="saveBulkOpd()" class="btn-base flex-1 text-xl py-4 shadow-2xl" style="background:#7c3aed !important;">
                     💾 บันทึก OPD ทั้งหมดที่เลือก
                 </button>
+                <button onclick="saveBulkOpd(true)" class="btn-base px-6 text-lg py-4 shadow-2xl" style="background:#0d9488 !important;" title="บันทึกแล้วไปหน้าชำระเงิน">
+                    💰 บันทึก &amp; ชำระเงิน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Bulk OPD: Catalog Modal ── -->
+    <div id="bulk-catalog-modal" class="bulk-sub-overlay" onclick="if(event.target===this)closeBulkCatalog()">
+        <div class="bulk-sub-content">
+            <div class="p-6 border-b border-white/10 flex justify-between bg-slate-900/50">
+                <h3 id="bulk-modal-title" class="text-2xl font-bold">เลือกรายการ</h3>
+                <button onclick="closeBulkCatalog()" class="text-3xl">✕</button>
+            </div>
+            <div class="p-4 bg-white/5">
+                <input type="text" id="bulk-catalog-search" class="input-box" placeholder="ค้นหา..." oninput="filterBulkCatalog()">
+            </div>
+            <div id="bulk-catalog-items" class="flex-1 overflow-y-auto p-4 space-y-3 bg-black/20 custom-scroll"></div>
+            <div class="p-5 bg-teal-500/10 border-t border-teal-500/20">
+                <div id="bulk-modal-session-list" class="flex flex-wrap gap-3"></div>
+            </div>
+            <div class="p-6 border-t border-white/10 bg-slate-900/50">
+                <button onclick="closeBulkCatalog()" class="btn-base btn-blue w-full text-xl py-4">เสร็จสิ้น</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Bulk OPD: Rx Calc Modal ── -->
+    <div id="bulk-rx-calc-modal" class="bulk-sub-overlay" style="z-index:320;">
+        <div class="bulk-sub-content" style="max-width:640px;">
+            <div class="p-6 border-b border-white/10 bg-blue-900/30">
+                <h4 id="bulk-rx-calc-name" class="text-2xl font-black text-blue-400">💊 กำหนดการให้ยา</h4>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto custom-scroll">
+                <div class="space-y-4">
+                    <div>
+                        <label class="bulk-label-clinical">โดสแนะนำ (mg/kg)</label>
+                        <select id="bulk-rx-dose-select" class="input-box w-full" onchange="document.getElementById('bulk-rx-dose-val').value=this.value; calculateBulkRxTablets();"></select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="bulk-label-clinical">โดสจริง</label><input type="number" id="bulk-rx-dose-val" class="input-box" step="0.1" oninput="calculateBulkRxTablets()"></div>
+                        <div><label class="bulk-label-clinical">Conc.</label><input type="number" id="bulk-rx-conc-val" class="input-box bg-white/5" readonly></div>
+                    </div>
+                    <div class="p-4 bg-teal-500/10 rounded-2xl">
+                        <label class="bulk-label-clinical text-teal-400">ป้อนครั้งละ</label>
+                        <div class="flex items-center gap-3 mt-1">
+                            <button onclick="adjustBulkRxTablets(-0.125)" class="btn-base bg-slate-600 hover:bg-slate-500 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-xl shrink-0">−</button>
+                            <div id="bulk-rx-tabs-display" class="text-3xl font-black text-white flex-1 text-center">0</div>
+                            <button onclick="adjustBulkRxTablets(0.125)" class="btn-base bg-slate-600 hover:bg-slate-500 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-xl shrink-0">+</button>
+                        </div>
+                        <input type="hidden" id="bulk-rx-tabs-val">
+                    </div>
+                </div>
+                <div class="space-y-4 border-l border-white/5 pl-6">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="bulk-label-clinical">ความถี่/วัน</label>
+                            <select id="bulk-rx-freq" class="input-box" onchange="calculateBulkRxTotal(); updateBulkTimeOfDay();">
+                                <option value="1">1 ครั้ง</option>
+                                <option value="2" selected>2 ครั้ง</option>
+                                <option value="3">3 ครั้ง</option>
+                                <option value="4">4 ครั้ง</option>
+                                <option value="0.5">วันเว้นวัน</option>
+                            </select>
+                        </div>
+                        <div><label class="bulk-label-clinical">จำนวนวัน</label><input type="number" id="bulk-rx-days" class="input-box" value="7" oninput="calculateBulkRxTotal()"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="bulk-label-clinical">มื้ออาหาร</label>
+                            <select id="bulk-rx-meal-timing" class="input-box">
+                                <option value="หลังอาหาร">หลังอาหาร</option>
+                                <option value="หลังอาหารทันที">หลังอาหารทันที</option>
+                                <option value="ก่อนอาหาร">ก่อนอาหาร</option>
+                                <option value="พร้อมอาหาร">พร้อมอาหาร</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="bulk-label-clinical">ช่วงเวลา</label>
+                            <select id="bulk-rx-day-timing" class="input-box">
+                                <option value="เช้า">เช้า</option>
+                                <option value="เย็น">เย็น</option>
+                                <option value="เช้า-เย็น" selected>เช้า-เย็น</option>
+                                <option value="เช้า-กลางวัน-เย็น">เช้า-กลางวัน-เย็น</option>
+                                <option value="ก่อนนอน">ก่อนนอน</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20">
+                        <div id="bulk-rx-info-text" class="text-slate-300 font-bold mb-1">฿0 /เม็ด | รวม 0 เม็ด</div>
+                        <div id="bulk-rx-total-price-display" class="text-2xl font-black text-white">฿ 0.00</div>
+                        <input type="hidden" id="bulk-rx-final-price-val">
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-4">
+                <button onclick="document.getElementById('bulk-rx-calc-modal').style.display='none'" class="btn-base bg-slate-600 px-6">ยกเลิก</button>
+                <button onclick="confirmBulkRxCalc()" class="btn-base btn-teal flex-1">✅ เพิ่มรายการ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Bulk OPD: Injection Modal ── -->
+    <div id="bulk-inj-modal" class="bulk-sub-overlay" style="z-index:320;">
+        <div class="bulk-sub-content" style="max-width:400px;">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30">
+                <h4 id="bulk-inj-name" class="font-bold text-teal-400">-</h4>
+            </div>
+            <div class="p-6 space-y-5">
+                <div><label class="bulk-label-clinical">โดสแนะนำ (mg/kg)</label><select id="bulk-inj-dose-select" class="input-box" onchange="calculateBulkInjMl()"></select></div>
+                <div><label class="bulk-label-clinical">ปริมาณ (ml)</label><input type="number" id="bulk-inj-ml" class="input-box text-2xl font-black text-yellow-400" step="0.01" value="0.1"></div>
+                <div>
+                    <label class="bulk-label-clinical">Route</label>
+                    <div class="flex flex-wrap gap-3">
+                        <label class="bulk-route-opt flex items-center gap-1"><input type="checkbox" name="bulk-route" value="SC"> SC</label>
+                        <label class="bulk-route-opt flex items-center gap-1"><input type="checkbox" name="bulk-route" value="IM"> IM</label>
+                        <label class="bulk-route-opt flex items-center gap-1"><input type="checkbox" name="bulk-route" value="IV"> IV</label>
+                    </div>
+                </div>
+                <div class="p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-center">
+                    <label class="bulk-label-clinical text-yellow-400">ราคา (แก้ไขได้)</label>
+                    <div id="bulk-inj-pop-price" class="text-3xl font-black text-white">฿ 0.00</div>
+                    <input type="hidden" id="bulk-inj-final-price">
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="document.getElementById('bulk-inj-modal').style.display='none'" class="btn-base bg-slate-600 px-6">ยกเลิก</button>
+                <button onclick="confirmBulkInj()" class="btn-base btn-teal flex-1">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Bulk OPD: Lab Price Modal ── -->
+    <div id="bulk-lab-price-modal" class="bulk-sub-overlay" style="z-index:320;">
+        <div class="bulk-sub-content" style="max-width:360px;">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30">
+                <h4 id="bulk-lab-price-name" class="font-bold text-teal-400">-</h4>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-center">
+                    <label for="bulk-lab-final-price" class="bulk-label-clinical text-yellow-400">ราคา (แก้ไขได้)</label>
+                    <input type="number" id="bulk-lab-final-price" class="input-box text-3xl font-black text-white text-center mt-2" step="0.01" value="0" min="0">
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="closeBulkLabPriceModal()" class="btn-base bg-slate-600 px-6">ยกเลิก</button>
+                <button onclick="confirmBulkLab()" class="btn-base btn-teal flex-1">ยืนยัน</button>
             </div>
         </div>
     </div>
 
     <script>
         /* ════════════════════════════════════════════
-           BULK OPD – state & helpers
+           BULK OPD – state
            ════════════════════════════════════════════ */
-        let bulkItems = { Lab: [], Tx: [], Rx: [] };
+        let bulkItems = { Lab: [], Tx: [], Rx: [] }; // each item: { name, price, dose?, unit?, freq?, meal?, day_timing?, days?, qty? }
         let bulkOpdOwnerHn = null;
         let _bulkVisitPicker = null;
         let _bulkApptPicker  = null;
+        let bulkCurrentCatalogType = 'lab';
+        let bulkFullCatalog = [];
+        let bulkDisplayedItems = [];
+        let bulkPendingItem = null;
 
-        const BULK_ITEM_COLORS = {
-            Lab: { bg: '#4c1d95', border: '#7c3aed', text: '#c4b5fd' },
-            Tx:  { bg: '#831843', border: '#db2777', text: '#f9a8d4' },
-            Rx:  { bg: '#064e3b', border: '#059669', text: '#6ee7b7' }
-        };
+        /* ─── helpers ─── */
+        function _bulkBullets(items) {
+            if (!items || items.length === 0) return '<span class="text-gray-500 text-sm">คลิกเพื่อเลือก…</span>';
+            const ul = document.createElement('ul');
+            ul.className = 'bulk-bullet-list';
+            items.forEach((i, idx) => {
+                const li = document.createElement('li');
+                const labelParts = [i.name];
+                if (i.dose) labelParts.push(`(${i.dose} ${i.unit || ''} ${i.freq || ''})`.trim());
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = labelParts.join(' ');
+                const priceSpan = document.createElement('span');
+                priceSpan.className = 'ml-auto text-yellow-400 font-bold text-xs';
+                priceSpan.textContent = `฿${(+i.price).toLocaleString(undefined,{minimumFractionDigits:2})}`;
+                const rmBtn = document.createElement('span');
+                rmBtn.className = 'text-red-400 cursor-pointer ml-2 font-bold';
+                rmBtn.textContent = '✕';
+                rmBtn.addEventListener('click', (e) => { e.stopPropagation(); removeBulkItemByIdx(i._type, idx); });
+                li.append(nameSpan, priceSpan, rmBtn);
+                ul.appendChild(li);
+            });
+            return ul.outerHTML;
+        }
+
+        function updateBulkDisplay() {
+            document.getElementById('bulk-lab-display').innerHTML = _bulkBullets(bulkItems.Lab.map(i=>({...i,_type:'Lab'})));
+            document.getElementById('bulk-tx-display').innerHTML  = _bulkBullets(bulkItems.Tx.map(i=>({...i,_type:'Tx'})));
+            document.getElementById('bulk-rx-display').innerHTML  = _bulkBullets(bulkItems.Rx.map(i=>({...i,_type:'Rx'})));
+            const total = [...bulkItems.Lab,...bulkItems.Tx,...bulkItems.Rx].reduce((s,i)=>s+((+i.price)||0),0);
+            document.getElementById('bulk-total-display').textContent = total.toLocaleString(undefined,{minimumFractionDigits:2});
+        }
+
+        function removeBulkItemByIdx(type, idx) {
+            bulkItems[type].splice(idx, 1);
+            updateBulkDisplay();
+            updateBulkModalSessionList();
+        }
+
+        function _bulkWeight() { return parseFloat(document.getElementById('bulk-weight').value) || 0; }
+
+        function updateBulkModalSessionList() {
+            const type = bulkCurrentCatalogType === 'rx' ? 'Rx' : bulkCurrentCatalogType === 'tx' ? 'Tx' : 'Lab';
+            const current = bulkItems[type] || [];
+            const container = document.getElementById('bulk-modal-session-list');
+            container.innerHTML = '';
+            current.forEach((i, idx) => {
+                const span = document.createElement('span');
+                span.className = 'bg-teal-500 text-black px-3 py-1 rounded-lg text-sm font-bold cursor-pointer';
+                span.textContent = `✕ ${i.name}`;
+                span.addEventListener('click', () => removeBulkItemByIdx(type, idx));
+                container.appendChild(span);
+            });
+        }
 
         function openBulkOpdModal(ownerHn) {
             bulkOpdOwnerHn = ownerHn;
             bulkItems = { Lab: [], Tx: [], Rx: [] };
 
             // Reset form fields
-            ['bulk-cc','bulk-hx','bulk-pe','bulk-dx','bulk-plan','bulk-appt-note'].forEach(id => {
+            ['bulk-cc','bulk-hx','bulk-pe','bulk-dx','bulk-plan','bulk-appt-note','bulk-weight'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
-            ['bulk-lab-tags','bulk-tx-tags','bulk-rx-tags'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.innerHTML = '';
-            });
+            updateBulkDisplay();
 
             // Init datepickers
             if (_bulkVisitPicker) _bulkVisitPicker.destroy();
@@ -939,38 +1147,213 @@
             document.getElementById('bulk-select-all').indeterminate = (checked > 0 && checked < total);
         }
 
-        function addBulkItem(type, inputId, tagContainerId) {
-            const input = document.getElementById(inputId);
-            const name = (input.value || '').trim();
-            if (!name) return;
-            if (bulkItems[type].includes(name)) { input.value = ''; return; }
-            bulkItems[type].push(name);
-            input.value = '';
+        /* ─── Catalog modal for Bulk OPD ─── */
+        async function openBulkCatalog(type) {
+            bulkCurrentCatalogType = type;
+            document.getElementById('bulk-catalog-modal').style.display = 'flex';
+            document.getElementById('bulk-catalog-search').value = '';
+            const titles = { lab:'🔬 เลือก Lab / หัตถการ', tx:'💉 เลือก Tx (ยาฉีด)', rx:'💊 เลือก Rx (ยากลับบ้าน)' };
+            document.getElementById('bulk-modal-title').textContent = titles[type] || 'เลือกรายการ';
 
-            const c = BULK_ITEM_COLORS[type];
-            const tag = document.createElement('span');
-            tag.className = 'bulk-item-tag';
-            tag.style.cssText = `background:${c.bg};border:1px solid ${c.border};color:${c.text}`;
-            tag.dataset.type = type;
-            tag.dataset.name = name;
-
-            const nameText = document.createTextNode(name + ' ');
-            const removeBtn = document.createElement('span');
-            removeBtn.className = 'remove-tag';
-            removeBtn.textContent = '✕';
-            removeBtn.onclick = () => removeBulkItem(type, tag);
-            tag.appendChild(nameText);
-            tag.appendChild(removeBtn);
-            document.getElementById(tagContainerId).appendChild(tag);
+            let items = [];
+            if (type === 'lab') {
+                const { data } = await db.from('services').select('*').in('category', ['Lab', 'หัตถการ']);
+                items = (data || []).map(i => ({ name: i.service_name, price: i.price, type: 'Lab', data: i }));
+            } else if (type === 'tx') {
+                const { data } = await db.from('pharmacy').select('*').eq('category', 'Injection');
+                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Tx', subtype: 'inj', data: i }));
+            } else if (type === 'rx') {
+                const { data } = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']);
+                items = (data || []).map(i => ({ name: i.item_name, price: i.price_per_unit, type: 'Rx', is_med: i.category !== 'General', data: i }));
+            }
+            bulkFullCatalog = items;
+            bulkDisplayedItems = [...items];
+            renderBulkCatalog();
+            updateBulkModalSessionList();
         }
 
-        function removeBulkItem(type, tagEl) {
-            const name = tagEl.dataset.name;
-            bulkItems[type] = bulkItems[type].filter(n => n !== name);
-            tagEl.remove();
+        function closeBulkCatalog() {
+            document.getElementById('bulk-catalog-modal').style.display = 'none';
+            updateBulkDisplay();
         }
 
-        async function saveBulkOpd() {
+        function filterBulkCatalog() {
+            const t = document.getElementById('bulk-catalog-search').value.toLowerCase();
+            bulkDisplayedItems = bulkFullCatalog.filter(i => i.name.toLowerCase().includes(t));
+            renderBulkCatalog();
+        }
+
+        function renderBulkCatalog() {
+            const weight = _bulkWeight();
+            const container = document.getElementById('bulk-catalog-items');
+            container.innerHTML = '';
+            bulkDisplayedItems.forEach((i, idx) => {
+                let displayPrice = parseFloat(i.price) || 0;
+                if (i.data && i.data.price_config && Array.isArray(i.data.price_config)) {
+                    const tier = i.data.price_config.find(t => weight <= t.max);
+                    if (tier) displayPrice = tier.price;
+                    else if (i.data.price_config.length > 0) displayPrice = i.data.price_config[i.data.price_config.length-1].price;
+                }
+                const row = document.createElement('div');
+                row.className = 'p-4 bg-white/5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-white/10 border border-transparent hover:border-teal-500/50';
+                const info = document.createElement('div');
+                const nameEl = document.createElement('b');
+                nameEl.textContent = i.name;
+                const priceEl = document.createElement('small');
+                priceEl.className = 'text-teal-400 font-bold';
+                priceEl.textContent = `฿ ${displayPrice.toLocaleString(undefined,{minimumFractionDigits:2})}`;
+                info.append(nameEl, document.createElement('br'), priceEl);
+                const plus = document.createElement('div');
+                plus.className = 'text-teal-500 text-2xl font-bold';
+                plus.textContent = '+';
+                row.append(info, plus);
+                row.addEventListener('click', () => handleBulkItemSelect(idx));
+                container.appendChild(row);
+            });
+        }
+
+        function handleBulkItemSelect(idx) {
+            const item = bulkDisplayedItems[idx]; if (!item) return;
+            const weight = _bulkWeight();
+            if (item.type === 'Rx' && item.is_med) {
+                bulkPendingItem = item;
+                document.getElementById('bulk-rx-calc-name').textContent = item.name;
+                document.getElementById('bulk-rx-conc-val').value = item.data.concentration_mg_unit || 1;
+                const ds = document.getElementById('bulk-rx-dose-select');
+                let opts = '<option value="">-- โดสแนะนำ --</option>';
+                for (let k=1; k<=5; k++) if (item.data[`dog_dose_${k}`] > 0) opts += `<option value="${item.data[`dog_dose_${k}`]}">${item.data[`dog_dose_${k}`]} mg/kg</option>`;
+                ds.innerHTML = opts;
+                document.getElementById('bulk-rx-calc-modal').style.display = 'flex';
+                calculateBulkRxTablets();
+            } else if (item.type === 'Tx') {
+                bulkPendingItem = item;
+                document.getElementById('bulk-inj-name').textContent = item.name;
+                const ds = document.getElementById('bulk-inj-dose-select');
+                let opts = '<option value="0">-- ระบุปริมาณเอง --</option>';
+                for (let k=1; k<=5; k++) if (item.data[`dog_dose_${k}`] > 0) opts += `<option value="${item.data[`dog_dose_${k}`]}">${item.data[`dog_dose_${k}`]} mg/kg (${item.data[`dog_for_${k}`] || '-'})</option>`;
+                ds.innerHTML = opts;
+                document.getElementById('bulk-inj-modal').style.display = 'flex';
+                calculateBulkInjMl();
+            } else if (item.type === 'Lab') {
+                let finalPrice = parseFloat(item.price) || 0;
+                if (item.data.price_config && Array.isArray(item.data.price_config)) {
+                    const tier = item.data.price_config.find(t => weight <= t.max);
+                    if (tier) finalPrice = tier.price;
+                    else if (item.data.price_config.length > 0) finalPrice = item.data.price_config[item.data.price_config.length-1].price;
+                }
+                bulkPendingItem = item;
+                document.getElementById('bulk-lab-price-name').textContent = item.name;
+                document.getElementById('bulk-lab-final-price').value = finalPrice;
+                document.getElementById('bulk-lab-price-modal').style.display = 'flex';
+            } else {
+                addBulkItemFromCatalog(item.type, item.name, item.price);
+            }
+        }
+
+        /* ─── Injection modal ─── */
+        function calculateBulkInjMl() {
+            const weight = _bulkWeight();
+            const dose = parseFloat(document.getElementById('bulk-inj-dose-select').value) || 0;
+            const conc = parseFloat(bulkPendingItem.data.concentration_mg_unit) || 1;
+            if (dose > 0 && weight > 0) document.getElementById('bulk-inj-ml').value = ((weight * dose) / conc).toFixed(2);
+            let finalPrice = bulkPendingItem.price;
+            if (bulkPendingItem.data.price_config && Array.isArray(bulkPendingItem.data.price_config)) {
+                const tier = bulkPendingItem.data.price_config.find(t => weight <= t.max);
+                if (tier) finalPrice = tier.price;
+                else finalPrice = bulkPendingItem.data.price_config[bulkPendingItem.data.price_config.length-1].price;
+            }
+            document.getElementById('bulk-inj-pop-price').textContent = `฿ ${parseFloat(finalPrice).toLocaleString(undefined,{minimumFractionDigits:2})}`;
+            document.getElementById('bulk-inj-final-price').value = finalPrice;
+        }
+
+        function confirmBulkInj() {
+            const ml = document.getElementById('bulk-inj-ml').value;
+            const routes = Array.from(document.querySelectorAll('input[name="bulk-route"]:checked')).map(c=>c.value).join('/');
+            const name = `${bulkPendingItem.name} (${ml}ml)${routes ? ' '+routes : ''}`;
+            addBulkItemFromCatalog('Tx', name, document.getElementById('bulk-inj-final-price').value);
+            document.querySelectorAll('input[name="bulk-route"]').forEach(c=>c.checked=false);
+            document.getElementById('bulk-inj-modal').style.display = 'none';
+        }
+
+        /* ─── Lab price modal ─── */
+        function closeBulkLabPriceModal() { document.getElementById('bulk-lab-price-modal').style.display = 'none'; }
+        function confirmBulkLab() {
+            addBulkItemFromCatalog('Lab', bulkPendingItem.name, parseFloat(document.getElementById('bulk-lab-final-price').value) || 0);
+            closeBulkLabPriceModal();
+        }
+
+        /* ─── Rx calc modal ─── */
+        const _BULK_RX_FRACS = {0.125:'1/8',0.25:'1/4',0.375:'3/8',0.5:'1/2',0.625:'5/8',0.75:'3/4',0.875:'7/8'};
+
+        function _bulkFmtTabs(t, unit) {
+            const whole = Math.floor(t), frac = Math.round((t-whole)*8)/8;
+            const display = frac===0 ? whole.toString() : (whole>0 ? whole+' ':'')+((_BULK_RX_FRACS[frac])||frac.toString());
+            return `${display} ${unit}`;
+        }
+
+        function calculateBulkRxTablets() {
+            const weight = _bulkWeight();
+            const dose = parseFloat(document.getElementById('bulk-rx-dose-val').value) || 0;
+            const conc = parseFloat(document.getElementById('bulk-rx-conc-val').value) || 1;
+            const t = dose > 0 && weight > 0 ? (weight * dose) / conc : 0;
+            document.getElementById('bulk-rx-tabs-display').textContent = _bulkFmtTabs(t, bulkPendingItem?.data?.unit || 'เม็ด');
+            document.getElementById('bulk-rx-tabs-val').value = t;
+            calculateBulkRxTotal();
+        }
+
+        function adjustBulkRxTablets(delta) {
+            const cur = parseFloat(document.getElementById('bulk-rx-tabs-val').value) || 0;
+            const nv = Math.max(0, Math.round((cur + delta) * 8) / 8);
+            document.getElementById('bulk-rx-tabs-val').value = nv;
+            document.getElementById('bulk-rx-tabs-display').textContent = _bulkFmtTabs(nv, bulkPendingItem?.data?.unit || 'เม็ด');
+            calculateBulkRxTotal();
+        }
+
+        function calculateBulkRxTotal() {
+            const tabs = parseFloat(document.getElementById('bulk-rx-tabs-val').value) || 0;
+            const freq = parseFloat(document.getElementById('bulk-rx-freq').value) || 1;
+            const days = parseInt(document.getElementById('bulk-rx-days').value) || 0;
+            const qty = Math.ceil(tabs * (freq === 0.5 ? Math.ceil(days/2) : freq * days));
+            if (bulkPendingItem) bulkPendingItem.calculatedQty = qty;
+            const unitPrice = parseFloat(bulkPendingItem?.price) || 0;
+            const total = qty * unitPrice;
+            document.getElementById('bulk-rx-info-text').textContent = `฿${unitPrice.toFixed(2)} /เม็ด | รวม ${qty} เม็ด`;
+            document.getElementById('bulk-rx-total-price-display').textContent = `฿ ${total.toLocaleString(undefined,{minimumFractionDigits:2})}`;
+            document.getElementById('bulk-rx-final-price-val').value = total.toFixed(2);
+        }
+
+        function updateBulkTimeOfDay() {
+            const f = document.getElementById('bulk-rx-freq').value;
+            const dt = document.getElementById('bulk-rx-day-timing');
+            if (f === '1' || f === '0.5') dt.value = 'เช้า';
+            else if (f === '2') dt.value = 'เช้า-เย็น';
+            else dt.value = 'เช้า-กลางวัน-เย็น';
+        }
+
+        function confirmBulkRxCalc() {
+            const tabs = document.getElementById('bulk-rx-tabs-display').textContent;
+            addBulkItemFromCatalog('Rx', bulkPendingItem.name, parseFloat(document.getElementById('bulk-rx-final-price-val').value), {
+                dose: tabs.split(' ').slice(0,-1).join(' '),
+                unit: bulkPendingItem.data.unit || 'เม็ด',
+                freq: document.getElementById('bulk-rx-freq').value === '0.5' ? 'วันเว้นวัน' : `วันละ ${document.getElementById('bulk-rx-freq').value} ครั้ง`,
+                meal: document.getElementById('bulk-rx-meal-timing').value,
+                day_timing: document.getElementById('bulk-rx-day-timing').value,
+                days: parseInt(document.getElementById('bulk-rx-days').value),
+                qty: bulkPendingItem.calculatedQty,
+                drug_name_th: bulkPendingItem.data.name_th,
+                warning: bulkPendingItem.data.side_effects
+            });
+            document.getElementById('bulk-rx-calc-modal').style.display = 'none';
+        }
+
+        /* ─── Add item to bulkItems ─── */
+        function addBulkItemFromCatalog(type, name, price, meta = {}) {
+            bulkItems[type].push({ name, price: parseFloat(price) || 0, ...meta });
+            updateBulkDisplay();
+            updateBulkModalSessionList();
+        }
+
+        async function saveBulkOpd(goToPos = false) {
             const selectedCbs = [...document.querySelectorAll('.bulk-animal-cb:checked')];
             if (selectedCbs.length === 0) {
                 alert('⚠️ กรุณาเลือกสัตว์อย่างน้อย 1 ตัว');
@@ -985,6 +1368,9 @@
             const plan        = document.getElementById('bulk-plan').value;
             const appointment = document.getElementById('bulk-appointment').value || null;
             const apptNote    = document.getElementById('bulk-appt-note').value;
+
+            const allBulkItems = [...bulkItems.Lab, ...bulkItems.Tx, ...bulkItems.Rx];
+            const totalCost = allBulkItems.reduce((s, i) => s + ((+i.price) || 0), 0);
 
             const btn = document.querySelector('#bulk-opd-modal .flex-1.text-xl');
             btn.disabled = true;
@@ -1010,8 +1396,8 @@
                         appointment_note:  apptNote,
                         appointment_2:     null,
                         appointment_note_2:'',
-                        total_cost:        0,
-                        payment_status:    (bulkItems.Lab.length + bulkItems.Tx.length + bulkItems.Rx.length) > 0 ? 'pending' : 'no_charge',
+                        total_cost:        totalCost,
+                        payment_status:    allBulkItems.length > 0 ? 'pending' : 'no_charge',
                         dld_categories:    []
                     };
 
@@ -1028,16 +1414,15 @@
                     }
 
                     const itemInserts = [
-                        ...bulkItems.Lab.map(name => ({ record_id: record.id, item_type: 'Lab', item_name: name, quantity: 1, unit_price: 0, total_price: 0 })),
-                        ...bulkItems.Tx.map(name  => ({ record_id: record.id, item_type: 'Tx',  item_name: name, quantity: 1, unit_price: 0, total_price: 0 })),
-                        ...bulkItems.Rx.map(name  => ({ record_id: record.id, item_type: 'Rx',  item_name: name, quantity: 1, unit_price: 0, total_price: 0 }))
+                        ...bulkItems.Lab.map(i => ({ record_id: record.id, item_type: 'Lab', item_name: i.name, quantity: i.qty || 1, unit_price: i.price, total_price: i.price })),
+                        ...bulkItems.Tx.map(i  => ({ record_id: record.id, item_type: 'Tx',  item_name: i.name, quantity: i.qty || 1, unit_price: i.price, total_price: i.price })),
+                        ...bulkItems.Rx.map(i  => ({ record_id: record.id, item_type: 'Rx',  item_name: i.name, dose_per_time: i.dose || null, unit: i.unit || null, frequency: i.freq || null, meal_timing: i.meal || null, day_timing: i.day_timing || null, duration_days: i.days || null, quantity: i.qty || 1, unit_price: i.price, total_price: i.price, drug_name_th: i.drug_name_th || null, warning_label: i.warning || null }))
                     ];
 
                     if (itemInserts.length > 0) {
                         const { error: itemErr } = await db.from('medical_record_items').insert(itemInserts);
                         if (itemErr) {
                             console.error('บันทึก items ไม่สำเร็จ (' + (pet.pet_name || animalId) + '):', itemErr);
-                            // Roll back the header record to avoid orphan
                             await db.from('medical_records').delete().eq('id', record.id);
                             failedPets.push(pet.pet_name || animalId);
                             continue;
@@ -1053,7 +1438,12 @@
                 let resultMsg = `✅ บันทึก OPD สำเร็จ ${savedCount} ตัว`;
                 if (failedPets.length > 0) resultMsg += `\n⚠️ บันทึกไม่สำเร็จ: ${failedPets.join(', ')}`;
 
-                // Offer to print appointment labels
+                if (savedCount > 0 && goToPos) {
+                    // Navigate to POS with the owner HN so all pending records are visible
+                    window.location.href = `pos.html?hn=${encodeURIComponent(bulkOpdOwnerHn)}`;
+                    return;
+                }
+
                 if (savedCount > 0 && appointment) {
                     const doPrint = confirm(resultMsg + '\n\nต้องการพิมพ์ใบนัดหมายสำหรับสัตว์ที่บันทึกสำเร็จด้วยหรือไม่?');
                     if (doPrint) {
