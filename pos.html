@@ -114,7 +114,7 @@
                 <h1 id="display-pet-name" class="txt-title text-3xl mb-1">รายการรอชำระเงิน</h1>
                 <p id="display-owner-info" class="txt-body text-gray-400 text-lg">กรุณาเลือกรายการจากคอลัมน์ซ้าย</p>
             </div>
-            <button id="btn-add-item" onclick="openCatalog('rx')" class="hidden glass-card px-6 py-3 txt-body font-bold text-teal-400 border-teal-500/30 hover:bg-teal-500/10 transition-all">+ เพิ่มรายการ</button>
+            <button id="btn-add-item" onclick="openCatalog('rx')" class="hidden glass-card px-6 py-3 txt-body font-bold text-teal-400 border-teal-500/30 hover:bg-teal-500/10 transition-all flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i> เพิ่มสินค้า</button>
         </div>
         <div class="flex-1 glass-card p-0 overflow-hidden flex flex-col border-none bg-slate-900/40">
             <div class="grid grid-cols-12 p-5 border-b border-white/10 txt-label text-sm bg-black/20">
@@ -411,7 +411,7 @@
             const isPaid = status === 'paid';
             const btn = document.getElementById('btn-pay');
             document.getElementById('view-mode-tag').classList.toggle('hidden', !isPaid);
-            document.getElementById('btn-add-item').classList.toggle('hidden', isPaid);
+            document.getElementById('btn-add-item').classList.toggle('hidden', status !== 'pending');
 
             if (isPaid) {
                 document.getElementById('btn-text').innerText = "พิมพ์ใบเสร็จ (Reprint)";
@@ -522,6 +522,20 @@
                 record_id: activeRecordId, item_type: type, item_name: name, quantity: 1, unit_price: finalPrice, total_price: finalPrice
             }]);
             if (error) return alert("Error adding item: " + error.message);
+
+            // บันทึกประวัติเมื่อสินค้าถูกเพิ่มขณะรอจ่ายเงิน
+            if (currentRecordData?.payment_status === 'pending') {
+                const { error: histError } = await db.from('pos_pending_additions').insert([{
+                    record_id: activeRecordId,
+                    item_type: type,
+                    item_name: name,
+                    quantity: 1,
+                    unit_price: finalPrice,
+                    total_price: finalPrice
+                }]);
+                if (histError) console.error('บันทึกประวัติล้มเหลว:', histError.message);
+            }
+
             await syncTotalToDB();
             refreshCartDisplay(activeRecordId);
         }
