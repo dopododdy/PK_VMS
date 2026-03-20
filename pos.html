@@ -787,7 +787,9 @@
                 combinedRecords.push({ record: rec, items: items || [], petName: rec.animals?.pet_name || '-' });
             }
             const ownerName = records[0]?.owners?.owner_name || ownerHn;
-            renderCombinedItems(ownerName);
+            const allItems = combinedRecords.flatMap(cr => cr.items);
+            const { nameTh: combinedNameTh } = await enrichItemsWithThaiNames(allItems);
+            renderCombinedItems(ownerName, combinedNameTh);
             const grandTotal = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
             document.getElementById('combined-sum-total').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('combined-discount').value = 0;
@@ -797,7 +799,7 @@
             lucide.createIcons();
         }
 
-        function renderCombinedItems(ownerName) {
+        function renderCombinedItems(ownerName, nameTh = {}) {
             const container = document.getElementById('combined-items-container');
             const numAnimals = combinedRecords.length;
             let html = `<div class="mb-3 txt-label">เจ้าของ: <span class="text-white font-black text-base">${ownerName}</span></div>`;
@@ -805,8 +807,9 @@
             for (const cr of combinedRecords) {
                 for (const item of cr.items) {
                     if (!itemMap[item.item_name]) {
-                        itemMap[item.item_name] = { quantity: item.quantity, totalPrice: 0 };
+                        itemMap[item.item_name] = { quantity: 0, totalPrice: 0 };
                     }
+                    itemMap[item.item_name].quantity += parseFloat(item.quantity || 1);
                     itemMap[item.item_name].totalPrice += parseFloat(item.total_price);
                 }
             }
@@ -815,8 +818,9 @@
                 <div class="font-black text-teal-400 mb-2 text-base">🐾 จำนวน ${numAnimals} ตัว</div>
                 <div class="space-y-1">`;
             for (const [itemName, data] of Object.entries(itemMap)) {
+                const displayName = nameTh[itemName] || itemName;
                 html += `<div class="flex justify-between text-sm">
-                    <span class="text-white">${itemName} x${Math.floor(data.quantity)} จำนวน ${numAnimals} ตัว</span>
+                    <span class="text-white">${displayName} x${Math.floor(data.quantity)} ตัว</span>
                     <span class="text-gray-300">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                 </div>`;
             }
@@ -882,19 +886,23 @@
                 const config = template.config, pw = config.width || 80;
                 const ownerRec = combinedRecords[0]?.record;
                 const ownerName = ownerRec?.owners?.owner_name || '-';
+                const allPrintItems = combinedRecords.flatMap(cr => cr.items);
+                const { nameTh: printNameTh } = await enrichItemsWithThaiNames(allPrintItems);
                 const numAnimals = combinedRecords.length;
                 const itemMap = {};
                 for (const cr of combinedRecords) {
                     for (const item of cr.items) {
                         if (!itemMap[item.item_name]) {
-                            itemMap[item.item_name] = { quantity: item.quantity, totalPrice: 0 };
+                            itemMap[item.item_name] = { quantity: 0, totalPrice: 0 };
                         }
+                        itemMap[item.item_name].quantity += parseFloat(item.quantity || 1);
                         itemMap[item.item_name].totalPrice += parseFloat(item.total_price);
                     }
                 }
                 let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">`;
                 for (const [itemName, data] of Object.entries(itemMap)) {
-                    itemsHtml += `<tr><td style="text-align:left;">${itemName} x${Math.floor(data.quantity)} จำนวน ${numAnimals} ตัว</td><td style="text-align:right;">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
+                    const displayName = printNameTh[itemName] || itemName;
+                    itemsHtml += `<tr><td style="text-align:left;">${displayName} x${Math.floor(data.quantity)} ตัว</td><td style="text-align:right;">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
                 }
                 itemsHtml += `</table>`;
                 const printData = {
