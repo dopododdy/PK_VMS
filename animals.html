@@ -836,6 +836,12 @@
             <!-- Footer -->
             <div class="p-6 border-t border-white/10 flex gap-3 flex-wrap" style="background:rgba(0,0,0,0.3)">
                 <button onclick="closeBulkOpdModal()" class="btn-base btn-gray px-8">ยกเลิก</button>
+                <button onclick="printBulkApptFromModal()" class="btn-base px-5 text-sm py-3 shadow-xl" style="background:#b45309 !important;" title="พิมพ์ใบนัดสำหรับสัตว์ที่เลือก">
+                    🖨️ พิมพ์นัดทั้งหมด
+                </button>
+                <button onclick="printBulkPetIdFromModal()" class="btn-base px-5 text-sm py-3 shadow-xl" style="background:#1d4ed8 !important;" title="พิมพ์บัตรประจำตัวสำหรับสัตว์ที่เลือก">
+                    🪪 พิมพ์บัตรประจำตัวทั้งหมด
+                </button>
                 <button onclick="saveBulkOpd()" class="btn-base flex-1 text-xl py-4 shadow-2xl" style="background:#7c3aed !important;">
                     💾 บันทึก OPD ทั้งหมดที่เลือก
                 </button>
@@ -1529,6 +1535,85 @@
                         if (l.align === 'center')      style += `left:0; width:100%; text-align:center;`;
                         else if (l.align === 'right')  style += `right:${l.x * px}px; text-align:right;`;
                         else                           style += `left:${l.x * px}px;`;
+                        html += `<div class="elem" style="${style}">${txt}</div>`;
+                    });
+                    html += `</div>`;
+                });
+
+                html += `</body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},800);};<\/script></html>`;
+                pw.document.write(html);
+                pw.document.close();
+
+            } catch (err) {
+                alert('พิมพ์ไม่สำเร็จ: ' + err.message);
+            }
+        }
+
+        function printBulkApptFromModal() {
+            const selectedCbs = [...document.querySelectorAll('.bulk-animal-cb:checked')];
+            if (selectedCbs.length === 0) { alert('⚠️ กรุณาเลือกสัตว์อย่างน้อย 1 ตัว'); return; }
+            const appointmentDate = document.getElementById('bulk-appointment').value;
+            if (!appointmentDate) { alert('⚠️ กรุณาระบุวันนัดก่อนพิมพ์'); return; }
+            const apptNote = document.getElementById('bulk-appt-note').value;
+            const animalIds = selectedCbs.map(cb => cb.value);
+            printBulkApptLabels(animalIds, appointmentDate, apptNote);
+        }
+
+        async function printBulkPetIdFromModal() {
+            const selectedCbs = [...document.querySelectorAll('.bulk-animal-cb:checked')];
+            if (selectedCbs.length === 0) { alert('⚠️ กรุณาเลือกสัตว์อย่างน้อย 1 ตัว'); return; }
+            const animalIds = selectedCbs.map(cb => cb.value);
+            await printBulkPetIdLabels(animalIds);
+        }
+
+        async function printBulkPetIdLabels(animalIds) {
+            try {
+                const { data: dbTemplate } = await db.from('print_templates')
+                    .select('config').eq('template_type', 'sticker_pet_id').single();
+                if (!dbTemplate) return alert("❌ ไม่พบ Template 'sticker_pet_id'");
+
+                const config = dbTemplate.config;
+                const px = 3.78;
+
+                const dataList = animalIds.map(id => {
+                    const pet   = allAnimals.find(a => String(a.id) === String(id));
+                    const owner = allOwners.find(o => o.hn === pet?.owner_hn);
+                    const ownerPhone = (allPhones.find(p => p.owner_hn === pet?.owner_hn && p.label === 'เบอร์หลัก') || allPhones.find(p => p.owner_hn === pet?.owner_hn))?.phone_number || '-';
+                    return {
+                        clinic_name:   'PK-VMS Animal Clinic',
+                        pet_name:      pet?.pet_name  || '-',
+                        hn:            pet?.owner_hn  || '-',
+                        owner_name:    owner?.owner_name  || '-',
+                        owner_phone:   ownerPhone,
+                        owner_address: owner?.address || '-',
+                        species:       pet?.pet_type  || '-',
+                        sex:           pet?.gender    || '-',
+                        weight:        pet?.weight    || '-',
+                        breed:         pet?.breed     || '-',
+                        date:          new Date().toLocaleDateString('th-TH'),
+                        time:          new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                    };
+                });
+
+                const pw = window.open('', '_blank');
+                let html = `<html><head>
+                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                    <style>
+                        body { margin:0; padding:0; font-family:'Sarabun',sans-serif; }
+                        .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; }
+                        .elem { position:absolute; color:black; line-height:1.2; }
+                        @page { size:${config.width}mm ${config.height}mm; margin:0; }
+                    </style>
+                </head><body>`;
+
+                dataList.forEach(data => {
+                    html += `<div class="sticker">`;
+                    config.lines.forEach(l => {
+                        let txt = (l.text || '').replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || '');
+                        let style = `top:${l.y * px}px; font-family:'Sarabun',sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'};`;
+                        if (l.align === 'center')     style += `left:0; width:100%; text-align:center;`;
+                        else if (l.align === 'right') style += `right:${l.x * px}px; text-align:right;`;
+                        else                          style += `left:${l.x * px}px;`;
                         html += `<div class="elem" style="${style}">${txt}</div>`;
                     });
                     html += `</div>`;
