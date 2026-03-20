@@ -40,6 +40,11 @@
         .btn-amber { background-color: #d97706 !important; }
         
         .list-box { background: rgba(20, 184, 177, 0.05); border: 1.5px dashed var(--teal); border-radius: 12px; min-height: 80px; padding: 12px; cursor: pointer; }
+        .bullet-list { list-style: none; padding: 0; margin: 0; }
+        .bullet-list li { padding: 3px 0; color: #e2e8f0; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .bullet-list li::before { content: "•"; color: var(--teal); font-weight: 900; }
+        .bullet-list li:hover { color: #f87171; }
+        .bullet-list .item-price { margin-left: auto; color: #facc15; font-weight: 700; font-size: 0.8em; white-space: nowrap; }
         .view-hidden { display: none; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: var(--navy-light); border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -729,9 +734,21 @@
         function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
         
         function updateFormUI() {
-            document.getElementById('list_lab_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Lab').map(i=>i.name), 'form_item');
-            document.getElementById('list_tx_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Tx').map(i=>i.name), 'form_item');
-            document.getElementById('list_rx_display').innerHTML = drawBullets(selectedItems.filter(i=>i.type==='Rx').map(i=> i.dose ? `${i.name} (${i.dose} ${i.unit} ${i.freq})` : i.name), 'form_item');
+            function drawItemsWithPrice(items, typeKey) {
+                if (!items || items.length === 0) return '-';
+                return `<ul class="bullet-list">${items.map((item, idx) => {
+                    const parts = [item.name];
+                    if (item.dose) {
+                        const detail = [item.dose, item.unit, item.freq].filter(Boolean).join(' ');
+                        if (detail) parts.push(`(${detail})`);
+                    }
+                    const label = parts.join(' ');
+                    return `<li onclick="currentCatalogType='${typeKey}';removeItem(${idx})"><span>${label}</span><span class="item-price">฿${(+item.price).toLocaleString(undefined,{minimumFractionDigits:2})}</span></li>`;
+                }).join('')}</ul>`;
+            }
+            document.getElementById('list_lab_display').innerHTML = drawItemsWithPrice(selectedItems.filter(i=>i.type==='Lab'), 'lab');
+            document.getElementById('list_tx_display').innerHTML  = drawItemsWithPrice(selectedItems.filter(i=>i.type==='Tx'), 'tx');
+            document.getElementById('list_rx_display').innerHTML  = drawItemsWithPrice(selectedItems.filter(i=>i.type==='Rx'), 'rx');
         }
 
         function removeItem(idx) {
