@@ -487,7 +487,7 @@
 
         function renderCatalogItems() {
             const weight = currentRecordData ? parseFloat(currentRecordData.weight) || 0 : 0;
-            document.getElementById('catalog-grid').innerHTML = displayedCatalog.map(i => {
+            document.getElementById('catalog-grid').innerHTML = displayedCatalog.map((i, idx) => {
                 let displayPrice = parseFloat(i.price) || 0;
                 if (i.data && i.data.price_config && Array.isArray(i.data.price_config)) {
                     const tiers = i.data.price_config;
@@ -497,7 +497,7 @@
                 }
                 const catalogDisplayName = i.data.name_th ? `${i.name} (${i.data.name_th})` : i.name;
                 return `
-                <div class="glass-card flex flex-col justify-between h-32" onclick="addItemToDB('${i.type}', '${i.name}', ${JSON.stringify(i.data)})">
+                <div class="glass-card flex flex-col justify-between h-32" onclick="addItemToDB(${idx})">
                     <div class="font-bold text-white text-sm line-clamp-2">${catalogDisplayName}</div>
                     <div class="text-teal-400 font-black text-right">฿${displayPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                 </div>`;
@@ -510,7 +510,12 @@
             renderCatalogItems();
         }
 
-        async function addItemToDB(type, name, masterData) {
+        async function addItemToDB(idx) {
+            const item = displayedCatalog[idx];
+            if (!item) return;
+            const type = item.type;
+            const name = item.name;
+            const masterData = item.data;
             let finalPrice = parseFloat(masterData.price || masterData.price_per_unit) || 0;
             const weight = parseFloat(currentRecordData.weight) || 0;
             if (masterData.price_config && Array.isArray(masterData.price_config)) {
