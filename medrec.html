@@ -166,6 +166,19 @@
         </div>
     </div>
 
+    <div id="lab-price-modal" class="modal-overlay" style="z-index: 110;">
+        <div class="modal-content !max-w-sm">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30"><h4 id="lab-price-name" class="font-bold text-teal-400">-</h4></div>
+            <div class="p-6 space-y-5">
+                <div class="p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20 text-center">
+                    <label for="lab-final-price" class="label-clinical text-yellow-400">ราคา (แก้ไขได้)</label>
+                    <input type="number" id="lab-final-price" class="input-box text-3xl font-black text-white text-center mt-2" step="0.01" value="0" min="0">
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3"><button onclick="closeLabPriceModal()" class="btn-base bg-slate-600 px-6">ยกเลิก</button><button onclick="confirmLab()" class="btn-base btn-teal flex-1">ยืนยัน</button></div>
+        </div>
+    </div>
+
     <div id="lab-view-modal" class="modal-overlay" style="z-index: 150;">
         <div class="modal-content !max-w-4xl">
             <div class="p-6 border-b border-white/10 flex justify-between bg-slate-900/50"><h3 class="text-2xl font-bold flex items-center gap-2">🔬 ผลตรวจทางห้องปฏิบัติการ</h3><button onclick="document.getElementById('lab-view-modal').style.display='none'" class="text-3xl">✕</button></div>
@@ -554,7 +567,10 @@
                     const tier = item.data.price_config.find(t => weight <= t.max);
                     if (tier) finalPrice = tier.price; else if (item.data.price_config.length > 0) finalPrice = item.data.price_config[item.data.price_config.length-1].price;
                 }
-                addItem('Lab', item.name, finalPrice);
+                pendingItem = item;
+                document.getElementById('lab-price-name').innerText = item.name;
+                document.getElementById('lab-final-price').value = finalPrice;
+                document.getElementById('lab-price-modal').style.display = 'flex';
             } else { addItem(item.type, item.name, item.price); }
         };
 
@@ -571,6 +587,8 @@
         }
 
         function confirmInj() { addItem('Tx', `${pendingItem.name} (${document.getElementById('inj-ml').value}ml) ${Array.from(document.querySelectorAll('input[name="route"]:checked')).map(c=>c.value).join('/')}`, document.getElementById('inj-final-price').value); document.getElementById('inj-modal').style.display='none'; }
+        function closeLabPriceModal() { document.getElementById('lab-price-modal').style.display='none'; }
+        function confirmLab() { addItem('Lab', pendingItem.name, parseFloat(document.getElementById('lab-final-price').value) || 0); closeLabPriceModal(); }
         function filterCatalog() { const t = document.getElementById('catalog-search').value.toLowerCase(); displayedItems = fullCatalog.filter(i=>i.name.toLowerCase().includes(t)); renderCatalog(); }
         function addItem(type, name, price, meta = {}) { selectedItems.push({ type, name, price: parseFloat(price), ...meta }); document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) + parseFloat(price)).toFixed(2); updateFormUI(); updateModalUI(); }
 
