@@ -59,6 +59,17 @@
         
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        /* ─── Bulk OPD Modal ─── */
+        .bulk-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:200; display:none; align-items:center; justify-content:center; padding:20px; }
+        .bulk-modal-content { background:#0f172a; border:1px solid rgba(255,255,255,0.1); border-radius:24px; width:100%; max-width:900px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px rgba(0,0,0,0.6); }
+        .bulk-item-tag { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-weight:700; font-size:0.82rem; cursor:default; }
+        .bulk-item-tag .remove-tag { cursor:pointer; opacity:0.7; font-size:1rem; line-height:1; }
+        .bulk-item-tag .remove-tag:hover { opacity:1; }
+        .animal-checkbox-row { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.2); cursor:pointer; transition:0.15s; }
+        .animal-checkbox-row:hover { background:rgba(20,184,177,0.08); border-color:rgba(20,184,177,0.3); }
+        .animal-checkbox-row input[type=checkbox] { width:18px; height:18px; accent-color:#14b8b1; cursor:pointer; flex-shrink:0; }
+        .label-clinical-bulk { color:#14b8b1; font-weight:800; font-size:1rem; margin-bottom:4px; display:block; }
     </style>
 </head>
 <body>
@@ -355,6 +366,7 @@
                                     <i data-lucide="id-card" class="w-5 h-5"></i> อ่านบัตรประชาชน
                                 </button>
                                 ${!isNew ? `
+                                    <button onclick="openBulkOpdModal('${owner.hn}')" class="btn-base shadow-lg" style="background-color:#7c3aed !important;">🏥 OPD พร้อมกัน</button>
                                     <button onclick="goToConsent('${owner.hn}')" class="btn-base btn-orange shadow-lg">📋 ใบยินยอมรวม</button>
                                     <button onclick="deleteOwner('${owner.hn}', '${owner.owner_name}')" class="btn-base btn-red">🗑️ ลบเจ้าของ</button>
                                 ` : ''}
@@ -696,6 +708,434 @@
                 setTimeout(() => { pri.focus(); pri.print(); document.body.removeChild(iframe); }, 700);
 
             } catch (err) { alert("Error: " + err.message); }
+        }
+
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════
+         BULK OPD MODAL – บันทึก OPD สำหรับหลายตัวพร้อมกัน
+         ═══════════════════════════════════════════════════ -->
+    <div id="bulk-opd-modal" class="bulk-modal-overlay" onclick="if(event.target===this)closeBulkOpdModal()">
+        <div class="bulk-modal-content">
+
+            <!-- Header -->
+            <div class="p-6 border-b border-white/10 flex justify-between items-center" style="background:rgba(124,58,237,0.2)">
+                <div>
+                    <h3 class="text-2xl font-black text-purple-300">🏥 บันทึก OPD พร้อมกัน</h3>
+                    <p class="text-sm text-gray-400 mt-1">กรอกข้อมูลร่วม แล้วติ๊กถูกสัตว์ที่ต้องการบันทึก</p>
+                </div>
+                <button onclick="closeBulkOpdModal()" class="text-gray-400 hover:text-white text-3xl leading-none">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div class="flex-1 overflow-y-auto custom-scroll p-6 space-y-6">
+
+                <!-- Animal selector -->
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="label-clinical-bulk text-lg">🐾 เลือกสัตว์ที่ต้องการบันทึก</span>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-bold text-teal-400">
+                            <input type="checkbox" id="bulk-select-all" style="width:16px;height:16px;accent-color:#14b8b1" onchange="toggleAllBulkAnimals(this)">
+                            เลือกทั้งหมด
+                        </label>
+                    </div>
+                    <div id="bulk-animal-list" class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scroll pr-1"></div>
+                    <div id="bulk-selected-count" class="text-right text-xs text-teal-400 mt-2 font-bold"></div>
+                </div>
+
+                <!-- Visit date + weight row -->
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-4">
+                        <label class="label-clinical-bulk">📅 วันที่รักษา</label>
+                        <input type="text" id="bulk-visit-date" class="input-box datepicker-bulk font-bold text-sky-400">
+                    </div>
+                    <div class="col-span-12 md:col-span-4">
+                        <label class="label-clinical-bulk">📅 วันนัด (1)</label>
+                        <input type="text" id="bulk-appointment" class="input-box datepicker-bulk text-orange-300">
+                    </div>
+                    <div class="col-span-12 md:col-span-4">
+                        <label class="label-clinical-bulk">📝 นัดเพื่อ (1)</label>
+                        <input type="text" id="bulk-appt-note" class="input-box" placeholder="เช่น วัคซีนประจำปี">
+                    </div>
+                </div>
+
+                <!-- CC / Hx row -->
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-6">
+                        <label class="label-clinical-bulk">CC (อาการสำคัญ)</label>
+                        <textarea id="bulk-cc" class="input-box h-20" placeholder="เช่น วัคซีนประจำปี, ตรวจสุขภาพประจำปี..."></textarea>
+                    </div>
+                    <div class="col-span-12 md:col-span-6">
+                        <label class="label-clinical-bulk">Hx (ประวัติ)</label>
+                        <textarea id="bulk-hx" class="input-box h-20" placeholder="ประวัติย้อนหลัง..."></textarea>
+                    </div>
+                </div>
+
+                <!-- PE / Dx row -->
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-6">
+                        <label class="label-clinical-bulk">PE (ตรวจร่างกาย)</label>
+                        <textarea id="bulk-pe" class="input-box h-20" placeholder="ผลการตรวจร่างกาย..."></textarea>
+                    </div>
+                    <div class="col-span-12 md:col-span-6">
+                        <label class="label-clinical-bulk text-yellow-400">Dx (วินิจฉัย)</label>
+                        <textarea id="bulk-dx" class="input-box h-20" placeholder="การวินิจฉัย..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Lab items -->
+                <div>
+                    <label class="label-clinical-bulk text-purple-300">🔬 Lab / หัตถการ</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="bulk-lab-input" class="input-box flex-1" placeholder="พิมพ์ชื่อรายการ Lab แล้วกด Enter…" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkItem('Lab','bulk-lab-input','bulk-lab-tags')}">
+                        <button onclick="addBulkItem('Lab','bulk-lab-input','bulk-lab-tags')" class="btn-base" style="background:#6d28d9 !important;white-space:nowrap">+ เพิ่ม</button>
+                    </div>
+                    <div id="bulk-lab-tags" class="flex flex-wrap gap-2 min-h-[36px] p-2 bg-black/20 rounded-xl border border-white/5"></div>
+                </div>
+
+                <!-- Tx items -->
+                <div>
+                    <label class="label-clinical-bulk text-pink-300">💉 Tx (ยาฉีด / หัตถการ)</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="bulk-tx-input" class="input-box flex-1" placeholder="พิมพ์ชื่อรายการ Tx แล้วกด Enter…" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkItem('Tx','bulk-tx-input','bulk-tx-tags')}">
+                        <button onclick="addBulkItem('Tx','bulk-tx-input','bulk-tx-tags')" class="btn-base" style="background:#be185d !important;white-space:nowrap">+ เพิ่ม</button>
+                    </div>
+                    <div id="bulk-tx-tags" class="flex flex-wrap gap-2 min-h-[36px] p-2 bg-black/20 rounded-xl border border-white/5"></div>
+                </div>
+
+                <!-- Rx items -->
+                <div>
+                    <label class="label-clinical-bulk text-green-300">💊 Rx (ยากลับบ้าน)</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="bulk-rx-input" class="input-box flex-1" placeholder="พิมพ์ชื่อรายการ Rx แล้วกด Enter…" onkeydown="if(event.key==='Enter'){event.preventDefault();addBulkItem('Rx','bulk-rx-input','bulk-rx-tags')}">
+                        <button onclick="addBulkItem('Rx','bulk-rx-input','bulk-rx-tags')" class="btn-base" style="background:#047857 !important;white-space:nowrap">+ เพิ่ม</button>
+                    </div>
+                    <div id="bulk-rx-tags" class="flex flex-wrap gap-2 min-h-[36px] p-2 bg-black/20 rounded-xl border border-white/5"></div>
+                </div>
+
+                <!-- Plan -->
+                <div>
+                    <label class="label-clinical-bulk">Plan (แผนการรักษาต่อ)</label>
+                    <input type="text" id="bulk-plan" class="input-box" placeholder="แผนการรักษาต่อ...">
+                </div>
+
+            </div><!-- end body -->
+
+            <!-- Footer -->
+            <div class="p-6 border-t border-white/10 flex gap-3 flex-wrap" style="background:rgba(0,0,0,0.3)">
+                <button onclick="closeBulkOpdModal()" class="btn-base btn-gray px-8">ยกเลิก</button>
+                <button onclick="saveBulkOpd()" class="btn-base flex-1 text-xl py-4 shadow-2xl" style="background:#7c3aed !important;">
+                    💾 บันทึก OPD ทั้งหมดที่เลือก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ════════════════════════════════════════════
+           BULK OPD – state & helpers
+           ════════════════════════════════════════════ */
+        let bulkItems = { Lab: [], Tx: [], Rx: [] };
+        let bulkOpdOwnerHn = null;
+        let _bulkVisitPicker = null;
+        let _bulkApptPicker  = null;
+
+        const BULK_ITEM_COLORS = {
+            Lab: { bg: '#4c1d95', border: '#7c3aed', text: '#c4b5fd' },
+            Tx:  { bg: '#831843', border: '#db2777', text: '#f9a8d4' },
+            Rx:  { bg: '#064e3b', border: '#059669', text: '#6ee7b7' }
+        };
+
+        function openBulkOpdModal(ownerHn) {
+            bulkOpdOwnerHn = ownerHn;
+            bulkItems = { Lab: [], Tx: [], Rx: [] };
+
+            // Reset form fields
+            ['bulk-cc','bulk-hx','bulk-pe','bulk-dx','bulk-plan','bulk-appt-note'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            ['bulk-lab-tags','bulk-tx-tags','bulk-rx-tags'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '';
+            });
+
+            // Init datepickers
+            if (_bulkVisitPicker) _bulkVisitPicker.destroy();
+            if (_bulkApptPicker) _bulkApptPicker.destroy();
+            const dpCfg = {
+                locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y",
+                onReady: (_, dateStr, inst) => {
+                    if (dateStr && inst.altInput) {
+                        const y = new Date(dateStr).getFullYear();
+                        inst.altInput.value = inst.altInput.value.replace(String(y), String(y + 543));
+                    }
+                },
+                onChange: (_, dateStr, inst) => {
+                    if (dateStr && inst.altInput) {
+                        const y = new Date(dateStr).getFullYear();
+                        inst.altInput.value = inst.altInput.value.replace(String(y), String(y + 543));
+                    }
+                }
+            };
+            _bulkVisitPicker = flatpickr('#bulk-visit-date', { ...dpCfg, defaultDate: 'today' });
+            _bulkApptPicker  = flatpickr('#bulk-appointment', dpCfg);
+
+            // Build animal list
+            const pets = allAnimals.filter(a => a.owner_hn === ownerHn);
+            const list = document.getElementById('bulk-animal-list');
+            document.getElementById('bulk-select-all').checked = false;
+
+            if (pets.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-sm col-span-2">ไม่พบสัตว์ในเจ้าของนี้</p>';
+            } else {
+                list.innerHTML = '';
+                pets.forEach(p => {
+                    const icon = p.pet_type === 'สุนัข' ? '🐶' : (p.pet_type === 'แมว' ? '🐱' : '🐾');
+                    const label = document.createElement('label');
+                    label.className = 'animal-checkbox-row';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.className = 'bulk-animal-cb';
+                    cb.value = p.id;
+                    cb.onchange = updateBulkCount;
+
+                    const iconSpan = document.createElement('span');
+                    iconSpan.className = 'text-lg';
+                    iconSpan.textContent = icon;
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'font-bold text-white flex-1';
+                    nameSpan.textContent = p.pet_name || '-';
+
+                    const infoSpan = document.createElement('span');
+                    infoSpan.className = 'text-xs text-gray-400';
+                    infoSpan.textContent = [p.pet_type, p.gender].filter(Boolean).join(' ');
+
+                    label.append(cb, iconSpan, nameSpan, infoSpan);
+                    list.appendChild(label);
+                });
+            }
+            updateBulkCount();
+            document.getElementById('bulk-opd-modal').style.display = 'flex';
+        }
+
+        function closeBulkOpdModal() {
+            document.getElementById('bulk-opd-modal').style.display = 'none';
+        }
+
+        function toggleAllBulkAnimals(masterCb) {
+            document.querySelectorAll('.bulk-animal-cb').forEach(cb => { cb.checked = masterCb.checked; });
+            updateBulkCount();
+        }
+
+        function updateBulkCount() {
+            const checked = document.querySelectorAll('.bulk-animal-cb:checked').length;
+            const total   = document.querySelectorAll('.bulk-animal-cb').length;
+            document.getElementById('bulk-selected-count').textContent =
+                checked > 0 ? `เลือกแล้ว ${checked} / ${total} ตัว` : '';
+            document.getElementById('bulk-select-all').checked = (total > 0 && checked === total);
+            document.getElementById('bulk-select-all').indeterminate = (checked > 0 && checked < total);
+        }
+
+        function addBulkItem(type, inputId, tagContainerId) {
+            const input = document.getElementById(inputId);
+            const name = (input.value || '').trim();
+            if (!name) return;
+            if (bulkItems[type].includes(name)) { input.value = ''; return; }
+            bulkItems[type].push(name);
+            input.value = '';
+
+            const c = BULK_ITEM_COLORS[type];
+            const tag = document.createElement('span');
+            tag.className = 'bulk-item-tag';
+            tag.style.cssText = `background:${c.bg};border:1px solid ${c.border};color:${c.text}`;
+            tag.dataset.type = type;
+            tag.dataset.name = name;
+
+            const nameText = document.createTextNode(name + ' ');
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'remove-tag';
+            removeBtn.textContent = '✕';
+            removeBtn.onclick = () => removeBulkItem(type, tag);
+            tag.appendChild(nameText);
+            tag.appendChild(removeBtn);
+            document.getElementById(tagContainerId).appendChild(tag);
+        }
+
+        function removeBulkItem(type, tagEl) {
+            const name = tagEl.dataset.name;
+            bulkItems[type] = bulkItems[type].filter(n => n !== name);
+            tagEl.remove();
+        }
+
+        async function saveBulkOpd() {
+            const selectedCbs = [...document.querySelectorAll('.bulk-animal-cb:checked')];
+            if (selectedCbs.length === 0) {
+                alert('⚠️ กรุณาเลือกสัตว์อย่างน้อย 1 ตัว');
+                return;
+            }
+
+            const visitDate   = document.getElementById('bulk-visit-date').value || new Date().toISOString().split('T')[0];
+            const cc          = document.getElementById('bulk-cc').value;
+            const hx          = document.getElementById('bulk-hx').value;
+            const pe          = document.getElementById('bulk-pe').value;
+            const dx          = document.getElementById('bulk-dx').value;
+            const plan        = document.getElementById('bulk-plan').value;
+            const appointment = document.getElementById('bulk-appointment').value || null;
+            const apptNote    = document.getElementById('bulk-appt-note').value;
+
+            const btn = document.querySelector('#bulk-opd-modal .flex-1.text-xl');
+            btn.disabled = true;
+            btn.textContent = '⏳ กำลังบันทึก...';
+
+            try {
+                let savedCount = 0;
+                const savedAnimalIds = [];
+                const failedPets = [];
+
+                for (const cb of selectedCbs) {
+                    const animalId = cb.value;
+                    const pet = allAnimals.find(a => String(a.id) === String(animalId));
+                    if (!pet) { failedPets.push(animalId); continue; }
+
+                    const headerData = {
+                        animal_id:         animalId,
+                        owner_hn:          bulkOpdOwnerHn,
+                        created_at:        visitDate,
+                        weight:            pet.weight || 0,
+                        cc, hx, pe, dx, plan,
+                        appointment,
+                        appointment_note:  apptNote,
+                        appointment_2:     null,
+                        appointment_note_2:'',
+                        total_cost:        0,
+                        payment_status:    (bulkItems.Lab.length + bulkItems.Tx.length + bulkItems.Rx.length) > 0 ? 'pending' : 'no_charge',
+                        dld_categories:    []
+                    };
+
+                    const { data: record, error: recErr } = await db
+                        .from('medical_records')
+                        .insert([headerData])
+                        .select()
+                        .single();
+
+                    if (recErr) {
+                        console.error('บันทึกไม่สำเร็จ (' + (pet.pet_name || animalId) + '):', recErr);
+                        failedPets.push(pet.pet_name || animalId);
+                        continue;
+                    }
+
+                    const itemInserts = [
+                        ...bulkItems.Lab.map(name => ({ record_id: record.id, item_type: 'Lab', item_name: name, quantity: 1, unit_price: 0, total_price: 0 })),
+                        ...bulkItems.Tx.map(name  => ({ record_id: record.id, item_type: 'Tx',  item_name: name, quantity: 1, unit_price: 0, total_price: 0 })),
+                        ...bulkItems.Rx.map(name  => ({ record_id: record.id, item_type: 'Rx',  item_name: name, quantity: 1, unit_price: 0, total_price: 0 }))
+                    ];
+
+                    if (itemInserts.length > 0) {
+                        const { error: itemErr } = await db.from('medical_record_items').insert(itemInserts);
+                        if (itemErr) {
+                            console.error('บันทึก items ไม่สำเร็จ (' + (pet.pet_name || animalId) + '):', itemErr);
+                            // Roll back the header record to avoid orphan
+                            await db.from('medical_records').delete().eq('id', record.id);
+                            failedPets.push(pet.pet_name || animalId);
+                            continue;
+                        }
+                    }
+
+                    savedCount++;
+                    savedAnimalIds.push(animalId);
+                }
+
+                closeBulkOpdModal();
+
+                let resultMsg = `✅ บันทึก OPD สำเร็จ ${savedCount} ตัว`;
+                if (failedPets.length > 0) resultMsg += `\n⚠️ บันทึกไม่สำเร็จ: ${failedPets.join(', ')}`;
+
+                // Offer to print appointment labels
+                if (savedCount > 0 && appointment) {
+                    const doPrint = confirm(resultMsg + '\n\nต้องการพิมพ์ใบนัดหมายสำหรับสัตว์ที่บันทึกสำเร็จด้วยหรือไม่?');
+                    if (doPrint) {
+                        await printBulkApptLabels(savedAnimalIds, appointment, apptNote);
+                    }
+                } else {
+                    alert(resultMsg);
+                }
+
+                await loadData();
+
+            } catch (err) {
+                console.error(err);
+                alert('❌ เกิดข้อผิดพลาด: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 บันทึก OPD ทั้งหมดที่เลือก';
+            }
+        }
+
+        async function printBulkApptLabels(animalIds, appointmentDate, appointmentNote) {
+            try {
+                const { data: t } = await db
+                    .from('print_templates')
+                    .select('config')
+                    .eq('template_type', 'sticker_appt')
+                    .single();
+                if (!t) { alert('ไม่พบ Template ใบนัด (sticker_appt)'); return; }
+
+                const config = t.config;
+                const px = 3.78;
+                const apptDateDisplay = appointmentDate
+                    ? formatThaiDate(appointmentDate)
+                    : '-';
+
+                const dataList = animalIds.map(id => {
+                    const pet   = allAnimals.find(a => String(a.id) === String(id));
+                    const owner = allOwners.find(o => o.hn === (pet?.owner_hn));
+                    return {
+                        clinic_name:        'PK-VMS Animal Clinic',
+                        owner_name:         owner?.owner_name || '-',
+                        pet_name:           pet?.pet_name || '-',
+                        hn:                 pet?.owner_hn || '-',
+                        appointment_date_1: apptDateDisplay,
+                        appointment_note_1: appointmentNote || '-',
+                        appointment_date_2: '-',
+                        appointment_note_2: '-',
+                        date:               formatThaiDate(new Date().toISOString().split('T')[0], 'short')
+                    };
+                });
+
+                const pw = window.open('', '_blank');
+                let html = `<html><head>
+                    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                    <style>
+                        body { margin:0; padding:0; font-family:'Sarabun',sans-serif; }
+                        .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; }
+                        .elem { position:absolute; color:black; line-height:1.2; }
+                        @page { size:${config.width}mm ${config.height}mm; margin:0; }
+                    </style>
+                </head><body>`;
+
+                dataList.forEach(data => {
+                    html += `<div class="sticker">`;
+                    config.lines.forEach(l => {
+                        let txt = (l.text || '').replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || '');
+                        let style = `top:${l.y * px}px; font-family:'Sarabun',sans-serif; font-size:${(l.size || 12) * 1.33}px; font-weight:${l.bold ? 'bold' : 'normal'};`;
+                        if (l.align === 'center')      style += `left:0; width:100%; text-align:center;`;
+                        else if (l.align === 'right')  style += `right:${l.x * px}px; text-align:right;`;
+                        else                           style += `left:${l.x * px}px;`;
+                        html += `<div class="elem" style="${style}">${txt}</div>`;
+                    });
+                    html += `</div>`;
+                });
+
+                html += `</body><script>window.onload=()=>{setTimeout(()=>{window.print();window.close();},800);};<\/script></html>`;
+                pw.document.write(html);
+                pw.document.close();
+
+            } catch (err) {
+                alert('พิมพ์ไม่สำเร็จ: ' + err.message);
+            }
         }
 
         window.onload = async () => {
