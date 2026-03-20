@@ -233,6 +233,40 @@
         </div>
     </div>
 
+    <!-- Combined Payment Modal -->
+    <div id="combined-payment-modal" class="modal-overlay" style="z-index:200;">
+        <div class="modal-content !max-w-lg">
+            <div class="p-8 border-b border-white/10 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-2xl font-black flex items-center gap-3"><i data-lucide="receipt" class="text-teal-400 w-7 h-7"></i> รวมใบเสร็จ – เจ้าของเดียวกัน</h3>
+                <button onclick="closeCombinedModal()" class="text-gray-400 hover:text-white transition-colors text-3xl">✕</button>
+            </div>
+            <div id="combined-items-container" class="flex-1 overflow-y-auto p-6 custom-scroll space-y-3"></div>
+            <div class="p-6 border-t border-white/10 space-y-4">
+                <div class="flex justify-between text-lg">
+                    <span class="text-gray-400">รวมยอด</span>
+                    <span id="combined-sum-total" class="font-black text-white text-xl">0.00</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="txt-label text-red-400 text-sm">ส่วนลด (฿)</span>
+                    <input type="number" id="combined-discount" class="search-input w-28 text-right p-2 font-bold text-lg" value="0" oninput="calcCombinedNet()">
+                </div>
+                <div class="pt-4 border-t border-white/10 flex justify-between items-end">
+                    <label class="txt-label text-teal-400 text-sm">ยอดสุทธิ</label>
+                    <div class="text-4xl font-black text-white" id="combined-net-total">0.00</div>
+                </div>
+                <input type="number" id="combined-received-cash" class="search-input h-16 text-center text-amber-400 text-2xl w-full font-black" placeholder="รับเงินสด 0.00" oninput="calcCombinedChange()">
+                <div class="flex justify-between items-center">
+                    <span class="txt-label text-sm">เงินทอน</span>
+                    <span id="combined-change" class="text-3xl font-black text-white">0.00</span>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-4">
+                <button onclick="closeCombinedModal()" class="flex-1 h-14 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-bold transition">ยกเลิก</button>
+                <button onclick="processCombinedPayment()" class="flex-1 h-14 bg-teal-500 hover:bg-teal-400 rounded-xl font-black text-lg transition">✅ ยืนยัน & พิมพ์ใบเสร็จ</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
         let allPatients = [], activeRecordId = null, activePatient = null;
@@ -241,6 +275,7 @@
         let pendingRecordsMap = {};
         let customerWindow = null;
         const customerChannel = new BroadcastChannel('pos_customer');
+        let combinedOwnerHn = null, combinedRecords = [];
 
         const SCHEMA_MIGRATION_MSG = '⚠️ ฐานข้อมูลยังไม่ได้รัน Migration SQL\n\nกรุณาไปที่ Settings (set-db.html) → อัปเดต Schema ฐานข้อมูล แล้ว Copy SQL ไปรันใน Supabase → SQL Editor';
 
@@ -369,14 +404,33 @@
                 container.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">ไม่มีรายการรอชำระ</p>';
                 return;
             }
-            container.innerHTML = list.map(r => `
-                <div class="glass-card border-l-4 border-l-amber-500" onclick="loadPendingRecord('${r.id}')">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-amber-400 font-bold text-sm">🐾 ${r.pet_name}</span>
-                        <span class="text-amber-400 font-bold text-sm">฿${parseFloat(r.net_amount || r.total_cost || 0).toLocaleString()}</span>
-                    </div>
-                    <div class="text-gray-400 text-[11px]">${r.owner_hn} | ${formatThaiDate(r.created_at, 'short')}</div>
-                </div>`).join('');
+            // Group by owner_hn to detect owners with multiple pending pets
+            const groups = {};
+            list.forEach(r => {
+                if (!groups[r.owner_hn]) groups[r.owner_hn] = { owner_name: r.owner_name, records: [] };
+                groups[r.owner_hn].records.push(r);
+            });
+            container.innerHTML = Object.entries(groups).map(([hn, g]) => {
+                const cards = g.records.map(r => `
+                    <div class="glass-card border-l-4 border-l-amber-500" onclick="loadPendingRecord('${r.id}')">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-amber-400 font-bold text-sm">🐾 ${r.pet_name}</span>
+                            <span class="text-amber-400 font-bold text-sm">฿${parseFloat(r.net_amount || r.total_cost || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="text-gray-400 text-[11px]">${r.owner_hn} | ${formatThaiDate(r.created_at, 'short')}</div>
+                    </div>`).join('');
+                if (g.records.length > 1) {
+                    const totalAmt = g.records.reduce((s, r) => s + parseFloat(r.net_amount || r.total_cost || 0), 0);
+                    return `<div class="border border-amber-500/30 rounded-xl p-2 bg-amber-500/5 space-y-2">
+                        <div class="flex justify-between items-center px-2 py-1">
+                            <span class="text-amber-300 font-bold text-xs">👤 ${g.owner_name} (${g.records.length} ตัว)</span>
+                            <button onclick="event.stopPropagation(); openCombinedPaymentModal('${hn}')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded-lg font-bold">🧾 รวมใบเสร็จ</button>
+                        </div>
+                        ${cards}
+                    </div>`;
+                }
+                return cards;
+            }).join('');
         }
 
         async function loadPendingRecord(recordId) {
@@ -717,6 +771,171 @@
             const { data } = await db.from('medical_records').select('net_amount').eq('payment_status', 'paid').gte('paid_at', startDate);
             const total = data ? data.reduce((sum, row) => sum + parseFloat(row.net_amount || 0), 0) : 0;
             return { total, count: data ? data.length : 0 };
+        }
+
+        /* ─── Combined Receipt (multiple pets, same owner) ─── */
+        async function openCombinedPaymentModal(ownerHn) {
+            combinedOwnerHn = ownerHn;
+            combinedRecords = [];
+            const { data: records } = await db.from('medical_records')
+                .select('*, animals(pet_name), owners(owner_name, phone, address)')
+                .eq('owner_hn', ownerHn)
+                .eq('payment_status', 'pending');
+            if (!records || records.length === 0) { alert('ไม่พบรายการรอชำระ'); return; }
+            for (const rec of records) {
+                const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', rec.id);
+                combinedRecords.push({ record: rec, items: items || [], petName: rec.animals?.pet_name || '-' });
+            }
+            const ownerName = records[0]?.owners?.owner_name || ownerHn;
+            renderCombinedItems(ownerName);
+            const grandTotal = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
+            document.getElementById('combined-sum-total').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('combined-discount').value = 0;
+            document.getElementById('combined-received-cash').value = '';
+            calcCombinedNet();
+            document.getElementById('combined-payment-modal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function renderCombinedItems(ownerName) {
+            const container = document.getElementById('combined-items-container');
+            let html = `<div class="mb-3 txt-label">เจ้าของ: <span class="text-white font-black text-base">${ownerName}</span></div>`;
+            for (const cr of combinedRecords) {
+                html += `<div class="bg-white/5 rounded-xl p-4">
+                    <div class="font-black text-teal-400 mb-2 text-base">🐾 ${cr.petName}</div>
+                    <div class="space-y-1">`;
+                for (const item of cr.items) {
+                    html += `<div class="flex justify-between text-sm">
+                        <span class="text-white">${item.item_name} x${Math.floor(item.quantity)}</span>
+                        <span class="text-gray-300">${parseFloat(item.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>`;
+                }
+                html += `<div class="flex justify-between font-bold mt-2 pt-2 border-t border-white/10 text-sm">
+                    <span class="text-gray-400">รวม</span>
+                    <span class="text-white">฿${parseFloat(cr.record.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                </div></div></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function calcCombinedNet() {
+            const sum = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
+            const disc = parseFloat(document.getElementById('combined-discount').value) || 0;
+            document.getElementById('combined-net-total').innerText = (sum - disc).toLocaleString(undefined, {minimumFractionDigits: 2});
+            calcCombinedChange();
+        }
+
+        function calcCombinedChange() {
+            const net = parseFloat(document.getElementById('combined-net-total').innerText.replace(/,/g, '')) || 0;
+            const recv = parseFloat(document.getElementById('combined-received-cash').value) || 0;
+            document.getElementById('combined-change').innerText = (recv - net > 0 ? recv - net : 0).toLocaleString(undefined, {minimumFractionDigits: 2});
+        }
+
+        function closeCombinedModal() {
+            document.getElementById('combined-payment-modal').style.display = 'none';
+        }
+
+        async function processCombinedPayment() {
+            const net = parseFloat(document.getElementById('combined-net-total').innerText.replace(/,/g, '')) || 0;
+            const recvd = parseFloat(document.getElementById('combined-received-cash').value) || 0;
+            if (recvd < net) { alert('เงินรับมาไม่พอ'); return; }
+            const totalDiscount = parseFloat(document.getElementById('combined-discount').value) || 0;
+            const grandTotal = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
+            const now = new Date();
+            const yyyy = now.getFullYear() + 543, mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+            const { count } = await db.from('medical_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'paid').gte('paid_at', startOfDay);
+            const receiptNo = `${yyyy}${mm}${dd}${combinedOwnerHn}C${String((count || 0) + 1).padStart(2, '0')}`;
+            for (let i = 0; i < combinedRecords.length; i++) {
+                const cr = combinedRecords[i];
+                const recDiscount = grandTotal > 0 ? (parseFloat(cr.record.total_cost || 0) / grandTotal) * totalDiscount : 0;
+                const recNet = parseFloat(cr.record.total_cost || 0) - recDiscount;
+                await db.from('medical_records').update({
+                    payment_status: 'paid', receipt_no: receiptNo,
+                    discount: recDiscount, net_amount: recNet,
+                    received_amount: i === 0 ? recvd : 0,
+                    paid_at: now.toISOString()
+                }).eq('id', cr.record.id);
+            }
+            alert('ชำระเงินสำเร็จ!');
+            closeCombinedModal();
+            await printCombinedReceipt(receiptNo, recvd, net, totalDiscount, now);
+            fetchPendingPayments();
+            if (activePatient && activePatient.hn === combinedOwnerHn) {
+                loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
+            }
+        }
+
+        async function printCombinedReceipt(receiptNo, receivedAmt, netAmt, discountAmt, paidAt) {
+            try {
+                const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
+                if (!template) { return alert('กรุณาตั้งค่า Template'); }
+                const config = template.config, pw = config.width || 80;
+                const ownerRec = combinedRecords[0]?.record;
+                const ownerName = ownerRec?.owners?.owner_name || '-';
+                const allItems = combinedRecords.flatMap(cr => cr.items);
+                let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">`;
+                for (const cr of combinedRecords) {
+                    itemsHtml += `<tr><td colspan="2" style="font-weight:bold; padding-top:6px; padding-bottom:2px;">🐾 ${cr.petName}</td></tr>`;
+                    for (const item of cr.items) {
+                        itemsHtml += `<tr><td style="text-align:left; padding-left:8px;">${item.item_name} x${Math.floor(item.quantity)}</td><td style="text-align:right;">${parseFloat(item.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
+                    }
+                }
+                itemsHtml += `</table>`;
+                const printData = {
+                    clinic_name: "PK-VMS Animal Clinic",
+                    clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
+                    phone: "02-123-4567", tax_id: "0105560001234",
+                    owner_name: ownerName,
+                    owner_phone: ownerRec?.owners?.phone || "-",
+                    owner_address: ownerRec?.owners?.address || "-",
+                    pet_name: combinedRecords.map(cr => cr.petName).join(', '),
+                    species: "-", sex: "-", weight: "-", breed: "-",
+                    hn: combinedOwnerHn || "-",
+                    receipt_no: receiptNo || "-",
+                    time: (paidAt || new Date()).toLocaleTimeString('th-TH'),
+                    total_price: combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    discount_val: parseFloat(discountAmt || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    net_total: parseFloat(netAmt || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    received_amount: parseFloat(receivedAmt || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    change_amount: (parseFloat(receivedAmt || 0) - parseFloat(netAmt || 0)).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    date: formatThaiDate((paidAt || new Date()).toISOString()),
+                    items_list: itemsHtml
+                };
+                const ph = config.height || 297;
+                let pushOffset = 0;
+                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
+                    const base = `position:absolute; top:${parseFloat(l.y)+pushOffset}mm; left:${l.x}mm;`;
+                    if (l.type === 'image') {
+                        return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                    } else if (l.type === 'rect') {
+                        return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
+                    } else {
+                        let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
+                        if (l.text?.includes("{{items_list}}")) pushOffset += (allItems.length + combinedRecords.length - 1) * 5;
+                        const fw = l.bold ? 'font-weight:bold;' : '';
+                        const fs = l.italic ? 'font-style:italic;' : '';
+                        const td = l.underline ? 'text-decoration:underline;' : '';
+                        const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' :
+                                           l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
+                        const widthStyle = alignStyle ? '' : `width:${pw - parseFloat(l.x)}mm;`;
+                        return `<div style="${base} ${widthStyle} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
+                    }
+                }).join('');
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
+                document.body.appendChild(iframe);
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`);
+                iframeDoc.close();
+                iframe.contentWindow.document.fonts.ready.then(function() {
+                    iframe.contentWindow.addEventListener('afterprint', function() {
+                        try { document.body.removeChild(iframe); } catch(e) { console.warn('Failed to remove print iframe:', e); }
+                    }, { once: true });
+                    iframe.contentWindow.print();
+                });
+            } catch (e) { alert("ข้อผิดพลาดในการพิมพ์: " + e.message); }
         }
     </script>
 </body>

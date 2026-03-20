@@ -856,6 +856,11 @@
             <div class="p-4 bg-white/5">
                 <input type="text" id="bulk-catalog-search" class="input-box" placeholder="ค้นหา..." oninput="filterBulkCatalog()">
             </div>
+            <div class="px-4 py-3 bg-amber-500/5 border-t border-amber-500/20 flex gap-3 items-center">
+                <input type="text" id="bulk-custom-item-name" class="input-box flex-1" placeholder="พิมพ์ชื่อรายการเอง...">
+                <input type="number" id="bulk-custom-item-price" class="input-box w-28 text-right" placeholder="ราคา" step="0.01" min="0">
+                <button onclick="addBulkCustomItem()" class="btn-base btn-teal px-4 shrink-0">➕ เพิ่ม</button>
+            </div>
             <div id="bulk-catalog-items" class="flex-1 overflow-y-auto p-4 space-y-3 bg-black/20 custom-scroll"></div>
             <div class="p-5 bg-teal-500/10 border-t border-teal-500/20">
                 <div id="bulk-modal-session-list" class="flex flex-wrap gap-3"></div>
@@ -1181,6 +1186,16 @@
             const t = document.getElementById('bulk-catalog-search').value.toLowerCase();
             bulkDisplayedItems = bulkFullCatalog.filter(i => i.name.toLowerCase().includes(t));
             renderBulkCatalog();
+        }
+
+        function addBulkCustomItem() {
+            const name = document.getElementById('bulk-custom-item-name').value.trim();
+            const price = parseFloat(document.getElementById('bulk-custom-item-price').value) || 0;
+            if (!name) { alert('กรุณาพิมพ์ชื่อรายการ'); return; }
+            const type = bulkCurrentCatalogType === 'rx' ? 'Rx' : bulkCurrentCatalogType === 'tx' ? 'Tx' : 'Lab';
+            addBulkItemFromCatalog(type, name, price);
+            document.getElementById('bulk-custom-item-name').value = '';
+            document.getElementById('bulk-custom-item-price').value = '';
         }
 
         function renderBulkCatalog() {
