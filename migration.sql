@@ -4,6 +4,23 @@
 -- ═══════════════════════════════════════════════════════════════
 
 -- ═══════════════════════════════════════════════════════════════
+-- สร้างตาราง pos_pending_additions
+-- บันทึกรายการสินค้าที่ถูกเพิ่มขณะรายการขายอยู่ในสถานะ 'รอจ่ายเงิน'
+-- เพื่อให้สามารถติดตามได้ว่าสินค้าใดถูกเพิ่มช่วงรอจ่ายเงิน
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS pos_pending_additions (
+  id          BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  record_id   UUID NOT NULL REFERENCES medical_records(id) ON DELETE CASCADE,
+  item_type   TEXT,
+  item_name   TEXT NOT NULL,
+  quantity    NUMERIC(10,3) NOT NULL DEFAULT 1,
+  unit_price  NUMERIC(12,2) NOT NULL DEFAULT 0,
+  total_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  added_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ═══════════════════════════════════════════════════════════════
 -- สร้างตาราง clinic_table_db สำหรับนำเข้าข้อมูลจาก ClinicDB.mdb
 -- ═══════════════════════════════════════════════════════════════
 
