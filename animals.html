@@ -286,8 +286,10 @@
                 const phones = _allPhonesMap.get(item.owner_hn) || [];
                 const address = (owner?.address || '').toLowerCase();
                 const ownerName = (owner?.owner_name || '').toLowerCase();
+                const lineId = (owner?.line_id || '').toLowerCase();
+                const email = (owner?.email || '').toLowerCase();
                 const basicMatch = item.owner_hn.includes(term) || ownerName.includes(term) ||
-                    phones.some(p => p.includes(term)) || address.includes(term);
+                    phones.some(p => p.includes(term)) || address.includes(term) || lineId.includes(term) || email.includes(term);
                 if (item._ownerOnly) {
                     return basicMatch;
                 }
@@ -337,7 +339,7 @@
             renderForm(owner, pets, phones);
         }
 
-        function createNewForm() { renderForm({ hn: '', owner_name: '', address: '' }, [], []); document.getElementById('f_hn').focus(); }
+        function createNewForm() { renderForm({ hn: '', owner_name: '', address: '', line_id: '', email: '' }, [], []); document.getElementById('f_hn').focus(); }
 
         function renderForm(owner, pets, phones = []) {
             const formView = document.getElementById('form-view');
@@ -368,6 +370,9 @@
                             <div class="col-span-5"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><input type="text" id="f_owner_name" class="input-box" value="${owner.owner_name || ''}"></div>
                             <div class="col-span-2"><label class="label-text">เบอร์โทรศัพท์หลัก</label><input type="tel" id="f_phone1" class="input-box text-teal-400 font-bold" value="${phones.find(p=>p.label==='เบอร์หลัก')?.phone_number || ''}"></div>
                             <div class="col-span-2"><label class="label-text">เบอร์โทรศัพท์สำรอง</label><input type="tel" id="f_phone2" class="input-box" value="${phones.find(p=>p.label==='เบอร์สำรอง')?.phone_number || ''}"></div>
+                            <div class="col-span-3"><label class="label-text">LINE ID</label><input type="text" id="f_line_id" class="input-box" value="${owner.line_id || ''}"></div>
+                            <div class="col-span-3"><label class="label-text">E-mail</label><input type="email" id="f_email" class="input-box" value="${owner.email || ''}"></div>
+                            <div class="col-span-6"></div>
                             <div class="col-span-12"><label class="label-text">ที่อยู่ปัจจุบัน</label><input type="text" id="f_address" class="input-box" value="${owner.address || ''}"></div>
                         </div>
                     </div>
@@ -553,7 +558,14 @@
             }
 
             try {
-                const { error: ownerErr } = await db.from('owners').upsert({ hn, owner_name: name, address: document.getElementById('f_address').value }, { onConflict: 'hn' });
+                const ownerData = {
+                    hn,
+                    owner_name: name,
+                    address: document.getElementById('f_address').value,
+                    line_id: document.getElementById('f_line_id').value.trim() || null,
+                    email: document.getElementById('f_email').value.trim() || null
+                };
+                const { error: ownerErr } = await db.from('owners').upsert(ownerData, { onConflict: 'hn' });
                 if (ownerErr) throw ownerErr;
 
                 const { error: delErr } = await db.from('owner_phones').delete().eq('owner_hn', hn);

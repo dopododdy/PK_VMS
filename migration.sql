@@ -63,6 +63,14 @@ UPDATE medical_records
 ALTER TABLE owners
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
+-- ═══════════════════════════════════════════════════════════════
+-- เพิ่ม line_id และ email ในตาราง owners สำหรับข้อมูลเจ้าของสัตว์
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE owners
+  ADD COLUMN IF NOT EXISTS line_id TEXT,
+  ADD COLUMN IF NOT EXISTS email   TEXT;
+
 ALTER TABLE animals
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
