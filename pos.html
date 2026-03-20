@@ -799,22 +799,31 @@
 
         function renderCombinedItems(ownerName) {
             const container = document.getElementById('combined-items-container');
+            const numAnimals = combinedRecords.length;
             let html = `<div class="mb-3 txt-label">เจ้าของ: <span class="text-white font-black text-base">${ownerName}</span></div>`;
+            const itemMap = {};
             for (const cr of combinedRecords) {
-                html += `<div class="bg-white/5 rounded-xl p-4">
-                    <div class="font-black text-teal-400 mb-2 text-base">🐾 ${cr.petName}</div>
-                    <div class="space-y-1">`;
                 for (const item of cr.items) {
-                    html += `<div class="flex justify-between text-sm">
-                        <span class="text-white">${item.item_name} x${Math.floor(item.quantity)}</span>
-                        <span class="text-gray-300">${parseFloat(item.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                    </div>`;
+                    if (!itemMap[item.item_name]) {
+                        itemMap[item.item_name] = { quantity: item.quantity, totalPrice: 0 };
+                    }
+                    itemMap[item.item_name].totalPrice += parseFloat(item.total_price);
                 }
-                html += `<div class="flex justify-between font-bold mt-2 pt-2 border-t border-white/10 text-sm">
-                    <span class="text-gray-400">รวม</span>
-                    <span class="text-white">฿${parseFloat(cr.record.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                </div></div></div>`;
             }
+            const grandTotal = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
+            html += `<div class="bg-white/5 rounded-xl p-4">
+                <div class="font-black text-teal-400 mb-2 text-base">🐾 จำนวน ${numAnimals} ตัว</div>
+                <div class="space-y-1">`;
+            for (const [itemName, data] of Object.entries(itemMap)) {
+                html += `<div class="flex justify-between text-sm">
+                    <span class="text-white">${itemName} x${Math.floor(data.quantity)} จำนวน ${numAnimals} ตัว</span>
+                    <span class="text-gray-300">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                </div>`;
+            }
+            html += `<div class="flex justify-between font-bold mt-2 pt-2 border-t border-white/10 text-sm">
+                <span class="text-gray-400">รวม</span>
+                <span class="text-white">฿${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+            </div></div></div>`;
             container.innerHTML = html;
         }
 
@@ -873,13 +882,19 @@
                 const config = template.config, pw = config.width || 80;
                 const ownerRec = combinedRecords[0]?.record;
                 const ownerName = ownerRec?.owners?.owner_name || '-';
-                const allItems = combinedRecords.flatMap(cr => cr.items);
-                let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">`;
+                const numAnimals = combinedRecords.length;
+                const itemMap = {};
                 for (const cr of combinedRecords) {
-                    itemsHtml += `<tr><td colspan="2" style="font-weight:bold; padding-top:6px; padding-bottom:2px;">🐾 ${cr.petName}</td></tr>`;
                     for (const item of cr.items) {
-                        itemsHtml += `<tr><td style="text-align:left; padding-left:8px;">${item.item_name} x${Math.floor(item.quantity)}</td><td style="text-align:right;">${parseFloat(item.total_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
+                        if (!itemMap[item.item_name]) {
+                            itemMap[item.item_name] = { quantity: item.quantity, totalPrice: 0 };
+                        }
+                        itemMap[item.item_name].totalPrice += parseFloat(item.total_price);
                     }
+                }
+                let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">`;
+                for (const [itemName, data] of Object.entries(itemMap)) {
+                    itemsHtml += `<tr><td style="text-align:left;">${itemName} x${Math.floor(data.quantity)} จำนวน ${numAnimals} ตัว</td><td style="text-align:right;">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
                 }
                 itemsHtml += `</table>`;
                 const printData = {
@@ -912,7 +927,7 @@
                         return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
                     } else {
                         let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
-                        if (l.text?.includes("{{items_list}}")) pushOffset += (allItems.length + combinedRecords.length - 1) * 5;
+                        if (l.text?.includes("{{items_list}}")) pushOffset += Object.keys(itemMap).length * 5;
                         const fw = l.bold ? 'font-weight:bold;' : '';
                         const fs = l.italic ? 'font-style:italic;' : '';
                         const td = l.underline ? 'text-decoration:underline;' : '';
