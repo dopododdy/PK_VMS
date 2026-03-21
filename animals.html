@@ -326,9 +326,13 @@
                 .filter(o => !ownersWithPets.has(o.hn))
                 .map(o => ({ _ownerOnly: true, owner_hn: o.hn }));
 
-            // Merge pets and owner-only entries, sorted by owner_hn descending
+            // Merge pets and owner-only entries, sorted A-Z by name
             const allItems = [...allAnimals, ...ownerOnlyEntries]
-                .sort((a, b) => parseInt(b.owner_hn) - parseInt(a.owner_hn));
+                .sort((a, b) => {
+                    const nameA = a._ownerOnly ? (ownerMap.get(a.owner_hn)?.owner_name || '') : (a.pet_name || '');
+                    const nameB = b._ownerOnly ? (ownerMap.get(b.owner_hn)?.owner_name || '') : (b.pet_name || '');
+                    return nameA.localeCompare(nameB, 'th');
+                });
 
             const filtered = !term ? allItems : allItems.filter(item => {
                 const owner = ownerMap.get(item.owner_hn);
