@@ -131,6 +131,14 @@
         let _medTextByAnimalId = new Map();
         let petCollapseCount = 0;
 
+        function getAnimalIcon(petType) {
+            if (!petType) return '🐾';
+            const t = petType.trim();
+            if (t.startsWith('สุนัข') || t === 'หมา') return '🐶';
+            if (t.startsWith('แมว')) return '🐱';
+            return '🐾';
+        }
+
         function formatThaiDate(dateString, format = 'long') {
             if (!dateString) return "-";
             const date = new Date(dateString);
@@ -283,7 +291,7 @@
                 ${animalsWithAppt.map(animal => {
                     const owner = ownerMap.get(animal.owner_hn);
                     const p1 = _primaryPhoneMap.get(animal.owner_hn) || '-';
-                    const typeIcon = animal.pet_type === 'สุนัข' ? '🐶' : (animal.pet_type === 'แมว' ? '🐱' : '🐾');
+                    const typeIcon = getAnimalIcon(animal.pet_type);
                     const notes = [...animalApptMap.get(animal.id)];
                     const apptHtml = notes.map(n =>
                         `<span class="inline-flex items-center gap-1 bg-orange-500/20 text-orange-300 text-xs px-2 py-0.5 rounded-full font-bold border border-orange-500/30">📌 ${n}</span>`
@@ -352,7 +360,7 @@
                             </div>
                         </div>`;
                 }
-                const typeIcon = item.pet_type === 'สุนัข' ? '🐶' : (item.pet_type === 'แมว' ? '🐱' : '🐾');
+                const typeIcon = getAnimalIcon(item.pet_type);
                 return `
                     <div class="pet-card" onclick="editOwner('${item.owner_hn}')" ondblclick="document.getElementById('search-box').value='${item.owner_hn}'; renderSidebar()" id="pet-${item.id}">
                         <div class="hn-col">#${item.owner_hn}</div>
@@ -434,7 +442,7 @@
             const collapseId = 'pet-body-' + petCollapseCount;
             const ageInfo = getAgeDetail(pet.birth_date);
             const effectiveType = pet.pet_type || 'แมว';
-            const headIcon = effectiveType === 'สุนัข' ? '🐶' : (effectiveType === 'แมว' ? '🐱' : '🐾');
+            const headIcon = getAnimalIcon(effectiveType);
             const speciesOptions = masterSpecies.map(s => `<option value="${s.name}" data-id="${s.id}" ${effectiveType === s.name ? 'selected' : ''}>${s.name}</option>`).join('');
             const effectiveGender = pet.gender || 'ไม่ระบุเพศ';
             const bodyDisplay = startExpanded ? '' : 'style="display:none"';
@@ -1131,7 +1139,7 @@
             } else {
                 list.innerHTML = '';
                 pets.forEach(p => {
-                    const icon = p.pet_type === 'สุนัข' ? '🐶' : (p.pet_type === 'แมว' ? '🐱' : '🐾');
+                    const icon = getAnimalIcon(p.pet_type);
                     const label = document.createElement('label');
                     label.className = 'animal-checkbox-row';
 

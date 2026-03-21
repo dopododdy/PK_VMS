@@ -418,6 +418,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     addNewPetForm();  // เริ่มต้นด้วยฟอร์มสัตว์ 1 ตัว สำหรับลูกค้าใหม่
 });
 
+function getAnimalIcon(petType) {
+    if (!petType) return '🐾';
+    const t = petType.trim();
+    if (t.startsWith('สุนัข') || t === 'หมา') return '🐶';
+    if (t.startsWith('แมว')) return '🐱';
+    return '🐾';
+}
+
 async function loadMasterData() {
     try {
         const [resSpecies, resBreeds, resOwners, resPhones, resAnimals] = await Promise.all([
@@ -732,7 +740,7 @@ function searchOwner() {
                    allPhones.find(p => p.owner_hn === o.hn)?.phone_number || '-';
         const petList = allAnimals.filter(a => a.owner_hn === o.hn);
         const petNames = petList.slice(0,3).map(a => {
-            const icon = a.pet_type === 'สุนัข' ? '🐶' : a.pet_type === 'แมว' ? '🐱' : '🐾';
+            const icon = getAnimalIcon(a.pet_type);
             return `${icon} ${a.pet_name}`;
         }).join('  ');
         return `

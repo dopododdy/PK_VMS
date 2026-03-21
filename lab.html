@@ -284,6 +284,20 @@
 
         window.onload = async () => { lucide.createIcons(); await Promise.all([fetchMasterParams(), loadAnimals()]); };
 
+        function getAnimalIcon(petType) {
+            if (!petType) return '🐾';
+            const t = petType.trim();
+            if (t.startsWith('สุนัข') || t === 'หมา') return '🐶';
+            if (t.startsWith('แมว')) return '🐱';
+            return '🐾';
+        }
+
+        function isPetDog(petType) {
+            if (!petType) return false;
+            const t = petType.trim();
+            return t.startsWith('สุนัข') || t === 'หมา';
+        }
+
         async function fetchMasterParams() { 
             // ✅ เรียงตาม order_index จาก Database (เหมือนกับ set-lab.html)
             const { data } = await db.from('mas_lab_parameters').select('*').order('order_index', { ascending: true }); 
@@ -305,13 +319,13 @@
                 <div class="pet-card" onclick="selectAnimal('${a.id}')" ondblclick="document.getElementById('search-box').value='${a.owner_hn}'; filterAnimals()" id="pet-${a.id}">
                     <div class="hn-col">#${a.owner_hn}</div>
                     <div class="flex flex-col min-w-0"><span class="text-white font-black truncate">${a.pet_name}</span><span class="text-[10px] text-gray-500 truncate">${a.owners?.owner_name || '-'}</span></div>
-                    <div class="text-lg flex items-center justify-center">${a.pet_type === 'สุนัข' ? '🐶' : '🐱'}</div>
+                    <div class="text-lg flex items-center justify-center">${getAnimalIcon(a.pet_type)}</div>
                 </div>`).join('');
         }
 
         // ✅ ฟังก์ชันคำนวณอายุและหาคอลัมน์ Reference ที่ถูกต้อง
         function getAgeReferenceMode(birthDateStr, targetDateStr = null) {
-            let isDog = currentAnimal.pet_type === 'สุนัข';
+            let isDog = isPetDog(currentAnimal.pet_type);
             let ageY = 0;
             
             if (birthDateStr) {
