@@ -698,6 +698,57 @@ ALTER TABLE IF EXISTS clinic_table_db
         }
 
         /* ══════════════════════════════════════════
+           Species / Gender normalisation helpers
+           ══════════════════════════════════════════ */
+
+        // Strip leading non-Thai characters (emoji, symbols) from a string.
+        // Thai Unicode block: U+0E00–U+0E7F.
+        function stripLeadingNonThai(s) {
+            return (s || '').replace(/^[^\u0E00-\u0E7F]+/, '').trim();
+        }
+
+        // Derive the species name from a raw animal_spp value.
+        // Handles:
+        //   Old_DB format  – '🐶สุนัข - ผู้ตอน' → 'สุนัข'
+        //   mainDB format  – ' สุนัข'            → 'สุนัข'
+        //   bare suffix    – 'สุนัข -'           → 'สุนัข'
+        function normalizeSpecies(spp) {
+            if (!spp) return 'อื่นๆ';
+            let s = stripLeadingNonThai(spp);
+            const dashIdx = s.indexOf(' - ');
+            if (dashIdx !== -1) s = s.slice(0, dashIdx).trim();   // keep only species part
+            s = s.replace(/\s*-\s*$/, '').trim();                 // remove trailing bare dash
+            return s || 'อื่นๆ';
+        }
+
+        // Derive the gender from the sex and/or spp fields.
+        // Handles:
+        //   clean sex value    – 'เมีย'          → 'เมีย'
+        //   species-prefixed   – 'สุนัขเมีย'     → 'เมีย'   (common Excel export bug)
+        //   Old_DB combined    – '🐶สุนัข - ผู้' → 'ผู้'   (gender embedded in spp)
+        function normalizeGender(sex, spp) {
+            // Must stay in sync with the species checks in getAnimalIcon() in animals.html.
+            const SPECIES_PREFIXES = ['สุนัข', 'แมว', 'หมา', 'กระต่าย'];
+            if (sex) {
+                let s = stripLeadingNonThai(sex);
+                for (const prefix of SPECIES_PREFIXES) {
+                    if (s.startsWith(prefix)) {
+                        s = s.slice(prefix.length).trim();
+                        break;
+                    }
+                }
+                return s;
+            }
+            // No separate sex field – try to extract gender from combined spp (Old_DB)
+            if (spp) {
+                const s = stripLeadingNonThai(spp);
+                const dashIdx = s.indexOf(' - ');
+                if (dashIdx !== -1) return s.slice(dashIdx + ' - '.length).trim();
+            }
+            return '';
+        }
+
+        /* ══════════════════════════════════════════
            Sync imported rows → owners / animals / owner_phones
            ══════════════════════════════════════════ */
         async function syncToVMSTables(rowsToSync) {
@@ -751,8 +802,8 @@ ALTER TABLE IF EXISTS clinic_table_db
                     newAnimals.push({
                         owner_hn: hn,
                         pet_name: row.animal_name,
-                        pet_type: (row.animal_spp || '').trim().replace(/\s*-\s*$/, '').trim() || 'อื่นๆ',
-                        gender:   row.animal_sex  || '',
+                        pet_type: normalizeSpecies(row.animal_spp),
+                        gender:   normalizeGender(row.animal_sex, row.animal_spp),
                         birth_date: row.animal_dob || null,
                         congenital_disease: row.animal_tag || '',
                         updated_at: new Date().toISOString(),

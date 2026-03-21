@@ -133,8 +133,11 @@
 
         function getAnimalIcon(petType) {
             if (!petType) return '🐾';
-            const t = petType.trim();
-            if (t.startsWith('สุนัข') || t === 'หมา') return '🐶';
+            // Strip leading non-Thai characters (e.g. emoji prefixes like 🐶/🐱 from legacy imports)
+            const t = petType.replace(/^[^\u0E00-\u0E7F]+/, '').trim();
+            // Use startsWith for all checks so that combined/legacy values
+            // (e.g. 'สุนัข - ผู้', 'หมา - เมีย') still render the correct icon.
+            if (t.startsWith('สุนัข') || t.startsWith('หมา')) return '🐶';
             if (t.startsWith('แมว')) return '🐱';
             return '🐾';
         }
