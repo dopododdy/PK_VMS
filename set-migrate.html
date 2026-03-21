@@ -92,6 +92,7 @@
   animal_id  VARCHAR(255),
   animal_name VARCHAR(255),
   animal_spp  VARCHAR(255),
+  animal_sex  VARCHAR(50),
   animal_tag  VARCHAR(255),
   owner_name  VARCHAR(255),
   animal_dob  DATE,
@@ -103,7 +104,11 @@
 
 -- แก้ไข phone_no สำหรับฐานข้อมูลเดิมที่สร้างด้วย VARCHAR(20)
 ALTER TABLE IF EXISTS clinic_table_db
-  ALTER COLUMN phone_no TYPE VARCHAR(50);</div>
+  ALTER COLUMN phone_no TYPE VARCHAR(50);
+
+-- เพิ่มคอลัมน์ animal_sex สำหรับฐานข้อมูลที่สร้างก่อนเวอร์ชันนี้
+ALTER TABLE IF EXISTS clinic_table_db
+  ADD COLUMN IF NOT EXISTS animal_sex VARCHAR(50);</div>
             <div class="flex items-center gap-3 mt-3">
                 <button onclick="copySQL()" class="btn-secondary text-sm">📋 คัดลอก SQL</button>
                 <span id="copy-ok" class="text-xs text-teal-400 hidden">✅ คัดลอกแล้ว!</span>
@@ -123,8 +128,19 @@ ALTER TABLE IF EXISTS clinic_table_db
             <!-- Excel tab -->
             <div class="mb-4 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
                 <p class="text-green-400 font-bold text-sm mb-2">📊 ตัวเลือก ก — ไฟล์ Excel (.xlsx)</p>
-                <p class="text-xs text-gray-300 mb-2">อัปโหลดไฟล์ <span class="text-teal-300 font-mono">Old_DB.xlsx</span> ได้โดยตรง ระบบจะอ่านคอลัมน์ต่อไปนี้อัตโนมัติ:</p>
-                <div class="grid grid-cols-2 gap-1 text-xs text-gray-400 font-mono">
+                <p class="text-xs text-gray-300 mb-1">รองรับทั้งรูปแบบภาษาอังกฤษ (<span class="text-teal-300 font-mono">mainDB.xlsx</span>) และรูปแบบภาษาไทย (<span class="text-teal-300 font-mono">Old_DB.xlsx</span>):</p>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-400 font-mono mt-2">
+                    <span class="text-gray-500 col-span-2 uppercase tracking-widest text-[10px] mb-1">รูปแบบภาษาอังกฤษ (mainDB.xlsx)</span>
+                    <span>HN → rec_id (upsert key) + owner HN</span>
+                    <span>AnimalName → animal_name</span>
+                    <span>AnimalSpp → animal_spp</span>
+                    <span>AnimalSex → animal_sex</span>
+                    <span>SpecialNote → animal_tag</span>
+                    <span>OwnerName → owner_name</span>
+                    <span>AnimalDOB → animal_dob</span>
+                    <span>PhoneNo → phone_no</span>
+                    <span>MedicalHistory → medrec</span>
+                    <span class="text-gray-500 col-span-2 uppercase tracking-widest text-[10px] mt-2 mb-1">รูปแบบภาษาไทย (Old_DB.xlsx)</span>
                     <span>HN → rec_id (owner HN)</span>
                     <span>ชื่อสัตว์ → animal_name</span>
                     <span>ชนิด - เพศ → animal_spp</span>
@@ -134,6 +150,7 @@ ALTER TABLE IF EXISTS clinic_table_db
                     <span>เบอร์โทรศัพท์ → phone_no</span>
                     <span>PE ตรวจร่างกาย → medrec</span>
                 </div>
+                <p class="text-xs text-amber-400 mt-2">💡 ถ้า HN ซ้ำกัน ระบบจะทับข้อมูลเดิมโดยอัตโนมัติ</p>
             </div>
 
             <!-- XML tab -->
@@ -260,6 +277,7 @@ ALTER TABLE IF EXISTS clinic_table_db
             AnimalID:   'animal_id',
             AnimalName: 'animal_name',
             AnimalSpp:  'animal_spp',
+            AnimalSex:  'animal_sex',
             AnimalTag:  'animal_tag',
             OwnerName:  'owner_name',
             AnimalDOB:  'animal_dob',
@@ -267,12 +285,23 @@ ALTER TABLE IF EXISTS clinic_table_db
             Medrec:     'medrec',
         };
 
-        /* Excel column header (Thai) → internal key (same as FIELD_MAP source) */
+        /* Excel column header → internal key (same as FIELD_MAP source).
+           รองรับทั้งรูปแบบภาษาอังกฤษ (mainDB.xlsx) และภาษาไทย (Old_DB.xlsx) */
         const XLSX_COL_MAP = {
             // HN is the owner's hospital number; mapped to 'AnimalID' so that
             // transformRow() stores it in animal_id, which syncToVMSTables() uses
             // as the owner's HN when creating the owners record.
+            // ── English column names (mainDB.xlsx) ──────────────────────────────
             'HN':                 'AnimalID',
+            'AnimalName':         'AnimalName',
+            'AnimalSpp':          'AnimalSpp',
+            'AnimalSex':          'AnimalSex',
+            'SpecialNote':        'AnimalTag',
+            'OwnerName':          'OwnerName',
+            'AnimalDOB':          'AnimalDOB',
+            'PhoneNo':            'PhoneNo',
+            'MedicalHistory':     'Medrec',
+            // ── Thai column names (Old_DB.xlsx) ──────────────────────────────────
             'ชื่อสัตว์':          'AnimalName',
             'ชนิด - เพศ':         'AnimalSpp',
             'ข้อควรระวัง':        'AnimalTag',
@@ -478,8 +507,12 @@ ALTER TABLE IF EXISTS clinic_table_db
                     row[key] = (val !== null && val !== undefined) ? String(val).replace(/_x000D_/g, '').trim() : '';
                 });
 
-                // Generate unique rec_id from row position in file
-                row['RecID'] = `xlsx_${r + 1}`;
+                // Use HN (stored in AnimalID) as RecID so that upsert overwrites by HN.
+                // Fall back to row-position-based ID for files without an HN column.
+                // Note: the fallback ID is positional (xlsx_N), so re-importing a file
+                // without an HN column with rows in a different order will create
+                // duplicate entries instead of updating existing ones.
+                row['RecID'] = row['AnimalID'] ? String(row['AnimalID']) : `xlsx_${r + 1}`;
 
                 rows.push(row);
             }
@@ -504,8 +537,9 @@ ALTER TABLE IF EXISTS clinic_table_db
             const previewSection = document.getElementById('preview-section');
             previewSection.classList.remove('hidden');
 
-            // For Excel, AnimalID is auto-filled from HN and RecID is generated — treat as optional
-            const optionalForXlsx = new Set(['AnimalID']);
+            // For Excel, AnimalID is auto-filled from HN and RecID is generated — treat as optional.
+            // AnimalSex is only present in the new English-format files (mainDB.xlsx), not Old_DB.xlsx.
+            const optionalForXlsx = new Set(['AnimalID', 'AnimalSex']);
             const knownFields = Object.keys(FIELD_MAP);
             const detectedFields = xmlHeaders.filter(h => knownFields.includes(h.trim()));
             const missingFields  = knownFields.filter(k => {
@@ -569,6 +603,7 @@ ALTER TABLE IF EXISTS clinic_table_db
                 animal_id:   row['AnimalID']   || null,
                 animal_name: row['AnimalName'] || null,
                 animal_spp:  row['AnimalSpp']  || null,
+                animal_sex:  row['AnimalSex']  || null,
                 animal_tag:  row['AnimalTag']  || null,
                 owner_name:  row['OwnerName']  || null,
                 animal_dob:  dob,
@@ -717,6 +752,7 @@ ALTER TABLE IF EXISTS clinic_table_db
                         owner_hn: hn,
                         pet_name: row.animal_name,
                         pet_type: row.animal_spp || 'อื่นๆ',
+                        gender:   row.animal_sex  || '',
                         birth_date: row.animal_dob || null,
                         congenital_disease: row.animal_tag || '',
                         updated_at: new Date().toISOString(),
