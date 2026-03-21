@@ -336,6 +336,14 @@
             return `${date.getDate()} ${format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()]} ${date.getFullYear() + 543}`;
         }
 
+        function getAnimalIcon(petType) {
+            if (!petType) return '🐾';
+            const t = petType.replace(/^[^\u0E00-\u0E7F]+/, '').trim();
+            if (t.startsWith('สุนัข') || t.startsWith('หมา')) return '🐶';
+            if (t.startsWith('แมว')) return '🐱';
+            return '🐾';
+        }
+
         // ✅ แก้ไขฟังก์ชัน onload เพื่อเช็ค HN อัตโนมัติ
         window.onload = async () => { 
             await fetchPatients();
@@ -366,7 +374,7 @@
         };
 
         async function fetchPatients() {
-            const { data } = await db.from('animals').select('pet_name, owner_hn, owners(owner_name)');
+            const { data } = await db.from('animals').select('pet_name, pet_type, owner_hn, owners(owner_name)');
             allPatients = data || [];
             document.getElementById('count-hn').innerText = allPatients.length;
             renderPatientList(allPatients);
@@ -382,19 +390,19 @@
             const sorted = [...list].sort((a, b) => Number(b.owner_hn) - Number(a.owner_hn));
             document.getElementById('patient-list').innerHTML = sorted.map(p => `
                 <div class="glass-card" onclick="loadPatientHistory('${p.owner_hn}', '${p.pet_name}', '${p.owners?.owner_name}')" ondblclick="document.getElementById('main-search').value='${p.owner_hn}'; filterPatients()">
-                    <div class="flex justify-between items-center mb-1"><span class="text-teal-400 font-bold text-sm">${p.owner_hn}</span><span class="text-white font-bold text-base">🐾 ${p.pet_name}</span></div>
+                    <div class="flex justify-between items-center mb-1"><span class="text-teal-400 font-bold text-sm">${p.owner_hn}</span><span class="text-white font-bold text-base">${getAnimalIcon(p.pet_type)} ${p.pet_name}</span></div>
                     <div class="text-gray-400 text-xs truncate">เจ้าของ: ${p.owners?.owner_name || '-'}</div>
                 </div>`).join('');
         }
 
         async function fetchPendingPayments() {
             const { data } = await db.from('medical_records')
-                .select('id, owner_hn, animal_id, created_at, total_cost, net_amount, animals(pet_name), owners(owner_name)')
+                .select('id, owner_hn, animal_id, created_at, total_cost, net_amount, animals(pet_name, pet_type), owners(owner_name)')
                 .eq('payment_status', 'pending')
                 .order('created_at', { ascending: true });
             const list = (data || []).map(r => {
                 const patient = allPatients.find(p => p.owner_hn === r.owner_hn);
-                return { ...r, pet_name: r.animals?.pet_name || patient?.pet_name || '-', owner_name: r.owners?.owner_name || patient?.owners?.owner_name || '-' };
+                return { ...r, pet_name: r.animals?.pet_name || patient?.pet_name || '-', pet_type: r.animals?.pet_type || patient?.pet_type || null, owner_name: r.owners?.owner_name || patient?.owners?.owner_name || '-' };
             });
             pendingRecordsMap = {};
             list.forEach(r => { pendingRecordsMap[r.id] = r; });
@@ -414,7 +422,7 @@
                 const cards = g.records.map(r => `
                     <div class="glass-card border-l-4 border-l-amber-500" onclick="loadPendingRecord('${r.id}')">
                         <div class="flex justify-between items-center mb-1">
-                            <span class="text-amber-400 font-bold text-sm">🐾 ${r.pet_name}</span>
+                            <span class="text-amber-400 font-bold text-sm">${getAnimalIcon(r.pet_type)} ${r.pet_name}</span>
                             <span class="text-amber-400 font-bold text-sm">฿${parseFloat(r.net_amount || r.total_cost || 0).toLocaleString()}</span>
                         </div>
                         <div class="text-gray-400 text-[11px]">${r.owner_hn} | ${formatThaiDate(r.created_at, 'short')}</div>
