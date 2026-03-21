@@ -688,7 +688,9 @@ ALTER TABLE IF EXISTS clinic_table_db
             }
 
             if (newOwners.length > 0) {
-                const { error: ownerErr } = await db.from('owners').upsert(newOwners, { onConflict: 'hn' });
+                // Deduplicate by hn to prevent "ON CONFLICT DO UPDATE command cannot affect row a second time"
+                const uniqueOwners = Array.from(new Map(newOwners.map(o => [o.hn, o])).values());
+                const { error: ownerErr } = await db.from('owners').upsert(uniqueOwners, { onConflict: 'hn' });
                 if (ownerErr) throw ownerErr;
             }
             if (newPhones.length > 0) {
@@ -773,7 +775,14 @@ ALTER TABLE IF EXISTS clinic_table_db
                 barEl.style.width = pct + '%';
                 pctEl.textContent = pct + '%';
 
-                const transformedBatch = batch.map(transformRow).filter(r => r.rec_id); // skip rows without RecID
+                const transformedBatch = (() => {
+                    const seen = new Set();
+                    return batch.map(transformRow).filter(r => {
+                        if (!r.rec_id || seen.has(r.rec_id)) return false;
+                        seen.add(r.rec_id);
+                        return true;
+                    });
+                })(); // skip rows without RecID, deduplicate by rec_id within each batch
 
                 skippedCount += batch.length - transformedBatch.length;
 
