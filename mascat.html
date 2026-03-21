@@ -81,9 +81,6 @@
                         <label class="label-clinical">หน่วย (Unit)</label>
                         <select id="f_unit" class="input-box cursor-pointer">
                             <option value="">-- เลือกหน่วย --</option>
-                            <option value="ขวด">ขวด</option><option value="แคปซูล">แคปซูล</option>
-                            <option value="ซีซี (cc)">ซีซี (cc)</option><option value="มิลลิลิตร (mL)">มิลลิลิตร (mL)</option>
-                            <option value="เม็ด">เม็ด</option><option value="อัน">อัน</option>
                         </select>
                     </div>
                     <div id="fixed-price-section">
@@ -156,7 +153,18 @@
         let currentCat = 'TakeHome';
         let items = [], selectedItem = null;
 
-        window.onload = async () => { renderTierInputs(); await setCategory('TakeHome'); };
+        window.onload = async () => { renderTierInputs(); await loadUnits(); await setCategory('TakeHome'); };
+
+        async function loadUnits() {
+            const { data, error } = await db.from('mas_units').select('name').order('name');
+            if (error) { console.error('loadUnits error:', error.message); return; }
+            const sel = document.getElementById('f_unit');
+            if (!sel) return;
+            const currentVal = sel.value;
+            sel.innerHTML = '<option value="">-- เลือกหน่วย --</option>' +
+                (data || []).map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+            if (currentVal) sel.value = currentVal;
+        }
 
         function renderTierInputs() {
             const container = document.getElementById('tiers-container'); container.innerHTML = '';
@@ -199,7 +207,12 @@
         }
 
         function renderItemList(data) {
-            document.getElementById('item-list').innerHTML = data.map(i => `
+            const sorted = [...data].sort((a, b) => {
+                const nameA = a.item_name || a.service_name || '';
+                const nameB = b.item_name || b.service_name || '';
+                return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+            });
+            document.getElementById('item-list').innerHTML = sorted.map(i => `
                 <div class="item-row-card ${selectedItem?.id === i.id ? 'selected' : ''}" onclick="selectItem('${i.id}')">
                     <div class="font-black text-white text-base uppercase">${i.item_name}</div>
                     <div class="text-sm text-teal-500/70 font-bold">${i.name_th || ''}</div>
