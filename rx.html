@@ -95,7 +95,7 @@
                         </div>
                         <div>
                             <label class="label-clinical">หน่วย (Unit)</label>
-                            <select id="f_unit" class="input-box">
+                            <select id="f_unit" class="input-box" onchange="toggleBottleVolumeField()">
                                 <option value="tablet">Tablet (เม็ด)</option>
                                 <option value="capsule">Capsule (แคปซูล)</option>
                                 <option value="mL">mL (มิลลิลิตร)</option>
@@ -103,8 +103,12 @@
                             </select>
                         </div>
                         <div>
-                            <label class="label-clinical text-yellow-400">ราคาขาย (฿)</label>
+                            <label class="label-clinical text-yellow-400" id="price-label">ราคาขาย (฿/หน่วย)</label>
                             <input type="number" id="f_price" class="input-box text-yellow-400 font-bold" placeholder="0.00">
+                        </div>
+                        <div id="bottle-volume-field" class="hidden md:col-span-2" style="display:none;">
+                            <label class="label-clinical text-teal-400">🧪 ขนาดขวด (mL/ขวด) — สำหรับยาน้ำที่จ่ายเป็นขวด</label>
+                            <input type="number" id="f_bottle_volume_ml" class="input-box" placeholder="เช่น 60 หมายถึง 60 mL/ขวด" min="0" step="1" oninput="toggleBottleVolumeField()">
                         </div>
                     </div>
 
@@ -200,7 +204,9 @@
             document.getElementById('f_conc').value = selectedMed.concentration_mg_unit || 1;
             document.getElementById('f_unit').value = selectedMed.unit || 'tablet';
             document.getElementById('f_price').value = selectedMed.price_per_unit || 0;
+            document.getElementById('f_bottle_volume_ml').value = selectedMed.bottle_volume_ml || 0;
             document.getElementById('f_side_effects').value = selectedMed.side_effects || '';
+            toggleBottleVolumeField();
 
             // Mapping Dog Doses
             document.getElementById('f_dog_dose_1').value = selectedMed.dog_dose_1 || 0;
@@ -232,6 +238,7 @@
                 concentration_mg_unit: parseFloat(document.getElementById('f_conc').value),
                 unit: document.getElementById('f_unit').value,
                 price_per_unit: parseFloat(document.getElementById('f_price').value),
+                bottle_volume_ml: parseFloat(document.getElementById('f_bottle_volume_ml').value) || 0,
                 side_effects: document.getElementById('f_side_effects').value,
                 // Doses & Labels
                 dog_dose_1: parseFloat(document.getElementById('f_dog_dose_1').value),
@@ -266,7 +273,24 @@
             document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(el => el.value = '');
             document.getElementById('f_conc').value = 1;
             document.getElementById('f_price').value = 0;
+            document.getElementById('f_bottle_volume_ml').value = 0;
             document.getElementById('btn-delete').classList.add('hidden');
+            toggleBottleVolumeField();
+        }
+
+        function toggleBottleVolumeField() {
+            const unit = document.getElementById('f_unit').value;
+            const bottleVol = parseFloat(document.getElementById('f_bottle_volume_ml').value) || 0;
+            const field = document.getElementById('bottle-volume-field');
+            const priceLabel = document.getElementById('price-label');
+            const unitLabels = { tablet: '฿/เม็ด', capsule: '฿/แคปซูล', bottle: '฿/ขวด' };
+            if (unit === 'mL') {
+                field.style.display = '';
+                if (priceLabel) priceLabel.innerText = `ราคาขาย (${bottleVol > 0 ? '฿/ขวด' : '฿/mL'})`;
+            } else {
+                field.style.display = 'none';
+                if (priceLabel) priceLabel.innerText = `ราคาขาย (${unitLabels[unit] || '฿/หน่วย'})`;
+            }
         }
 
         async function deleteMed() {
