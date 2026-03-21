@@ -842,3 +842,12 @@ WHERE NOT EXISTS (
   SELECT 1 FROM public.pharmacy p WHERE p.item_name = t.item_name
 );
 
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- เพิ่ม bottle_volume_ml สำหรับยาน้ำ (unit = 'mL') ที่จ่ายเป็นขวด
+-- ค่าใน field นี้คือปริมาตรต่อขวด เช่น 60 หมายถึง 60 mL/ขวด
+-- ราคาใน price_per_unit สำหรับยาน้ำ = ราคาต่อขวด (ไม่ใช่ต่อ mL)
+-- ═══════════════════════════════════════════════════════════════
+ALTER TABLE pharmacy
+  ADD COLUMN IF NOT EXISTS bottle_volume_ml NUMERIC(10,2) DEFAULT 0;
