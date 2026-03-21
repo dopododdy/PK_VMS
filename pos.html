@@ -389,12 +389,12 @@
 
         async function fetchPendingPayments() {
             const { data } = await db.from('medical_records')
-                .select('id, owner_hn, created_at, total_cost, net_amount')
+                .select('id, owner_hn, animal_id, created_at, total_cost, net_amount, animals(pet_name), owners(owner_name)')
                 .eq('payment_status', 'pending')
                 .order('created_at', { ascending: true });
             const list = (data || []).map(r => {
                 const patient = allPatients.find(p => p.owner_hn === r.owner_hn);
-                return { ...r, pet_name: patient?.pet_name || '-', owner_name: patient?.owners?.owner_name || '-' };
+                return { ...r, pet_name: r.animals?.pet_name || patient?.pet_name || '-', owner_name: r.owners?.owner_name || patient?.owners?.owner_name || '-' };
             });
             pendingRecordsMap = {};
             list.forEach(r => { pendingRecordsMap[r.id] = r; });
