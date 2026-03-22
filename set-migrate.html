@@ -755,20 +755,44 @@ ALTER TABLE IF EXISTS clinic_table_db
             // ── 1. Load existing owners (paginated) ──────────────────
             const existingOwners = await fetchAllFromDB('owners', 'hn, owner_name');
             const ownerByName = new Map(existingOwners.map(o => [o.owner_name, o.hn]));
+            // Secondary lookup by HN so that Excel-supplied HNs are used as the primary key
+            const ownerByHN = new Map(existingOwners.map(o => [String(o.hn), o.owner_name]));
             const existingHNs = existingOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
             let nextHN = Math.max(...existingHNs, 690000) + 1; // 690000 is the baseline so auto-generated HNs start at ≥ 690001
 
-            // ── 2. Collect new owners (deduplicated by owner_name) ───
+            // ── 2. Collect new owners ─────────────────────────────────
+            // When Excel provides an HN, it is the authoritative key:
+            //   • HN not in DB → create a new owner with that HN.
+            //   • HN already in DB → reuse the existing owner (no duplicate).
+            // When no HN is provided, fall back to name-based deduplication.
             const newOwners = [];
             const newPhones = [];
             for (const row of rowsToSync) {
                 if (!row.owner_name) continue;
-                if (!ownerByName.has(row.owner_name)) {
-                    const hn = row.animal_id ? String(row.animal_id) : (nextHN++).toString().padStart(6, '0');
-                    ownerByName.set(row.owner_name, hn);
-                    newOwners.push({ hn, owner_name: row.owner_name, address: '' });
-                    if (row.phone_no) {
-                        newPhones.push({ owner_hn: hn, phone_number: row.phone_no, label: 'เบอร์หลัก' });
+                const hn = row.animal_id ? String(row.animal_id) : null;
+                if (hn) {
+                    // HN-based matching (primary)
+                    if (!ownerByHN.has(hn)) {
+                        ownerByHN.set(hn, row.owner_name);
+                        ownerByName.set(row.owner_name, hn);
+                        newOwners.push({ hn, owner_name: row.owner_name, address: '' });
+                        if (row.phone_no) {
+                            newPhones.push({ owner_hn: hn, phone_number: row.phone_no, label: 'เบอร์หลัก' });
+                        }
+                    } else if (!ownerByName.has(row.owner_name)) {
+                        // HN already in DB; link this owner name to that HN in-memory only
+                        // (for animal lookup in step 4 – no DB owner record is created).
+                        ownerByName.set(row.owner_name, hn);
+                    }
+                } else {
+                    // No HN supplied: fall back to name-based deduplication
+                    if (!ownerByName.has(row.owner_name)) {
+                        const autoHN = (nextHN++).toString().padStart(6, '0');
+                        ownerByName.set(row.owner_name, autoHN);
+                        newOwners.push({ hn: autoHN, owner_name: row.owner_name, address: '' });
+                        if (row.phone_no) {
+                            newPhones.push({ owner_hn: autoHN, phone_number: row.phone_no, label: 'เบอร์หลัก' });
+                        }
                     }
                 }
             }
@@ -794,7 +818,8 @@ ALTER TABLE IF EXISTS clinic_table_db
             const newAnimals = [];
             for (const row of rowsToSync) {
                 if (!row.animal_name || !row.owner_name) continue;
-                const hn = ownerByName.get(row.owner_name);
+                // Prefer the HN from Excel directly; fall back to the name→HN lookup
+                const hn = (row.animal_id ? String(row.animal_id) : null) || ownerByName.get(row.owner_name);
                 if (!hn) continue;
                 const key = `${hn}|${row.animal_name.toLowerCase()}|${row.animal_dob || ''}`;
                 if (!animalSet.has(key)) {

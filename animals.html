@@ -171,18 +171,18 @@
         }
 
         async function loadData() {
-            const [allAnimalData, resO, resP, resSpecies, resBreeds, resMedRecs, resMedItems] = await Promise.all([
+            const [allAnimalData, allOwnersData, allPhonesData, resSpecies, resBreeds, resMedRecs, resMedItems] = await Promise.all([
                 fetchAllRows(db.from('animals').select('*')),
-                db.from('owners').select('*'),
-                db.from('owner_phones').select('*'),
+                fetchAllRows(db.from('owners').select('*')),
+                fetchAllRows(db.from('owner_phones').select('*')),
                 db.from('mas_species').select('*').order('name'),
                 db.from('mas_breeds').select('*').order('name'),
                 db.from('medical_records').select('id, animal_id, owner_hn, created_at, cc, hx, pe, dx, appointment, appointment_2, appointment_note, appointment_note_2'),
                 db.from('medical_record_items').select('record_id, item_name')
             ]);
-            allOwners = resO.data || [];
+            allOwners = allOwnersData;
             allAnimals = allAnimalData;
-            allPhones = resP.data || [];
+            allPhones = allPhonesData;
             masterSpecies = resSpecies.data || [];
             masterBreeds = resBreeds.data || [];
             allMedRecs = resMedRecs.data || [];
