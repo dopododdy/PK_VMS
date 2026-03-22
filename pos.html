@@ -65,6 +65,10 @@
         /* Quantity +/- Buttons */
         .qty-btn { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; width: 24px; height: 24px; font-size: 16px; line-height: 1; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; }
         .qty-btn:hover { background: rgba(255,255,255,0.25); }
+        .qty-input { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; width: 44px; text-align: center; font-size: 14px; padding: 2px 0; outline: none; }
+        .qty-input:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.08); }
+        .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .qty-input[type=number] { -moz-appearance: textfield; }
     </style>
 </head>
 <body class="flex">
@@ -533,7 +537,7 @@
                     <div class="col-span-2 text-center txt-body text-base">
                         ${!isPaid ? `<div class="flex items-center justify-center gap-1">
                             <button class="qty-btn" aria-label="ลดจำนวน" onclick="updateItemQuantity('${i.id}', -1)">−</button>
-                            <span id="qty-${i.id}">${i.quantity}</span>
+                            <input type="number" id="qty-${i.id}" class="qty-input" value="${i.quantity}" min="1" onclick="this.select()" onchange="setItemQuantity('${i.id}', this.value)">
                             <button class="qty-btn" aria-label="เพิ่มจำนวน" onclick="updateItemQuantity('${i.id}', 1)">+</button>
                         </div>` : i.quantity}
                     </div>
@@ -640,9 +644,22 @@
         }
 
         async function updateItemQuantity(itemId, delta) {
+            const inputEl = document.getElementById(`qty-${itemId}`);
             const { data: item, error: fetchErr } = await db.from('medical_record_items').select('quantity, unit_price').eq('id', itemId).single();
             if (fetchErr || !item) { alert("ไม่สามารถโหลดข้อมูลรายการได้"); return; }
-            const newQty = Math.max(1, (item.quantity ?? 1) + delta);
+            const currentQty = inputEl ? (parseInt(inputEl.value, 10) || (item.quantity ?? 1)) : (item.quantity ?? 1);
+            const newQty = Math.max(1, currentQty + delta);
+            const newTotal = newQty * parseFloat(item.unit_price || 0);
+            const { error } = await db.from('medical_record_items').update({ quantity: newQty, total_price: newTotal }).eq('id', itemId);
+            if (error) return alert("Error updating quantity: " + error.message);
+            await syncTotalToDB();
+            refreshCartDisplay(activeRecordId);
+        }
+
+        async function setItemQuantity(itemId, rawVal) {
+            const newQty = Math.max(1, parseInt(rawVal, 10) || 1);
+            const { data: item, error: fetchErr } = await db.from('medical_record_items').select('unit_price').eq('id', itemId).single();
+            if (fetchErr || !item) { alert("ไม่สามารถโหลดข้อมูลรายการได้"); return; }
             const newTotal = newQty * parseFloat(item.unit_price || 0);
             const { error } = await db.from('medical_record_items').update({ quantity: newQty, total_price: newTotal }).eq('id', itemId);
             if (error) return alert("Error updating quantity: " + error.message);
