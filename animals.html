@@ -171,22 +171,22 @@
         }
 
         async function loadData() {
-            const [allAnimalData, allOwnersData, allPhonesData, resSpecies, resBreeds, resMedRecs, resMedItems] = await Promise.all([
+            const [allAnimalData, allOwnersData, allPhonesData, resSpecies, resBreeds, allMedRecsData, allMedItemsData] = await Promise.all([
                 fetchAllRows(db.from('animals').select('*')),
                 fetchAllRows(db.from('owners').select('*')),
                 fetchAllRows(db.from('owner_phones').select('*')),
                 db.from('mas_species').select('*').order('name'),
                 db.from('mas_breeds').select('*').order('name'),
-                db.from('medical_records').select('id, animal_id, owner_hn, created_at, cc, hx, pe, dx, appointment, appointment_2, appointment_note, appointment_note_2'),
-                db.from('medical_record_items').select('record_id, item_name')
+                fetchAllRows(db.from('medical_records').select('id, animal_id, owner_hn, created_at, cc, hx, pe, dx, appointment, appointment_2, appointment_note, appointment_note_2')),
+                fetchAllRows(db.from('medical_record_items').select('record_id, item_name'))
             ]);
             allOwners = allOwnersData;
             allAnimals = allAnimalData;
             allPhones = allPhonesData;
             masterSpecies = resSpecies.data || [];
             masterBreeds = resBreeds.data || [];
-            allMedRecs = resMedRecs.data || [];
-            allMedItems = resMedItems.data || [];
+            allMedRecs = allMedRecsData;
+            allMedItems = allMedItemsData;
             buildLookupMaps();
             if (currentSidebarTab === 'today') renderTodayAppointments();
             else renderSidebar();
