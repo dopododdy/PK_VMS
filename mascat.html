@@ -27,6 +27,51 @@
         .item-row-card.selected { border-color: var(--teal); background: rgba(20, 184, 177, 0.1); }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        /* ─── Responsive 3-Panel Layout ─── */
+        @media (max-width: 1023px) {
+            body { overflow: auto !important; }
+            .flex.flex-1.gap-6.overflow-hidden {
+                flex-direction: column !important;
+                overflow: visible !important;
+                height: auto !important;
+            }
+            aside.w-64 { width: 100% !important; flex-shrink: 0; }
+            aside.w-64 .section-card { display: flex; flex-wrap: wrap; gap: 8px; }
+            aside.w-64 .section-card .label-clinical { width: 100%; }
+            aside.w-64 .sidebar-btn { width: auto !important; flex: 1 1 140px; margin-bottom: 0 !important; padding: 10px 12px; font-size: 0.85rem; }
+            main.w-80 { width: 100% !important; }
+            main.w-80 .section-card { height: auto !important; max-height: 40vh; }
+            section.flex-1 { width: 100% !important; overflow: visible !important; }
+            section.flex-1 .section-card { min-height: auto !important; }
+            header { position: sticky; top: 0; z-index: 10; background: var(--navy); padding: 1rem; }
+            header button:last-child { display: none !important; } /* Hide + เพิ่มรายการใหม่ from header */
+            .mobile-add-btn { display: flex !important; }
+        }
+        @media (max-width: 767px) {
+            header { flex-wrap: wrap; gap: 8px; }
+            header .flex.items-center.gap-4 { width: 100%; }
+            aside.w-64 .sidebar-btn { flex: 1 1 calc(50% - 4px); }
+            section.flex-1 .section-card { padding: 1rem !important; }
+            .grid.grid-cols-1.md\:grid-cols-2 { grid-template-columns: 1fr !important; }
+        }
+        .mobile-add-btn {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 60;
+            background: var(--teal);
+            color: #020617;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(20,184,177,0.4);
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col p-4 md:p-6">
@@ -44,10 +89,10 @@
                 </div>
             </div>
         </div>
-        <button onclick="addNewItem()" class="bg-teal-500 hover:bg-teal-400 text-navy px-8 py-3 rounded-xl font-black shadow-lg transition-all">+ เพิ่มรายการใหม่</button>
+        <button onclick="addNewItem()" class="bg-teal-500 hover:bg-teal-400 text-navy px-8 py-3 rounded-xl font-black shadow-lg transition-all hidden lg:block">+ เพิ่มรายการใหม่</button>
     </header>
 
-    <div class="flex flex-1 gap-6 overflow-hidden">
+    <div class="flex flex-1 gap-6 overflow-hidden" id="panel-container">
         <aside class="w-64 flex flex-col">
             <div class="section-card flex-1">
                 <label class="label-clinical mb-4">หมวดหมู่หลัก</label>
@@ -298,5 +343,6 @@
             renderItemList(items.filter(i => (i.item_name || i.service_name || '').toLowerCase().includes(term) || (i.name_th || '').toLowerCase().includes(term)));
         }
     </script>
+<button class="mobile-add-btn" onclick="addNewItem()" aria-label="Add new item">+ เพิ่มรายการ</button>
 </body>
 </html>
