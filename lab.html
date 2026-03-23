@@ -126,7 +126,11 @@
                             <h3 class="text-2xl font-black text-white" id="form-title-text">บันทึกผลเลือดใหม่</h3>
                             <p class="text-teal-500 font-bold text-sm mt-1" id="disp-ref-mode">-</p>
                         </div>
-                        <div class="flex gap-3">
+                        <div class="flex gap-3 items-center flex-wrap">
+                            <label for="lab-date-input" class="text-sm font-bold text-gray-400 whitespace-nowrap">📅 วันที่ตรวจ:</label>
+                            <input type="datetime-local" id="lab-date-input"
+                                class="input-box text-white font-bold"
+                                style="color-scheme: dark; min-width: 200px;">
                             <button id="btn-cancel-edit" onclick="cancelEditLab()" class="hidden bg-gray-700 hover:bg-gray-600 px-6 py-4 rounded-2xl font-black transition text-white">ยกเลิก</button>
                             <button id="btn-save-lab" onclick="saveLabResults()" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-2xl font-black transition flex items-center gap-3 shadow-lg text-white">
                                 <i data-lucide="save"></i> บันทึกผลเลือด
@@ -411,13 +415,26 @@
 
         
 
+        function toDatetimeLocalString(date) {
+            const pad = n => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
         function renderInputForm() {
     const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
     document.getElementById('disp-ref-mode').innerText = `อ้างอิงช่วงอายุ: ${refInfo.modeName}`;
+    document.getElementById('lab-date-input').value = toDatetimeLocalString(new Date());
 
     let htmlCbc = '', htmlChem = '';
 
-    masterParams.forEach(p => {
+    // เรียง Chem: ย้าย ALKP ไปไว้ด้านล่างสุด ส่วน CBC คงลำดับเดิม
+    const sortedParams = [
+        ...masterParams.filter(p => p.category === 'CBC'),
+        ...masterParams.filter(p => p.category !== 'CBC' && p.parameter_name !== 'ALKP'),
+        ...masterParams.filter(p => p.category !== 'CBC' && p.parameter_name === 'ALKP')
+    ];
+
+    sortedParams.forEach(p => {
         const { min, max } = getRefRange(p, refInfo.mode, refInfo.isDog);
         const displayRef = (min !== null && max !== null) ? `${min} - ${max}` : '-';
         
@@ -930,6 +947,7 @@
             // เปลี่ยนหน้าตา UI เป็นโหมดแก้ไข
             document.getElementById('form-title-text').innerText = '✏️ แก้ไขผลเลือด';
             document.getElementById('disp-ref-mode').innerText = `อัปเดตข้อมูลของวันที่: ${formatThaiDate(new Date(ts))}`;
+            document.getElementById('lab-date-input').value = toDatetimeLocalString(new Date(ts));
             
             const saveBtn = document.getElementById('btn-save-lab');
             saveBtn.innerHTML = '<i data-lucide="save"></i> อัปเดตผลเลือด';
@@ -950,6 +968,7 @@
             document.getElementById('form-title-text').innerText = 'บันทึกผลเลือดใหม่';
             const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
             document.getElementById('disp-ref-mode').innerText = `อ้างอิงช่วงอายุ: ${refInfo.modeName}`;
+            document.getElementById('lab-date-input').value = toDatetimeLocalString(new Date());
             
             const saveBtn = document.getElementById('btn-save-lab');
             saveBtn.innerHTML = '<i data-lucide="save"></i> บันทึกผลเลือด';
@@ -963,8 +982,9 @@
         // ฟังก์ชัน Save (รองรับทั้งเพิ่มใหม่ และ อัปเดต)
         async function saveLabResults() {
             const results = []; 
-            // ถ้าเป็นการแก้ไข ให้ใช้ timestamp เดิม (ข้อมูลจะได้อยู่คอลัมน์เดิม) ถ้าเพิ่มใหม่สร้าง ts ใหม่
-            const ts = editingLabSession ? editingLabSession : new Date().toISOString();
+            // ใช้วันที่จาก input field (ให้แก้ไขได้) ถ้าไม่มีค่าจึงใช้ timestamp ปัจจุบัน
+            const dateInputVal = document.getElementById('lab-date-input').value;
+            const ts = dateInputVal ? new Date(dateInputVal).toISOString() : (editingLabSession || new Date().toISOString());
             
             document.querySelectorAll('.lab-input').forEach(i => { 
                 if (i.value) {
