@@ -173,12 +173,18 @@
                         <h1 class="text-4xl font-black text-white" id="doc-title">ใบยินยอมผ่าตัด/วางยาสลบ</h1>
                         <p class="text-teal-500 font-bold mt-2 bg-teal-500/10 px-4 py-1 rounded-full inline-block" id="owner-info">-</p>
                     </div>
-                    <div class="flex gap-3 items-center">
+                    <div class="flex gap-3 items-center flex-wrap">
                         <button id="btn-print-queue" onclick="printQueueCard()" class="hidden bg-orange-700 hover:bg-orange-600 px-6 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
                             🎫 พิมพ์บัตรคิว
                         </button>
                         <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
                             <i data-lucide="printer"></i> พิมพ์เอกสาร
+                        </button>
+                        <button onclick="saveCurrentDocAsPdf()" class="bg-blue-700 hover:bg-blue-600 px-6 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
+                            <i data-lucide="file-down"></i> บันทึกเป็น PDF
+                        </button>
+                        <button onclick="shareCurrentDoc()" class="bg-violet-700 hover:bg-violet-600 px-6 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
+                            <i data-lucide="share-2"></i> แชร์
                         </button>
                     </div>
                 </div>
@@ -1014,7 +1020,37 @@ ${tableHtml}
                 </table></div>`;
         }
 
-        async function printTreatmentHistory() {
+        async function shareHtmlAsFile(html, filename, title) {
+            try {
+                const file = new File([html], filename, { type: 'text/html' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ title, files: [file] });
+                    return;
+                }
+                if (navigator.share) {
+                    await navigator.share({ title, text: title });
+                    return;
+                }
+            } catch(e) {
+                if (e.name !== 'AbortError') console.error('Share error:', e);
+                else return;
+            }
+            // Fallback: open in new window for user to print/save
+            const win = window.open('', '_blank');
+            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+            win.document.write(html);
+            win.document.close();
+        }
+
+        async function saveCurrentDocAsPdf() {
+            await printCurrentDoc('pdf');
+        }
+
+        async function shareCurrentDoc() {
+            await printCurrentDoc('share');
+        }
+
+        async function printTreatmentHistory(mode = 'print') {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             const petId = Array.from(selectedPetIds)[0];
             const pet = ownerPets.find(p => p.id.toString() === petId.toString());
@@ -1054,8 +1090,7 @@ ${tableHtml}
                 </tr>`;
             }).join('');
 
-            const win = window.open('', '_blank');
-            win.document.write(`<html><head>
+            const _histHtml = `<html><head>
 <meta charset="UTF-8">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
@@ -1103,17 +1138,27 @@ ${tableHtml}
     <tbody>${rows}</tbody>
   </table>
   <div style="margin-top:10pt; font-size:7.5pt; color:#9ca3af; text-align:right;">รวม ${records.length} ครั้ง | สร้างโดย PK-VMS Pro</div>
-<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>
-</body></html>`);
+</body></html>`;
+            const _petNameSafe = (pet ? pet.pet_name : 'สัตว์').replace(/[<>]/g, '');
+            if (mode === 'share') {
+                await shareHtmlAsFile(_histHtml, `ประวัติการรักษา_${_petNameSafe}.html`, `ประวัติการรักษา - ${petInfo}`);
+                return;
+            }
+            const _autoScript = mode === 'pdf'
+                ? `<script>window.onload=()=>{ document.title=${JSON.stringify('ประวัติการรักษา_' + _petNameSafe)}; window.print(); };<\/script>`
+                : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
+            const win = window.open('', '_blank');
+            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+            win.document.write(_histHtml.replace('</body>', _autoScript + '</body>'));
             win.document.close();
         }
 
-        async function printCurrentDoc() {
+        async function printCurrentDoc(mode = 'print') {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
 
             // ประวัติการรักษา: print full treatment history on A4
             if (activeDocType === 'doc_history') {
-                return printTreatmentHistory();
+                return printTreatmentHistory(mode);
             }
 
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', activeDocType).single();
@@ -1134,8 +1179,7 @@ ${tableHtml}
                 const petInfo      = selectedPet ? `${selectedPet.pet_name} (${selectedPet.pet_type}${selectedPet.breed ? '/' + selectedPet.breed : ''}, ${selectedPet.gender}${selectedPet.weight ? ', ' + selectedPet.weight + ' กก.' : ''})` : '-';
                 const urgColor     = refUrgency === 'ฉุกเฉิน' ? '#dc2626' : refUrgency === 'เร่งด่วน' ? '#ea580c' : '#16a34a';
                 const dateStr      = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
-                const win = window.open('', '_blank');
-                win.document.write(`<html><head>
+                const _refHtml = `<html><head>
 <meta charset="UTF-8">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
@@ -1218,8 +1262,18 @@ ${tableHtml}
       <div style="font-size:9pt;">(${currentOwner?.owner_name || ''})</div>
     </div>
   </div>
-<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>
-</body></html>`);
+</body></html>`;
+                if (mode === 'share') {
+                    await shareHtmlAsFile(_refHtml, `ใบส่งตัว_${(selectedPet?.pet_name || 'สัตว์').replace(/[<>]/g, '')}.html`, `ใบส่งตัวสัตว์ป่วย - ${petInfo}`);
+                    return;
+                }
+                const _refTitleStr = JSON.stringify('ใบส่งตัว_' + (selectedPet?.pet_name || 'สัตว์').replace(/[<>]/g, ''));
+                const _refScript = mode === 'pdf'
+                    ? `<script>window.onload=()=>{ document.title=${_refTitleStr}; window.print(); };<\/script>`
+                    : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
+                const win = window.open('', '_blank');
+                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+                win.document.write(_refHtml.replace('</body>', _refScript + '</body>'));
                 win.document.close();
                 return;
             }
@@ -1261,8 +1315,7 @@ ${tableHtml}
                     </tr>`;
                 }).join('');
 
-                const win = window.open('', '_blank');
-                win.document.write(`<html><head>
+                const _consentHtml = `<html><head>
 <meta charset="UTF-8">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
@@ -1340,8 +1393,18 @@ ${tableHtml}
       <div style="font-size:9pt;">(${VET_NAME})</div>
     </div>
   </div>
-<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>
-</body></html>`);
+</body></html>`;
+                if (mode === 'share') {
+                    await shareHtmlAsFile(_consentHtml, `ใบยินยอม_${(currentOwner?.owner_name || 'เจ้าของ').replace(/[<>]/g, '')}.html`, `ใบยินยอมทำหัตถการ/วางยาสลบ`);
+                    return;
+                }
+                const _consentTitleStr = JSON.stringify('ใบยินยอม_' + (currentOwner?.owner_name || 'เจ้าของ').replace(/[<>]/g, ''));
+                const _consentScript = mode === 'pdf'
+                    ? `<script>window.onload=()=>{ document.title=${_consentTitleStr}; window.print(); };<\/script>`
+                    : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
+                const win = window.open('', '_blank');
+                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+                win.document.write(_consentHtml.replace('</body>', _consentScript + '</body>'));
                 win.document.close();
                 return;
             }
@@ -1474,8 +1537,19 @@ if (activeDocType === 'doc_consent') {
 
 
             
+            const _tmplHtml = `<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');body { margin: 0; padding: 0; background: white; }.page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }@media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style></head><body><div class="page">${printContent}</div></body></html>`;
+            if (mode === 'share') {
+                const _tmplName = (dataMap.pet_name || 'เอกสาร').replace(/[<>]/g, '');
+                await shareHtmlAsFile(_tmplHtml, `${_tmplName}_document.html`, `เอกสาร - ${dataMap.pet_name || ''}`);
+                return;
+            }
+            const _tmplTitleStr = JSON.stringify((dataMap.pet_name || 'document').replace(/[<>]/g, ''));
+            const _tmplScript = mode === 'pdf'
+                ? `<script>window.onload=()=>{ document.title=${_tmplTitleStr}; window.print(); };<\/script>`
+                : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
             const win = window.open('', '_blank');
-            win.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');body { margin: 0; padding: 0; background: white; }.page { position: relative; width: ${pw}mm; height: ${ph}mm; overflow: hidden; }@media print { @page { size: ${pw}mm ${ph}mm; margin: 0; } }</style></head><body><div class="page">${printContent}</div><script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body></html>`);
+            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+            win.document.write(_tmplHtml.replace('</body>', _tmplScript + '</body>'));
             win.document.close();
         }
         async function printQueueCard() {
