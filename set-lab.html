@@ -56,11 +56,64 @@
             opacity: 0.4;
             background: rgba(20, 184, 177, 0.2);
         }
+        /* ─── Responsive Mobile Sidebar ─── */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+            background: var(--teal);
+            color: #020617;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-weight: 900;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(20,184,177,0.4);
+            white-space: nowrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 49;
+            backdrop-filter: blur(2px);
+        }
+        @media (max-width: 767px) {
+            body { overflow: auto !important; }
+            .sidebar-container {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                height: 100%;
+                width: min(85vw, 380px) !important;
+                z-index: 50;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+            .sidebar-container.sidebar-open {
+                left: 0;
+            }
+            .sidebar-backdrop.sidebar-open {
+                display: block;
+            }
+            .sidebar-toggle {
+                display: flex;
+            }
+            main .section-card { padding: 1rem !important; border-radius: 16px; }
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <aside class="sidebar-container">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+    <aside class="sidebar-container" id="main-sidebar">
         <div class="p-6 border-b border-white/5">
             <div class="flex justify-between items-center mb-5">
                 <h2 class="text-2xl font-black text-white">ผลเลือด Master</h2>
@@ -190,6 +243,20 @@
     </main>
 
     <script>
+        function toggleSidebar() {
+            var s = document.getElementById('main-sidebar');
+            var b = document.getElementById('sidebar-backdrop');
+            var btn = document.getElementById('sidebar-toggle-btn');
+            if (s.classList.contains('sidebar-open')) { closeSidebar(); }
+            else { s.classList.add('sidebar-open'); b.classList.add('sidebar-open'); btn.textContent = '✕ ปิด'; }
+        }
+        function closeSidebar() {
+            var s = document.getElementById('main-sidebar');
+            var b = document.getElementById('sidebar-backdrop');
+            var btn = document.getElementById('sidebar-toggle-btn');
+            s.classList.remove('sidebar-open'); b.classList.remove('sidebar-open');
+            if (btn) btn.textContent = '☰ รายการ';
+        }
         let allParams = [];
         let currentActiveTab = 'CBC';
         let sortableInstance = null; // เพิ่มตัวแปรเก็บ instance ของ Sortable
@@ -368,6 +435,7 @@
         }
 
         function editParam(id) {
+            closeSidebar();
             const p = allParams.find(item => item.id === id);
             if (!p) return;
             resetForm();
@@ -453,5 +521,6 @@
             } catch (err) { alert(err.message); }
         }
     </script>
+<button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle lab list sidebar">☰ รายการ</button>
 </body>
 </html>

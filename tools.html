@@ -29,6 +29,60 @@
         .conc-cell-wrapper { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
         .save-conc-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 3px 5px; border-radius: 6px; transition: 0.2s; opacity: 0.55; line-height: 1; }
         .save-conc-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+        /* ─── Responsive Mobile Sidebar ─── */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+            background: var(--teal);
+            color: #020617;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-weight: 900;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(20,184,177,0.4);
+            white-space: nowrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 49;
+            backdrop-filter: blur(2px);
+        }
+        @media (max-width: 767px) {
+            body { overflow: auto !important; }
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                height: 100%;
+                z-index: 50;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+            .sidebar.sidebar-open {
+                left: 0;
+            }
+            .sidebar-backdrop.sidebar-open {
+                display: block;
+            }
+            .sidebar-toggle {
+                display: flex;
+            }
+            .tool-content {
+                padding: 1rem !important;
+            }
+            table { font-size: 0.85rem; }
+        }
         .badge { display: inline-block; font-size: 0.7rem; padding: 1px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
         .tool-input { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 8px 12px; color: #e2e8f0; font-size: 0.95rem; outline: none; width: 100%; box-sizing: border-box; }
         .tool-input:focus { border-color: var(--teal); }
@@ -39,7 +93,8 @@
 </head>
 <body class="flex h-screen">
 
-    <aside class="sidebar flex flex-col shrink-0">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+    <aside class="sidebar flex flex-col shrink-0" id="main-sidebar">
         <div class="p-6 border-b border-white/5 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <span class="text-4xl">🧮</span>
@@ -85,6 +140,20 @@
     </main>
 
     <script>
+        function toggleSidebar() {
+            var s = document.getElementById('main-sidebar');
+            var b = document.getElementById('sidebar-backdrop');
+            var btn = document.getElementById('sidebar-toggle-btn');
+            if (s.classList.contains('sidebar-open')) { closeSidebar(); }
+            else { s.classList.add('sidebar-open'); b.classList.add('sidebar-open'); btn.textContent = '✕ ปิด'; }
+        }
+        function closeSidebar() {
+            var s = document.getElementById('main-sidebar');
+            var b = document.getElementById('sidebar-backdrop');
+            var btn = document.getElementById('sidebar-toggle-btn');
+            s.classList.remove('sidebar-open'); b.classList.remove('sidebar-open');
+            if (btn) btn.textContent = '☰ เครื่องมือ';
+        }
         let patient = { species: 'dog', weight: 0 };
         let currentActiveTool = 'emergency';
         let drugConcentrations = {};
@@ -160,6 +229,7 @@
         }
 
         function showTool(toolId) {
+            closeSidebar();
             currentActiveTool = toolId;
             document.querySelectorAll('.nav-item').forEach(el => {
                 el.classList.toggle('active', el.dataset.tool === toolId);
@@ -814,5 +884,6 @@
             setSpecies('dog');
         };
     </script>
+<button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle tools sidebar">☰ เครื่องมือ</button>
 </body>
 </html>

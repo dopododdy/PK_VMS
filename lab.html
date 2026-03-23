@@ -73,11 +73,65 @@
 
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        /* ─── Responsive Mobile Sidebar ─── */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+            background: var(--teal);
+            color: #020617;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-weight: 900;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(20,184,177,0.4);
+            white-space: nowrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 49;
+            backdrop-filter: blur(2px);
+        }
+        @media (max-width: 767px) {
+            body { overflow: auto !important; }
+            .sidebar-container {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                height: 100%;
+                width: min(85vw, 340px) !important;
+                z-index: 50;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+            .sidebar-container.sidebar-open {
+                left: 0;
+            }
+            .sidebar-backdrop.sidebar-open {
+                display: block;
+            }
+            .sidebar-toggle {
+                display: flex;
+            }
+            #lab-editor { padding: 0; }
+            .p-8 { padding: 1rem !important; }
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
-
-    <aside class="sidebar-container no-print">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+    <aside class="sidebar-container no-print" id="main-sidebar">
         <div class="p-6 border-b border-white/5">
             <div class="flex justify-between items-center mb-5">
                 <div class="flex items-center gap-3">
@@ -276,6 +330,27 @@
     </main>
 
     <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('main-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            const btn = document.getElementById('sidebar-toggle-btn');
+            const isOpen = sidebar.classList.contains('sidebar-open');
+            if (isOpen) { closeSidebar(); }
+            else {
+                sidebar.classList.add('sidebar-open');
+                backdrop.classList.add('sidebar-open');
+                if (btn) btn.textContent = '✕ ปิด';
+            }
+        }
+        function closeSidebar() {
+            const sidebar = document.getElementById('main-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            const btn = document.getElementById('sidebar-toggle-btn');
+            sidebar.classList.remove('sidebar-open');
+            backdrop.classList.remove('sidebar-open');
+            if (btn) btn.textContent = '☰ Lab List';
+        }
+
         let masterParams = [], currentAnimal = null, labHistory = [], imagingHistory = [];
         let currentAgeYears = 0;
         let editingLabSession = null;
@@ -381,6 +456,7 @@
         }
 
         async function selectAnimal(id) {
+            closeSidebar();
             // ✅ ยกเลิกโหมดแก้ไขอัตโนมัติถ้ามีการสลับไปดูสัตว์ตัวอื่น
             if (editingLabSession) {
                 cancelEditLab(); 
@@ -1270,5 +1346,6 @@
         function switchTab(tab, el) { document.querySelectorAll('.lab-tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); ['input', 'imaging', 'echo', 'trends'].forEach(v => document.getElementById('view-'+v).classList.add('hidden')); document.getElementById('view-' + tab).classList.remove('hidden'); lucide.createIcons(); }
         function formatThaiDate(d) { const m = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]; return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear() + 543}`; }
     </script>
+<button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()">☰ Lab List</button>
 </body>
 </html>

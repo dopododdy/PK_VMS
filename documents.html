@@ -39,6 +39,60 @@
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
+        /* ─── Responsive Mobile Sidebar ─── */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+            background: var(--teal);
+            color: #020617;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-weight: 900;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(20,184,177,0.4);
+            white-space: nowrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 49;
+            backdrop-filter: blur(2px);
+        }
+        @media (max-width: 767px) {
+            body { overflow: auto !important; }
+            .sidebar-container {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                height: 100%;
+                width: min(85vw, 360px) !important;
+                z-index: 50;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+            .sidebar-container.sidebar-open {
+                left: 0;
+            }
+            .sidebar-backdrop.sidebar-open {
+                display: block;
+            }
+            .sidebar-toggle {
+                display: flex;
+            }
+            main { overflow-y: auto !important; }
+            #content-area { padding: 1rem !important; overflow-y: auto !important; }
+        }
+
         .btn-base { padding: 8px 16px; border-radius: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; border: none; cursor: pointer; color: white; font-size: 0.9rem; }
 
         /* DLD Report table styles */
@@ -59,8 +113,8 @@
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
-
-    <aside class="sidebar-container">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+    <aside class="sidebar-container" id="main-sidebar">
         <div class="p-6 border-b border-white/5 bg-navy">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center gap-3">
@@ -140,6 +194,27 @@
     </main>
 
     <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('main-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            const btn = document.getElementById('sidebar-toggle-btn');
+            const isOpen = sidebar.classList.contains('sidebar-open');
+            if (isOpen) { closeSidebar(); }
+            else {
+                sidebar.classList.add('sidebar-open');
+                backdrop.classList.add('sidebar-open');
+                if (btn) btn.textContent = '✕ ปิด';
+            }
+        }
+        function closeSidebar() {
+            const sidebar = document.getElementById('main-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            const btn = document.getElementById('sidebar-toggle-btn');
+            sidebar.classList.remove('sidebar-open');
+            backdrop.classList.remove('sidebar-open');
+            if (btn) btn.textContent = '☰ รายชื่อ';
+        }
+
         let currentOwner = null;
         let ownerPets = [];
         let selectedPetIds = new Set();
@@ -196,6 +271,7 @@
         }
 
         async function selectOwner(hn, targetPetId = null) {
+            closeSidebar();
             const [{ data: owner }, { data: pets }, { data: phones }] = await Promise.all([
                 db.from('owners').select('*').eq('hn', hn).single(),
                 db.from('animals').select('*').eq('owner_hn', hn),
@@ -1557,5 +1633,6 @@ if (activeDocType === 'doc_consent') {
             });
         }
     </script>
+<button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()">☰ รายชื่อ</button>
 </body>
 </html>

@@ -69,11 +69,63 @@
         .qty-input:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.08); }
         .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .qty-input[type=number] { -moz-appearance: textfield; }
+        /* ─── Responsive POS Layout ─── */
+        .pos-tab-bar {
+            display: none;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            background: var(--navy-mid);
+            border-bottom: 1px solid var(--border);
+        }
+        .pos-tab-btn {
+            flex: 1;
+            padding: 12px 8px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: 0.2s;
+        }
+        .pos-tab-btn.active {
+            color: var(--teal);
+            border-bottom-color: var(--teal);
+        }
+        @media (max-width: 1023px) {
+            body { overflow: auto !important; height: auto !important; }
+            .col-side, .col-main, .col-pay {
+                width: 100% !important;
+                border: none !important;
+                display: none !important;
+            }
+            .col-side.pos-active, .col-main.pos-active, .col-pay.pos-active {
+                display: flex !important;
+                flex-direction: column;
+                min-height: 100vh;
+                padding-bottom: 80px;
+            }
+            body.flex { flex-direction: column !important; }
+            .pos-tab-bar { display: flex !important; }
+            .modal-content { max-width: calc(100vw - 32px) !important; }
+            .numpad button { height: 50px; font-size: 18px; }
+        }
+        @media (max-width: 767px) {
+            .item-grid-box { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; }
+            .txt-price { font-size: 28px !important; }
+        }
     </style>
 </head>
 <body class="flex">
+<div class="pos-tab-bar" id="pos-tab-bar">
+    <button class="pos-tab-btn active" onclick="switchPosTab('side')" id="pos-tab-side">👤 ผู้ป่วย</button>
+    <button class="pos-tab-btn" onclick="switchPosTab('main')" id="pos-tab-main">🛒 รายการ</button>
+    <button class="pos-tab-btn" onclick="switchPosTab('pay')" id="pos-tab-pay">💳 ชำระ</button>
+</div>
 
-    <div class="col-side flex flex-col p-6">
+    <div class="col-side flex flex-col p-6 pos-active" id="pos-col-side">
         <div class="mb-6">
             <div class="flex justify-between items-center mb-5">
                 <div class="flex items-center gap-3">
@@ -114,7 +166,7 @@
         </div>
     </div>
 
-    <div class="col-main flex flex-col p-8">
+    <div class="col-main flex flex-col p-8" id="pos-col-main">
         <div class="flex justify-between items-start mb-8">
             <div>
                 <div id="view-mode-tag" class="hidden bg-blue-500/20 text-blue-400 text-[12px] px-3 py-1 rounded font-bold mb-2 uppercase">Paid / Reprint Mode</div>
@@ -135,7 +187,7 @@
         </div>
     </div>
 
-    <div class="col-pay flex flex-col p-8">
+    <div class="col-pay flex flex-col p-8" id="pos-col-pay">
         <div class="flex-1">
             <div class="space-y-6 mb-10">
                 <div class="flex justify-between txt-body text-lg">
@@ -275,6 +327,18 @@
     </div>
 
     <script>
+        function switchPosTab(tab) {
+            var cols = { side: document.getElementById('pos-col-side'), main: document.getElementById('pos-col-main'), pay: document.getElementById('pos-col-pay') };
+            var tabs = { side: document.getElementById('pos-tab-side'), main: document.getElementById('pos-tab-main'), pay: document.getElementById('pos-tab-pay') };
+            Object.values(cols).forEach(function(c) { if(c) c.classList.remove('pos-active'); });
+            Object.values(tabs).forEach(function(t) { if(t) t.classList.remove('active'); });
+            if (cols[tab]) cols[tab].classList.add('pos-active');
+            if (tabs[tab]) tabs[tab].classList.add('active');
+        }
+        // Init: on desktop all cols show, on mobile only first
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.innerWidth <= 1023) { switchPosTab('side'); }
+        });
         lucide.createIcons();
         let allPatients = [], activeRecordId = null, activePatient = null;
         let currentRecordData = null; 
