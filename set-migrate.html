@@ -24,7 +24,6 @@
         .mesh-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%); }
         .glass-panel { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 24px; backdrop-filter: blur(10px); }
         .action-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 20px; padding: 24px; transition: all 0.2s; }
-        .action-card:hover { border-color: var(--teal); background: rgba(20,184,177,0.05); }
         .btn-primary { background: var(--teal); color: #fff; font-weight: 700; padding: 10px 20px; border-radius: 12px; border: none; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-primary:hover { background: #0e9994; }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -35,7 +34,7 @@
         .drop-zone {
             border: 2px dashed rgba(20,184,177,0.4);
             border-radius: 16px;
-            padding: 48px 24px;
+            padding: 40px 24px;
             text-align: center;
             cursor: pointer;
             transition: all 0.25s;
@@ -48,15 +47,35 @@
         .drop-zone input[type="file"] { display: none; }
         .table-preview { width: 100%; border-collapse: collapse; font-size: 12px; }
         .table-preview th { background: rgba(20,184,177,0.1); color: var(--teal); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
-        .table-preview td { padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #cbd5e1; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .table-preview td { padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #cbd5e1; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .table-preview tr:hover td { background: rgba(255,255,255,0.02); }
         .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
         .badge-success { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
-        .badge-error   { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.2);  }
+        .badge-error   { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
         .badge-info    { background: rgba(20,184,177,0.15);  color: var(--teal); border: 1px solid rgba(20,184,177,0.2); }
         .sql-block { background: rgba(0,0,0,0.4); border: 1px solid rgba(20,184,177,0.2); border-radius: 12px; padding: 16px; font-family: 'Courier New', monospace; font-size: 12px; color: #7dd3fc; white-space: pre; overflow-x: auto; line-height: 1.6; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        /* ── Tabs ── */
+        .tab-nav { display: flex; gap: 4px; padding: 6px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px; }
+        .tab-btn {
+            flex: 1; padding: 10px 16px; border-radius: 12px; border: none; cursor: pointer;
+            font-family: "Sarabun", sans-serif; font-weight: 700; font-size: 14px;
+            color: #94a3b8; background: transparent; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .tab-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.05); }
+        .tab-btn.active { background: rgba(20,184,177,0.15); color: var(--teal); border: 1px solid rgba(20,184,177,0.3); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── SQL Accordion ── */
+        .sql-accordion { border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
+        .sql-accordion-header { width: 100%; padding: 16px 20px; background: rgba(255,255,255,0.03); border: none; cursor: pointer; display: flex; align-items: center; gap: 12px; justify-content: space-between; color: #e2e8f0; font-family: "Sarabun", sans-serif; font-size: 14px; font-weight: 700; transition: 0.2s; }
+        .sql-accordion-header:hover { background: rgba(255,255,255,0.05); }
+        .sql-accordion-body { padding: 20px; background: rgba(0,0,0,0.2); border-top: 1px solid var(--border); display: none; }
+        .sql-accordion-body.open { display: block; }
     </style>
 </head>
 <body>
@@ -71,22 +90,36 @@
     <header class="p-6 border-b border-white/5 bg-navy/80 backdrop-blur-md sticky top-0 z-50">
         <div class="max-w-5xl mx-auto flex items-center gap-4">
             <a href="settings.html" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition text-gray-400 text-xl" title="กลับหน้าตั้งค่า">⚙️</a>
-            <h1 class="text-xl font-bold border-l pl-4 border-white/20">📤 นำเข้าข้อมูล (Data Migration)</h1>
+            <div class="border-l pl-4 border-white/20">
+                <h1 class="text-xl font-bold">📤 นำเข้าข้อมูล (Data Migration)</h1>
+                <p class="text-xs text-gray-500 mt-0.5">นำเข้าข้อมูลผู้ป่วย · ยากิน · ยาฉีด เข้าสู่ Supabase</p>
+            </div>
         </div>
     </header>
 
     <main class="max-w-5xl mx-auto p-6 space-y-6">
 
-        <!-- Step 1: Create Table SQL -->
-        <div class="action-card" id="step-sql">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-2xl">🛠️</div>
-                <div>
-                    <h3 class="text-white font-bold text-base">ขั้นตอนที่ 1 — สร้างตารางใน Supabase</h3>
-                    <p class="text-xs text-gray-500">รัน SQL นี้ใน Supabase → SQL Editor ก่อนอัปโหลดข้อมูล (ทำครั้งเดียว)</p>
-                </div>
-            </div>
-            <div class="sql-block" id="create-table-sql">CREATE TABLE IF NOT EXISTS clinic_table_db (
+        <!-- SQL Accordion -->
+        <div class="sql-accordion">
+            <button class="sql-accordion-header" onclick="toggleSqlAccordion(this)">
+                <span class="flex items-center gap-3">
+                    <span class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-lg flex-shrink-0">🛠️</span>
+                    <span>
+                        <span class="block text-white font-bold">สร้างตาราง Supabase (ทำครั้งเดียว)</span>
+                        <span class="block text-xs text-gray-500 font-normal mt-0.5">รัน SQL ใน Supabase → SQL Editor ก่อนอัปโหลดข้อมูล</span>
+                    </span>
+                </span>
+                <span class="text-gray-500 chevron transition-transform duration-200">▼</span>
+            </button>
+            <div class="sql-accordion-body" id="sql-accordion-body">
+                <!-- clinic_table_db SQL -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm font-bold text-gray-300">📁 ตาราง clinic_table_db (ข้อมูลผู้ป่วย)</p>
+                        <button onclick="copySQL('create-table-sql','copy-ok-1')" class="btn-secondary text-xs py-1.5">📋 คัดลอก</button>
+                    </div>
+                    <span id="copy-ok-1" class="text-xs text-teal-400 hidden">✅ คัดลอกแล้ว!</span>
+                    <div class="sql-block" id="create-table-sql">CREATE TABLE IF NOT EXISTS clinic_table_db (
   id         BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   rec_id     VARCHAR(255) UNIQUE,
   animal_id  VARCHAR(255),
@@ -109,158 +142,390 @@ ALTER TABLE IF EXISTS clinic_table_db
 -- เพิ่มคอลัมน์ animal_sex สำหรับฐานข้อมูลที่สร้างก่อนเวอร์ชันนี้
 ALTER TABLE IF EXISTS clinic_table_db
   ADD COLUMN IF NOT EXISTS animal_sex VARCHAR(50);</div>
-            <div class="flex items-center gap-3 mt-3">
-                <button onclick="copySQL()" class="btn-secondary text-sm">📋 คัดลอก SQL</button>
-                <span id="copy-ok" class="text-xs text-teal-400 hidden">✅ คัดลอกแล้ว!</span>
-            </div>
-        </div>
+                </div>
 
-        <!-- Step 2: Export Instructions -->
-        <div class="action-card">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-2xl">📁</div>
+                <!-- pharmacy SQL -->
                 <div>
-                    <h3 class="text-white font-bold text-base">ขั้นตอนที่ 2 — เตรียมไฟล์ข้อมูล</h3>
-                    <p class="text-xs text-gray-500">รองรับไฟล์ Excel (.xlsx) และ XML จาก Microsoft Access</p>
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm font-bold text-gray-300">💊 ตาราง pharmacy (ยากิน / ยาฉีด)</p>
+                        <button onclick="copySQL('pharmacy-table-sql','copy-ok-2')" class="btn-secondary text-xs py-1.5">📋 คัดลอก</button>
+                    </div>
+                    <span id="copy-ok-2" class="text-xs text-teal-400 hidden">✅ คัดลอกแล้ว!</span>
+                    <div class="sql-block" id="pharmacy-table-sql">CREATE TABLE IF NOT EXISTS pharmacy (
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_name             TEXT NOT NULL,
+  name_th               TEXT,
+  category              TEXT,
+  sub_category          TEXT,
+  unit                  TEXT DEFAULT 'tablet',
+  concentration_mg_unit NUMERIC(10,4) DEFAULT 1,
+  price_per_unit        NUMERIC(10,2) DEFAULT 0,
+  bottle_volume_ml      NUMERIC(10,2) DEFAULT 0,
+  side_effects          TEXT,
+  is_medication         BOOLEAN DEFAULT TRUE,
+  dog_dose_1 NUMERIC(10,4), dog_for_1 TEXT,
+  dog_dose_2 NUMERIC(10,4), dog_for_2 TEXT,
+  dog_dose_3 NUMERIC(10,4), dog_for_3 TEXT,
+  cat_dose_1 NUMERIC(10,4), cat_for_1 TEXT,
+  cat_dose_2 NUMERIC(10,4), cat_for_2 TEXT,
+  cat_dose_3 NUMERIC(10,4), cat_for_3 TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);</div>
                 </div>
-            </div>
-
-            <!-- Excel tab -->
-            <div class="mb-4 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-                <p class="text-green-400 font-bold text-sm mb-2">📊 ตัวเลือก ก — ไฟล์ Excel (.xlsx)</p>
-                <p class="text-xs text-gray-300 mb-1">รองรับทั้งรูปแบบภาษาอังกฤษ (<span class="text-teal-300 font-mono">mainDB.xlsx</span>) และรูปแบบภาษาไทย (<span class="text-teal-300 font-mono">Old_DB.xlsx</span>):</p>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-400 font-mono mt-2">
-                    <span class="text-gray-500 col-span-2 uppercase tracking-widest text-[10px] mb-1">รูปแบบภาษาอังกฤษ (mainDB.xlsx)</span>
-                    <span>HN → rec_id (upsert key) + owner HN</span>
-                    <span>AnimalName → animal_name</span>
-                    <span>AnimalSpp → animal_spp</span>
-                    <span>AnimalSex → animal_sex</span>
-                    <span>SpecialNote → animal_tag</span>
-                    <span>OwnerName → owner_name</span>
-                    <span>AnimalDOB → animal_dob</span>
-                    <span>PhoneNo → phone_no</span>
-                    <span>MedicalHistory → medrec</span>
-                    <span class="text-gray-500 col-span-2 uppercase tracking-widest text-[10px] mt-2 mb-1">รูปแบบภาษาไทย (Old_DB.xlsx)</span>
-                    <span>HN → rec_id (owner HN)</span>
-                    <span>ชื่อสัตว์ → animal_name</span>
-                    <span>ชนิด - เพศ → animal_spp</span>
-                    <span>ข้อควรระวัง → animal_tag</span>
-                    <span>ชื่อ เจ้าของ → owner_name</span>
-                    <span>วดป เกิด → animal_dob</span>
-                    <span>เบอร์โทรศัพท์ → phone_no</span>
-                    <span>PE ตรวจร่างกาย → medrec</span>
-                </div>
-                <p class="text-xs text-amber-400 mt-2">💡 ถ้า HN ซ้ำกัน ระบบจะทับข้อมูลเดิมโดยอัตโนมัติ</p>
-            </div>
-
-            <!-- XML tab -->
-            <div class="p-3 rounded-xl bg-white/5 border border-white/10">
-                <p class="text-gray-300 font-bold text-sm mb-2">🗄️ ตัวเลือก ข — XML จาก Microsoft Access</p>
-                <ol class="list-decimal list-inside space-y-1 text-xs text-gray-400 leading-relaxed">
-                    <li>เปิดไฟล์ <span class="text-teal-300 font-mono">ClinicDB.mdb</span> ใน Microsoft Access</li>
-                    <li>คลิกขวาที่ตาราง <span class="text-teal-300 font-mono">ClinicTableDB</span> → <strong>Export</strong> → <strong>XML File</strong></li>
-                    <li>เลือกส่งออก <strong>Data (XML)</strong> เท่านั้น</li>
-                    <li>บันทึกเป็นไฟล์ <span class="text-teal-300 font-mono">.xml</span></li>
-                </ol>
             </div>
         </div>
 
-        <!-- Step 3: Upload -->
-        <div class="action-card">
-            <div class="flex items-center gap-3 mb-5">
-                <div class="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-2xl">⬆️</div>
-                <div>
-                    <h3 class="text-white font-bold text-base">ขั้นตอนที่ 3 — อัปโหลดไฟล์</h3>
-                    <p class="text-xs text-gray-500">เลือกไฟล์ Excel (.xlsx) หรือ XML จาก Access</p>
-                </div>
-            </div>
-
-            <!-- Drop Zone -->
-            <label class="drop-zone" id="drop-zone" for="xml-input">
-                <input type="file" id="xml-input" accept=".xlsx,.xls,.xml,text/xml,application/xml,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="handleFileSelect(event)">
-                <div id="drop-zone-content">
-                    <p class="text-4xl mb-3">📊</p>
-                    <p class="text-white font-bold text-lg">ลากไฟล์มาวางที่นี่</p>
-                    <p class="text-gray-400 text-sm mt-1">หรือคลิกเพื่อเลือกไฟล์</p>
-                    <p class="text-xs text-gray-500 mt-3">รองรับ .xlsx (Excel) และ .xml (Access Export)</p>
-                </div>
-            </label>
-
-            <!-- File Info -->
-            <div id="file-info" class="hidden mt-4 p-4 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center gap-3">
-                <span class="text-2xl" id="file-icon">📊</span>
-                <div class="flex-1 min-w-0">
-                    <p class="text-white font-bold text-sm truncate" id="file-name">—</p>
-                    <p class="text-xs text-gray-400" id="file-size">—</p>
-                </div>
-                <span class="badge badge-info" id="file-row-count">—</span>
-                <button onclick="clearFile()" class="text-gray-500 hover:text-red-400 text-lg transition">✕</button>
-            </div>
+        <!-- Tab Navigation -->
+        <div class="tab-nav" role="tablist">
+            <button class="tab-btn active" onclick="switchTab('patient')" id="tab-btn-patient" role="tab">
+                📁 ข้อมูลผู้ป่วย
+            </button>
+            <button class="tab-btn" onclick="switchTab('oral')" id="tab-btn-oral" role="tab">
+                💊 ยากิน (Oral)
+            </button>
+            <button class="tab-btn" onclick="switchTab('injection')" id="tab-btn-injection" role="tab">
+                💉 ยาฉีด (Injection)
+            </button>
         </div>
 
-        <!-- Step 4: Preview -->
-        <div class="action-card hidden" id="preview-section">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-2xl">👁️</div>
+        <!-- ══════════ TAB: PATIENT ══════════ -->
+        <div class="tab-panel active space-y-5" id="tab-patient">
+
+            <!-- Instructions -->
+            <div class="action-card">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-2xl">📁</div>
                     <div>
-                        <h3 class="text-white font-bold text-base">ตัวอย่างข้อมูล (Preview)</h3>
-                        <p class="text-xs text-gray-500" id="preview-summary">—</p>
+                        <h3 class="text-white font-bold text-base">เตรียมไฟล์ข้อมูลผู้ป่วย</h3>
+                        <p class="text-xs text-gray-500">รองรับไฟล์ Excel (.xlsx) และ XML จาก Microsoft Access</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2" id="validation-badges"></div>
-            </div>
-
-            <!-- Field Mapping -->
-            <div class="mb-4 p-3 rounded-xl bg-black/20 border border-white/5 text-xs">
-                <p class="text-gray-400 font-bold mb-2 uppercase tracking-widest">การ Mapping Fields</p>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-2" id="field-mapping"></div>
-            </div>
-
-            <div class="overflow-x-auto rounded-xl border border-white/10">
-                <table class="table-preview">
-                    <thead id="preview-head"></thead>
-                    <tbody id="preview-body"></tbody>
-                </table>
-            </div>
-            <p class="text-xs text-gray-500 mt-2">แสดง 5 แถวแรก</p>
-        </div>
-
-        <!-- Import Button & Progress -->
-        <div class="action-card" id="import-section" style="display:none">
-            <div class="flex items-center gap-3 mb-5">
-                <div class="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-2xl">🚀</div>
-                <div>
-                    <h3 class="text-white font-bold text-base">ขั้นตอนที่ 4 — นำเข้าข้อมูล</h3>
-                    <p class="text-xs text-gray-500">ระบบจะ Upsert ข้อมูลทีละ batch โดยอ้างอิงจาก RecID</p>
+                <div class="mb-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                    <p class="text-green-400 font-bold text-sm mb-2">📊 ตัวเลือก ก — ไฟล์ Excel (.xlsx)</p>
+                    <p class="text-xs text-gray-300 mb-1">รองรับทั้งรูปแบบภาษาอังกฤษ (<span class="text-teal-300 font-mono">mainDB.xlsx</span>) และรูปแบบภาษาไทย (<span class="text-teal-300 font-mono">Old_DB.xlsx</span>):</p>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-400 font-mono mt-2">
+                        <span class="text-gray-500 col-span-2 uppercase tracking-widest text-[10px] mb-1">รูปแบบภาษาอังกฤษ (mainDB.xlsx)</span>
+                        <span>HN → rec_id + owner HN</span><span>AnimalName → animal_name</span>
+                        <span>AnimalSpp → animal_spp</span><span>AnimalSex → animal_sex</span>
+                        <span>SpecialNote → animal_tag</span><span>OwnerName → owner_name</span>
+                        <span>AnimalDOB → animal_dob</span><span>PhoneNo → phone_no</span>
+                        <span class="col-span-2">MedicalHistory → medrec</span>
+                        <span class="text-gray-500 col-span-2 uppercase tracking-widest text-[10px] mt-2 mb-1">รูปแบบภาษาไทย (Old_DB.xlsx)</span>
+                        <span>HN → rec_id</span><span>ชื่อสัตว์ → animal_name</span>
+                        <span>ชนิด - เพศ → animal_spp</span><span>ข้อควรระวัง → animal_tag</span>
+                        <span>ชื่อ เจ้าของ → owner_name</span><span>วดป เกิด → animal_dob</span>
+                        <span>เบอร์โทรศัพท์ → phone_no</span><span>PE ตรวจร่างกาย → medrec</span>
+                    </div>
+                    <p class="text-xs text-amber-400 mt-2">💡 ถ้า HN ซ้ำกัน ระบบจะทับข้อมูลเดิมโดยอัตโนมัติ</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p class="text-gray-300 font-bold text-sm mb-2">🗄️ ตัวเลือก ข — XML จาก Microsoft Access</p>
+                    <ol class="list-decimal list-inside space-y-1 text-xs text-gray-400 leading-relaxed">
+                        <li>เปิดไฟล์ <span class="text-teal-300 font-mono">ClinicDB.mdb</span> ใน Microsoft Access</li>
+                        <li>คลิกขวาที่ตาราง <span class="text-teal-300 font-mono">ClinicTableDB</span> → <strong>Export</strong> → <strong>XML File</strong></li>
+                        <li>เลือกส่งออก <strong>Data (XML)</strong> เท่านั้น</li>
+                        <li>บันทึกเป็นไฟล์ <span class="text-teal-300 font-mono">.xml</span></li>
+                    </ol>
                 </div>
             </div>
 
-            <!-- Progress -->
-            <div id="import-progress" class="hidden mb-5">
-                <div class="flex justify-between text-xs text-gray-400 mb-2">
-                    <span id="import-status-text">กำลังนำเข้า...</span>
-                    <span id="import-percent">0%</span>
+            <!-- Upload -->
+            <div class="action-card">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-2xl">⬆️</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">อัปโหลดไฟล์ข้อมูลผู้ป่วย</h3>
+                        <p class="text-xs text-gray-500">เลือกไฟล์ Excel (.xlsx) หรือ XML จาก Access</p>
+                    </div>
                 </div>
-                <div class="progress-bar mb-2"><div class="progress-bar-inner" id="import-bar" style="width:0%"></div></div>
-                <p class="text-xs text-gray-500" id="import-detail">—</p>
+                <label class="drop-zone" id="drop-zone" for="xml-input">
+                    <input type="file" id="xml-input" accept=".xlsx,.xls,.xml,text/xml,application/xml,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="handlePatientFileSelect(event)">
+                    <div id="drop-zone-content">
+                        <p class="text-4xl mb-3">📊</p>
+                        <p class="text-white font-bold text-lg">ลากไฟล์มาวางที่นี่</p>
+                        <p class="text-gray-400 text-sm mt-1">หรือคลิกเพื่อเลือกไฟล์</p>
+                        <p class="text-xs text-gray-500 mt-3">รองรับ .xlsx (Excel) และ .xml (Access Export)</p>
+                    </div>
+                </label>
+                <div id="file-info" class="hidden mt-4 p-4 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center gap-3">
+                    <span class="text-2xl" id="file-icon">📊</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-bold text-sm truncate" id="file-name">—</p>
+                        <p class="text-xs text-gray-400" id="file-size">—</p>
+                    </div>
+                    <span class="badge badge-info" id="file-row-count">—</span>
+                    <button onclick="clearPatientFile()" class="text-gray-500 hover:text-red-400 text-lg transition">✕</button>
+                </div>
             </div>
 
-            <!-- Result -->
-            <div id="import-result" class="hidden mb-5 p-4 rounded-xl border">
-                <p class="font-bold text-base" id="import-result-title">—</p>
-                <div class="mt-2 text-sm space-y-1" id="import-result-body"></div>
+            <!-- Preview -->
+            <div class="action-card hidden" id="preview-section">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-2xl">👁️</div>
+                        <div>
+                            <h3 class="text-white font-bold text-base">ตัวอย่างข้อมูล (Preview)</h3>
+                            <p class="text-xs text-gray-500" id="preview-summary">—</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2" id="validation-badges"></div>
+                </div>
+                <div class="mb-4 p-3 rounded-xl bg-black/20 border border-white/5 text-xs">
+                    <p class="text-gray-400 font-bold mb-2 uppercase tracking-widest">การ Mapping Fields</p>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2" id="field-mapping"></div>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-white/10">
+                    <table class="table-preview">
+                        <thead id="preview-head"></thead>
+                        <tbody id="preview-body"></tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">แสดง 5 แถวแรก</p>
             </div>
 
-            <div class="flex gap-3 flex-wrap">
-                <button onclick="startImport()" id="btn-import" class="btn-primary">
-                    🚀 เริ่มนำเข้าข้อมูล
-                </button>
-                <button onclick="clearFile()" class="btn-secondary" id="btn-reset-import">
-                    🔄 เริ่มใหม่
-                </button>
+            <!-- Import -->
+            <div class="action-card" id="import-section" style="display:none">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-2xl">🚀</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">นำเข้าข้อมูลผู้ป่วย</h3>
+                        <p class="text-xs text-gray-500">ระบบจะ Upsert ข้อมูลทีละ batch โดยอ้างอิงจาก RecID</p>
+                    </div>
+                </div>
+                <div id="import-progress" class="hidden mb-5">
+                    <div class="flex justify-between text-xs text-gray-400 mb-2">
+                        <span id="import-status-text">กำลังนำเข้า...</span>
+                        <span id="import-percent">0%</span>
+                    </div>
+                    <div class="progress-bar mb-2"><div class="progress-bar-inner" id="import-bar" style="width:0%"></div></div>
+                    <p class="text-xs text-gray-500" id="import-detail">—</p>
+                </div>
+                <div id="import-result" class="hidden mb-5 p-4 rounded-xl border">
+                    <p class="font-bold text-base" id="import-result-title">—</p>
+                    <div class="mt-2 text-sm space-y-1" id="import-result-body"></div>
+                </div>
+                <div class="flex gap-3 flex-wrap">
+                    <button onclick="startPatientImport()" id="btn-import" class="btn-primary">🚀 เริ่มนำเข้าข้อมูล</button>
+                    <button onclick="clearPatientFile()" class="btn-secondary">🔄 เริ่มใหม่</button>
+                </div>
             </div>
-        </div>
+
+        </div><!-- /tab-patient -->
+
+        <!-- ══════════ TAB: ORAL ══════════ -->
+        <div class="tab-panel space-y-5" id="tab-oral">
+
+            <!-- Instructions -->
+            <div class="action-card">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl">💊</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">นำเข้าฐานข้อมูลยากิน</h3>
+                        <p class="text-xs text-gray-500">อัปโหลดไฟล์ <span class="text-teal-300 font-mono">oral.csv</span> เพื่อเพิ่มยากินเข้า pharmacy (category = TakeHome)</p>
+                    </div>
+                </div>
+                <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                    <p class="text-emerald-300 font-bold mb-2">📋 รูปแบบ CSV ที่รองรับ</p>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-400 font-mono">
+                        <span>drugName → item_name</span><span>drugGroup → sub_category</span>
+                        <span>doseDog1 (mg/kg) → dog_dose_1</span><span>indicationDog1 → dog_for_1</span>
+                        <span>doseDog2 (mg/kg) → dog_dose_2</span><span>indicationDog2 → dog_for_2</span>
+                        <span>doseDog3 (mg/kg) → dog_dose_3</span><span>indicationDog3 → dog_for_3</span>
+                        <span>doseCat1 (mg/kg) → cat_dose_1</span><span>indicationCat1 → cat_for_1</span>
+                        <span>doseCat2 (mg/kg) → cat_dose_2</span><span>indicationCat2 → cat_for_2</span>
+                        <span>doseCat3 (mg/kg) → cat_dose_3</span><span>indicationCat3 → cat_for_3</span>
+                        <span class="col-span-2">contraindication → side_effects</span>
+                    </div>
+                    <p class="text-amber-400 mt-2">💡 ยาที่มีชื่อซ้ำในระบบจะถูกข้ามไป (ไม่เขียนทับ)</p>
+                </div>
+            </div>
+
+            <!-- Upload -->
+            <div class="action-card">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-2xl">⬆️</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">อัปโหลดไฟล์ oral.csv</h3>
+                        <p class="text-xs text-gray-500">เลือกไฟล์ .csv</p>
+                    </div>
+                </div>
+                <label class="drop-zone" id="oral-drop-zone" for="oral-csv-input">
+                    <input type="file" id="oral-csv-input" accept=".csv,text/csv" onchange="handleDrugFileSelect(event,'oral')">
+                    <div id="oral-drop-zone-content">
+                        <p class="text-4xl mb-3">💊</p>
+                        <p class="text-white font-bold text-lg">ลากไฟล์มาวางที่นี่</p>
+                        <p class="text-gray-400 text-sm mt-1">หรือคลิกเพื่อเลือกไฟล์</p>
+                        <p class="text-xs text-gray-500 mt-3">รองรับ .csv (oral.csv)</p>
+                    </div>
+                </label>
+                <div id="oral-file-info" class="hidden mt-4 p-4 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center gap-3">
+                    <span class="text-2xl">📄</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-bold text-sm truncate" id="oral-file-name">—</p>
+                        <p class="text-xs text-gray-400" id="oral-file-size">—</p>
+                    </div>
+                    <span class="badge badge-info" id="oral-file-row-count">—</span>
+                    <button onclick="clearDrugFile('oral')" class="text-gray-500 hover:text-red-400 text-lg transition">✕</button>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="action-card hidden" id="oral-preview-section">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-2xl">👁️</div>
+                        <div>
+                            <h3 class="text-white font-bold text-base">ตัวอย่างข้อมูลยากิน</h3>
+                            <p class="text-xs text-gray-500" id="oral-preview-summary">—</p>
+                        </div>
+                    </div>
+                    <div id="oral-validation-badges"></div>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-white/10">
+                    <table class="table-preview">
+                        <thead id="oral-preview-head"></thead>
+                        <tbody id="oral-preview-body"></tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">แสดง 5 แถวแรก</p>
+            </div>
+
+            <!-- Import -->
+            <div class="action-card hidden" id="oral-import-section">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-2xl">🚀</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">นำเข้าข้อมูลยากิน</h3>
+                        <p class="text-xs text-gray-500">เพิ่มยากินใหม่เข้าตาราง pharmacy (category = TakeHome)</p>
+                    </div>
+                </div>
+                <div id="oral-import-progress" class="hidden mb-5">
+                    <div class="flex justify-between text-xs text-gray-400 mb-2">
+                        <span id="oral-import-status">กำลังนำเข้า...</span>
+                        <span id="oral-import-pct">0%</span>
+                    </div>
+                    <div class="progress-bar mb-2"><div class="progress-bar-inner" id="oral-import-bar" style="width:0%"></div></div>
+                    <p class="text-xs text-gray-500" id="oral-import-detail">—</p>
+                </div>
+                <div id="oral-import-result" class="hidden mb-5 p-4 rounded-xl border">
+                    <p class="font-bold text-base" id="oral-result-title">—</p>
+                    <div class="mt-2 text-sm space-y-1" id="oral-result-body"></div>
+                </div>
+                <div class="flex gap-3 flex-wrap">
+                    <button onclick="startDrugImport('oral')" id="oral-btn-import" class="btn-primary">🚀 เริ่มนำเข้าข้อมูล</button>
+                    <button onclick="clearDrugFile('oral')" class="btn-secondary">🔄 เริ่มใหม่</button>
+                </div>
+            </div>
+
+        </div><!-- /tab-oral -->
+
+        <!-- ══════════ TAB: INJECTION ══════════ -->
+        <div class="tab-panel space-y-5" id="tab-injection">
+
+            <!-- Instructions -->
+            <div class="action-card">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-2xl">💉</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">นำเข้าฐานข้อมูลยาฉีด</h3>
+                        <p class="text-xs text-gray-500">อัปโหลดไฟล์ <span class="text-teal-300 font-mono">injection.csv</span> เพื่อเพิ่มยาฉีดเข้า pharmacy (category = Injection)</p>
+                    </div>
+                </div>
+                <div class="p-3 rounded-xl bg-pink-500/10 border border-pink-500/20 text-xs">
+                    <p class="text-pink-300 font-bold mb-2">📋 รูปแบบ CSV ที่รองรับ</p>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-400 font-mono">
+                        <span>drugName → item_name</span><span>drugGroup → sub_category</span>
+                        <span>doseDog1 (mg/kg) → dog_dose_1</span><span>indicationDog1 → dog_for_1</span>
+                        <span>doseDog2 (mg/kg) → dog_dose_2</span><span>indicationDog2 → dog_for_2</span>
+                        <span>doseDog3 (mg/kg) → dog_dose_3</span><span>indicationDog3 → dog_for_3</span>
+                        <span>doseCat1 (mg/kg) → cat_dose_1</span><span>indicationCat1 → cat_for_1</span>
+                        <span>doseCat2 (mg/kg) → cat_dose_2</span><span>indicationCat2 → cat_for_2</span>
+                        <span>doseCat3 (mg/kg) → cat_dose_3</span><span>indicationCat3 → cat_for_3</span>
+                        <span class="col-span-2">contraindication → side_effects</span>
+                    </div>
+                    <p class="text-amber-400 mt-2">💡 ยาที่มีชื่อซ้ำในระบบจะถูกข้ามไป (ไม่เขียนทับ)</p>
+                </div>
+            </div>
+
+            <!-- Upload -->
+            <div class="action-card">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-2xl">⬆️</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">อัปโหลดไฟล์ injection.csv</h3>
+                        <p class="text-xs text-gray-500">เลือกไฟล์ .csv</p>
+                    </div>
+                </div>
+                <label class="drop-zone" id="inj-drop-zone" for="inj-csv-input">
+                    <input type="file" id="inj-csv-input" accept=".csv,text/csv" onchange="handleDrugFileSelect(event,'injection')">
+                    <div id="inj-drop-zone-content">
+                        <p class="text-4xl mb-3">💉</p>
+                        <p class="text-white font-bold text-lg">ลากไฟล์มาวางที่นี่</p>
+                        <p class="text-gray-400 text-sm mt-1">หรือคลิกเพื่อเลือกไฟล์</p>
+                        <p class="text-xs text-gray-500 mt-3">รองรับ .csv (injection.csv)</p>
+                    </div>
+                </label>
+                <div id="inj-file-info" class="hidden mt-4 p-4 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center gap-3">
+                    <span class="text-2xl">📄</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-bold text-sm truncate" id="inj-file-name">—</p>
+                        <p class="text-xs text-gray-400" id="inj-file-size">—</p>
+                    </div>
+                    <span class="badge badge-info" id="inj-file-row-count">—</span>
+                    <button onclick="clearDrugFile('injection')" class="text-gray-500 hover:text-red-400 text-lg transition">✕</button>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="action-card hidden" id="inj-preview-section">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-2xl">👁️</div>
+                        <div>
+                            <h3 class="text-white font-bold text-base">ตัวอย่างข้อมูลยาฉีด</h3>
+                            <p class="text-xs text-gray-500" id="inj-preview-summary">—</p>
+                        </div>
+                    </div>
+                    <div id="inj-validation-badges"></div>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-white/10">
+                    <table class="table-preview">
+                        <thead id="inj-preview-head"></thead>
+                        <tbody id="inj-preview-body"></tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">แสดง 5 แถวแรก</p>
+            </div>
+
+            <!-- Import -->
+            <div class="action-card hidden" id="inj-import-section">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-2xl">🚀</div>
+                    <div>
+                        <h3 class="text-white font-bold text-base">นำเข้าข้อมูลยาฉีด</h3>
+                        <p class="text-xs text-gray-500">เพิ่มยาฉีดใหม่เข้าตาราง pharmacy (category = Injection)</p>
+                    </div>
+                </div>
+                <div id="inj-import-progress" class="hidden mb-5">
+                    <div class="flex justify-between text-xs text-gray-400 mb-2">
+                        <span id="inj-import-status">กำลังนำเข้า...</span>
+                        <span id="inj-import-pct">0%</span>
+                    </div>
+                    <div class="progress-bar mb-2"><div class="progress-bar-inner" id="inj-import-bar" style="width:0%"></div></div>
+                    <p class="text-xs text-gray-500" id="inj-import-detail">—</p>
+                </div>
+                <div id="inj-import-result" class="hidden mb-5 p-4 rounded-xl border">
+                    <p class="font-bold text-base" id="inj-result-title">—</p>
+                    <div class="mt-2 text-sm space-y-1" id="inj-result-body"></div>
+                </div>
+                <div class="flex gap-3 flex-wrap">
+                    <button onclick="startDrugImport('injection')" id="inj-btn-import" class="btn-primary">🚀 เริ่มนำเข้าข้อมูล</button>
+                    <button onclick="clearDrugFile('injection')" class="btn-secondary">🔄 เริ่มใหม่</button>
+                </div>
+            </div>
+
+        </div><!-- /tab-injection -->
 
     </main>
 
@@ -269,9 +534,52 @@ ALTER TABLE IF EXISTS clinic_table_db
     </footer>
 
     <script>
-        /* ══════════════════════════════════════════
-           Field Mapping: Access → Supabase
-           ══════════════════════════════════════════ */
+        /* ════════════════════════════════════════════════════
+           UI: Tab switching & SQL accordion
+           ════════════════════════════════════════════════════ */
+        function switchTab(name) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            document.getElementById('tab-btn-' + name).classList.add('active');
+        }
+
+        function toggleSqlAccordion(btn) {
+            const body = document.getElementById('sql-accordion-body');
+            const chevron = btn.querySelector('.chevron');
+            const isOpen = body.classList.contains('open');
+            body.classList.toggle('open', !isOpen);
+            chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+        }
+
+        /* ════════════════════════════════════════════════════
+           Copy SQL
+           ════════════════════════════════════════════════════ */
+        function copySQL(blockId, okId) {
+            const sql = document.getElementById(blockId).innerText;
+            navigator.clipboard.writeText(sql).then(() => {
+                const ok = document.getElementById(okId);
+                ok.classList.remove('hidden');
+                setTimeout(() => ok.classList.add('hidden'), 2500);
+            });
+        }
+
+        /* ════════════════════════════════════════════════════
+           Shared helpers
+           ════════════════════════════════════════════════════ */
+        function escapeHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        /* ════════════════════════════════════════════════════
+           ██  PATIENT RECORDS  (XLSX / XML)
+           ════════════════════════════════════════════════════ */
         const FIELD_MAP = {
             RecID:      'rec_id',
             AnimalID:   'animal_id',
@@ -285,75 +593,58 @@ ALTER TABLE IF EXISTS clinic_table_db
             Medrec:     'medrec',
         };
 
-        /* Excel column header → internal key (same as FIELD_MAP source).
-           รองรับทั้งรูปแบบภาษาอังกฤษ (mainDB.xlsx) และภาษาไทย (Old_DB.xlsx) */
         const XLSX_COL_MAP = {
-            // HN is the owner's hospital number; mapped to 'AnimalID' so that
-            // transformRow() stores it in animal_id, which syncToVMSTables() uses
-            // as the owner's HN when creating the owners record.
-            // ── English column names (mainDB.xlsx) ──────────────────────────────
-            'HN':                 'AnimalID',
-            'AnimalName':         'AnimalName',
-            'AnimalSpp':          'AnimalSpp',
-            'AnimalSex':          'AnimalSex',
-            'SpecialNote':        'AnimalTag',
-            'OwnerName':          'OwnerName',
-            'AnimalDOB':          'AnimalDOB',
-            'PhoneNo':            'PhoneNo',
-            'MedicalHistory':     'Medrec',
-            // ── Thai column names (Old_DB.xlsx) ──────────────────────────────────
-            'ชื่อสัตว์':          'AnimalName',
-            'ชนิด - เพศ':         'AnimalSpp',
-            'ข้อควรระวัง':        'AnimalTag',
-            'ชื่อ เจ้าของ':       'OwnerName',
-            'วดป เกิด':           'AnimalDOB',
-            'เบอร์โทรศัพท์':      'PhoneNo',
-            'PE ตรวจร่างกาย':     'Medrec',
+            // ── English column names (mainDB.xlsx) ──
+            'HN':               'AnimalID',
+            'AnimalName':       'AnimalName',
+            'AnimalSpp':        'AnimalSpp',
+            'AnimalSex':        'AnimalSex',
+            'SpecialNote':      'AnimalTag',
+            'OwnerName':        'OwnerName',
+            'AnimalDOB':        'AnimalDOB',
+            'PhoneNo':          'PhoneNo',
+            'MedicalHistory':   'Medrec',
+            // ── Thai column names (Old_DB.xlsx) ──
+            'ชื่อสัตว์':        'AnimalName',
+            'ชนิด - เพศ':       'AnimalSpp',
+            'ข้อควรระวัง':      'AnimalTag',
+            'ชื่อ เจ้าของ':     'OwnerName',
+            'วดป เกิด':         'AnimalDOB',
+            'เบอร์โทรศัพท์':    'PhoneNo',
+            'PE ตรวจร่างกาย':   'Medrec',
         };
 
         const BATCH_SIZE = 100;
         let parsedRows = [];
         let xmlHeaders = [];
-        let fileType = 'xml'; // 'xml' | 'xlsx'
+        let fileType = 'xml';
 
-        /* ══════════════════════════════════════════
-           Copy SQL
-           ══════════════════════════════════════════ */
-        function copySQL() {
-            const sql = document.getElementById('create-table-sql').innerText;
-            navigator.clipboard.writeText(sql).then(() => {
-                const ok = document.getElementById('copy-ok');
-                ok.classList.remove('hidden');
-                setTimeout(() => ok.classList.add('hidden'), 2500);
-            });
-        }
+        // Module-scope constants (reused across calls)
+        const THAI_MONTHS = {
+            'มกราคม':1,'กุมภาพันธ์':2,'มีนาคม':3,'เมษายน':4,
+            'พฤษภาคม':5,'มิถุนายน':6,'กรกฎาคม':7,'สิงหาคม':8,
+            'กันยายน':9,'ตุลาคม':10,'พฤศจิกายน':11,'ธันวาคม':12,
+        };
+        const SPECIES_PREFIXES = ['สุนัข','แมว','หมา','กระต่าย'];
 
-        /* ══════════════════════════════════════════
-           Drag & Drop
-           ══════════════════════════════════════════ */
+        // ── Drag & drop for patient file ──
         const dropZone = document.getElementById('drop-zone');
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('drag-over');
             const file = e.dataTransfer.files[0];
-            if (file) processFile(file);
+            if (file) processPatientFile(file);
         });
 
-        function handleFileSelect(e) {
+        function handlePatientFileSelect(e) {
             const file = e.target.files[0];
-            if (file) processFile(file);
+            if (file) processPatientFile(file);
         }
 
-        function clearFile() {
-            parsedRows = [];
-            xmlHeaders = [];
-            fileType = 'xml';
+        function clearPatientFile() {
+            parsedRows = []; xmlHeaders = []; fileType = 'xml';
             document.getElementById('xml-input').value = '';
             document.getElementById('file-info').classList.add('hidden');
             document.getElementById('preview-section').classList.add('hidden');
@@ -364,63 +655,46 @@ ALTER TABLE IF EXISTS clinic_table_db
             document.getElementById('btn-import').innerHTML = '🚀 เริ่มนำเข้าข้อมูล';
         }
 
-        /* ══════════════════════════════════════════
-           File Processing (XML + XLSX)
-           ══════════════════════════════════════════ */
-        function processFile(file) {
+        function processPatientFile(file) {
             const name = file.name.toLowerCase();
             const isXlsx = name.endsWith('.xlsx') || name.endsWith('.xls');
             const isXml  = name.endsWith('.xml');
-
-            if (!isXlsx && !isXml) {
-                alert('⚠️ กรุณาเลือกไฟล์ .xlsx หรือ .xml เท่านั้น');
-                return;
-            }
-
+            if (!isXlsx && !isXml) { alert('⚠️ กรุณาเลือกไฟล์ .xlsx หรือ .xml เท่านั้น'); return; }
             fileType = isXlsx ? 'xlsx' : 'xml';
             document.getElementById('file-icon').textContent = isXlsx ? '📊' : '📄';
-
             const reader = new FileReader();
-
             if (isXlsx) {
                 reader.onload = (e) => {
                     try {
                         const result = parseXLSX(e.target.result);
-                        xmlHeaders = result.headers;
-                        parsedRows = result.rows;
-                        showFileInfo(file, parsedRows.length);
-                        showPreview();
+                        xmlHeaders = result.headers; parsedRows = result.rows;
+                        showPatientFileInfo(file, parsedRows.length);
+                        showPatientPreview();
                         document.getElementById('import-section').style.display = '';
                         document.getElementById('import-result').classList.add('hidden');
                         document.getElementById('btn-import').disabled = false;
                         document.getElementById('btn-import').innerHTML = '🚀 เริ่มนำเข้าข้อมูล';
-                    } catch (err) {
-                        alert('❌ ไม่สามารถอ่านไฟล์ Excel ได้: ' + err.message);
-                    }
+                    } catch (err) { alert('❌ ไม่สามารถอ่านไฟล์ Excel ได้: ' + err.message); }
                 };
                 reader.readAsArrayBuffer(file);
             } else {
                 reader.onload = (e) => {
                     try {
-                        const text = e.target.result;
-                        const result = parseXML(text);
-                        xmlHeaders = result.headers;
-                        parsedRows = result.rows;
-                        showFileInfo(file, parsedRows.length);
-                        showPreview();
+                        const result = parseXML(e.target.result);
+                        xmlHeaders = result.headers; parsedRows = result.rows;
+                        showPatientFileInfo(file, parsedRows.length);
+                        showPatientPreview();
                         document.getElementById('import-section').style.display = '';
                         document.getElementById('import-result').classList.add('hidden');
                         document.getElementById('btn-import').disabled = false;
                         document.getElementById('btn-import').innerHTML = '🚀 เริ่มนำเข้าข้อมูล';
-                    } catch (err) {
-                        alert('❌ ไม่สามารถอ่านไฟล์ XML ได้: ' + err.message);
-                    }
+                    } catch (err) { alert('❌ ไม่สามารถอ่านไฟล์ XML ได้: ' + err.message); }
                 };
                 reader.readAsText(file, 'UTF-8');
             }
         }
 
-        function showFileInfo(file, rowCount) {
+        function showPatientFileInfo(file, rowCount) {
             document.getElementById('file-name').textContent = file.name;
             document.getElementById('file-size').textContent = formatFileSize(file.size);
             document.getElementById('file-row-count').textContent = rowCount + ' แถว';
@@ -430,115 +704,57 @@ ALTER TABLE IF EXISTS clinic_table_db
         function parseXML(text) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/xml');
-
             const parseError = doc.querySelector('parsererror');
-            if (parseError) throw new Error('ไฟล์ XML ไม่ถูกต้อง: ' + (parseError.textContent.trim().slice(0, 200) + (parseError.textContent.trim().length > 200 ? '...' : '')));
-
+            if (parseError) throw new Error('ไฟล์ XML ไม่ถูกต้อง: ' + parseError.textContent.trim().slice(0, 200));
             const root = doc.documentElement;
             const records = Array.from(root.children);
-
             if (records.length === 0) throw new Error('ไฟล์ XML ต้องมีอย่างน้อย 1 แถวข้อมูล');
-
             const headers = Array.from(records[0].children).map(el => el.tagName);
             const rows = records.map(record => {
                 const row = {};
-                Array.from(record.children).forEach(el => {
-                    row[el.tagName] = el.textContent.trim();
-                });
+                Array.from(record.children).forEach(el => { row[el.tagName] = el.textContent.trim(); });
                 return row;
             });
-
             return { headers, rows };
         }
 
-        /* ══════════════════════════════════════════
-           XLSX Parsing (SheetJS)
-           ══════════════════════════════════════════ */
         function parseXLSX(arrayBuffer) {
-            if (typeof XLSX === 'undefined') {
-                throw new Error('ไลบรารี SheetJS ยังไม่โหลด กรุณารีเฟรชหน้าแล้วลองใหม่');
-            }
-
-            const wb = XLSX.read(arrayBuffer, {
-                type: 'array',
-                // Disable SheetJS date conversion: dates in this Excel file are stored
-                // as Thai-formatted strings (e.g. "27 สิงหาคม 2568") and parsed by
-                // the custom parseDate() function which handles Buddhist Era conversion.
-                cellDates: false,
-            });
-            if (!wb.SheetNames || wb.SheetNames.length === 0) {
-                throw new Error('ไม่พบ Sheet ในไฟล์ Excel');
-            }
-
+            if (typeof XLSX === 'undefined') throw new Error('ไลบรารี SheetJS ยังไม่โหลด กรุณารีเฟรชหน้าแล้วลองใหม่');
+            const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: false });
+            if (!wb.SheetNames || wb.SheetNames.length === 0) throw new Error('ไม่พบ Sheet ในไฟล์ Excel');
             const ws = wb.Sheets[wb.SheetNames[0]];
             const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
-
-            // Find the header row (first row with a non-null cell)
             let headerRowIdx = -1;
             for (let i = 0; i < raw.length; i++) {
-                if (raw[i].some(v => v !== null && v !== '')) {
-                    headerRowIdx = i;
-                    break;
-                }
+                if (raw[i].some(v => v !== null && v !== '')) { headerRowIdx = i; break; }
             }
             if (headerRowIdx === -1) throw new Error('ไม่พบ Header Row ในไฟล์ Excel');
-
             const excelHeaders = raw[headerRowIdx];
-
-            // Build column index → internal key mapping
             const colToKey = {};
             excelHeaders.forEach((hdr, colIdx) => {
                 const h = (hdr || '').toString().trim();
-                if (XLSX_COL_MAP[h]) {
-                    colToKey[colIdx] = XLSX_COL_MAP[h];
-                }
+                if (XLSX_COL_MAP[h]) colToKey[colIdx] = XLSX_COL_MAP[h];
             });
-
-            // Parse data rows, skipping blank rows
             const rows = [];
             for (let r = headerRowIdx + 1; r < raw.length; r++) {
                 const cells = raw[r];
-                // Skip completely empty rows
                 if (!cells || cells.every(v => v === null || v === '')) continue;
-
                 const row = {};
                 Object.entries(colToKey).forEach(([colIdx, key]) => {
                     const val = cells[colIdx];
                     row[key] = (val !== null && val !== undefined) ? String(val).replace(/_x000D_/g, '').trim() : '';
                 });
-
-                // Use HN (stored in AnimalID) as RecID so that upsert overwrites by HN.
-                // Fall back to row-position-based ID for files without an HN column.
-                // Note: the fallback ID is positional (xlsx_N), so re-importing a file
-                // without an HN column with rows in a different order will create
-                // duplicate entries instead of updating existing ones.
                 row['RecID'] = row['AnimalID'] ? String(row['AnimalID']) : `xlsx_${r + 1}`;
-
                 rows.push(row);
             }
-
             if (rows.length === 0) throw new Error('ไม่พบข้อมูลในไฟล์ Excel');
-
-            // Expose internal key names as "headers" for preview
             const headers = ['RecID', ...Object.values(colToKey)];
             return { headers, rows };
         }
 
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-        }
-
-        /* ══════════════════════════════════════════
-           Preview
-           ══════════════════════════════════════════ */
-        function showPreview() {
+        function showPatientPreview() {
             const previewSection = document.getElementById('preview-section');
             previewSection.classList.remove('hidden');
-
-            // For Excel, AnimalID is auto-filled from HN and RecID is generated — treat as optional.
-            // AnimalSex is only present in the new English-format files (mainDB.xlsx), not Old_DB.xlsx.
             const optionalForXlsx = new Set(['AnimalID', 'AnimalSex']);
             const knownFields = Object.keys(FIELD_MAP);
             const detectedFields = xmlHeaders.filter(h => knownFields.includes(h.trim()));
@@ -546,23 +762,16 @@ ALTER TABLE IF EXISTS clinic_table_db
                 if (fileType === 'xlsx' && optionalForXlsx.has(k)) return false;
                 return !xmlHeaders.map(h => h.trim()).includes(k);
             });
-
             const badges = document.getElementById('validation-badges');
             badges.innerHTML = '';
-            if (fileType === 'xlsx') {
-                badges.innerHTML += `<span class="badge badge-success">📊 Excel</span>`;
-            }
+            if (fileType === 'xlsx') badges.innerHTML += `<span class="badge badge-success">📊 Excel</span>`;
             if (missingFields.length === 0) {
                 badges.innerHTML += `<span class="badge badge-success">✅ Fields ครบถ้วน</span>`;
             } else {
                 badges.innerHTML += `<span class="badge badge-error">⚠️ ขาด ${missingFields.length} field</span>`;
             }
-
-            // Summary
             document.getElementById('preview-summary').textContent =
                 `พบ ${parsedRows.length} แถว | ${detectedFields.length}/${knownFields.length} fields ตรงกัน`;
-
-            // Field mapping display
             const mappingEl = document.getElementById('field-mapping');
             mappingEl.innerHTML = Object.entries(FIELD_MAP).map(([src, dst]) => {
                 const found = xmlHeaders.map(h => h.trim()).includes(src);
@@ -576,28 +785,15 @@ ALTER TABLE IF EXISTS clinic_table_db
                     ${isOptional && !found ? '<span class="text-xs text-gray-500">(auto)</span>' : ''}
                 </div>`;
             }).join('');
-
-            // Preview table
             const previewRows = parsedRows.slice(0, 5);
             const previewCols = Object.keys(FIELD_MAP);
-
-            document.getElementById('preview-head').innerHTML =
-                `<tr>${previewCols.map(c => `<th>${c}</th>`).join('')}</tr>`;
-
+            document.getElementById('preview-head').innerHTML = `<tr>${previewCols.map(c => `<th>${c}</th>`).join('')}</tr>`;
             document.getElementById('preview-body').innerHTML = previewRows.map(row =>
                 `<tr>${previewCols.map(c => `<td title="${escapeHtml(row[c] || '')}">${escapeHtml(row[c] || '—')}</td>`).join('')}</tr>`
             ).join('');
         }
 
-        function escapeHtml(str) {
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-        /* ══════════════════════════════════════════
-           Data Transformation
-           ══════════════════════════════════════════ */
-        function transformRow(row) {
-            const dob = parseDate(row['AnimalDOB']);
+        function transformPatientRow(row) {
             return {
                 rec_id:      row['RecID']      || null,
                 animal_id:   row['AnimalID']   || null,
@@ -606,7 +802,7 @@ ALTER TABLE IF EXISTS clinic_table_db
                 animal_sex:  row['AnimalSex']  || null,
                 animal_tag:  row['AnimalTag']  || null,
                 owner_name:  row['OwnerName']  || null,
-                animal_dob:  dob,
+                animal_dob:  parseDate(row['AnimalDOB']),
                 phone_no:    row['PhoneNo']    || null,
                 medrec:      row['Medrec']     || null,
             };
@@ -615,77 +811,43 @@ ALTER TABLE IF EXISTS clinic_table_db
         function parseDate(val) {
             if (!val || val.trim() === '') return null;
             const s = val.trim();
-
-            // Try ISO format first
             if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
-            // Thai full month name: "DD ชื่อเดือน YYYY" (Buddhist Era)
-            // e.g. "27 สิงหาคม 2568" → 2025-08-27
-            const THAI_MONTHS = {
-                'มกราคม': 1, 'กุมภาพันธ์': 2, 'มีนาคม': 3, 'เมษายน': 4,
-                'พฤษภาคม': 5, 'มิถุนายน': 6, 'กรกฎาคม': 7, 'สิงหาคม': 8,
-                'กันยายน': 9, 'ตุลาคม': 10, 'พฤศจิกายน': 11, 'ธันวาคม': 12,
-            };
             const thaiMatch = s.match(/^(\d{1,2})\s+(.+?)\s+(\d{4})$/);
             if (thaiMatch) {
                 const [, d, monthName, yearStr] = thaiMatch;
                 const month = THAI_MONTHS[monthName.trim()];
                 if (month) {
                     let y = parseInt(yearStr);
-                    if (y > 2300) y -= 543; // Buddhist Era → CE
-                    const dd = String(d).padStart(2, '0');
-                    const mm = String(month).padStart(2, '0');
+                    if (y > 2300) y -= 543;
+                    const dd = String(d).padStart(2,'0'), mm = String(month).padStart(2,'0');
                     const testDate = new Date(`${y}-${mm}-${dd}`);
-                    if (!isNaN(testDate.getTime()) &&
-                        testDate.getFullYear() === y &&
-                        testDate.getMonth() + 1 === month &&
-                        testDate.getDate() === parseInt(d)) {
+                    if (!isNaN(testDate.getTime()) && testDate.getFullYear()===y && testDate.getMonth()+1===month && testDate.getDate()===parseInt(d))
                         return `${y}-${mm}-${dd}`;
-                    }
                 }
             }
-
-            // Thai Buddhist year: DD/MM/YYYY where year > 2300
             const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
             if (dmyMatch) {
                 let [, d, m, y] = dmyMatch;
                 y = parseInt(y);
-                if (y > 2300) y -= 543; // Convert Buddhist Era to CE
-                if (y < 100)  y += 2000;
-                const dd = String(d).padStart(2, '0');
-                const mm = String(m).padStart(2, '0');
-                // Use Date object to validate the date (catches invalid dates like 31/02)
+                if (y > 2300) y -= 543;
+                if (y < 100) y += 2000;
+                const dd = String(d).padStart(2,'0'), mm = String(m).padStart(2,'0');
                 const testDate = new Date(`${y}-${mm}-${dd}`);
-                if (!isNaN(testDate.getTime()) &&
-                    testDate.getFullYear() === y &&
-                    testDate.getMonth() + 1 === parseInt(m) &&
-                    testDate.getDate() === parseInt(d)) {
+                if (!isNaN(testDate.getTime()) && testDate.getFullYear()===y && testDate.getMonth()+1===parseInt(m) && testDate.getDate()===parseInt(d))
                     return `${y}-${mm}-${dd}`;
-                }
             }
-
-            // Try native Date parsing as last resort
             const dt = new Date(s);
             if (!isNaN(dt.getTime())) {
                 const y = dt.getFullYear();
-                if (y < 1900 || y > 2100) return null; // reject unreasonable years (avoids "+0YYYY-MM" overflow)
-                const mm = String(dt.getMonth() + 1).padStart(2, '0');
-                const dd = String(dt.getDate()).padStart(2, '0');
-                return `${y}-${mm}-${dd}`;
+                if (y < 1900 || y > 2100) return null;
+                return `${y}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
             }
-
-            return null; // Cannot parse — store as null
+            return null;
         }
 
-        /* ══════════════════════════════════════════
-           Helper: fetch all rows from a table with
-           range-based pagination so results are not
-           capped by the Supabase default row limit.
-           ══════════════════════════════════════════ */
         async function fetchAllFromDB(table, columns = '*') {
             const PAGE_SIZE = 1000;
-            let all = [];
-            let from = 0;
+            let all = [], from = 0;
             while (true) {
                 const { data, error } = await db.from(table).select(columns).range(from, from + PAGE_SIZE - 1);
                 if (error) throw error;
@@ -697,49 +859,23 @@ ALTER TABLE IF EXISTS clinic_table_db
             return all;
         }
 
-        /* ══════════════════════════════════════════
-           Species / Gender normalisation helpers
-           ══════════════════════════════════════════ */
+        function stripLeadingNonThai(s) { return (s||'').replace(/^[^\u0E00-\u0E7F]+/,'').trim(); }
 
-        // Strip leading non-Thai characters (emoji, symbols) from a string.
-        // Thai Unicode block: U+0E00–U+0E7F.
-        function stripLeadingNonThai(s) {
-            return (s || '').replace(/^[^\u0E00-\u0E7F]+/, '').trim();
-        }
-
-        // Derive the species name from a raw animal_spp value.
-        // Handles:
-        //   Old_DB format  – '🐶สุนัข - ผู้ตอน' → 'สุนัข'
-        //   mainDB format  – ' สุนัข'            → 'สุนัข'
-        //   bare suffix    – 'สุนัข -'           → 'สุนัข'
         function normalizeSpecies(spp) {
             if (!spp) return 'อื่นๆ';
             let s = stripLeadingNonThai(spp);
             const dashIdx = s.indexOf(' - ');
-            if (dashIdx !== -1) s = s.slice(0, dashIdx).trim();   // keep only species part
-            s = s.replace(/\s*-\s*$/, '').trim();                 // remove trailing bare dash
+            if (dashIdx !== -1) s = s.slice(0, dashIdx).trim();
+            s = s.replace(/\s*-\s*$/,'').trim();
             return s || 'อื่นๆ';
         }
 
-        // Derive the gender from the sex and/or spp fields.
-        // Handles:
-        //   clean sex value    – 'เมีย'          → 'เมีย'
-        //   species-prefixed   – 'สุนัขเมีย'     → 'เมีย'   (common Excel export bug)
-        //   Old_DB combined    – '🐶สุนัข - ผู้' → 'ผู้'   (gender embedded in spp)
         function normalizeGender(sex, spp) {
-            // Must stay in sync with the species checks in getAnimalIcon() in animals.html.
-            const SPECIES_PREFIXES = ['สุนัข', 'แมว', 'หมา', 'กระต่าย'];
             if (sex) {
                 let s = stripLeadingNonThai(sex);
-                for (const prefix of SPECIES_PREFIXES) {
-                    if (s.startsWith(prefix)) {
-                        s = s.slice(prefix.length).trim();
-                        break;
-                    }
-                }
+                for (const prefix of SPECIES_PREFIXES) { if (s.startsWith(prefix)) { s = s.slice(prefix.length).trim(); break; } }
                 return s;
             }
-            // No separate sex field – try to extract gender from combined spp (Old_DB)
             if (spp) {
                 const s = stripLeadingNonThai(spp);
                 const dashIdx = s.indexOf(' - ');
@@ -748,116 +884,68 @@ ALTER TABLE IF EXISTS clinic_table_db
             return '';
         }
 
-        /* ══════════════════════════════════════════
-           Sync imported rows → owners / animals / owner_phones
-           ══════════════════════════════════════════ */
         async function syncToVMSTables(rowsToSync) {
-            // ── 1. Load existing owners (paginated) ──────────────────
-            const existingOwners = await fetchAllFromDB('owners', 'hn, owner_name');
+            const existingOwners = await fetchAllFromDB('owners','hn, owner_name');
             const ownerByName = new Map(existingOwners.map(o => [o.owner_name, o.hn]));
-            // Secondary lookup by HN so that Excel-supplied HNs are used as the primary key
-            const ownerByHN = new Map(existingOwners.map(o => [String(o.hn), o.owner_name]));
+            const ownerByHN   = new Map(existingOwners.map(o => [String(o.hn), o.owner_name]));
             const existingHNs = existingOwners.map(o => parseInt(o.hn)).filter(n => !isNaN(n));
-            let nextHN = Math.max(...existingHNs, 690000) + 1; // 690000 is the baseline so auto-generated HNs start at ≥ 690001
-
-            // ── 2. Collect new owners ─────────────────────────────────
-            // When Excel provides an HN, it is the authoritative key:
-            //   • HN not in DB → create a new owner with that HN.
-            //   • HN already in DB → reuse the existing owner (no duplicate).
-            // When no HN is provided, fall back to name-based deduplication.
-            const newOwners = [];
-            const newPhones = [];
+            let nextHN = Math.max(...existingHNs, 690000) + 1;
+            const newOwners = [], newPhones = [];
             for (const row of rowsToSync) {
                 if (!row.owner_name) continue;
                 const hn = row.animal_id ? String(row.animal_id) : null;
                 if (hn) {
-                    // HN-based matching (primary)
                     if (!ownerByHN.has(hn)) {
-                        ownerByHN.set(hn, row.owner_name);
-                        ownerByName.set(row.owner_name, hn);
+                        ownerByHN.set(hn, row.owner_name); ownerByName.set(row.owner_name, hn);
                         newOwners.push({ hn, owner_name: row.owner_name, address: '' });
-                        if (row.phone_no) {
-                            newPhones.push({ owner_hn: hn, phone_number: row.phone_no, label: 'เบอร์หลัก' });
-                        }
+                        if (row.phone_no) newPhones.push({ owner_hn: hn, phone_number: row.phone_no, label: 'เบอร์หลัก' });
                     } else if (!ownerByName.has(row.owner_name)) {
-                        // HN already in DB; link this owner name to that HN in-memory only
-                        // (for animal lookup in step 4 – no DB owner record is created).
                         ownerByName.set(row.owner_name, hn);
                     }
                 } else {
-                    // No HN supplied: fall back to name-based deduplication
                     if (!ownerByName.has(row.owner_name)) {
-                        const autoHN = (nextHN++).toString().padStart(6, '0');
+                        const autoHN = (nextHN++).toString().padStart(6,'0');
                         ownerByName.set(row.owner_name, autoHN);
                         newOwners.push({ hn: autoHN, owner_name: row.owner_name, address: '' });
-                        if (row.phone_no) {
-                            newPhones.push({ owner_hn: autoHN, phone_number: row.phone_no, label: 'เบอร์หลัก' });
-                        }
+                        if (row.phone_no) newPhones.push({ owner_hn: autoHN, phone_number: row.phone_no, label: 'เบอร์หลัก' });
                     }
                 }
             }
-
             if (newOwners.length > 0) {
-                // Deduplicate by hn to prevent "ON CONFLICT DO UPDATE command cannot affect row a second time"
                 const uniqueOwners = Array.from(new Map(newOwners.map(o => [o.hn, o])).values());
-                const { error: ownerErr } = await db.from('owners').upsert(uniqueOwners, { onConflict: 'hn' });
-                if (ownerErr) throw ownerErr;
+                const { error } = await db.from('owners').upsert(uniqueOwners, { onConflict: 'hn' });
+                if (error) throw error;
             }
             if (newPhones.length > 0) {
-                const { error: phoneErr } = await db.from('owner_phones').insert(newPhones);
-                if (phoneErr) throw phoneErr;
+                const { error } = await db.from('owner_phones').insert(newPhones);
+                if (error) throw error;
             }
-
-            // ── 3. Load existing animals (paginated, to skip duplicates) ────────
-            const existingAnimals = await fetchAllFromDB('animals', 'owner_hn, pet_name, birth_date');
-            const animalSet = new Set(
-                existingAnimals.map(a => `${a.owner_hn}|${(a.pet_name || '').toLowerCase()}|${a.birth_date || ''}`)
-            );
-
-            // ── 4. Collect new animals ────────────────────────────────
+            const existingAnimals = await fetchAllFromDB('animals','owner_hn, pet_name, birth_date');
+            const animalSet = new Set(existingAnimals.map(a => `${a.owner_hn}|${(a.pet_name||'').toLowerCase()}|${a.birth_date||''}`));
             const newAnimals = [];
             for (const row of rowsToSync) {
                 if (!row.animal_name || !row.owner_name) continue;
-                // Prefer the HN from Excel directly; fall back to the name→HN lookup
                 const hn = (row.animal_id ? String(row.animal_id) : null) || ownerByName.get(row.owner_name);
                 if (!hn) continue;
-                const key = `${hn}|${row.animal_name.toLowerCase()}|${row.animal_dob || ''}`;
+                const key = `${hn}|${row.animal_name.toLowerCase()}|${row.animal_dob||''}`;
                 if (!animalSet.has(key)) {
                     animalSet.add(key);
-                    newAnimals.push({
-                        owner_hn: hn,
-                        pet_name: row.animal_name,
-                        pet_type: normalizeSpecies(row.animal_spp),
-                        gender:   normalizeGender(row.animal_sex, row.animal_spp),
-                        birth_date: row.animal_dob || null,
-                        congenital_disease: row.animal_tag || '',
-                        updated_at: new Date().toISOString(),
-                    });
+                    newAnimals.push({ owner_hn: hn, pet_name: row.animal_name, pet_type: normalizeSpecies(row.animal_spp), gender: normalizeGender(row.animal_sex, row.animal_spp), birth_date: row.animal_dob || null, congenital_disease: row.animal_tag || '', updated_at: new Date().toISOString() });
                 }
             }
-
             let insertedAnimals = 0;
             if (newAnimals.length > 0) {
                 for (let i = 0; i < newAnimals.length; i += BATCH_SIZE) {
-                    const batch = newAnimals.slice(i, i + BATCH_SIZE);
-                    const { error: animalErr } = await db.from('animals').insert(batch);
-                    if (animalErr) throw animalErr;
-                    insertedAnimals += batch.length;
+                    const { error } = await db.from('animals').insert(newAnimals.slice(i, i + BATCH_SIZE));
+                    if (error) throw error;
+                    insertedAnimals += Math.min(BATCH_SIZE, newAnimals.length - i);
                 }
             }
-
             return { owners: newOwners.length, animals: insertedAnimals };
         }
 
-        /* ══════════════════════════════════════════
-           Import
-           ══════════════════════════════════════════ */
-        async function startImport() {
-            if (parsedRows.length === 0) {
-                alert('⚠️ ไม่มีข้อมูลให้นำเข้า กรุณาเลือกไฟล์ Excel (.xlsx) หรือ XML ก่อน');
-                return;
-            }
-
+        async function startPatientImport() {
+            if (parsedRows.length === 0) { alert('⚠️ ไม่มีข้อมูลให้นำเข้า กรุณาเลือกไฟล์ Excel (.xlsx) หรือ XML ก่อน'); return; }
             const btnImport  = document.getElementById('btn-import');
             const progressEl = document.getElementById('import-progress');
             const barEl      = document.getElementById('import-bar');
@@ -865,111 +953,331 @@ ALTER TABLE IF EXISTS clinic_table_db
             const statusEl   = document.getElementById('import-status-text');
             const detailEl   = document.getElementById('import-detail');
             const resultEl   = document.getElementById('import-result');
-
-            btnImport.disabled = true;
-            btnImport.innerHTML = '⏳ กำลังนำเข้า...';
-            progressEl.classList.remove('hidden');
-            resultEl.classList.add('hidden');
-
-            let importedCount = 0;
-            let skippedCount  = 0;
-            const errors = [];
-            const total = parsedRows.length;
-
-            // Process in batches
+            btnImport.disabled = true; btnImport.innerHTML = '⏳ กำลังนำเข้า...';
+            progressEl.classList.remove('hidden'); resultEl.classList.add('hidden');
+            let importedCount = 0, skippedCount = 0;
+            const errors = [], total = parsedRows.length;
             for (let i = 0; i < total; i += BATCH_SIZE) {
                 const batch = parsedRows.slice(i, i + BATCH_SIZE);
                 const batchEnd = Math.min(i + BATCH_SIZE, total);
-
-                statusEl.textContent = `กำลังนำเข้าแถว ${i + 1}–${batchEnd} จาก ${total}...`;
-                detailEl.textContent = `Batch ${Math.floor(i / BATCH_SIZE) + 1} / ${Math.ceil(total / BATCH_SIZE)}`;
-                const pct = Math.round((i / total) * 100);
-                barEl.style.width = pct + '%';
-                pctEl.textContent = pct + '%';
-
-                const transformedBatch = (() => {
-                    const seen = new Set();
-                    return batch.map(transformRow).filter(r => {
-                        if (!r.rec_id || seen.has(r.rec_id)) return false;
-                        seen.add(r.rec_id);
-                        return true;
-                    });
-                })(); // skip rows without RecID, deduplicate by rec_id within each batch
-
+                statusEl.textContent = `กำลังนำเข้าแถว ${i+1}–${batchEnd} จาก ${total}...`;
+                detailEl.textContent = `Batch ${Math.floor(i/BATCH_SIZE)+1} / ${Math.ceil(total/BATCH_SIZE)}`;
+                barEl.style.width = Math.round((i/total)*100) + '%';
+                pctEl.textContent  = Math.round((i/total)*100) + '%';
+                const seen = new Set();
+                const transformedBatch = batch.map(transformPatientRow).filter(r => {
+                    if (!r.rec_id || seen.has(r.rec_id)) return false;
+                    seen.add(r.rec_id); return true;
+                });
                 skippedCount += batch.length - transformedBatch.length;
-
                 if (transformedBatch.length === 0) continue;
-
                 try {
-                    const { error } = await window.db
-                        .from('clinic_table_db')
-                        .upsert(transformedBatch, { onConflict: 'rec_id' });
-
-                    if (error) {
-                        errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}`);
-                    } else {
-                        importedCount += transformedBatch.length;
-                    }
-                } catch (err) {
-                    errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${err.message}`);
-                }
+                    const { error } = await window.db.from('clinic_table_db').upsert(transformedBatch, { onConflict: 'rec_id' });
+                    if (error) errors.push(`Batch ${Math.floor(i/BATCH_SIZE)+1}: ${error.message}`);
+                    else importedCount += transformedBatch.length;
+                } catch (err) { errors.push(`Batch ${Math.floor(i/BATCH_SIZE)+1}: ${err.message}`); }
             }
-
-            barEl.style.width = '100%';
-            pctEl.textContent = '100%';
-            statusEl.textContent = 'เสร็จสิ้น!';
-
-            // ── Sync to owners / animals / owner_phones ──────────────
-            let syncResult = null;
-            let syncError  = null;
+            barEl.style.width = '100%'; pctEl.textContent = '100%';
+            let syncResult = null, syncError = null;
             if (importedCount > 0) {
                 try {
                     statusEl.textContent = 'กำลังซิงค์ไปยัง VMS...';
                     detailEl.textContent = 'สร้าง owners และ animals...';
-                    const allTransformed = parsedRows.map(transformRow).filter(r => r.rec_id);
-                    syncResult = await syncToVMSTables(allTransformed);
-                } catch (err) {
-                    syncError = err.message;
-                }
+                    syncResult = await syncToVMSTables(parsedRows.map(transformPatientRow).filter(r => r.rec_id));
+                } catch (err) { syncError = err.message; }
             }
-            statusEl.textContent = 'เสร็จสิ้น!';
-            detailEl.textContent = '';
-
-            // Show result
+            statusEl.textContent = 'เสร็จสิ้น!'; detailEl.textContent = '';
             resultEl.classList.remove('hidden');
             const titleEl = document.getElementById('import-result-title');
             const bodyEl  = document.getElementById('import-result-body');
-
             if (errors.length === 0 && !syncError) {
                 resultEl.className = 'mb-5 p-4 rounded-xl border border-green-500/30 bg-green-500/10';
-                titleEl.className  = 'font-bold text-base text-green-400';
-                titleEl.textContent = '✅ นำเข้าข้อมูลสำเร็จ!';
+                titleEl.className  = 'font-bold text-base text-green-400'; titleEl.textContent = '✅ นำเข้าข้อมูลสำเร็จ!';
             } else {
                 resultEl.className = 'mb-5 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10';
-                titleEl.className  = 'font-bold text-base text-amber-400';
-                titleEl.textContent = `⚠️ นำเข้าเสร็จ แต่มีบางแถวที่เกิดข้อผิดพลาด`;
+                titleEl.className  = 'font-bold text-base text-amber-400'; titleEl.textContent = '⚠️ นำเข้าเสร็จ แต่มีบางแถวที่เกิดข้อผิดพลาด';
             }
-
             const hasTooLong = errors.some(e => e.includes('value too long for type character varying'));
             bodyEl.innerHTML = `
                 <p class="text-gray-300">✅ นำเข้าสำเร็จ: <strong class="text-green-400">${importedCount.toLocaleString()} แถว</strong></p>
-                ${skippedCount > 0 ? `<p class="text-amber-400">⏭️ ข้ามแถวที่ไม่มี RecID: <strong>${skippedCount} แถว</strong> — กรุณาตรวจสอบว่า ฟิลด์ RecID ในไฟล์ XML หรือคอลัมน์ HN ในไฟล์ Excel ไม่ว่างเปล่า</p>` : ''}
-                ${syncResult ? `
-                    <p class="text-teal-400 mt-1">📥 ซิงค์ไปยัง VMS: เจ้าของใหม่ <strong>${syncResult.owners}</strong> ราย · สัตว์ใหม่ <strong>${syncResult.animals}</strong> ตัว</p>
-                ` : ''}
-                ${errors.length > 0 ? `
-                    <p class="text-red-400 font-bold mt-2">❌ ข้อผิดพลาด (${errors.length}):</p>
-                    <ul class="list-disc list-inside text-red-300 text-xs space-y-1 mt-1">
-                        ${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
-                    </ul>
-                    <p class="text-xs text-gray-400 mt-2">💡 หากเจอ Error "relation does not exist" กรุณารัน SQL ในขั้นตอนที่ 1 ก่อน</p>
-                    ${hasTooLong ? `<p class="text-xs text-amber-300 mt-1">💡 หากเจอ Error "value too long for type character varying" กรุณารัน SQL ในขั้นตอนที่ 1 อีกครั้ง (มี ALTER TABLE สำหรับขยาย phone_no เป็น VARCHAR(50))</p>` : ''}
-                ` : ''}
+                ${skippedCount > 0 ? `<p class="text-amber-400">⏭️ ข้ามแถวที่ไม่มี RecID: <strong>${skippedCount} แถว</strong></p>` : ''}
+                ${syncResult ? `<p class="text-teal-400 mt-1">📥 ซิงค์ไปยัง VMS: เจ้าของใหม่ <strong>${syncResult.owners}</strong> ราย · สัตว์ใหม่ <strong>${syncResult.animals}</strong> ตัว</p>` : ''}
+                ${errors.length > 0 ? `<p class="text-red-400 font-bold mt-2">❌ ข้อผิดพลาด (${errors.length}):</p><ul class="list-disc list-inside text-red-300 text-xs space-y-1 mt-1">${errors.map(e=>`<li>${escapeHtml(e)}</li>`).join('')}</ul><p class="text-xs text-gray-400 mt-2">💡 หากเจอ Error "relation does not exist" กรุณารัน SQL ก่อน</p>${hasTooLong ? `<p class="text-xs text-amber-300 mt-1">💡 หากเจอ "value too long" กรุณารัน SQL อีกครั้ง</p>` : ''}` : ''}
                 ${syncError ? `<p class="text-red-300 text-xs mt-2">⚠️ ซิงค์ไปยัง VMS ล้มเหลว: ${escapeHtml(syncError)}</p>` : ''}
             `;
+            btnImport.disabled = false; btnImport.innerHTML = '🔄 นำเข้าอีกครั้ง';
+        }
 
-            btnImport.disabled = false;
-            btnImport.innerHTML = '🔄 นำเข้าอีกครั้ง';
+        /* ════════════════════════════════════════════════════
+           ██  DRUG CSV  (oral / injection)
+           ════════════════════════════════════════════════════ */
+
+        // State for each drug type
+        const drugState = {
+            oral:      { rows: [], headers: [] },
+            injection: { rows: [], headers: [] },
+        };
+
+        // CSV column header → internal key
+        const CSV_DRUG_COLS = [
+            'drugName', 'drugGroup',
+            'doseDog1 (mg/kg)', 'indicationDog1',
+            'doseDog2 (mg/kg)', 'indicationDog2',
+            'doseDog3 (mg/kg)', 'indicationDog3',
+            'doseCat1 (mg/kg)', 'indicationCat1',
+            'doseCat2 (mg/kg)', 'indicationCat2',
+            'doseCat3 (mg/kg)', 'indicationCat3',
+            'contraindication',
+        ];
+
+        // Preview columns for table display
+        const DRUG_PREVIEW_COLS = ['drugName','drugGroup','doseDog1 (mg/kg)','indicationDog1','doseCat1 (mg/kg)','indicationCat1','contraindication'];
+
+        const idPrefix = { oral: 'oral', injection: 'inj' };
+        const catLabel = { oral: 'TakeHome', injection: 'Injection' };
+        const unitDefault = { oral: 'tablet', injection: 'mL' };
+
+        // Drag & drop for drug zones
+        ['oral','injection'].forEach(type => {
+            const zoneId = (type === 'oral') ? 'oral-drop-zone' : 'inj-drop-zone';
+            const zone = document.getElementById(zoneId);
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault(); zone.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file) processDrugFile(file, type);
+            });
+        });
+
+        function handleDrugFileSelect(e, type) {
+            const file = e.target.files[0];
+            if (file) processDrugFile(file, type);
+        }
+
+        function clearDrugFile(type) {
+            drugState[type].rows = []; drugState[type].headers = [];
+            const p = idPrefix[type];
+            const inputId = (type === 'oral') ? 'oral-csv-input' : 'inj-csv-input';
+            document.getElementById(inputId).value = '';
+            document.getElementById(p+'-file-info').classList.add('hidden');
+            document.getElementById(p+'-preview-section').classList.add('hidden');
+            document.getElementById(p+'-import-section').classList.add('hidden');
+            document.getElementById(p+'-import-progress').classList.add('hidden');
+            document.getElementById(p+'-import-result').classList.add('hidden');
+            const btnId = (type === 'oral') ? 'oral-btn-import' : 'inj-btn-import';
+            document.getElementById(btnId).disabled = false;
+            document.getElementById(btnId).innerHTML = '🚀 เริ่มนำเข้าข้อมูล';
+        }
+
+        function processDrugFile(file, type) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('⚠️ กรุณาเลือกไฟล์ .csv เท่านั้น'); return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const result = parseCSV(e.target.result);
+                    drugState[type].rows = result.rows;
+                    drugState[type].headers = result.headers;
+                    showDrugFileInfo(file, result.rows.length, type);
+                    showDrugPreview(type);
+                    const p = idPrefix[type];
+                    document.getElementById(p+'-import-section').classList.remove('hidden');
+                    document.getElementById(p+'-import-result').classList.add('hidden');
+                    const btnId = (type === 'oral') ? 'oral-btn-import' : 'inj-btn-import';
+                    document.getElementById(btnId).disabled = false;
+                    document.getElementById(btnId).innerHTML = '🚀 เริ่มนำเข้าข้อมูล';
+                } catch (err) { alert('❌ ไม่สามารถอ่านไฟล์ CSV ได้: ' + err.message); }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseCSV(text) {
+            // Strip BOM if present
+            const raw = text.replace(/^\uFEFF/, '');
+            const lines = raw.split(/\r?\n/);
+            if (lines.length < 2) throw new Error('ไฟล์ CSV ต้องมีอย่างน้อย 2 แถว (header + data)');
+
+            function parseLine(line) {
+                const result = [];
+                let cur = '', inQuote = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    if (ch === '"') {
+                        if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
+                        else inQuote = !inQuote;
+                    } else if (ch === ',' && !inQuote) {
+                        result.push(cur); cur = '';
+                    } else {
+                        cur += ch;
+                    }
+                }
+                result.push(cur);
+                return result;
+            }
+
+            const headers = parseLine(lines[0]);
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cells = parseLine(line);
+                const row = {};
+                headers.forEach((h, idx) => { row[h.trim()] = (cells[idx] || '').trim(); });
+                if (row[headers[0].trim()]) rows.push(row); // skip empty rows
+            }
+            if (rows.length === 0) throw new Error('ไม่พบข้อมูลในไฟล์ CSV');
+            return { headers: headers.map(h => h.trim()), rows };
+        }
+
+        function showDrugFileInfo(file, rowCount, type) {
+            const p = idPrefix[type];
+            document.getElementById(p+'-file-name').textContent = file.name;
+            document.getElementById(p+'-file-size').textContent = formatFileSize(file.size);
+            document.getElementById(p+'-file-row-count').textContent = rowCount + ' แถว';
+            document.getElementById(p+'-file-info').classList.remove('hidden');
+        }
+
+        function showDrugPreview(type) {
+            const state = drugState[type];
+            const p = idPrefix[type];
+            document.getElementById(p+'-preview-section').classList.remove('hidden');
+            const total = state.rows.length;
+            const missing = CSV_DRUG_COLS.filter(c => !state.headers.includes(c));
+            const badgesEl = document.getElementById(p+'-validation-badges');
+            badgesEl.innerHTML = missing.length === 0
+                ? `<span class="badge badge-success">✅ คอลัมน์ครบถ้วน</span>`
+                : `<span class="badge badge-error">⚠️ ขาด ${missing.length} คอลัมน์</span>`;
+            document.getElementById(p+'-preview-summary').textContent = `พบ ${total} รายการ`;
+            const previewRows = state.rows.slice(0, 5);
+            document.getElementById(p+'-preview-head').innerHTML =
+                `<tr>${DRUG_PREVIEW_COLS.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr>`;
+            document.getElementById(p+'-preview-body').innerHTML = previewRows.map(row =>
+                `<tr>${DRUG_PREVIEW_COLS.map(c => `<td title="${escapeHtml(row[c]||'')}">${escapeHtml(row[c]||'—')}</td>`).join('')}</tr>`
+            ).join('');
+        }
+
+        // Parse the first numeric value from a dose string like "11-22 mg/kg" → 11
+        function parseDoseNum(doseStr) {
+            if (!doseStr || !doseStr.trim()) return null;
+            const match = doseStr.trim().match(/[\d.]+/);
+            return match ? parseFloat(match[0]) : null;
+        }
+
+        // Combine dose string and indication into a single descriptive label
+        function buildDoseFor(doseStr, indication) {
+            const parts = [];
+            if (doseStr && doseStr.trim()) parts.push(doseStr.trim());
+            if (indication && indication.trim()) parts.push(indication.trim());
+            return parts.join(' — ') || null;
+        }
+
+        function transformDrugRow(row, type) {
+            return {
+                item_name:             row['drugName'] || null,
+                name_th:               null,
+                category:              catLabel[type],
+                sub_category:          row['drugGroup'] || null,
+                unit:                  unitDefault[type],
+                concentration_mg_unit: 1,
+                price_per_unit:        0,
+                bottle_volume_ml:      0,
+                side_effects:          row['contraindication'] || null,
+                is_medication:         true,
+                dog_dose_1: parseDoseNum(row['doseDog1 (mg/kg)']),
+                dog_for_1:  buildDoseFor(row['doseDog1 (mg/kg)'], row['indicationDog1']),
+                dog_dose_2: parseDoseNum(row['doseDog2 (mg/kg)']),
+                dog_for_2:  buildDoseFor(row['doseDog2 (mg/kg)'], row['indicationDog2']),
+                dog_dose_3: parseDoseNum(row['doseDog3 (mg/kg)']),
+                dog_for_3:  buildDoseFor(row['doseDog3 (mg/kg)'], row['indicationDog3']),
+                cat_dose_1: parseDoseNum(row['doseCat1 (mg/kg)']),
+                cat_for_1:  buildDoseFor(row['doseCat1 (mg/kg)'], row['indicationCat1']),
+                cat_dose_2: parseDoseNum(row['doseCat2 (mg/kg)']),
+                cat_for_2:  buildDoseFor(row['doseCat2 (mg/kg)'], row['indicationCat2']),
+                cat_dose_3: parseDoseNum(row['doseCat3 (mg/kg)']),
+                cat_for_3:  buildDoseFor(row['doseCat3 (mg/kg)'], row['indicationCat3']),
+            };
+        }
+
+        async function startDrugImport(type) {
+            const state = drugState[type];
+            if (state.rows.length === 0) { alert('⚠️ ไม่มีข้อมูลให้นำเข้า กรุณาเลือกไฟล์ CSV ก่อน'); return; }
+            const p = idPrefix[type];
+            const btnId   = (type === 'oral') ? 'oral-btn-import' : 'inj-btn-import';
+            const btnEl   = document.getElementById(btnId);
+            const progEl  = document.getElementById(p+'-import-progress');
+            const barEl   = document.getElementById(p+'-import-bar');
+            const pctEl   = document.getElementById(p+'-import-pct');
+            const statEl  = document.getElementById(p+'-import-status');
+            const detEl   = document.getElementById(p+'-import-detail');
+            const resEl   = document.getElementById(p+'-import-result');
+            btnEl.disabled = true; btnEl.innerHTML = '⏳ กำลังนำเข้า...';
+            progEl.classList.remove('hidden'); resEl.classList.add('hidden');
+
+            // Fetch existing drug names to skip duplicates
+            statEl.textContent = 'กำลังตรวจสอบรายการซ้ำ...';
+            let existingNames = new Set();
+            let dupCheckWarning = '';
+            try {
+                const existing = await fetchAllFromDB('pharmacy','item_name');
+                existingNames = new Set(existing.map(r => (r.item_name||'').toLowerCase()));
+            } catch (err) {
+                dupCheckWarning = `⚠️ ไม่สามารถตรวจสอบรายการซ้ำได้: ${err.message} — ระบบจะพยายามเพิ่มรายการทั้งหมด`;
+            }
+
+            const allDrugs = state.rows
+                .map(row => transformDrugRow(row, type))
+                .filter(r => r.item_name && !existingNames.has(r.item_name.toLowerCase()));
+
+            const skipped = state.rows.length - allDrugs.length;
+            const total   = allDrugs.length;
+            let insertedCount = 0;
+            const errors = [];
+
+            if (total === 0) {
+                barEl.style.width = '100%'; pctEl.textContent = '100%'; statEl.textContent = 'เสร็จสิ้น!'; detEl.textContent = '';
+                resEl.classList.remove('hidden');
+                resEl.className = 'mb-5 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10';
+                document.getElementById(p+'-result-title').className = 'font-bold text-base text-amber-400';
+                document.getElementById(p+'-result-title').textContent = '⚠️ ไม่มีรายการใหม่ให้เพิ่ม';
+                document.getElementById(p+'-result-body').innerHTML = `<p class="text-gray-300">ยาทั้ง <strong>${state.rows.length}</strong> รายการ มีชื่อซ้ำกับที่มีอยู่ในระบบแล้ว</p>${dupCheckWarning ? `<p class="text-amber-300 text-xs mt-1">⚠️ ${escapeHtml(dupCheckWarning)}</p>` : ''}`;
+                btnEl.disabled = false; btnEl.innerHTML = '🔄 นำเข้าอีกครั้ง';
+                return;
+            }
+
+            for (let i = 0; i < total; i += BATCH_SIZE) {
+                const batch = allDrugs.slice(i, i + BATCH_SIZE);
+                const batchEnd = Math.min(i + BATCH_SIZE, total);
+                statEl.textContent = `กำลังนำเข้ารายการ ${i+1}–${batchEnd} จาก ${total}...`;
+                detEl.textContent  = `Batch ${Math.floor(i/BATCH_SIZE)+1} / ${Math.ceil(total/BATCH_SIZE)}`;
+                barEl.style.width  = Math.round((i/total)*100) + '%';
+                pctEl.textContent  = Math.round((i/total)*100) + '%';
+                try {
+                    const { error } = await window.db.from('pharmacy').insert(batch);
+                    if (error) errors.push(`Batch ${Math.floor(i/BATCH_SIZE)+1}: ${error.message}`);
+                    else insertedCount += batch.length;
+                } catch (err) { errors.push(`Batch ${Math.floor(i/BATCH_SIZE)+1}: ${err.message}`); }
+            }
+
+            barEl.style.width = '100%'; pctEl.textContent = '100%'; statEl.textContent = 'เสร็จสิ้น!'; detEl.textContent = '';
+            resEl.classList.remove('hidden');
+            if (errors.length === 0) {
+                resEl.className = 'mb-5 p-4 rounded-xl border border-green-500/30 bg-green-500/10';
+                document.getElementById(p+'-result-title').className = 'font-bold text-base text-green-400';
+                document.getElementById(p+'-result-title').textContent = '✅ นำเข้าข้อมูลสำเร็จ!';
+            } else {
+                resEl.className = 'mb-5 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10';
+                document.getElementById(p+'-result-title').className = 'font-bold text-base text-amber-400';
+                document.getElementById(p+'-result-title').textContent = '⚠️ นำเข้าเสร็จ แต่มีบางรายการที่เกิดข้อผิดพลาด';
+            }
+            document.getElementById(p+'-result-body').innerHTML = `
+                <p class="text-gray-300">✅ เพิ่มยาใหม่: <strong class="text-green-400">${insertedCount.toLocaleString()} รายการ</strong></p>
+                ${skipped > 0 ? `<p class="text-amber-400">⏭️ ข้ามรายการซ้ำ: <strong>${skipped} รายการ</strong></p>` : ''}
+                ${dupCheckWarning ? `<p class="text-amber-300 text-xs mt-1">⚠️ ${escapeHtml(dupCheckWarning)}</p>` : ''}
+                ${errors.length > 0 ? `<p class="text-red-400 font-bold mt-2">❌ ข้อผิดพลาด (${errors.length}):</p><ul class="list-disc list-inside text-red-300 text-xs space-y-1 mt-1">${errors.map(e=>`<li>${escapeHtml(e)}</li>`).join('')}</ul><p class="text-xs text-gray-400 mt-2">💡 หากเจอ Error "relation does not exist" กรุณารัน SQL ในส่วน "สร้างตาราง" ก่อน</p>` : ''}
+            `;
+            btnEl.disabled = false; btnEl.innerHTML = '🔄 นำเข้าอีกครั้ง';
         }
     </script>
 </body>
