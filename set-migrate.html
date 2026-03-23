@@ -72,7 +72,7 @@
 
         /* ── SQL Accordion ── */
         .sql-accordion { border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
-        .sql-accordion-header { width: 100%; padding: 16px 20px; background: rgba(255,255,255,0.03); border: none; cursor: pointer; display: flex; align-items: center; gap-12px; justify-content: space-between; color: #e2e8f0; font-family: "Sarabun", sans-serif; font-size: 14px; font-weight: 700; transition: 0.2s; }
+        .sql-accordion-header { width: 100%; padding: 16px 20px; background: rgba(255,255,255,0.03); border: none; cursor: pointer; display: flex; align-items: center; gap: 12px; justify-content: space-between; color: #e2e8f0; font-family: "Sarabun", sans-serif; font-size: 14px; font-weight: 700; transition: 0.2s; }
         .sql-accordion-header:hover { background: rgba(255,255,255,0.05); }
         .sql-accordion-body { padding: 20px; background: rgba(0,0,0,0.2); border-top: 1px solid var(--border); display: none; }
         .sql-accordion-body.open { display: block; }
@@ -619,6 +619,14 @@ ALTER TABLE IF EXISTS clinic_table_db
         let xmlHeaders = [];
         let fileType = 'xml';
 
+        // Module-scope constants (reused across calls)
+        const THAI_MONTHS = {
+            'มกราคม':1,'กุมภาพันธ์':2,'มีนาคม':3,'เมษายน':4,
+            'พฤษภาคม':5,'มิถุนายน':6,'กรกฎาคม':7,'สิงหาคม':8,
+            'กันยายน':9,'ตุลาคม':10,'พฤศจิกายน':11,'ธันวาคม':12,
+        };
+        const SPECIES_PREFIXES = ['สุนัข','แมว','หมา','กระต่าย'];
+
         // ── Drag & drop for patient file ──
         const dropZone = document.getElementById('drop-zone');
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -804,11 +812,6 @@ ALTER TABLE IF EXISTS clinic_table_db
             if (!val || val.trim() === '') return null;
             const s = val.trim();
             if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-            const THAI_MONTHS = {
-                'มกราคม':1,'กุมภาพันธ์':2,'มีนาคม':3,'เมษายน':4,
-                'พฤษภาคม':5,'มิถุนายน':6,'กรกฎาคม':7,'สิงหาคม':8,
-                'กันยายน':9,'ตุลาคม':10,'พฤศจิกายน':11,'ธันวาคม':12,
-            };
             const thaiMatch = s.match(/^(\d{1,2})\s+(.+?)\s+(\d{4})$/);
             if (thaiMatch) {
                 const [, d, monthName, yearStr] = thaiMatch;
@@ -868,7 +871,6 @@ ALTER TABLE IF EXISTS clinic_table_db
         }
 
         function normalizeGender(sex, spp) {
-            const SPECIES_PREFIXES = ['สุนัข','แมว','หมา','กระต่าย'];
             if (sex) {
                 let s = stripLeadingNonThai(sex);
                 for (const prefix of SPECIES_PREFIXES) { if (s.startsWith(prefix)) { s = s.slice(prefix.length).trim(); break; } }
@@ -1022,13 +1024,9 @@ ALTER TABLE IF EXISTS clinic_table_db
             'doseDog1 (mg/kg)', 'indicationDog1',
             'doseDog2 (mg/kg)', 'indicationDog2',
             'doseDog3 (mg/kg)', 'indicationDog3',
-            'doseDog4 (mg/kg)', 'indicationDog4',
-            'doseDog5 (mg/kg)', 'indicationDog5',
             'doseCat1 (mg/kg)', 'indicationCat1',
             'doseCat2 (mg/kg)', 'indicationCat2',
             'doseCat3 (mg/kg)', 'indicationCat3',
-            'doseCat4 (mg/kg)', 'indicationCat4',
-            'doseCat5 (mg/kg)', 'indicationCat5',
             'contraindication',
         ];
 
@@ -1220,11 +1218,12 @@ ALTER TABLE IF EXISTS clinic_table_db
             // Fetch existing drug names to skip duplicates
             statEl.textContent = 'กำลังตรวจสอบรายการซ้ำ...';
             let existingNames = new Set();
+            let dupCheckWarning = '';
             try {
                 const existing = await fetchAllFromDB('pharmacy','item_name');
                 existingNames = new Set(existing.map(r => (r.item_name||'').toLowerCase()));
             } catch (err) {
-                // If fetch fails, proceed without duplicate check
+                dupCheckWarning = `⚠️ ไม่สามารถตรวจสอบรายการซ้ำได้: ${err.message} — ระบบจะพยายามเพิ่มรายการทั้งหมด`;
             }
 
             const allDrugs = state.rows
@@ -1242,7 +1241,7 @@ ALTER TABLE IF EXISTS clinic_table_db
                 resEl.className = 'mb-5 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10';
                 document.getElementById(p+'-result-title').className = 'font-bold text-base text-amber-400';
                 document.getElementById(p+'-result-title').textContent = '⚠️ ไม่มีรายการใหม่ให้เพิ่ม';
-                document.getElementById(p+'-result-body').innerHTML = `<p class="text-gray-300">ยาทั้ง <strong>${state.rows.length}</strong> รายการ มีชื่อซ้ำกับที่มีอยู่ในระบบแล้ว</p>`;
+                document.getElementById(p+'-result-body').innerHTML = `<p class="text-gray-300">ยาทั้ง <strong>${state.rows.length}</strong> รายการ มีชื่อซ้ำกับที่มีอยู่ในระบบแล้ว</p>${dupCheckWarning ? `<p class="text-amber-300 text-xs mt-1">⚠️ ${escapeHtml(dupCheckWarning)}</p>` : ''}`;
                 btnEl.disabled = false; btnEl.innerHTML = '🔄 นำเข้าอีกครั้ง';
                 return;
             }
@@ -1275,6 +1274,7 @@ ALTER TABLE IF EXISTS clinic_table_db
             document.getElementById(p+'-result-body').innerHTML = `
                 <p class="text-gray-300">✅ เพิ่มยาใหม่: <strong class="text-green-400">${insertedCount.toLocaleString()} รายการ</strong></p>
                 ${skipped > 0 ? `<p class="text-amber-400">⏭️ ข้ามรายการซ้ำ: <strong>${skipped} รายการ</strong></p>` : ''}
+                ${dupCheckWarning ? `<p class="text-amber-300 text-xs mt-1">⚠️ ${escapeHtml(dupCheckWarning)}</p>` : ''}
                 ${errors.length > 0 ? `<p class="text-red-400 font-bold mt-2">❌ ข้อผิดพลาด (${errors.length}):</p><ul class="list-disc list-inside text-red-300 text-xs space-y-1 mt-1">${errors.map(e=>`<li>${escapeHtml(e)}</li>`).join('')}</ul><p class="text-xs text-gray-400 mt-2">💡 หากเจอ Error "relation does not exist" กรุณารัน SQL ในส่วน "สร้างตาราง" ก่อน</p>` : ''}
             `;
             btnEl.disabled = false; btnEl.innerHTML = '🔄 นำเข้าอีกครั้ง';
