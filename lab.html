@@ -496,8 +496,13 @@
         </th>`).join('')}
     </tr>`;
     
-    // 2. สร้าง Body: แยกข้อมูลเป็นคอลัมน์ตาม Style ใหม่
-    document.getElementById('trend-body').innerHTML = masterParams.map(p => {
+    // 2. สร้าง Body: แยกข้อมูลเป็นคอลัมน์ตาม Style ใหม่ (เรียงลำดับเหมือน tab ผลเลือด)
+    const sortedParams = [
+        ...masterParams.filter(p => p.category === 'CBC'),
+        ...masterParams.filter(p => p.category !== 'CBC' && p.parameter_name !== 'ALKP'),
+        ...masterParams.filter(p => p.category !== 'CBC' && p.parameter_name === 'ALKP')
+    ];
+    document.getElementById('trend-body').innerHTML = sortedParams.map(p => {
         // คำนวณหาค่า Reference ปัจจุบันเพื่อโชว์ในคอลัมน์ที่ 3 (เป็นเกณฑ์อ้างอิงหลัก)
         const currentRefInfo = getAgeReferenceMode(currentAnimal.birth_date);
         const cRef = getRefRange(p, currentRefInfo.mode, currentRefInfo.isDog);
