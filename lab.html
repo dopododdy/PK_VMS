@@ -10,6 +10,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
@@ -1132,26 +1134,57 @@
 
         async function deleteEchoRecord(id) { if (confirm("ลบผล Echo นี้ทิ้งอย่างถาวร?")) { await db.from('imaging_results').delete().eq('id', id); fetchImagingHistory(currentAnimal.id); } }
 
-        // ---- Share Utility ----
-        async function shareHtmlAsFile(html, filename, title) {
+        // ---- Share Utility (PDF) ----
+        async function sharePdfFromHtml(html, pdfFilename, title) {
+            const container = document.createElement('div');
+            container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;';
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const styles = Array.from(doc.querySelectorAll('style')).map(s => s.textContent).join('\n');
+            container.innerHTML = `<style>${styles}</style>${doc.body.innerHTML}`;
+            document.body.appendChild(container);
             try {
-                const file = new File([html], filename, { type: 'text/html' });
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ title, files: [file] });
-                    return;
+                await document.fonts.ready;
+                const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794, windowWidth: 794 });
+                const { jsPDF } = window.jspdf;
+                const imgWidthMm = 210, pageHeightMm = 297;
+                const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pageHeightPx = Math.round((canvas.width * pageHeightMm) / imgWidthMm);
+                const totalPages = Math.ceil(canvas.height / pageHeightPx);
+                for (let i = 0; i < totalPages; i++) {
+                    if (i > 0) pdf.addPage();
+                    const pageCanvas = document.createElement('canvas');
+                    pageCanvas.width = canvas.width;
+                    pageCanvas.height = Math.min(pageHeightPx, canvas.height - i * pageHeightPx);
+                    const ctx = pageCanvas.getContext('2d');
+                    ctx.drawImage(canvas, 0, i * pageHeightPx, canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
+                    const sliceHeightMm = (pageCanvas.height * imgWidthMm) / canvas.width;
+                    pdf.addImage(pageCanvas.toDataURL('image/png'), 'PNG', 0, 0, imgWidthMm, sliceHeightMm);
                 }
-                if (navigator.share) {
-                    await navigator.share({ title, text: title });
-                    return;
+                const blob = pdf.output('blob');
+                const file = new File([blob], pdfFilename, { type: 'application/pdf' });
+                try {
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ title, files: [file] });
+                        return;
+                    }
+                } catch(e) {
+                    if (e.name === 'AbortError') return;
                 }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = pdfFilename; a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
             } catch(e) {
-                if (e.name !== 'AbortError') console.error('Share error:', e);
-                else return;
+                console.error('PDF share error:', e);
+                const win = window.open('', '_blank');
+                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+                win.document.write(html);
+                win.document.close();
+            } finally {
+                document.body.removeChild(container);
             }
-            const win = window.open('', '_blank');
-            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
-            win.document.write(html);
-            win.document.close();
         }
 
         async function shareImagingReport(id) {
@@ -1170,7 +1203,7 @@
             const css = `* { font-family: 'Sarabun', sans-serif; box-sizing: border-box; margin: 0; padding: 0; } body { background: #fff; color: #111; font-size: 11pt; } .report-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 16mm; background: #fff; } .header { text-align: center; border-bottom: 3px double #1a2a4a; padding-bottom: 10px; margin-bottom: 12px; } .clinic-name { font-size: 17pt; font-weight: 900; color: #1a2a4a; } .form-title { font-size: 13pt; font-weight: 700; color: #1a6a9a; margin-top: 4px; } .exam-date { font-size: 10pt; color: #555; margin-top: 3px; } .title-banner { background: #1a2a4a; color: #fff; text-align: center; padding: 7px 12px; font-size: 13pt; font-weight: 900; letter-spacing: 1px; margin-bottom: 10px; border-radius: 3px; } .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin-bottom: 10px; border: 1px solid #bbb; padding: 8px 12px; border-radius: 3px; background: #f9fafb; } .info-row { display: flex; gap: 6px; font-size: 10pt; padding: 2px 0; } .info-label { font-weight: 700; color: #333; min-width: 105px; } .info-val { color: #111; } .section-title { font-size: 10.5pt; font-weight: 900; background: #e8f4f8; border-left: 5px solid #1a6a9a; padding: 5px 10px; margin: 10px 0 6px; color: #1a2a4a; } .text-box { border: 1px solid #ccc; border-radius: 3px; padding: 10px 12px; font-size: 11pt; line-height: 1.7; white-space: pre-wrap; min-height: 80px; } .impression-box { border: 1px solid #1a6a9a; border-radius: 3px; padding: 10px 12px; font-style: italic; font-weight: 700; font-size: 12pt; color: #1a2a4a; } .footer { margin-top: 20px; border-top: 2px solid #1a2a4a; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; } .footer-info { font-size: 9pt; color: #777; line-height: 1.5; } .sign-block { text-align: center; min-width: 180px; } .sign-line { border-top: 1px solid #333; margin: 36px auto 4px; width: 160px; } .sign-name { font-size: 10.5pt; font-weight: 800; color: #1a2a4a; } .sign-label { font-size: 9pt; font-weight: 700; color: #555; } @page { size: A4; margin: 0; } @media print { body { margin: 0; } .report-page { padding: 12mm 14mm; } }`;
             const reportHtml = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานผล ${escapeHtml(item.exam_type)} - ${escapeHtml(currentAnimal.pet_name)}</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"><style>${css}</style></head><body><div class="report-page"><div class="header"><div class="clinic-name">คลินิกรักษาสัตว์หมอปิติพัฒน์</div><div class="form-title">รายงานผลการตรวจทางรังสีวิทยา (Imaging Report)</div><div class="exam-date">วันที่และเวลาตรวจ: <strong>${escapeHtml(examDateTime)}</strong></div></div><div class="title-banner">📸 IMAGING REPORT</div><div class="info-grid"><div class="info-row"><span class="info-label">ชื่อสัตว์:</span><span class="info-val"><strong>${escapeHtml(currentAnimal.pet_name)}</strong></span></div><div class="info-row"><span class="info-label">เจ้าของ:</span><span class="info-val">${escapeHtml(ownerName)}</span></div><div class="info-row"><span class="info-label">HN:</span><span class="info-val">${escapeHtml(currentAnimal.owner_hn||'-')}</span></div><div class="info-row"><span class="info-label">ชนิด / สายพันธุ์:</span><span class="info-val">${escapeHtml(currentAnimal.pet_type||'-')} / ${escapeHtml(currentAnimal.breed||'-')}</span></div><div class="info-row"><span class="info-label">Modality:</span><span class="info-val"><strong>${escapeHtml(item.exam_type)}</strong></span></div><div class="info-row"><span class="info-label">Region / Study:</span><span class="info-val"><strong>${escapeHtml(item.region||'-')}</strong></span></div></div><div class="section-title">🔍 Findings</div><div class="text-box">${escapeHtml(item.findings||'-')}</div><div class="section-title" style="margin-top:12px;">💡 Impression</div><div class="impression-box">${escapeHtml(item.impression||'-')}</div><div class="footer"><div class="footer-info"><div>คลินิกรักษาสัตว์หมอปิติพัฒน์</div><div>วันที่พิมพ์รายงาน: ${escapeHtml(printDateTime)}</div><div style="margin-top:4px;font-size:8pt;color:#aaa;">รายงานนี้สร้างโดยระบบ PK-VMS อัตโนมัติ</div></div><div class="sign-block"><div class="sign-line"></div><div class="sign-name">${escapeHtml(VET_NAME)}</div><div class="sign-label">สัตวแพทย์ผู้ตรวจ</div></div></div></div></body></html>`;
             const safeName = (currentAnimal.pet_name || 'สัตว์').replace(/[<>"]/g, '');
-            await shareHtmlAsFile(reportHtml, `Imaging_${safeName}.html`, `รายงาน Imaging - ${currentAnimal.pet_name}`);
+            await sharePdfFromHtml(reportHtml, `Imaging_${safeName}.pdf`, `รายงาน Imaging - ${currentAnimal.pet_name}`);
         }
 
         async function shareBloodReport(ts) { await printBloodReport(ts, 'share'); }
@@ -1228,7 +1261,7 @@
             if (mode === 'share') {
                 const safeName = (currentAnimal.pet_name || 'สัตว์').replace(/[<>"]/g, '');
                 const shareHtml = reportHtml.replace(/<script>window\.onload[^<]*<\/script>/, '');
-                await shareHtmlAsFile(shareHtml, `ผลเลือด_${safeName}.html`, `รายงานผลเลือด - ${currentAnimal.pet_name}`);
+                await sharePdfFromHtml(shareHtml, `ผลเลือด_${safeName}.pdf`, `รายงานผลเลือด - ${currentAnimal.pet_name}`);
                 return;
             }
             pw.document.write(reportHtml);
@@ -1400,7 +1433,7 @@
             if (mode === 'share') {
                 const safeName = (currentAnimal.pet_name || 'สัตว์').replace(/[<>"]/g, '');
                 const shareHtml = reportHtml.replace(/<script>window\.onload[^<]*<\/script>\s*/, '');
-                await shareHtmlAsFile(shareHtml, `Echo_${safeName}.html`, `รายงาน Echocardiography - ${currentAnimal.pet_name}`);
+                await sharePdfFromHtml(shareHtml, `Echo_${safeName}.pdf`, `รายงาน Echocardiography - ${currentAnimal.pet_name}`);
                 return;
             }
             pw.document.write(reportHtml);
