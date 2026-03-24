@@ -843,20 +843,20 @@
                     </thead>
                     <tbody>
                         ${[
-                            ['ivsd',  'IVSd (ความหนา IVS ช่วง Diastole)'],
-                            ['lvidd', 'LVIDd (เส้นผ่าศูนย์กลาง LV ช่วง Diastole)'],
-                            ['pwd',   'PWd (ความหนา PW ช่วง Diastole)'],
-                            ['la',    'LA (Left Atrium)'],
-                            ['ivss',  'IVSs (ความหนา IVS ช่วง Systole)'],
-                            ['lvids', 'LVIDs (เส้นผ่าศูนย์กลาง LV ช่วง Systole)'],
-                            ['pws',   'PWs (ความหนา PW ช่วง Systole)'],
-                            ['ao',    'Ao (Aorta)'],
-                            ['me',    'Mitral E (ความเร็วไหลผ่าน Mitral ช่วง E)'],
-                            ['ma',    'Mitral A (ความเร็วไหลผ่าน Mitral ช่วง A)'],
-                            ['lvot',  'LVOT (Left Ventricular Outflow Tract)'],
-                            ['rvot',  'RVOT (Right Ventricular Outflow Tract)'],
-                            ['te',    'Tricuspid E (ความเร็วไหลผ่าน Tricuspid ช่วง E)'],
-                            ['ta',    'Tricuspid A (ความเร็วไหลผ่าน Tricuspid ช่วง A)'],
+                            ['ivsd',  'IVSd'],
+                            ['lvidd', 'LVIDd'],
+                            ['pwd',   'PWd'],
+                            ['la',    'LA'],
+                            ['ivss',  'IVSs'],
+                            ['lvids', 'LVIDs'],
+                            ['pws',   'PWs'],
+                            ['ao',    'Ao'],
+                            ['me',    'Mitral E'],
+                            ['ma',    'Mitral A'],
+                            ['lvot',  'LVOT'],
+                            ['rvot',  'RVOT'],
+                            ['te',    'Tricuspid E'],
+                            ['ta',    'Tricuspid A'],
                         ].map(([k, label]) => {
                             const r = ecRefs[k];
                             const v = ecValues[k];
@@ -913,37 +913,37 @@
                             <td class="status-cell">${statusLabel(laaoNum, 0, 1.6)}</td>
                         </tr>
                         <tr>
-                            <td class="param-name">FS % (Fractional Shortening)</td>
+                            <td class="param-name">FS %</td>
                             <td class="ref-cell" style="text-align:center;">25 – 45 %</td>
                             <td class="calc-val" style="${rowStyle(fsNum, 25, 45)}">${escapeHtml(fs)}</td>
                             <td class="status-cell">${statusLabel(fsNum, 25, 45)}</td>
                         </tr>
                         <tr>
-                            <td class="param-name">EF % (Ejection Fraction, Teichholz)</td>
+                            <td class="param-name">EF %</td>
                             <td class="ref-cell" style="text-align:center;">&gt; 50 %</td>
                             <td class="calc-val" style="${rowStyle(efNum, 50, 999)}">${escapeHtml(ef)}</td>
                             <td class="status-cell">${statusLabel(efNum, 50, 999)}</td>
                         </tr>
                         <tr>
-                            <td class="param-name">n-IVSd (Normalized)</td>
+                            <td class="param-name">n-IVSd</td>
                             <td class="ref-cell" style="text-align:center;">0.32 – 0.54</td>
                             <td class="calc-val" style="${rowStyle(nIvsdNum, 0.32, 0.54)}">${escapeHtml(nIvsd)}</td>
                             <td class="status-cell">${statusLabel(nIvsdNum, 0.32, 0.54)}</td>
                         </tr>
                         <tr>
-                            <td class="param-name">n-LVIDd (Normalized)</td>
+                            <td class="param-name">n-LVIDd</td>
                             <td class="ref-cell" style="text-align:center;">1.27 – 1.85</td>
                             <td class="calc-val" style="${rowStyle(nLviddNum, 1.27, 1.85)}">${escapeHtml(nLvidd)}</td>
                             <td class="status-cell">${statusLabel(nLviddNum, 1.27, 1.85)}</td>
                         </tr>
                         <tr>
-                            <td class="param-name">n-PWd (Normalized)</td>
+                            <td class="param-name">n-PWd</td>
                             <td class="ref-cell" style="text-align:center;">0.32 – 0.54</td>
                             <td class="calc-val" style="${rowStyle(nPwdNum, 0.32, 0.54)}">${escapeHtml(nPwd)}</td>
                             <td class="status-cell">${statusLabel(nPwdNum, 0.32, 0.54)}</td>
                         </tr>
                         <tr>
-                            <td class="param-name">n-LVIDs (Normalized)</td>
+                            <td class="param-name">n-LVIDs</td>
                             <td class="ref-cell" style="text-align:center;">0.71 – 1.26</td>
                             <td class="calc-val" style="${rowStyle(nLvidsNum, 0.71, 1.26)}">${escapeHtml(nLvids)}</td>
                             <td class="status-cell">${statusLabel(nLvidsNum, 0.71, 1.26)}</td>
@@ -995,7 +995,7 @@
             echoList.innerHTML = echos.map(item => `
                 <div class="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-teal-500/10 transition">
                     <div class="flex justify-between items-center">
-                        <div>
+                        <div class="cursor-pointer flex-1" onclick="viewEchoRecord('${item.id}')">
                             <div class="text-white font-bold text-sm">${formatThaiDate(new Date(item.created_at))}</div>
                             <div class="text-[10px] text-gray-500 uppercase">Weight: ${item.findings.bw} kg</div>
                         </div>
@@ -1133,6 +1133,12 @@
             saveBtn.classList.add('bg-teal-600', 'hover:bg-teal-500');
             saveBtn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
             document.getElementById('btn-cancel-echo').classList.add('hidden');
+        }
+
+        function viewEchoRecord(id) {
+            const item = imagingHistory.find(i => i.id == id);
+            if (!item) return;
+            loadEchoRecord(item);
         }
 
         async function deleteEchoRecord(id) { if (confirm("ลบผล Echo นี้ทิ้งอย่างถาวร?")) { await db.from('imaging_results').delete().eq('id', id); fetchImagingHistory(currentAnimal.id); } }
@@ -1373,6 +1379,7 @@
                 .sign-label { font-size: 9pt; font-weight: 700; color: #555; }
                 @page { size: A4 portrait; margin: 0; }
                 @media print { body { margin: 0; } .report-page { width: 210mm; min-height: 297mm; padding: 12mm 14mm; box-shadow: none; } .page-break { page-break-before: always; break-before: page; } }
+            </style>
             </head><body>
             <div class="report-page">
                 <div class="header">
@@ -1394,7 +1401,7 @@
                 <table style="margin-top:5px;">
                     <thead><tr><th style="width:28%;">พารามิเตอร์</th><th class="center" style="width:14%;">หน่วย</th><th class="center" style="width:22%;">ค่าอ้างอิง</th><th class="center" style="width:22%;">ค่าที่วัดได้</th><th class="center" style="width:14%;">ผล</th></tr></thead>
                     <tbody>
-                        ${[['ivsd','IVSd (ความหนา IVS ช่วง Diastole)'],['lvidd','LVIDd (เส้นผ่าศูนย์กลาง LV ช่วง Diastole)'],['pwd','PWd (ความหนา PW ช่วง Diastole)'],['la','LA (Left Atrium)'],['ivss','IVSs (ความหนา IVS ช่วง Systole)'],['lvids','LVIDs (เส้นผ่าศูนย์กลาง LV ช่วง Systole)'],['pws','PWs (ความหนา PW ช่วง Systole)'],['ao','Ao (Aorta)'],['me','Mitral E (ความเร็วไหลผ่าน Mitral ช่วง E)'],['ma','Mitral A (ความเร็วไหลผ่าน Mitral ช่วง A)'],['lvot','LVOT (Left Ventricular Outflow Tract)'],['rvot','RVOT (Right Ventricular Outflow Tract)'],['te','Tricuspid E (ความเร็วไหลผ่าน Tricuspid ช่วง E)'],['ta','Tricuspid A (ความเร็วไหลผ่าน Tricuspid ช่วง A)']].map(([k,label]) => {
+                        ${[['ivsd','IVSd'],['lvidd','LVIDd'],['pwd','PWd'],['la','LA'],['ivss','IVSs'],['lvids','LVIDs'],['pws','PWs'],['ao','Ao'],['me','Mitral E'],['ma','Mitral A'],['lvot','LVOT'],['rvot','RVOT'],['te','Tricuspid E'],['ta','Tricuspid A']].map(([k,label]) => {
                             const r=ecRefs[k]; const v=ecValues[k];
                             return `<tr><td class="param-name">${escapeHtml(label)}</td><td style="text-align:center;color:#555;">${r.unit}</td><td class="ref-cell" style="text-align:center;">${r.ref}</td><td class="val-cell" style="${v?rowStyle(parseFloat(v),r.min,r.max):''}">${v?escapeHtml(v):'<span style="color:#bbb;">-</span>'}</td><td class="status-cell">${v?statusLabel(parseFloat(v),r.min,r.max):''}</td></tr>`;
                         }).join('')}
@@ -1415,12 +1422,12 @@
                     <thead><tr><th style="width:32%;">พารามิเตอร์</th><th class="center" style="width:26%;">ค่าอ้างอิง</th><th class="center" style="width:24%;">ค่าที่คำนวณได้</th><th class="center" style="width:18%;">ผล</th></tr></thead>
                     <tbody>
                         <tr><td class="param-name">LA/Ao Ratio</td><td class="ref-cell" style="text-align:center;">&lt; 1.6</td><td class="calc-val" style="${rowStyle(laaoNum,0,1.6)}">${escapeHtml(laaoStr)}</td><td class="status-cell">${statusLabel(laaoNum,0,1.6)}</td></tr>
-                        <tr><td class="param-name">FS % (Fractional Shortening)</td><td class="ref-cell" style="text-align:center;">25 – 45 %</td><td class="calc-val" style="${rowStyle(fsNum,25,45)}">${escapeHtml(fsStr)}</td><td class="status-cell">${statusLabel(fsNum,25,45)}</td></tr>
-                        <tr><td class="param-name">EF % (Ejection Fraction, Teichholz)</td><td class="ref-cell" style="text-align:center;">&gt; 50 %</td><td class="calc-val" style="${rowStyle(efNum,50,999)}">${escapeHtml(efStr)}</td><td class="status-cell">${statusLabel(efNum,50,999)}</td></tr>
-                        <tr><td class="param-name">n-IVSd (Normalized)</td><td class="ref-cell" style="text-align:center;">0.32 – 0.54</td><td class="calc-val" style="${rowStyle(nIvsdNum,0.32,0.54)}">${escapeHtml(nIvsd)}</td><td class="status-cell">${statusLabel(nIvsdNum,0.32,0.54)}</td></tr>
-                        <tr><td class="param-name">n-LVIDd (Normalized)</td><td class="ref-cell" style="text-align:center;">1.27 – 1.85</td><td class="calc-val" style="${rowStyle(nLviddNum,1.27,1.85)}">${escapeHtml(nLvidd)}</td><td class="status-cell">${statusLabel(nLviddNum,1.27,1.85)}</td></tr>
-                        <tr><td class="param-name">n-PWd (Normalized)</td><td class="ref-cell" style="text-align:center;">0.32 – 0.54</td><td class="calc-val" style="${rowStyle(nPwdNum,0.32,0.54)}">${escapeHtml(nPwd)}</td><td class="status-cell">${statusLabel(nPwdNum,0.32,0.54)}</td></tr>
-                        <tr><td class="param-name">n-LVIDs (Normalized)</td><td class="ref-cell" style="text-align:center;">0.71 – 1.26</td><td class="calc-val" style="${rowStyle(nLvidsNum,0.71,1.26)}">${escapeHtml(nLvids)}</td><td class="status-cell">${statusLabel(nLvidsNum,0.71,1.26)}</td></tr>
+                        <tr><td class="param-name">FS %</td><td class="ref-cell" style="text-align:center;">25 – 45 %</td><td class="calc-val" style="${rowStyle(fsNum,25,45)}">${escapeHtml(fsStr)}</td><td class="status-cell">${statusLabel(fsNum,25,45)}</td></tr>
+                        <tr><td class="param-name">EF %</td><td class="ref-cell" style="text-align:center;">&gt; 50 %</td><td class="calc-val" style="${rowStyle(efNum,50,999)}">${escapeHtml(efStr)}</td><td class="status-cell">${statusLabel(efNum,50,999)}</td></tr>
+                        <tr><td class="param-name">n-IVSd</td><td class="ref-cell" style="text-align:center;">0.32 – 0.54</td><td class="calc-val" style="${rowStyle(nIvsdNum,0.32,0.54)}">${escapeHtml(nIvsd)}</td><td class="status-cell">${statusLabel(nIvsdNum,0.32,0.54)}</td></tr>
+                        <tr><td class="param-name">n-LVIDd</td><td class="ref-cell" style="text-align:center;">1.27 – 1.85</td><td class="calc-val" style="${rowStyle(nLviddNum,1.27,1.85)}">${escapeHtml(nLvidd)}</td><td class="status-cell">${statusLabel(nLviddNum,1.27,1.85)}</td></tr>
+                        <tr><td class="param-name">n-PWd</td><td class="ref-cell" style="text-align:center;">0.32 – 0.54</td><td class="calc-val" style="${rowStyle(nPwdNum,0.32,0.54)}">${escapeHtml(nPwd)}</td><td class="status-cell">${statusLabel(nPwdNum,0.32,0.54)}</td></tr>
+                        <tr><td class="param-name">n-LVIDs</td><td class="ref-cell" style="text-align:center;">0.71 – 1.26</td><td class="calc-val" style="${rowStyle(nLvidsNum,0.71,1.26)}">${escapeHtml(nLvids)}</td><td class="status-cell">${statusLabel(nLvidsNum,0.71,1.26)}</td></tr>
                     </tbody>
                 </table>
                 <div class="section-title">📝 Impression / บทสรุปและข้อสังเกต (Notes)</div>
