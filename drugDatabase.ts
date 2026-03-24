@@ -3538,4 +3538,176 @@ export const drugDatabase: Drug[] = [
   warnings:
   'ต้องมีความชำนาญในการฉีด Epidural ใช้ Preservative-free morphine เท่านั้น ระวังปัสสาวะไม่ออก (Urinary retention)',
   sideEffects: 'ปัสสาวะไม่ออก, คัน, หายใจช้า (delayed)'
+},
+{
+  id: 'amantadine',
+  name: 'Amantadine',
+  thaiName: 'อะแมนตาดีน',
+  drugClass: 'NMDA Receptor Antagonist (Analgesic Adjunct)',
+  species: 'both',
+  dosage: { dog: { min: 3, max: 5 }, cat: { min: 3, max: 3 } },
+  routes: ['PO'],
+  frequency: 'q24h',
+  concentrations: [
+  { value: 100, unit: 'mg/tablet', label: 'Tab 100mg' },
+  { value: 100, unit: 'mg/capsule', label: 'Cap 100mg' }],
+  administrationNotes:
+  'ใช้เป็นยาเสริมแก้ปวดเรื้อรัง (Wind-up pain) ร่วมกับ NSAIDs หรือ Gabapentin ไม่ใช้เป็นยาเดี่ยว ให้พร้อมอาหาร',
+  warnings: 'ระวังในสัตว์โรคไต ยาน้ำ (Syrup) บางผลิตภัณฑ์มี Xylitol เป็นพิษต่อสุนัข',
+  sideEffects: 'ง่วงซึม, ท้องเสีย, เดินเซ (พบน้อย)'
+},
+{
+  id: 'chlorpromazine',
+  name: 'Chlorpromazine',
+  thaiName: 'คลอร์โปรมาซีน',
+  drugClass: 'Phenothiazine Antiemetic / Sedative',
+  species: 'both',
+  dosage: { dog: { min: 0.5, max: 1 }, cat: { min: 0.25, max: 0.5 } },
+  routes: ['IM', 'IV', 'PO'],
+  frequency: 'q6-8h',
+  concentrations: [
+  { value: 25, unit: 'mg/ml', label: 'Injectable 25mg/ml' },
+  { value: 10, unit: 'mg/tablet', label: 'Tab 10mg' },
+  { value: 25, unit: 'mg/tablet', label: 'Tab 25mg' }],
+  administrationNotes:
+  'ใช้แก้อาเจียนรุนแรง (Vestibular disease, Motion sickness) IV ให้ช้ามาก IM ให้ลึก ขณะให้ยาต้องนอน',
+  warnings: 'ทำให้ความดันโลหิตต่ำ ห้ามใช้ในสัตว์ที่ Hypovolemic หรือ Shock',
+  sideEffects: 'ความดันต่ำ, ง่วงซึม, อุณหภูมิกายต่ำ'
+},
+{
+  id: 'cefpodoxime',
+  name: 'Cefpodoxime Proxetil',
+  thaiName: 'เซฟโพด็อกซิม',
+  drugClass: 'Antibiotic (3rd Gen Cephalosporin)',
+  species: 'both',
+  dosage: { dog: { min: 5, max: 10 }, cat: { min: 5, max: 5 } },
+  routes: ['PO'],
+  frequency: 'q12-24h',
+  concentrations: [
+  { value: 100, unit: 'mg/tablet', label: 'Simplicef 100mg' },
+  { value: 200, unit: 'mg/tablet', label: 'Simplicef 200mg' }],
+  administrationNotes:
+  'ยาปฏิชีวนะ Cephalosporin รุ่น 3 ชนิดกิน ครอบคลุมแบคทีเรียแกรมลบ ใช้รักษาโรคผิวหนัง หู และ UTI',
+  warnings: 'ระวังในสัตว์ที่แพ้ Penicillin (Cross-reactivity)',
+  sideEffects: 'อาเจียน, ท้องเสีย, เบื่ออาหาร'
+},
+{
+  id: 'methylprednisolone',
+  name: 'Methylprednisolone',
+  thaiName: 'เมทิลเพรดนิโซโลน',
+  drugClass: 'Corticosteroid',
+  species: 'both',
+  dosage: { dog: { min: 0.5, max: 2 }, cat: { min: 0.5, max: 2 } },
+  routes: ['PO', 'IV', 'IM'],
+  frequency: 'q12-24h (anti-inflam); q24-72h (Depo)',
+  concentrations: [
+  { value: 4, unit: 'mg/tablet', label: 'Medrol 4mg' },
+  { value: 16, unit: 'mg/tablet', label: 'Medrol 16mg' },
+  { value: 40, unit: 'mg/ml', label: 'Depo-Medrol 40mg/ml (IM)' },
+  { value: 125, unit: 'mg/ml', label: 'Solu-Medrol 125mg/vial (IV)' }],
+  administrationNotes:
+  'สเตียรอยด์ฤทธิ์ปานกลาง ลดการอักเสบ กดภูมิ Depo-Medrol (IM) ออกฤทธิ์นาน 3-6 สัปดาห์ ระวังใช้ซ้ำบ่อยเกินไป',
+  warnings: 'ระวัง PU/PD, GI ulcer, การติดเชื้อ, ต่อมหมวกไตฝ่อ ห้ามใช้ร่วมกับ NSAIDs',
+  sideEffects: 'กินน้ำมาก, ปัสสาวะมาก, อ้วน, ติดเชื้อง่าย'
+},
+{
+  id: 'hydroxyzine',
+  name: 'Hydroxyzine',
+  thaiName: 'ไฮดรอกซีซีน',
+  drugClass: 'Antihistamine (H1 antagonist)',
+  species: 'both',
+  dosage: { dog: { min: 1, max: 2 }, cat: { min: 1, max: 2 } },
+  routes: ['PO'],
+  frequency: 'q8h',
+  concentrations: [
+  { value: 10, unit: 'mg/tablet', label: 'Tab 10mg' },
+  { value: 25, unit: 'mg/tablet', label: 'Tab 25mg' },
+  { value: 50, unit: 'mg/tablet', label: 'Tab 50mg' }],
+  administrationNotes:
+  'ยาแก้แพ้รุ่นที่ 1 มีฤทธิ์ Sedation ช่วยลดอาการคัน ใช้ร่วมกับ Steroid ได้ในกรณีแพ้รุนแรง',
+  warnings: 'ทำให้ง่วงซึม ระวังในสัตว์ที่ขับรถหรือต้องตื่นตัว',
+  sideEffects: 'ง่วงซึม, ปากแห้ง, เบื่ออาหาร'
+},
+{
+  id: 'pyrantel',
+  name: 'Pyrantel Pamoate',
+  thaiName: 'ไพแรนเทล',
+  drugClass: 'Anthelmintic',
+  species: 'both',
+  dosage: { dog: { min: 5, max: 10 }, cat: { min: 5, max: 10 } },
+  routes: ['PO'],
+  frequency: 'Once; repeat after 2 weeks',
+  concentrations: [
+  { value: 50, unit: 'mg/ml', label: 'Oral suspension 50mg/ml' },
+  { value: 250, unit: 'mg/tablet', label: 'Tab 250mg' }],
+  administrationNotes:
+  'ถ่ายพยาธิตัวกลม (Roundworm, Hookworm) ปลอดภัยสูง ใช้ได้ในลูกสัตว์ตั้งแต่อายุ 2 สัปดาห์ขึ้นไป',
+  warnings: 'ห้ามใช้ร่วมกับ Piperazine (ออกฤทธิ์ตรงข้าม)',
+  sideEffects: 'คลื่นไส้, อาเจียน (พบน้อย)'
+},
+{
+  id: 'tylosin',
+  name: 'Tylosin',
+  thaiName: 'ไทโลซิน',
+  drugClass: 'Antibiotic (Macrolide)',
+  species: 'both',
+  dosage: { dog: { min: 5, max: 25 }, cat: { min: 10, max: 15 } },
+  routes: ['PO'],
+  frequency: 'q12h',
+  concentrations: [
+  { value: 500, unit: 'mg/capsule', label: 'Cap 500mg' }],
+  administrationNotes:
+  'ใช้รักษา Antibiotic-Responsive Diarrhea (ARD) / Tylosin-Responsive Diarrhea ในสุนัข ขนาดต่ำ 5-10 mg/kg มักได้ผลดี ให้พร้อมอาหาร',
+  warnings: 'ระวังใช้นานเกินไป อาจทำให้ดื้อยา',
+  sideEffects: 'ท้องเสีย, อาเจียน'
+},
+{
+  id: 'cyanocobalamin',
+  name: 'Cyanocobalamin (Vitamin B12)',
+  thaiName: 'วิตามินบี 12 (ไซยาโนโคบาลามิน)',
+  drugClass: 'Vitamin / Supplement',
+  species: 'both',
+  dosage: { dog: { min: 250, max: 1500 }, cat: { min: 250, max: 250 } },
+  routes: ['SC', 'IM', 'IV'],
+  frequency: 'Weekly x 6 weeks, then monthly',
+  concentrations: [
+  { value: 1000, unit: 'mcg/ml', label: 'Inj 1000 mcg/ml' }],
+  administrationNotes:
+  'เสริม Cobalamin ในสัตว์ที่มี Hypocobalaminemia จากโรคทางเดินอาหาร (EPI, IBD, lymphoma)',
+  warnings: 'ปลอดภัยสูง ผลข้างเคียงน้อยมาก',
+  sideEffects: 'ปฏิกิริยาที่ตำแหน่งฉีด (พบน้อย)'
+},
+{
+  id: 'amitriptyline',
+  name: 'Amitriptyline',
+  thaiName: 'อะมิทริปทีลีน',
+  drugClass: 'Tricyclic Antidepressant (TCA)',
+  species: 'both',
+  dosage: { dog: { min: 1, max: 2 }, cat: { min: 0.5, max: 1 } },
+  routes: ['PO'],
+  frequency: 'q12-24h',
+  concentrations: [
+  { value: 10, unit: 'mg/tablet', label: 'Tab 10mg' },
+  { value: 25, unit: 'mg/tablet', label: 'Tab 25mg' }],
+  administrationNotes:
+  'ใช้รักษา Feline Idiopathic Cystitis (FIC), ลดความวิตกกังวล, พฤติกรรมก้าวร้าว หรืออาการ Psychogenic alopecia ในแมว',
+  warnings: 'ห้ามใช้ร่วมกับ MAO inhibitors (Selegiline) อาจเกิด Serotonin syndrome',
+  sideEffects: 'ง่วงซึม, ปากแห้ง, ปัสสาวะคั่ง, หัวใจเต้นผิดปกติ'
+},
+{
+  id: 'stanozolol',
+  name: 'Stanozolol',
+  thaiName: 'สตาโนโซลอล',
+  drugClass: 'Anabolic Steroid',
+  species: 'both',
+  dosage: { dog: { min: 1, max: 2 }, cat: { min: 0.5, max: 1 } },
+  routes: ['PO', 'IM'],
+  frequency: 'q12-24h (PO); q7days (IM)',
+  concentrations: [
+  { value: 2, unit: 'mg/tablet', label: 'Tab 2mg' },
+  { value: 50, unit: 'mg/ml', label: 'Inj 50mg/ml (Winstrol Depot)' }],
+  administrationNotes:
+  'ใช้กระตุ้นความอยากอาหาร เพิ่มน้ำหนัก และเพิ่มการสร้างเม็ดเลือดแดง ในสัตว์ที่มีภาวะ Hepatic lipidosis หรือ Cachexia',
+  warnings: 'ระวังตับอักเสบ ห้ามใช้ในสัตว์ตั้งท้องหรือให้นม ระวัง Prostatic hypertrophy ในสุนัขตัวผู้',
+  sideEffects: 'ค่าตับขึ้น, พฤติกรรมก้าวร้าว, ตับอักเสบ (การใช้นาน)'
 }];
