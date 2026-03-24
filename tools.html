@@ -102,6 +102,18 @@
         .drug-search { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 8px 14px 8px 36px; color: #e2e8f0; font-size: 0.9rem; outline: none; width: 100%; box-sizing: border-box; }
         .drug-search:focus { border-color: var(--teal); }
         .drug-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #64748b; pointer-events: none; font-size: 0.9rem; }
+        /* Dose range input */
+        .dose-range-cell { display: flex; flex-direction: column; gap: 3px; min-width: 130px; }
+        .dose-range-input { background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 3px 7px; color: #e2e8f0; font-size: 0.82rem; width: 80px; outline: none; }
+        .dose-range-input:focus { border-color: var(--teal); }
+        .dose-quick-row { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+        .dose-quick-btn { padding: 1px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 600; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; cursor: pointer; transition: 0.15s; }
+        .dose-quick-btn:hover, .dose-quick-btn.active { background: rgba(20,184,166,0.18); border-color: rgba(20,184,166,0.45); color: #2dd4bf; }
+        .save-dose-btn { padding: 1px 6px; border-radius: 4px; font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; cursor: pointer; transition: 0.15s; }
+        .save-dose-btn:hover { background: rgba(20,184,166,0.18); border-color: rgba(20,184,166,0.45); }
+        .dose-range-hint { font-size: 0.63rem; color: #475569; line-height: 1.2; }
+        /* Thai indication under drug name */
+        .drug-indication-th { font-size: 0.68rem; color: #64748b; margin-top: 2px; margin-bottom: 2px; line-height: 1.3; }
     </style>
 </head>
 <body class="flex h-screen">
@@ -191,6 +203,7 @@
         let commonActiveTab = '';
         let commonSearch = '';
         let commonDoseSelection = {};
+        let commonDoseCustom = {};
 
         const emergencyDrugs = [
             { name: 'Atropine',          category: 'Cardiac',           doseText: '0.04 mg/kg IV',        dosePerKg: 0.04,  concentrations: [{value:0.54,label:'0.54 mg/ml'},{value:1.0,label:'1 mg/ml'}] },
@@ -1168,6 +1181,218 @@
               concentrations: [{value:2,label:'Tab 2mg',unit:'tab'}, {value:50,label:'Inj 50mg/ml (Winstrol Depot)',unit:'ml'}] },
         ];
 
+        const drugExtraData = {
+            'Acepromazine':{doseRange:{dog:[0.025,0.2],cat:[0.05,0.2]},indicationTh:'ซึมประสาท (q6-8h)'},
+            'Acepromazine (Pre-anesthetic)':{doseRange:{dog:[0.01,0.05],cat:[0.01,0.05]},indicationTh:'Pre-anesthetic: ใช้โดสต่ำ (0.01-0.05) ร่วมกับ Opioid ก่อนวางยาสลบ'},
+            'Acetaminophen':{doseRange:{dog:[10,15]},indicationTh:'ลดไข้/แก้ปวดสุนัข (⚠️ ห้ามใช้ในแมวเด็ดขาด)'},
+            'Acetazolamide':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'ลดความดันลูกตา (Glaucoma)'},
+            'Acetylcysteine':{indicationTh:'แก้พิษพาราเซตามอล: Loading dose 140 mg/kg จากนั้น 70 mg/kg ทุก 4-6 ชม.'},
+            'Afoxolaner':{indicationTh:'กำจัดหมัดและเห็บ (q30d)'},
+            'Albendazole':{doseRange:{dog:[25,50],cat:[25,50]},indicationTh:'ถ่ายพยาธิหลายชนิด (q12h นาน 3-5 วัน)'},
+            'Albuterol':{doseRange:{dog:[0.02,0.05],cat:[0.02,0.05]},indicationTh:'ขยายหลอดลม / หอบหืด'},
+            'Alendronate':{indicationTh:'Hypercalcemia: 10 mg/ตัว สัปดาห์ละครั้ง (ต้องป้อนน้ำตาม)'},
+            'Alfaxalone':{doseRange:{dog:[2,3],cat:[2,5]},indicationTh:'สลบ (Induction) ฉีด IV ช้าๆ'},
+            'Allopurinol':{doseRange:{dog:[10,15]},indicationTh:'รักษา Leishmaniasis / ลดกรดยูริก'},
+            'Alprazolam':{doseRange:{dog:[0.02,0.1],cat:[0.0125,0.025]},indicationTh:'ลดความวิตกกังวล ให้ก่อนเหตุการณ์เครียด'},
+            'Altrenogest':{doseRange:{dog:[0.044,0.088],cat:[0.044,0.088]},indicationTh:'ควบคุมวงจรการเป็นสัด (⚠️ ผู้ใช้ต้องสวมถุงมือ)'},
+            'Aluminum Hydroxide':{doseRange:{dog:[30,90],cat:[30,90]},indicationTh:'ลดฟอสฟอรัสในเลือด (CKD) ผสมอาหาร'},
+            'Amikacin':{doseRange:{dog:[15,30],cat:[10,15]},indicationTh:'ยาปฏิชีวนะ (q24h เพื่อลดพิษต่อไต)'},
+            'Aminophylline':{indicationTh:'ขยายหลอดลม (IV ช้าๆ)'},
+            'Amiodarone':{doseRange:{dog:[10,15]},indicationTh:'หัวใจเต้นผิดจังหวะรุนแรง (IV: Loading 10 mg/kg ช้าๆ)'},
+            'Amlodipine':{doseRange:{dog:[0.1,0.5],cat:[0.125,0.25]},indicationTh:'ลดความดันหลักในแมว'},
+            'Amoxicillin':{doseRange:{dog:[10,20],cat:[10,20]},indicationTh:'ยาปฏิชีวนะ (q12h)'},
+            'Amoxicillin-Clavulanate':{doseRange:{dog:[12.5,25],cat:[12.5,25]},indicationTh:'ยาปฏิชีวนะ (ให้พร้อมอาหาร)'},
+            'Amphotericin B':{doseRange:{dog:[0.25,0.5],cat:[0.25,0.5]},indicationTh:'เชื้อรารุนแรง (q48h Cumulative dose)'},
+            'Ampicillin':{doseRange:{dog:[10,20],cat:[10,20]},indicationTh:'ยาปฏิชีวนะ (ให้ตอนท้องว่าง)'},
+            'Atenolol':{doseRange:{dog:[0.25,1]},indicationTh:'ลดการทำงานหัวใจ แมว: มักให้ 6.25-12.5 mg/ตัว/วัน'},
+            'Atipamezole':{doseRange:{dog:[0.1,0.2],cat:[0.1,0.2]},indicationTh:'Reverse ฤทธิ์ Dexmedetomidine'},
+            'Atracurium':{doseRange:{dog:[0.1,0.2],cat:[0.1,0.2]},indicationTh:'คลายกล้ามเนื้อระหว่างสลบ (ต้องมีเครื่องช่วยหายใจ)'},
+            'Atropine':{doseRange:{dog:[0.02,0.04],cat:[0.02,0.04]},indicationTh:'ลดน้ำลาย / CPR / แก้พิษ Organophosphate'},
+            'Azathioprine':{doseRange:{dog:[1,2]},indicationTh:'โรคภูมิคุ้มกันทำลายตัวเอง (⚠️ ห้ามใช้ในแมว)'},
+            'Azithromycin':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'ยาปฏิชีวนะ (ติดเชื้อทางเดินหายใจ)'},
+            'Benazepril':{doseRange:{dog:[0.25,0.5],cat:[0.25,0.5]},indicationTh:'โรคหัวใจ / โรคไต (ลดโปรตีนรั่ว)'},
+            'Betamethasone':{doseRange:{dog:[0.1,0.2],cat:[0.1,0.2]},indicationTh:'ลดอักเสบ (Long-acting)'},
+            'Bupivacaine':{doseRange:{dog:[1,2]},indicationTh:'ยาชาเฉพาะที่ออกฤทธิ์นาน (ห้ามฉีด IV)'},
+            'Buprenorphine':{doseRange:{dog:[0.01,0.02],cat:[0.01,0.03]},indicationTh:'แก้ปวด (แมวหยดใต้ลิ้นได้)'},
+            'Butorphanol':{doseRange:{dog:[0.2,0.4],cat:[0.2,0.4]},indicationTh:'แก้ปวดระดับเบา-ปานกลาง'},
+            'Calcitriol':{doseRange:{dog:[2.5,3.5],cat:[2.5,3.5]},indicationTh:'Sec. Hyperparathyroidism: 2.5-3.5 ng/kg'},
+            'Carprofen':{doseRange:{dog:[2.2,4.4]},indicationTh:'ลดปวด/อักเสบสุนัข (4.4 q24h หรือ 2.2 q12h)'},
+            'Cefazolin':{doseRange:{dog:[20,30],cat:[20,30]},indicationTh:'ป้องกันติดเชื้อก่อนผ่าตัด'},
+            'Cefovecin':{indicationTh:'ติดเชื้อแบคทีเรีย (ฉีดครั้งเดียวอยู่ได้ 14 วัน)'},
+            'Cephalexin':{doseRange:{dog:[22,30],cat:[22,30]},indicationTh:'ติดเชื้อที่ผิวหนัง (Pyoderma)'},
+            'Cetirizine':{doseRange:{dog:[1,2]},indicationTh:'แก้แพ้: สุนัข 1-2 mg/kg, แมว 5 mg/ตัว'},
+            'Chloramphenicol':{doseRange:{dog:[25,50],cat:[12.5,25]},indicationTh:'ยาปฏิชีวนะ (⚠️ ผู้ใช้ต้องสวมถุงมือ)'},
+            'Chlorhexidine':{indicationTh:'ทำความสะอาดแผล/ผิวหนัง (Topical)'},
+            'Chlorpheniramine':{doseRange:{dog:[0.2,0.5],cat:[1,2]},indicationTh:'แก้แพ้: สุนัข 4-8 mg/ตัว, แมว 2-4 mg/ตัว'},
+            'Cimetidine':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'ลดกรดในกระเพาะ'},
+            'Cisapride':{doseRange:{cat:[0.1,0.5]},indicationTh:'ท้องผูกเรื้อรัง (Megacolon) ในแมว'},
+            'Cisatracurium':{doseRange:{dog:[0.1,0.15],cat:[0.1,0.15]},indicationTh:'คลายกล้ามเนื้อระหว่างสลบ'},
+            'Clindamycin':{doseRange:{dog:[5.5,11],cat:[5.5,11]},indicationTh:'ติดเชื้อช่องปาก/กระดูก/Toxoplasmosis'},
+            'Clomipramine':{doseRange:{dog:[1,3],cat:[0.25,0.5]},indicationTh:'พฤติกรรมวิตกกังวล (Separation anxiety)'},
+            'Clopidogrel':{indicationTh:'ป้องกันลิ่มเลือดแมว (ATE): 18.75 mg/ตัว'},
+            'Cyclosporine':{doseRange:{cat:[5,7]},indicationTh:'Atopic dermatitis'},
+            'Dantrolene':{doseRange:{dog:[1,5],cat:[0.5,2]},indicationTh:'Malignant hyperthermia / กล้ามเนื้อเกร็ง'},
+            'Desflurane':{indicationTh:'ยาสลบสูดดม (Recovery เร็วที่สุด)'},
+            'Desmopressin (DDAVP)':{doseRange:{dog:[1,4],cat:[1,4]},indicationTh:'Diabetes insipidus / vWD: 1-4 mcg/kg'},
+            'Dexamethasone':{doseRange:{dog:[0.1,0.5],cat:[0.1,0.5]},indicationTh:'ลดอักเสบ (Corticosteroid)'},
+            'Dexmedetomidine':{doseRange:{dog:[0.005,0.02],cat:[0.01,0.04]},indicationTh:'สงบสัตว์ก่อนหัตถการ'},
+            'Dexmedetomidine (CRI)':{doseRange:{dog:[0.5,2],cat:[0.5,1]},indicationTh:'Intra-op Analgesia: CRI (mcg/kg/hr)'},
+            'Diazepam':{doseRange:{dog:[0.25,0.5],cat:[0.25,0.5]},indicationTh:'ระงับชักฉุกเฉิน (ห้ามผสมยาอื่นในไซริงค์)'},
+            'Digoxin':{doseRange:{dog:[0.005,0.01],cat:[0.005,0.01]},indicationTh:'โรคหัวใจ (Therapeutic index แคบมาก)'},
+            'Diltiazem':{doseRange:{dog:[0.5,1.5],cat:[1.75,2.5]},indicationTh:'รักษา HCM ในแมว (ลด Heart rate)'},
+            'Dimercaprol (BAL)':{doseRange:{dog:[2.5,5],cat:[2.5,5]},indicationTh:'แก้พิษโลหะหนัก (ฉีด IM ลึก)'},
+            'Diphenhydramine':{doseRange:{dog:[2,4],cat:[2,4]},indicationTh:'แก้แพ้ / ก่อนให้เลือด'},
+            'Dobutamine':{doseRange:{dog:[2,15],cat:[1,5]},indicationTh:'เพิ่มแรงบีบตัวหัวใจ (CRI: mcg/kg/min)'},
+            'Dopamine':{doseRange:{dog:[2,10],cat:[2,10]},indicationTh:'ขยายหลอดเลือดไต: 2-5 mcg/kg/min / เพิ่มความดัน: 5-10 mcg/kg/min'},
+            'Doxapram':{doseRange:{dog:[1,5],cat:[1,5]},indicationTh:'กระตุ้นการหายใจ (ลูกสัตว์แรกเกิด)'},
+            'Doxycycline':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'ยาปฏิชีวนะ (แมวต้องป้อนน้ำตามเสมอ)'},
+            'Enalapril':{doseRange:{dog:[0.25,0.5],cat:[0.25,0.5]},indicationTh:'โรคหัวใจ / ความดันสูง'},
+            'Enrofloxacin':{doseRange:{dog:[5,10]},indicationTh:'ยาปฏิชีวนะ (⚠️ แมวห้ามเกิน 5 mg/kg)'},
+            'Epinephrine':{doseRange:{dog:[0.01,0.02],cat:[0.01,0.02]},indicationTh:'CPR (IV q3-5m) / Anaphylaxis (IM)'},
+            'Epoetin Alfa (EPO)':{indicationTh:'โลหิตจางจากโรคไต: 100 IU/kg (SC)'},
+            'Erythromycin':{doseRange:{dog:[0.5,1],cat:[0.5,1]},indicationTh:'Prokinetic: ใช้โดสต่ำ (0.5-1 mg/kg)'},
+            'Esmolol':{doseRange:{dog:[0.05,0.1],cat:[0.05,0.1]},indicationTh:'ลดหัวใจเต้นเร็วฉุกเฉิน (Ultra-short acting)'},
+            'Esomeprazole':{doseRange:{dog:[0.5,1],cat:[0.5,1]},indicationTh:'ลดกรดในกระเพาะ'},
+            'Etomidate':{doseRange:{dog:[1,2],cat:[1,3]},indicationTh:'Induction ปลอดภัยต่อหัวใจที่สุด'},
+            'Famotidine':{doseRange:{dog:[0.5,1],cat:[0.5,1]},indicationTh:'ลดกรดในกระเพาะ'},
+            'Fenbendazole':{indicationTh:'ถ่ายพยาธิรวม / Giardia (ให้ 3-5 วัน)'},
+            'Fentanyl':{doseRange:{dog:[0.002,0.005],cat:[0.001,0.003]},indicationTh:'แก้ปวดรุนแรง'},
+            'Fentanyl (CRI)':{doseRange:{dog:[2,10],cat:[1,5]},indicationTh:'Intra-op Analgesia: CRI (mcg/kg/hr)'},
+            'Fentanyl Transdermal Patch':{doseRange:{dog:[2,4]},indicationTh:'แก้ปวดแบบแปะ: แมว 25 mcg/hr, สุนัข 2-4 mcg/kg/hr'},
+            'Firocoxib':{indicationTh:'ลดปวด/อักเสบสุนัข (COX-2 selective)'},
+            'Fluconazole':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'เชื้อราในสมอง/ตา (ผ่าน BBB ได้ดี)'},
+            'Flumazenil':{doseRange:{dog:[0.01,0.02],cat:[0.01,0.02]},indicationTh:'Reverse ฤทธิ์ Benzodiazepine'},
+            'Fluoxetine':{doseRange:{dog:[1,2],cat:[0.5,1]},indicationTh:'พฤติกรรมวิตกกังวล / ฉี่ไม่เป็นที่'},
+            'Fluralaner':{doseRange:{dog:[25,56],cat:[40,94]},indicationTh:'กำจัดหมัดและเห็บ (ออกฤทธิ์ 12 สัปดาห์)'},
+            'Furosemide':{doseRange:{dog:[2,4],cat:[1,2]},indicationTh:'ขับน้ำ / ลดน้ำท่วมปอด'},
+            'Gabapentin':{doseRange:{dog:[10,20],cat:[5,10]},indicationTh:'ปวดระบบประสาท / ลดเครียด'},
+            'Gabapentin (Pre-anesthetic)':{doseRange:{dog:[5,10]},indicationTh:'ก่อนวางยาสลบ/ลดเครียด: แมว 50-100 mg/ตัว'},
+            'Gentamicin':{doseRange:{dog:[9,14],cat:[5,8]},indicationTh:'ยาปฏิชีวนะ (ให้วันละครั้ง ระวังพิษต่อไต)'},
+            'Glipizide':{doseRange:{cat:[0.25,0.5]},indicationTh:'เบาหวานแมว: 2.5 mg/ตัว q12h'},
+            'Glycopyrrolate':{doseRange:{dog:[0.005,0.01],cat:[0.005,0.01]},indicationTh:'ลดน้ำลาย (แทน Atropine ไม่ผ่าน BBB)'},
+            'Griseofulvin':{doseRange:{dog:[25,50],cat:[25,50]},indicationTh:'รักษา Dermatophytosis'},
+            'Heparin':{doseRange:{dog:[100,200],cat:[100,200]},indicationTh:'ป้องกันลิ่มเลือด (IU/kg)'},
+            'Hydralazine':{doseRange:{dog:[0.5,2],cat:[0.5,0.8]},indicationTh:'ลดความดันฉุกเฉิน / ลด Afterload'},
+            'Hydrochlorothiazide':{doseRange:{dog:[2,4],cat:[1,2]},indicationTh:'ยาขับปัสสาวะ (ใช้ร่วมกับ Furosemide)'},
+            'Hydrocortisone':{doseRange:{dog:[1,5],cat:[1,5]},indicationTh:'รักษา Addisonian crisis'},
+            'Hydromorphone':{doseRange:{dog:[0.05,0.1],cat:[0.025,0.05]},indicationTh:'แก้ปวดรุนแรง (ใช้เป็น Premed)'},
+            'Imidacloprid + Moxidectin':{doseRange:{dog:[10,25],cat:[10,25]},indicationTh:'ป้องกันหมัด/พยาธิหัวใจ (Spot-on)'},
+            'Imidocarb Dipropionate':{doseRange:{dog:[5,6.6]},indicationTh:'รักษา Babesiosis (ต้องให้ Atropine ก่อน)'},
+            'Insulin (Regular)':{doseRange:{dog:[0.1,0.25],cat:[0.1,0.25]},indicationTh:'DKA: 0.1 IU/kg/hr CRI / Maintenance: 0.25-0.5 IU/kg SC'},
+            'Isoflurane':{indicationTh:'ยาสลบสูดดม (MAC)'},
+            'Itraconazole':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'รักษาเชื้อราผิวหนัง (Dermatophytosis)'},
+            'Ivermectin':{doseRange:{dog:[0.006,0.6]},indicationTh:'ป้องกันพยาธิหัวใจ: 6 mcg/kg / ไรขี้เรื้อน (Demodex): 0.3-0.6 mg/kg'},
+            'Ketamine':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'Induction สลบ'},
+            'Ketamine (CRI - Analgesic)':{doseRange:{dog:[2,10],cat:[2,5]},indicationTh:'Intra-op Analgesia: CRI 2-10 mcg/kg/min'},
+            'Ketoconazole':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'ยารักษาเชื้อรา'},
+            'Ketoprofen':{doseRange:{dog:[1,2]},indicationTh:'ลดปวดอักเสบ (ใช้ระยะสั้น ไม่เกิน 5 วัน)'},
+            'Lactulose':{doseRange:{dog:[0.5,1],cat:[0.5,1]},indicationTh:'ท้องผูก / Hepatic encephalopathy'},
+            'Levetiracetam':{doseRange:{dog:[20,30],cat:[20,30]},indicationTh:'ยากันชัก'},
+            'Levothyroxine':{doseRange:{dog:[0.02,0.04]},indicationTh:'ภาวะฮอร์โมนไทรอยด์ต่ำสุนัข'},
+            'Lidocaine':{doseRange:{dog:[2,4],cat:[0.25,0.5]},indicationTh:'Antiarrhythmic: 2 mg/kg IV แล้วต่อ CRI'},
+            'Lidocaine (CRI - Analgesic)':{doseRange:{dog:[25,80]},indicationTh:'Intra-op Analgesia (CRI): mcg/kg/min (ห้ามใช้ในแมว)'},
+            'Bupivacaine/Lidocaine Splash Block':{doseRange:{dog:[1,2]},indicationTh:'ราดแผล: Bupivacaine 0.5% หรือ Lidocaine 2%'},
+            'Lokivetmab':{doseRange:{dog:[1,2]},indicationTh:'ลดคันจาก Atopic dermatitis (ฉีด SC)'},
+            'Loperamide':{doseRange:{dog:[0.1,0.2]},indicationTh:'หยุดท้องเสียสุนัข (ห้ามใช้ในแมว)'},
+            'Mannitol':{doseRange:{dog:[0.5,1],cat:[0.5,1]},indicationTh:'ลดความดันสมอง/ลูกตา'},
+            'Marbofloxacin':{doseRange:{dog:[2,5],cat:[2,5]},indicationTh:'ยาปฏิชีวนะ (ปลอดภัยกว่า Enrofloxacin ในแมว)'},
+            'Maropitant':{indicationTh:'แก้อาเจียน (ฉีดเย็นแสบน้อยลง)'},
+            'Maropitant (Motion Sickness)':{indicationTh:'ป้องกันเมารถ (สุนัข): 8 mg/kg PO ก่อนเดินทาง 2 ชม.'},
+            'Maropitant (Pre-anesthetic)':{indicationTh:'ลดปวดอวัยวะภายใน / ก่อนสลบ: 1 mg/kg'},
+            'Maropitant (Cerenia) - Visceral Pain':{indicationTh:'ลดปวดอวัยวะภายใน: 1 mg/kg q24h'},
+            'Medetomidine':{doseRange:{dog:[0.01,0.04],cat:[0.02,0.08]},indicationTh:'สงบสัตว์ / ทำให้อาเจียนในแมว'},
+            'Meperidine (Pethidine)':{doseRange:{dog:[3,5],cat:[3,5]},indicationTh:'แก้ปวด (⚠️ ห้ามฉีด IV - Histamine release)'},
+            'Mepivacaine':{doseRange:{dog:[3,5],cat:[3,4]},indicationTh:'ยาชาเฉพาะที่ (Dental block)'},
+            'Methadone':{doseRange:{dog:[0.1,0.5],cat:[0.1,0.3]},indicationTh:'แก้ปวดรุนแรง'},
+            'Methimazole':{doseRange:{cat:[1.25,5]},indicationTh:'Hyperthyroid แมว: เริ่ม 2.5 mg q12h'},
+            'Methocarbamol':{doseRange:{dog:[15,44],cat:[15,44]},indicationTh:'คลายกล้ามเนื้อ / แก้พิษ Strychnine'},
+            'Methotrexate':{doseRange:{dog:[2.5,5],cat:[2.5,5]},indicationTh:'ยาเคมีบำบัด / กดภูมิ'},
+            'Metoclopramide':{doseRange:{dog:[0.2,0.5],cat:[0.2,0.4]},indicationTh:'แก้อาเจียน / กระตุ้นกระเพาะ'},
+            'Metoprolol':{doseRange:{dog:[0.2,1]},indicationTh:'แมว (HCM): 2-15 mg/ตัว q8h'},
+            'Metronidazole':{doseRange:{dog:[10,15],cat:[10,15]},indicationTh:'ติดเชื้อ Anaerobe / Giardia / IBD'},
+            'Midazolam':{doseRange:{dog:[0.2,0.3],cat:[0.2,0.3]},indicationTh:'ใช้ร่วม Induction ให้กล้ามเนื้อคลายตัว'},
+            'Milbemycin Oxime':{doseRange:{dog:[0.5,1]},indicationTh:'ป้องกันพยาธิหัวใจ'},
+            'Mirtazapine':{doseRange:{dog:[0.5,1],cat:[1.88,3.75]},indicationTh:'กระตุ้นความอยากอาหาร'},
+            'Misoprostol':{doseRange:{dog:[2,5],cat:[2,5]},indicationTh:'ป้องกันแผลกระเพาะจาก NSAID (mcg/kg)'},
+            'MLK Protocol (Morphine-Lidocaine-Ketamine)':{indicationTh:'CRI สุนัข: Morphine (0.12) + Lido (3) + Ketamine (0.6)'},
+            'Morphine':{doseRange:{dog:[0.5,1],cat:[0.1,0.2]},indicationTh:'แก้ปวดรุนแรง (IV ให้ช้าๆ ระวัง Histamine)'},
+            'Morphine (Epidural)':{indicationTh:'Epidural block: 0.1 mg/kg (Preservative-free)'},
+            'Mycophenolate Mofetil':{doseRange:{dog:[10,20]},indicationTh:'กดภูมิคุ้มกัน (แทน Azathioprine ในสุนัข)'},
+            'Naloxone':{doseRange:{dog:[0.01,0.04],cat:[0.01,0.04]},indicationTh:'Reverse ฤทธิ์ Opioids ทุกชนิด'},
+            'Neostigmine':{doseRange:{dog:[0.01,0.04],cat:[0.01,0.04]},indicationTh:'Reverse NM Blockers (ให้พร้อม Atropine)'},
+            'Nitroprusside':{doseRange:{dog:[1,10],cat:[1,10]},indicationTh:'ลดความดัน (CRI mcg/kg/min)'},
+            'Nitrous Oxide (N\u2082O)':{indicationTh:'ก๊าซช่วยสลบ (ต้องผสม O2 อย่างน้อย 33%)'},
+            'Norepinephrine':{doseRange:{dog:[0.1,1],cat:[0.1,1]},indicationTh:'เพิ่มความดัน Septic shock (CRI)'},
+            'Oclacitinib':{doseRange:{dog:[0.4,0.6]},indicationTh:'ลดคันจาก Atopic dermatitis (Apoquel)'},
+            'Omeprazole':{doseRange:{dog:[0.5,1],cat:[0.5,1]},indicationTh:'ลดกรดในกระเพาะ'},
+            'Ondansetron':{doseRange:{dog:[0.1,0.5],cat:[0.1,0.22]},indicationTh:'แก้อาเจียนรุนแรง / ตับอ่อนอักเสบ'},
+            'Oxymorphone':{doseRange:{dog:[0.05,0.1],cat:[0.02,0.05]},indicationTh:'แก้ปวดรุนแรง (แรงกว่า Morphine 10 เท่า)'},
+            'Pancuronium':{doseRange:{dog:[0.06,0.1],cat:[0.06,0.1]},indicationTh:'คลายกล้ามเนื้อระหว่างสลบ (Long-acting)'},
+            'Pantoprazole':{indicationTh:'ลดกรด (แบบ IV drip)'},
+            'Pentobarbital':{indicationTh:'Euthanasia เท่านั้น'},
+            'Phenobarbital':{doseRange:{dog:[2,5],cat:[1,2]},indicationTh:'ยากันชักหลัก'},
+            'Phenoxybenzamine':{doseRange:{dog:[0.25,0.5],cat:[0.25,0.5]},indicationTh:'คลายกล้ามเนื้อหูรูดกระเพาะปัสสาวะ'},
+            'Phenytoin':{doseRange:{dog:[20,35]},indicationTh:'กันชัก / Antiarrhythmic (ห้ามใช้ในแมว)'},
+            'Pimobendan':{doseRange:{dog:[0.25,0.3],cat:[0.25,0.3]},indicationTh:'โรคหัวใจ (ห้ามใช้ใน HCM)'},
+            'Potassium Bromide':{doseRange:{dog:[20,40]},indicationTh:'ยากันชักสุนัข (⚠️ ห้ามใช้ในแมว - ปอดอักเสบ)'},
+            'Potassium Citrate':{doseRange:{dog:[50,75],cat:[50,75]},indicationTh:'ป้องกันนิ่ว Calcium oxalate'},
+            'Praziquantel':{doseRange:{dog:[5,7.5],cat:[5,7.5]},indicationTh:'ถ่ายพยาธิตัวตืด (ครั้งเดียว)'},
+            'Procainamide':{doseRange:{dog:[10,20]},indicationTh:'Antiarrhythmic Class IA'},
+            'Propofol':{doseRange:{dog:[4,6],cat:[4,8]},indicationTh:'Induction สลบ'},
+            'Propofol (TIVA - Total IV Anesthesia)':{doseRange:{dog:[0.1,0.4],cat:[0.1,0.3]},indicationTh:'Total IV Anesthesia: CRI (mg/kg/min)'},
+            'Propranolol':{doseRange:{dog:[0.2,1],cat:[0.4,1.2]},indicationTh:'หัวใจเต้นเร็ว / Hyperthyroidism'},
+            'Ranitidine':{doseRange:{dog:[1,2],cat:[1,2]},indicationTh:'ลดกรด / กระตุ้นกระเพาะ'},
+            'Remifentanil':{doseRange:{dog:[5,40],cat:[5,20]},indicationTh:'แก้ปวด Ultra-short (CRI: mcg/kg/hr)'},
+            'Rifampin':{doseRange:{dog:[5,10],cat:[10,15]},indicationTh:'ยาปฏิชีวนะ (ใช้ร่วมยาอื่นเสมอ ปัสสาวะสีส้ม)'},
+            'Robenacoxib':{doseRange:{dog:[1,2],cat:[1,2]},indicationTh:'NSAID ลดปวด/อักเสบ (Onsior)'},
+            'Rocuronium':{doseRange:{dog:[0.3,0.6],cat:[0.3,0.6]},indicationTh:'คลายกล้ามเนื้อระหว่างสลบ'},
+            'Ropivacaine':{doseRange:{dog:[1,3],cat:[1,1.5]},indicationTh:'ยาชาเฉพาะที่ (ปลอดภัยต่อหัวใจกว่า Bupivacaine)'},
+            'S-Adenosylmethionine (SAMe)':{doseRange:{dog:[18,20],cat:[18,20]},indicationTh:'บำรุงตับ'},
+            'Sarolaner':{doseRange:{dog:[2,4]},indicationTh:'กำจัดหมัดและเห็บ (Simparica)'},
+            'Selamectin':{doseRange:{dog:[6,12],cat:[6,12]},indicationTh:'ป้องกันหมัด/ไร/พยาธิหัวใจ (Spot-on)'},
+            'Selegiline':{doseRange:{dog:[0.5,1]},indicationTh:'Cognitive Dysfunction (CDS) สุนัข'},
+            'Sevoflurane':{indicationTh:'ยาสลบสูดดม (MAC)'},
+            'Sildenafil':{doseRange:{dog:[1,2],cat:[1,2]},indicationTh:'Pulmonary hypertension'},
+            'Sodium Bicarbonate':{doseRange:{dog:[1,2],cat:[1,2]},indicationTh:'แก้ Metabolic acidosis'},
+            'Spironolactone':{doseRange:{dog:[1,2],cat:[1,2]},indicationTh:'ขับปัสสาวะ (รักษาระดับโพแทสเซียม)'},
+            'Succinylcholine':{doseRange:{dog:[0.3,0.5],cat:[0.3,0.5]},indicationTh:'Emergency intubation (Depolarizing)'},
+            'Sucralfate':{doseRange:{dog:[0.5,1],cat:[0.25,0.5]},indicationTh:'เคลือบกระเพาะ (ให้ตอนท้องว่าง)'},
+            'Sufentanil':{doseRange:{dog:[0.5,1],cat:[0.5,1]},indicationTh:'แก้ปวดรุนแรง (CRI: mcg/kg/hr)'},
+            'Sugammadex':{doseRange:{dog:[2,4],cat:[2,4]},indicationTh:'Reverse Rocuronium/Vecuronium'},
+            'Sulfamethoxazole-Trimethoprim':{doseRange:{dog:[15,30],cat:[15,30]},indicationTh:'ยาปฏิชีวนะ (ระวังตาแห้งในสุนัข)'},
+            'Telmisartan':{doseRange:{cat:[1,2]},indicationTh:'รักษาโปรตีนรั่วในปัสสาวะแมว (CKD)'},
+            'Terbinafine':{doseRange:{cat:[30,40]},indicationTh:'รักษาเชื้อราผิวหนัง (Dermatophytosis)'},
+            'Theophylline':{doseRange:{cat:[4,8]},indicationTh:'ขยายหลอดลม'},
+            'Thiopental':{doseRange:{dog:[10,15],cat:[10,15]},indicationTh:'Induction (⚠️ ห้ามฉีดนอกเส้นเลือด)'},
+            'Tiletamine-Zolazepam':{doseRange:{dog:[6,12],cat:[6,12]},indicationTh:'IM: 6-12 mg/kg, IV: 2-6 mg/kg (Zoletil)'},
+            'Tobramycin':{doseRange:{dog:[2,3],cat:[2,3]},indicationTh:'ยาปฏิชีวนะ (ระวังพิษต่อไต/หู)'},
+            'Toceranib':{doseRange:{dog:[2.5,3.25]},indicationTh:'Mast cell tumor (⚠️ ยาเคมีบำบัด)'},
+            'Tramadol':{doseRange:{dog:[2,5],cat:[1,2]},indicationTh:'แก้ปวด'},
+            'Tranexamic Acid':{doseRange:{dog:[10,20],cat:[10,20]},indicationTh:'หยุดเลือดออก'},
+            'Trazodone':{doseRange:{dog:[3,7],cat:[3,5]},indicationTh:'ลดความเครียด / วิตกกังวล'},
+            'Trazodone (Pre-anesthetic)':{doseRange:{dog:[3,5]},indicationTh:'ลดความเครียดก่อนสลบสุนัข: ให้ 1-2 ชม. ก่อน'},
+            'Ursodeoxycholic Acid':{doseRange:{dog:[10,15],cat:[10,15]},indicationTh:'ขับน้ำดี / โรคตับ'},
+            'Valproic Acid':{doseRange:{dog:[60,200]},indicationTh:'ยากันชัก'},
+            'Vancomycin':{doseRange:{dog:[12,15],cat:[12,15]},indicationTh:'ยาปฏิชีวนะ (IV drip ช้าๆ)'},
+            'Vasopressin':{indicationTh:'CPR (0.8 IU/kg) / เพิ่มความดัน'},
+            'Vecuronium':{doseRange:{dog:[0.05,0.1],cat:[0.05,0.1]},indicationTh:'คลายกล้ามเนื้อระหว่างสลบ'},
+            'Verapamil':{doseRange:{dog:[1,3]},indicationTh:'Supraventricular tachycardia'},
+            'Vincristine':{doseRange:{dog:[0.5,0.7],cat:[0.5,0.7]},indicationTh:'ยาเคมีบำบัด (⚠️ ห้ามรั่วนอกเส้นเลือด)'},
+            'Vitamin K1 (Phytonadione)':{doseRange:{dog:[2.5,5],cat:[2.5,5]},indicationTh:'แก้พิษยาเบื่อหนู (ห้ามฉีด IV)'},
+            'Warfarin':{doseRange:{dog:[0.1,0.2],cat:[0.06,0.1]},indicationTh:'ยาต้านการแข็งตัวของเลือด'},
+            'Xylazine':{doseRange:{dog:[0.5,1],cat:[0.5,1]},indicationTh:'ซึมประสาท / ทำให้อาเจียนแมว'},
+            'Yohimbine':{indicationTh:'Reverse ฤทธิ์ Xylazine'},
+            'Zonisamide':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'ยากันชัก'},
+            'Chlorpromazine':{indicationTh:'แก้อาเจียน / ระงับประสาท'},
+            'Pyrantel Pamoate':{indicationTh:'ถ่ายพยาธิไส้เดือน (Roundworm / Hookworm)'},
+            'Hydroxyzine':{indicationTh:'แก้แพ้ / ลดคัน'},
+            'Cefpodoxime Proxetil':{doseRange:{dog:[5,10],cat:[5,10]},indicationTh:'ยาปฏิชีวนะ (ติดเชื้อผิวหนัง/ทางเดินหายใจ)'},
+            'Tylosin':{indicationTh:'ยาปฏิชีวนะ / ท้องเสียเรื้อรัง (Antibiotic-responsive diarrhea)'},
+            'Methylprednisolone':{doseRange:{dog:[0.5,10],cat:[0.5,2]},indicationTh:'ลดอักเสบ / กดภูมิคุ้มกัน'},
+            'Amantadine':{doseRange:{dog:[3,5],cat:[3,5]},indicationTh:'ลดปวดเรื้อรัง / เสริม Opioid (NMDA antagonist)'},
+            'Stanozolol':{doseRange:{dog:[1,2]},indicationTh:'กระตุ้นการสร้างเม็ดเลือด / เพิ่มน้ำหนัก'},
+        };
+
         function setSpecies(s) {
             patient.species = s;
             document.getElementById('btn-dog').classList.toggle('bg-teal-600', s==='dog');
@@ -1761,8 +1986,9 @@
                     const concObj = drug.concentrations.find(c => c.value === conc);
                     const resultUnit = commonConcUnit[idx] || (concObj ? concObj.unit : drug.concentrations[0].unit);
                     const badgeClass = commonCatColors[drug.category] || 'bg-gray-500/20 text-gray-300';
+                    const extra = drugExtraData[drug.name] || {};
 
-                    // Dosage cell: dropdown if indications exist, else plain text
+                    // Dosage cell: dropdown if indications exist, range-input if doseRange exists, else plain text
                     let doseCell, doseForCalc;
                     if (drug.indications && drug.indications.length > 0) {
                         const selIdx = commonDoseSelection[idx] || 0;
@@ -1772,6 +1998,36 @@
                         ).join('');
                         doseCell = `<select class="dose-select" onchange="setCommonDoseSelection(${idx}, this.value)">${doseOptions}</select>`;
                         doseForCalc = typeof ind.dose === 'object' ? ind.dose[patient.species] : ind.dose;
+                    } else if (extra.doseRange) {
+                        const range = extra.doseRange;
+                        const speciesRange = patient.species === 'dog' ? (range.dog || null) : (range.cat || null);
+                        const defaultDose = typeof drug.calcDose === 'object' ? drug.calcDose[patient.species] : drug.calcDose;
+                        const savedDose = commonDoseCustom[idx];
+                        const currentDose = (savedDose !== undefined && savedDose !== null) ? savedDose : defaultDose;
+                        if (speciesRange) {
+                            const rMin = speciesRange[0], rMax = speciesRange[1];
+                            const rMid = parseFloat(((rMin + rMax) / 2).toFixed(6));
+                            const eps = 1e-9;
+                            const isMin = currentDose != null && Math.abs(currentDose - rMin) < eps;
+                            const isMid = currentDose != null && Math.abs(currentDose - rMid) < eps;
+                            const isMax = currentDose != null && Math.abs(currentDose - rMax) < eps;
+                            const dogHint = range.dog ? range.dog[0] + (range.dog[0]!==range.dog[1] ? '–'+range.dog[1] : '') : '—';
+                            const catHint = range.cat ? range.cat[0] + (range.cat[0]!==range.cat[1] ? '–'+range.cat[1] : '') : '—';
+                            doseCell = `<div class="dose-range-cell">` +
+                                `<input type="number" class="dose-range-input" value="${currentDose != null ? currentDose : ''}" min="${rMin}" max="${rMax}" step="any" onchange="setCommonCustomDose(${idx},this.value)" title="Dog: ${dogHint} / Cat: ${catHint} mg/kg">` +
+                                `<div class="dose-quick-row">` +
+                                `<button class="dose-quick-btn${isMin?' active':''}" onclick="setCommonCustomDose(${idx},${rMin})">Min</button>` +
+                                `<button class="dose-quick-btn${isMid?' active':''}" onclick="setCommonCustomDose(${idx},${rMid})">Mid</button>` +
+                                `<button class="dose-quick-btn${isMax?' active':''}" onclick="setCommonCustomDose(${idx},${rMax})">Max</button>` +
+                                `<button class="save-dose-btn" data-common-dose-save="${idx}" onclick="saveCommonDose(${idx})" title="บันทึก dose เริ่มต้น">💾</button>` +
+                                `</div>` +
+                                `<div class="dose-range-hint">🐕${dogHint} / 🐈${catHint} mg/kg</div>` +
+                                `</div>`;
+                            doseForCalc = currentDose;
+                        } else {
+                            doseCell = `<span class="text-gray-300 text-sm">${drug.doseText}</span>`;
+                            doseForCalc = defaultDose;
+                        }
                     } else {
                         doseCell = `<span class="text-gray-300 text-sm">${drug.doseText}</span>`;
                         doseForCalc = typeof drug.calcDose === 'object' ? drug.calcDose[patient.species] : drug.calcDose;
@@ -1794,8 +2050,9 @@
                     const routeIcons = (cdHasInj(drug) ? '💉' : '') + (cdHasTabCap(drug) || cdHasOralMl(drug) ? '💊' : '');
                     const speciesIcons = (cdForDog(drug) ? '🐕' : '') + (cdForCat(drug) ? '🐈' : '');
                     const drugIcons = routeIcons + speciesIcons;
+                    const indicationHtml = extra.indicationTh ? `<div class="drug-indication-th">${escHtml(extra.indicationTh)}</div>` : '';
                     return `<tr>
-                        <td><div class="font-semibold">${drug.name}${drugIcons ? ' <span style="font-size:0.85em">' + drugIcons + '</span>' : ''}</div><span class="badge ${badgeClass}">${drug.category}</span></td>
+                        <td><div class="font-semibold">${drug.name}${drugIcons ? ' <span style="font-size:0.85em">' + drugIcons + '</span>' : ''}</div>${indicationHtml}<span class="badge ${badgeClass}">${drug.category}</span></td>
                         <td>${doseCell}</td>
                         <td>${concCell}</td>
                         <td class="res-val">${resultText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
@@ -1985,6 +2242,39 @@
             renderCurrentTool();
         }
 
+        function setCommonCustomDose(idx, val) {
+            const numVal = parseFloat(val);
+            if (!isNaN(numVal) && numVal > 0) {
+                // Clamp to valid range if doseRange is defined for current species
+                const extra = drugExtraData[commonDrugs[idx] && commonDrugs[idx].name] || {};
+                if (extra.doseRange) {
+                    const range = extra.doseRange;
+                    const speciesRange = patient.species === 'dog' ? (range.dog || null) : (range.cat || null);
+                    if (speciesRange) {
+                        commonDoseCustom[idx] = Math.min(speciesRange[1], Math.max(speciesRange[0], numVal));
+                    } else {
+                        commonDoseCustom[idx] = numVal;
+                    }
+                } else {
+                    commonDoseCustom[idx] = numVal;
+                }
+            } else {
+                delete commonDoseCustom[idx];
+            }
+            renderCurrentTool();
+        }
+
+        function saveCommonDose(idx) {
+            const dose = commonDoseCustom[idx];
+            if (dose !== undefined && dose !== null) {
+                localStorage.setItem(`commonDose_${idx}`, JSON.stringify({ value: dose }));
+            } else {
+                localStorage.removeItem(`commonDose_${idx}`);
+            }
+            const btn = document.querySelector(`[data-common-dose-save="${idx}"]`);
+            if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
+        }
+
         function setDehydration(pct) {
             dehydrationPercent = pct;
             renderCurrentTool();
@@ -2048,6 +2338,13 @@
                         if (data.isCustom) commonConcMode[idx] = 'custom';
                         if (data.unit) commonConcUnit[idx] = data.unit;
                     } catch (e) { console.warn('Failed to parse saved common drug concentration:', e); }
+                }
+                const savedDose = localStorage.getItem(`commonDose_${idx}`);
+                if (savedDose) {
+                    try {
+                        const data = JSON.parse(savedDose);
+                        if (data.value != null) commonDoseCustom[idx] = data.value;
+                    } catch (e) { console.warn('Failed to parse saved common drug dose:', e); }
                 }
             });
             commonActiveTab = 'All';
