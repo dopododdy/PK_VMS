@@ -244,6 +244,11 @@
             <div class="p-6 border-b border-white/10">
                 <input type="text" id="catalog-search" class="search-input" placeholder="ค้นหาชื่อรายการ..." oninput="filterCatalogItems()">
             </div>
+            <div class="px-6 py-4 bg-amber-500/5 border-b border-amber-500/20 flex gap-3 items-center">
+                <input type="text" id="catalog-custom-name" class="search-input flex-1" placeholder="พิมพ์ชื่อสินค้าที่ไม่มีในรายการ..." style="padding-left:14px" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomItemFromCatalog()}">
+                <input type="number" id="catalog-custom-price" class="search-input w-32 text-right" placeholder="ราคา" min="0" step="0.01" style="padding-left:14px" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomItemFromCatalog()}">
+                <button onclick="addCustomItemFromCatalog()" class="bg-amber-500 hover:bg-amber-400 text-black font-bold px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">➕ เพิ่ม</button>
+            </div>
             <div id="catalog-items-container" class="flex-1 overflow-y-auto p-8 custom-scroll">
                 <div id="catalog-grid" class="item-grid-box"></div>
             </div>
@@ -762,6 +767,36 @@
             if (error) return alert("Error adding item: " + error.message);
             document.getElementById('manual-item-name').value = '';
             document.getElementById('manual-item-price').value = '';
+            await syncTotalToDB();
+            refreshCartDisplay(activeRecordId);
+        }
+
+        async function addCustomItemFromCatalog() {
+            const name = document.getElementById('catalog-custom-name').value.trim();
+            const price = parseFloat(document.getElementById('catalog-custom-price').value) || 0;
+            if (!name) return alert("กรุณาพิมพ์ชื่อรายการ");
+            if (!activeRecordId) return alert("เลือกรายการก่อน");
+            const typeMap = { rx: 'Rx', tx: 'Tx', lab: 'Lab' };
+            const type = typeMap[currentCatType] || 'Rx';
+            const { error } = await db.from('medical_record_items').insert([{
+                record_id: activeRecordId, item_type: type, item_name: name, quantity: 1, unit_price: price, total_price: price
+            }]);
+            if (error) return alert("Error adding item: " + error.message);
+
+            if (currentRecordData?.payment_status === 'pending') {
+                const { error: histError } = await db.from('pos_pending_additions').insert([{
+                    record_id: activeRecordId,
+                    item_type: type,
+                    item_name: name,
+                    quantity: 1,
+                    unit_price: price,
+                    total_price: price
+                }]);
+                if (histError) console.error('บันทึกประวัติล้มเหลว:', histError.message);
+            }
+
+            document.getElementById('catalog-custom-name').value = '';
+            document.getElementById('catalog-custom-price').value = '';
             await syncTotalToDB();
             refreshCartDisplay(activeRecordId);
         }
