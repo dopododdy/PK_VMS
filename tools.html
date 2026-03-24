@@ -1647,6 +1647,7 @@
                         result = (dosePerKg * w) / conc;
                     }
                     const resultText = (w > 0 && dosePerKg != null && !isNaN(dosePerKg) && dosePerKg > 0) ? result.toFixed(2) : '—';
+                    const fractionText = (w > 0 && dosePerKg != null && !isNaN(dosePerKg) && dosePerKg > 0) ? formatFraction(result) : '—';
                     const badgeClass = commonCatColors[drug.category] || 'bg-gray-500/20 text-gray-300';
                     const concOptions = drug.concentrations.map(c =>
                         `<option value="${c.value}"${!isCustomMode && c.value === conc ? ' selected' : ''}>${c.label}</option>`
@@ -1660,11 +1661,12 @@
                         <td class="text-gray-300 text-sm">${drug.doseText}</td>
                         <td>${concCell}</td>
                         <td class="res-val">${resultText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
+                        <td class="res-val">${fractionText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
                     </tr>`;
                 }).join('');
                 html += `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
                     <table>
-                        <thead><tr><th>Drug</th><th>Dosage</th><th>Formulation</th><th>Dose/admin</th></tr></thead>
+                        <thead><tr><th>Drug</th><th>Dosage</th><th>Formulation</th><th>Dose/admin</th><th>เม็ด/ครั้ง</th></tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                 </div>`;
@@ -1792,6 +1794,22 @@
                 commonConcentrations[idx] = numVal;
                 renderCurrentTool();
             }
+        }
+
+        function formatFraction(val) {
+            if (!(val > 0)) return '—';
+            if (val > 10) return Math.round(val).toString(); // above 10 units, integer is clear enough
+            const fracs = [
+                [1,8],[1,6],[1,4],[1,3],[3,8],[1,2],[2,3],[3,4],
+                [1,1],[5,4],[4,3],[3,2],[5,3],[7,4],[2,1],
+                [5,2],[3,1],[7,2],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1]
+            ];
+            let best = fracs[0], bestDiff = Infinity;
+            for (const f of fracs) {
+                const diff = Math.abs(val - f[0]/f[1]);
+                if (diff < bestDiff) { bestDiff = diff; best = f; }
+            }
+            return best[1] === 1 ? `${best[0]}` : `${best[0]}/${best[1]}`;
         }
 
         function saveCommonConc(idx) {
