@@ -1712,11 +1712,11 @@
                 // Category tab bar
                 const tabBarHtml = `<div class="cat-tab-bar">${cdCategories.map(cat => {
                     const cnt = commonDrugs.filter(d => d.category === cat).length;
-                    return `<button onclick="setCommonTab('${cat}')" class="cat-tab-btn${cat === commonActiveTab ? ' active' : ''}">${cat} <span style="opacity:0.6">(${cnt})</span></button>`;
+                    return `<button onclick="setCommonTab('${escHtml(cat)}')" class="cat-tab-btn${cat === commonActiveTab ? ' active' : ''}">${escHtml(cat)} <span style="opacity:0.6">(${cnt})</span></button>`;
                 }).join('')}</div>`;
 
                 // Search box
-                const safeSearch = (commonSearch || '').replace(/"/g, '&quot;');
+                const safeSearch = escHtml(commonSearch || '');
                 const searchHtml = `<div class="drug-search-wrap"><span class="drug-search-icon">🔍</span><input type="text" class="drug-search" placeholder="ค้นหาชื่อยา..." value="${safeSearch}" oninput="setCommonSearch(this.value)"></div>`;
 
                 // Filter drugs
@@ -1739,7 +1739,7 @@
                         const selIdx = commonDoseSelection[idx] || 0;
                         const ind = drug.indications[selIdx];
                         const doseOptions = drug.indications.map((d, i) =>
-                            `<option value="${i}"${i === selIdx ? ' selected' : ''}>${d.label}</option>`
+                            `<option value="${i}"${i === selIdx ? ' selected' : ''}>${escHtml(d.label)}</option>`
                         ).join('');
                         doseCell = `<select class="dose-select" onchange="setCommonDoseSelection(${idx}, this.value)">${doseOptions}</select>`;
                         doseForCalc = typeof ind.dose === 'object' ? ind.dose[patient.species] : ind.dose;
@@ -1772,7 +1772,7 @@
                 }).join('');
 
                 const emptyMsg = filteredDrugs.length === 0
-                    ? `<tr><td colspan="5" class="text-center py-8 text-gray-600">ไม่พบยาที่ค้นหา "${commonSearch}"</td></tr>`
+                    ? `<tr><td colspan="5" class="text-center py-8 text-gray-600">ไม่พบยาที่ค้นหา "${escHtml(commonSearch)}"</td></tr>`
                     : '';
 
                 html += tabBarHtml + searchHtml + `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
@@ -1905,6 +1905,10 @@
                 commonConcentrations[idx] = numVal;
                 renderCurrentTool();
             }
+        }
+
+        function escHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
         }
 
         function formatFraction(val) {
