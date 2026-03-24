@@ -1967,7 +1967,7 @@
 
                 // Search box
                 const safeSearch = escHtml(commonSearch || '');
-                const searchHtml = `<div class="drug-search-wrap"><span class="drug-search-icon">🔍</span><input type="text" class="drug-search" placeholder="ค้นหาชื่อยา..." value="${safeSearch}" oninput="setCommonSearch(this.value)"></div>`;
+                const searchHtml = `<div class="drug-search-wrap"><span class="drug-search-icon">🔍</span><input type="text" class="drug-search" placeholder="ค้นหาชื่อยา..." value="${safeSearch}" oninput="setCommonSearch(this.value, this.selectionStart)"></div>`;
 
                 // Filter drugs
                 const query = (commonSearch || '').toLowerCase();
@@ -1981,17 +1981,7 @@
                     })
                     .filter(({drug}) => !query || drug.name.toLowerCase().includes(query));
 
-                // Selected list section
-                const checkedDrugNames = commonDrugs.filter((d, i) => commonDrugChecked[i]).map(d => d.name);
-                const selectedListHtml = checkedDrugNames.length > 0 ? `
-                    <div style="background:rgba(20,184,177,0.08);border:1px solid rgba(20,184,177,0.25);border-radius:12px;padding:12px 16px;margin-bottom:14px;">
-                        <div style="font-size:0.75rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">⭐ Selected List (${checkedDrugNames.length})</div>
-                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                            ${checkedDrugNames.map(n => `<span style="background:rgba(20,184,177,0.15);border:1px solid rgba(20,184,177,0.3);border-radius:6px;padding:2px 10px;font-size:0.78rem;color:#2dd4bf;">${escHtml(n)}</span>`).join('')}
-                        </div>
-                    </div>` : '';
-
-                const rows = filteredDrugs.map(({drug, idx}) => {
+                const buildDrugRow = ({drug, idx}) => {
                     const conc = commonConcentrations[idx] !== undefined ? commonConcentrations[idx] : drug.concentrations[0].value;
                     const isCustomMode = commonConcMode[idx] === 'custom';
                     const concObj = drug.concentrations.find(c => c.value === conc);
@@ -2071,16 +2061,25 @@
                         <td class="res-val">${resultText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
                         <td class="res-val">${fractionText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
                     </tr>`;
-                }).join('');
+                };
+
+                const rows = filteredDrugs.map(buildDrugRow).join('');
+
+                // Selected List group at the bottom of the table
+                const checkedEntries = commonDrugs.map((drug, idx) => ({drug, idx})).filter(({idx}) => !!commonDrugChecked[idx]);
+                const selectedGroupRows = checkedEntries.length > 0
+                    ? `<tr style="background:rgba(20,184,177,0.12)"><td colspan="6" style="padding:6px 12px;font-size:0.75rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.05em">⭐ Selected List (${checkedEntries.length})</td></tr>` +
+                      checkedEntries.map(buildDrugRow).join('')
+                    : '';
 
                 const emptyMsg = filteredDrugs.length === 0
                     ? `<tr><td colspan="6" class="text-center py-8 text-gray-600">ไม่พบยาที่ค้นหา "${escHtml(commonSearch)}"</td></tr>`
                     : '';
 
-                html += tabBarHtml + searchHtml + selectedListHtml + `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+                html += tabBarHtml + searchHtml + `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
                     <table>
                         <thead><tr><th style="width:32px">☑</th><th>Drug</th><th>Dosage / Indication</th><th>Formulation</th><th>Dose/admin</th><th>เม็ด/ครั้ง</th></tr></thead>
-                        <tbody>${rows || emptyMsg}</tbody>
+                        <tbody>${rows || emptyMsg}${selectedGroupRows}</tbody>
                     </table>
                 </div>`;
             }
@@ -2245,9 +2244,14 @@
             renderCurrentTool();
         }
 
-        function setCommonSearch(query) {
+        function setCommonSearch(query, cursorPos) {
             commonSearch = query;
             renderCurrentTool();
+            const inp = document.querySelector('.drug-search');
+            if (inp) {
+                inp.focus();
+                if (cursorPos != null) inp.setSelectionRange(cursorPos, cursorPos);
+            }
         }
 
         function setCommonDoseSelection(idx, selIdx) {
