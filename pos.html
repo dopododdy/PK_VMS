@@ -184,6 +184,11 @@
                 <div class="col-span-2 text-right">รวม</div>
             </div>
             <div id="cart-items" class="flex-1 overflow-y-auto custom-scroll divide-y divide-white/5"></div>
+            <div id="manual-item-row" class="hidden border-t border-white/10 p-4 bg-black/20 flex gap-2 items-center">
+                <input type="text" id="manual-item-name" class="search-input flex-1" placeholder="ชื่อสินค้า/บริการ" aria-label="ชื่อสินค้า/บริการ" style="padding-left:14px" onkeydown="if(event.key==='Enter'){event.preventDefault();addManualItem()}">
+                <input type="number" id="manual-item-price" class="search-input w-32 text-right" placeholder="ราคา" aria-label="ราคาสินค้า" style="padding-left:14px" min="0" step="0.01" onkeydown="if(event.key==='Enter'){event.preventDefault();addManualItem()}">
+                <button onclick="addManualItem()" class="bg-teal-500 hover:bg-teal-400 text-navy-dark font-bold px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap"><i data-lucide="plus" class="w-4 h-4"></i> เพิ่ม</button>
+            </div>
         </div>
     </div>
 
@@ -205,7 +210,7 @@
             </div>
             <div class="space-y-5 mt-12">
                 <label class="txt-label flex items-center gap-2 text-sm"><i data-lucide="banknote" class="w-4 h-4"></i> รับเงินสด</label>
-                <input type="number" id="received-cash" class="search-input txt-price h-20 text-center text-amber-400 text-3xl" placeholder="0.00" oninput="calculateChange()">
+                <input type="number" id="received-cash" class="search-input txt-price h-20 text-center text-amber-400 text-3xl" placeholder="0.00" oninput="calculateChange()" onkeydown="if(event.key==='Enter'){event.preventDefault();processPayment()}">
                 <div class="numpad grid grid-cols-3 gap-3">
                     <button onclick="addCash(100)">100</button>
                     <button onclick="addCash(500)">500</button>
@@ -358,7 +363,7 @@
                     <label class="txt-label text-teal-400 text-sm">ยอดสุทธิ</label>
                     <div class="text-4xl font-black text-white" id="combined-net-total">0.00</div>
                 </div>
-                <input type="number" id="combined-received-cash" class="search-input h-16 text-center text-amber-400 text-2xl w-full font-black" placeholder="รับเงินสด 0.00" oninput="calcCombinedChange()">
+                <input type="number" id="combined-received-cash" class="search-input h-16 text-center text-amber-400 text-2xl w-full font-black" placeholder="รับเงินสด 0.00" oninput="calcCombinedChange()" onkeydown="if(event.key==='Enter'){event.preventDefault();processCombinedPayment()}">
                 <div class="flex justify-between items-center">
                     <span class="txt-label text-sm">เงินทอน</span>
                     <span id="combined-change" class="text-3xl font-black text-white">0.00</span>
@@ -587,6 +592,7 @@
             document.getElementById('sum-total').innerText = "0.00";
             document.getElementById('net-total').innerText = "0.00";
             document.getElementById('btn-add-item').classList.add('hidden');
+            document.getElementById('manual-item-row').classList.add('hidden');
 
             const { data } = await db.from('medical_records').select('*').eq('owner_hn', hn).order('created_at', { ascending: false });
             const container = document.getElementById('payment-history');
@@ -605,6 +611,7 @@
             const btn = document.getElementById('btn-pay');
             document.getElementById('view-mode-tag').classList.toggle('hidden', !isPaid);
             document.getElementById('btn-add-item').classList.toggle('hidden', status !== 'pending');
+            document.getElementById('manual-item-row').classList.toggle('hidden', status !== 'pending');
 
             if (isPaid) {
                 document.getElementById('btn-text').innerText = "พิมพ์ใบเสร็จ (Reprint)";
@@ -744,6 +751,21 @@
             refreshCartDisplay(activeRecordId);
         }
 
+        async function addManualItem() {
+            const name = document.getElementById('manual-item-name').value.trim();
+            const price = parseFloat(document.getElementById('manual-item-price').value) || 0;
+            if (!name) return alert("กรุณาใส่ชื่อรายการ");
+            if (!activeRecordId) return alert("เลือกรายการก่อน");
+            const { error } = await db.from('medical_record_items').insert([{
+                record_id: activeRecordId, item_type: 'Rx', item_name: name, quantity: 1, unit_price: price, total_price: price
+            }]);
+            if (error) return alert("Error adding item: " + error.message);
+            document.getElementById('manual-item-name').value = '';
+            document.getElementById('manual-item-price').value = '';
+            await syncTotalToDB();
+            refreshCartDisplay(activeRecordId);
+        }
+
         async function removeItemFromDB(itemId) {
             if (!confirm("ลบรายการ?")) return;
             const { error } = await db.from('medical_record_items').delete().eq('id', itemId);
@@ -817,7 +839,6 @@
                 }
                 return alert(error.message);
             }
-            alert("ชำระเงินสำเร็จ!");
             sendToCustomerDisplay({ type: 'payment_done' });
             printReceipt(activeRecordId);
             loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
@@ -1175,7 +1196,6 @@ ${resetNote}
                     paid_at: now.toISOString()
                 }).eq('id', cr.record.id);
             }
-            alert('ชำระเงินสำเร็จ!');
             closeCombinedModal();
             await printCombinedReceipt(receiptNo, recvd, net, totalDiscount, now);
             fetchPendingPayments();
