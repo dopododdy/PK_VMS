@@ -204,6 +204,7 @@
         let commonSearch = '';
         let commonDoseSelection = {};
         let commonDoseCustom = {};
+        let commonDrugChecked = {};
 
         const emergencyDrugs = [
             { name: 'Atropine',          category: 'Cardiac',           doseText: '0.04 mg/kg IV',        dosePerKg: 0.04,  concentrations: [{value:0.54,label:'0.54 mg/ml'},{value:1.0,label:'1 mg/ml'}] },
@@ -1980,6 +1981,16 @@
                     })
                     .filter(({drug}) => !query || drug.name.toLowerCase().includes(query));
 
+                // Selected list section
+                const checkedDrugNames = commonDrugs.filter((d, i) => commonDrugChecked[i]).map(d => d.name);
+                const selectedListHtml = checkedDrugNames.length > 0 ? `
+                    <div style="background:rgba(20,184,177,0.08);border:1px solid rgba(20,184,177,0.25);border-radius:12px;padding:12px 16px;margin-bottom:14px;">
+                        <div style="font-size:0.75rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">⭐ Selected List (${checkedDrugNames.length})</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                            ${checkedDrugNames.map(n => `<span style="background:rgba(20,184,177,0.15);border:1px solid rgba(20,184,177,0.3);border-radius:6px;padding:2px 10px;font-size:0.78rem;color:#2dd4bf;">${escHtml(n)}</span>`).join('')}
+                        </div>
+                    </div>` : '';
+
                 const rows = filteredDrugs.map(({drug, idx}) => {
                     const conc = commonConcentrations[idx] !== undefined ? commonConcentrations[idx] : drug.concentrations[0].value;
                     const isCustomMode = commonConcMode[idx] === 'custom';
@@ -1987,6 +1998,7 @@
                     const resultUnit = commonConcUnit[idx] || (concObj ? concObj.unit : drug.concentrations[0].unit);
                     const badgeClass = commonCatColors[drug.category] || 'bg-gray-500/20 text-gray-300';
                     const extra = drugExtraData[drug.name] || {};
+                    const isChecked = !!commonDrugChecked[idx];
 
                     // Dosage cell: dropdown if indications exist, range-input if doseRange exists, else plain text
                     let doseCell, doseForCalc;
@@ -2051,7 +2063,8 @@
                     const speciesIcons = (cdForDog(drug) ? '🐕' : '') + (cdForCat(drug) ? '🐈' : '');
                     const drugIcons = routeIcons + speciesIcons;
                     const indicationHtml = extra.indicationTh ? `<div class="drug-indication-th">${escHtml(extra.indicationTh)}</div>` : '';
-                    return `<tr>
+                    return `<tr${isChecked ? ' style="background:rgba(20,184,177,0.06)"' : ''}>
+                        <td style="width:32px;text-align:center;padding:8px 4px"><input type="checkbox"${isChecked ? ' checked' : ''} onchange="toggleCommonDrugCheck(${idx})" style="width:16px;height:16px;cursor:pointer;accent-color:var(--teal)" title="เพิ่มใน Selected List"></td>
                         <td><div class="font-semibold">${drug.name}${drugIcons ? ' <span style="font-size:0.85em">' + drugIcons + '</span>' : ''}</div>${indicationHtml}<span class="badge ${badgeClass}">${drug.category}</span></td>
                         <td>${doseCell}</td>
                         <td>${concCell}</td>
@@ -2061,12 +2074,12 @@
                 }).join('');
 
                 const emptyMsg = filteredDrugs.length === 0
-                    ? `<tr><td colspan="5" class="text-center py-8 text-gray-600">ไม่พบยาที่ค้นหา "${escHtml(commonSearch)}"</td></tr>`
+                    ? `<tr><td colspan="6" class="text-center py-8 text-gray-600">ไม่พบยาที่ค้นหา "${escHtml(commonSearch)}"</td></tr>`
                     : '';
 
-                html += tabBarHtml + searchHtml + `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+                html += tabBarHtml + searchHtml + selectedListHtml + `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
                     <table>
-                        <thead><tr><th>Drug</th><th>Dosage / Indication</th><th>Formulation</th><th>Dose/admin</th><th>เม็ด/ครั้ง</th></tr></thead>
+                        <thead><tr><th style="width:32px">☑</th><th>Drug</th><th>Dosage / Indication</th><th>Formulation</th><th>Dose/admin</th><th>เม็ด/ครั้ง</th></tr></thead>
                         <tbody>${rows || emptyMsg}</tbody>
                     </table>
                 </div>`;
@@ -2275,6 +2288,23 @@
             if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
         }
 
+        function toggleCommonDrugCheck(idx) {
+            commonDrugChecked[idx] = !commonDrugChecked[idx];
+            localStorage.setItem('commonDrugCheckedStates', JSON.stringify(commonDrugChecked));
+            const favorites = commonDrugs
+                .filter((d, i) => commonDrugChecked[i])
+                .map(d => ({
+                    name: d.name,
+                    category: d.category,
+                    doseText: d.doseText,
+                    calcDose: d.calcDose,
+                    speciesDose: d.speciesDose,
+                    indications: d.indications
+                }));
+            localStorage.setItem('commonDrugFavorites', JSON.stringify(favorites));
+            renderCurrentTool();
+        }
+
         function setDehydration(pct) {
             dehydrationPercent = pct;
             renderCurrentTool();
@@ -2347,6 +2377,10 @@
                     } catch (e) { console.warn('Failed to parse saved common drug dose:', e); }
                 }
             });
+            const savedChecked = localStorage.getItem('commonDrugCheckedStates');
+            if (savedChecked) {
+                try { commonDrugChecked = JSON.parse(savedChecked); } catch (e) { console.warn('Failed to parse common drug checked states:', e); }
+            }
             commonActiveTab = 'All';
             setSpecies('dog');
         };
