@@ -1094,7 +1094,7 @@
               doseText: '0.25 mg/kg | q12h',
               calcDose: 0.25,
               concentrations: [{value:10,label:'Cap 10mg',unit:'cap'}] },
-            { name: 'Pimobendan', category: 'Other',
+            { name: 'Pimobendan', category: 'Cardiac',
               doseText: '0.25 mg/kg | q12h',
               calcDose: 0.25,
               concentrations: [{value:1.25,label:'Vetmedin 1.25mg',unit:'tab'}, {value:2.5,label:'Vetmedin 2.5mg',unit:'tab'}, {value:5,label:'Vetmedin 5mg',unit:'tab'}] },
@@ -1704,14 +1704,38 @@
                     'Other':           'bg-gray-500/20 text-gray-300'
                 };
 
+                // Helper functions for drug route / species detection
+                const cdHasInj    = d => d.concentrations.some(c => c.label && c.label.startsWith('Inj'));
+                const cdHasTabCap = d => d.concentrations.some(c => c.unit === 'tab' || c.unit === 'cap');
+                const cdHasOralMl = d => d.concentrations.some(c => c.unit === 'ml' && /susp|syrup|oral/i.test(c.label || ''));
+                const cdForDog    = d => {
+                    if (typeof d.calcDose === 'number') return true;
+                    if (d.calcDose && d.calcDose.dog != null) return true;
+                    if (d.speciesDose && d.speciesDose.dog != null) return true;
+                    return !d.calcDose && !d.speciesDose;
+                };
+                const cdForCat    = d => {
+                    if (typeof d.calcDose === 'number') return true;
+                    if (d.calcDose && d.calcDose.cat != null) return true;
+                    if (d.speciesDose && d.speciesDose.cat != null) return true;
+                    return !d.calcDose && !d.speciesDose;
+                };
+
                 // Build ordered unique category list
                 const cdCategories = [];
                 commonDrugs.forEach(d => { if (!cdCategories.includes(d.category)) cdCategories.push(d.category); });
-                if (!commonActiveTab || !cdCategories.includes(commonActiveTab)) commonActiveTab = cdCategories[0];
+                const cdSpecialTabs = ['All', 'oral tablet/capsul', 'oral mL'];
+                const allValidTabs = [...cdSpecialTabs, ...cdCategories];
+                if (!commonActiveTab || !allValidTabs.includes(commonActiveTab)) commonActiveTab = 'All';
 
                 // Category tab bar (use data-cat to avoid inline-JS quoting issues)
-                const tabBarHtml = `<div class="cat-tab-bar">${cdCategories.map(cat => {
-                    const cnt = commonDrugs.filter(d => d.category === cat).length;
+                const specialTabCounts = {
+                    'All':               commonDrugs.length,
+                    'oral tablet/capsul': commonDrugs.filter(cdHasTabCap).length,
+                    'oral mL':            commonDrugs.filter(cdHasOralMl).length
+                };
+                const tabBarHtml = `<div class="cat-tab-bar">${[...cdSpecialTabs, ...cdCategories].map(cat => {
+                    const cnt = cat in specialTabCounts ? specialTabCounts[cat] : commonDrugs.filter(d => d.category === cat).length;
                     return `<button onclick="setCommonTab(this.dataset.cat)" data-cat="${escHtml(cat)}" class="cat-tab-btn${cat === commonActiveTab ? ' active' : ''}">${escHtml(cat)} <span style="opacity:0.6">(${cnt})</span></button>`;
                 }).join('')}</div>`;
 
@@ -1723,7 +1747,12 @@
                 const query = (commonSearch || '').toLowerCase();
                 const filteredDrugs = commonDrugs
                     .map((drug, idx) => ({drug, idx}))
-                    .filter(({drug}) => drug.category === commonActiveTab)
+                    .filter(({drug}) => {
+                        if (commonActiveTab === 'All') return true;
+                        if (commonActiveTab === 'oral tablet/capsul') return cdHasTabCap(drug);
+                        if (commonActiveTab === 'oral mL') return cdHasOralMl(drug);
+                        return drug.category === commonActiveTab;
+                    })
                     .filter(({drug}) => !query || drug.name.toLowerCase().includes(query));
 
                 const rows = filteredDrugs.map(({drug, idx}) => {
@@ -1762,8 +1791,11 @@
                         ? `<input type="number" class="custom-conc-input" placeholder="mg/unit" value="${conc > 0 ? conc : ''}" onchange="changeCommonCustomConc(${idx},this.value)" min="0.001" step="any">`
                         : '';
                     const concCell = `<div class="conc-cell-wrapper"><select class="conc-select" onchange="changeCommonConc(${idx},this.value)">${concOptions}</select>${customInput}<button class="save-conc-btn" data-common-save-btn="${idx}" onclick="saveCommonConc(${idx})" title="บันทึกความเข้มข้นเริ่มต้น">💾</button></div>`;
+                    const routeIcons = (cdHasInj(drug) ? '💉' : '') + (cdHasTabCap(drug) || cdHasOralMl(drug) ? '💊' : '');
+                    const speciesIcons = (cdForDog(drug) ? '🐕' : '') + (cdForCat(drug) ? '🐈' : '');
+                    const drugIcons = routeIcons + speciesIcons;
                     return `<tr>
-                        <td><div class="font-semibold">${drug.name}</div><span class="badge ${badgeClass}">${drug.category}</span></td>
+                        <td><div class="font-semibold">${drug.name}${drugIcons ? ' <span style="font-size:0.85em">' + drugIcons + '</span>' : ''}</div><span class="badge ${badgeClass}">${drug.category}</span></td>
                         <td>${doseCell}</td>
                         <td>${concCell}</td>
                         <td class="res-val">${resultText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
@@ -2018,9 +2050,7 @@
                     } catch (e) { console.warn('Failed to parse saved common drug concentration:', e); }
                 }
             });
-            const cdCats = [];
-            commonDrugs.forEach(d => { if (!cdCats.includes(d.category)) cdCats.push(d.category); });
-            commonActiveTab = cdCats[0] || '';
+            commonActiveTab = 'All';
             setSpecies('dog');
         };
     </script>
