@@ -117,6 +117,7 @@
         </div>
 
         <nav class="flex-1 overflow-y-auto pt-2 custom-scroll">
+            <div class="nav-item" data-tool="common_drugs" onclick="showTool('common_drugs')">💊 Common Drugs</div>
             <div class="nav-item active" data-tool="emergency" onclick="showTool('emergency')">🚑 Emergency Drugs</div>
             <div class="nav-item" data-tool="anesthetics" onclick="showTool('anesthetics')">💤 Anesthetics</div>
             <div class="nav-item" data-tool="fluids" onclick="showTool('fluids')">💧 Fluid Therapy</div>
@@ -171,6 +172,9 @@
         let mitralData = {grade:'', vhs:'', lviddn:'', laao:''};
         let traumaData = [null, null, null, null, null, null];
         let ruleOf20 = {};
+        let commonConcentrations = {};
+        let commonConcMode = {};
+        let commonConcUnit = {};
 
         const emergencyDrugs = [
             { name: 'Atropine',          category: 'Cardiac',           doseText: '0.04 mg/kg IV',        dosePerKg: 0.04,  concentrations: [{value:0.54,label:'0.54 mg/ml'},{value:1.0,label:'1 mg/ml'}] },
@@ -214,6 +218,101 @@
             { name: 'Dopamine',        category: 'Vasopressor', doseText: '2–10 μg/kg/min',   doseUnit: 'μg/kg/min', doseVal: 5,    concentrations: [{value:40,label:'40 mg/ml'},{value:200,label:'200 mg/ml'}] },
             { name: 'Dobutamine',      category: 'Inotrope',    doseText: '2–15 μg/kg/min',   doseUnit: 'μg/kg/min', doseVal: 5,    concentrations: [{value:12.5,label:'12.5 mg/ml'},{value:50,label:'50 mg/ml'}] },
             { name: 'Norepinephrine',  category: 'Vasopressor', doseText: '0.1–1 μg/kg/min',  doseUnit: 'μg/kg/min', doseVal: 0.3,  concentrations: [{value:1,label:'1 mg/ml'}] },
+        ];
+
+        const commonDrugs = [
+            // ─── Antibiotics ───
+            { name: 'Amoxicillin-Clavulanate', category: 'Antibiotic',
+              doseText: '12.5 mg/kg PO BID',
+              calcDose: 12.5,
+              concentrations: [{value:62.5,label:'62.5 mg/tab',unit:'tab'},{value:125,label:'125 mg/ml (susp)',unit:'ml'}] },
+            { name: 'Doxycycline', category: 'Antibiotic',
+              doseText: '5–10 mg/kg PO BID',
+              calcDose: 5,
+              concentrations: [{value:100,label:'100 mg/cap',unit:'cap'},{value:10,label:'10 mg/ml (syrup)',unit:'ml'}] },
+            { name: 'Metronidazole', category: 'Antibiotic',
+              doseText: '15–25 mg/kg PO BID',
+              calcDose: 15,
+              concentrations: [{value:250,label:'250 mg/tab',unit:'tab'},{value:500,label:'500 mg/tab',unit:'tab'}] },
+            { name: 'Enrofloxacin', category: 'Antibiotic',
+              doseText: 'Dog: 5 mg/kg SID | Cat: 5 mg/kg SID (caution)',
+              calcDose: {dog:5, cat:5},
+              concentrations: [{value:50,label:'50 mg/tab',unit:'tab'},{value:150,label:'150 mg/tab',unit:'tab'},{value:22.7,label:'22.7 mg/ml (inj)',unit:'ml'}] },
+            { name: 'Cephalexin', category: 'Antibiotic',
+              doseText: '22 mg/kg PO BID',
+              calcDose: 22,
+              concentrations: [{value:250,label:'250 mg/cap',unit:'cap'},{value:500,label:'500 mg/cap',unit:'cap'}] },
+            { name: 'Trimethoprim-Sulfa', category: 'Antibiotic',
+              doseText: '15 mg/kg PO BID',
+              calcDose: 15,
+              concentrations: [{value:480,label:'480 mg/tab',unit:'tab'},{value:240,label:'240 mg/tab',unit:'tab'}] },
+            // ─── NSAIDs ───
+            { name: 'Meloxicam', category: 'NSAID',
+              doseText: 'Dog: 0.1 mg/kg SID | Cat: 0.05 mg/kg SID',
+              calcDose: {dog:0.1, cat:0.05},
+              concentrations: [{value:1.5,label:'1.5 mg/ml (oral)',unit:'ml'},{value:5,label:'5 mg/ml (inj)',unit:'ml'}] },
+            { name: 'Carprofen', category: 'NSAID',
+              doseText: 'Dog: 4.4 mg/kg SID (not for cats)',
+              calcDose: {dog:4.4, cat:null},
+              concentrations: [{value:25,label:'25 mg/tab',unit:'tab'},{value:100,label:'100 mg/tab',unit:'tab'}] },
+            { name: 'Robenacoxib', category: 'NSAID',
+              doseText: '1–2 mg/kg PO SID',
+              calcDose: 1,
+              concentrations: [{value:10,label:'10 mg/tab',unit:'tab'},{value:20,label:'20 mg/tab',unit:'tab'},{value:40,label:'40 mg/tab',unit:'tab'}] },
+            // ─── Corticosteroids ───
+            { name: 'Prednisolone', category: 'Corticosteroid',
+              doseText: '1–2 mg/kg PO SID (anti-inflam)',
+              calcDose: 1,
+              concentrations: [{value:5,label:'5 mg/tab',unit:'tab'},{value:20,label:'20 mg/tab',unit:'tab'}] },
+            { name: 'Dexamethasone', category: 'Corticosteroid',
+              doseText: '0.1–0.2 mg/kg IV/SC',
+              calcDose: 0.1,
+              concentrations: [{value:2,label:'2 mg/ml (inj)',unit:'ml'},{value:4,label:'4 mg/ml (inj)',unit:'ml'}] },
+            // ─── GI ───
+            { name: 'Maropitant (Cerenia)', category: 'GI',
+              doseText: '1 mg/kg PO/SC SID',
+              calcDose: 1,
+              concentrations: [{value:16,label:'16 mg/tab',unit:'tab'},{value:24,label:'24 mg/tab',unit:'tab'},{value:10,label:'10 mg/ml (inj)',unit:'ml'}] },
+            { name: 'Metoclopramide', category: 'GI',
+              doseText: '0.2–0.5 mg/kg PO/SC TID',
+              calcDose: 0.3,
+              concentrations: [{value:5,label:'5 mg/tab',unit:'tab'},{value:5,label:'5 mg/ml (inj)',unit:'ml'}] },
+            { name: 'Omeprazole', category: 'GI',
+              doseText: '1 mg/kg PO SID',
+              calcDose: 1,
+              concentrations: [{value:20,label:'20 mg/cap',unit:'cap'}] },
+            { name: 'Famotidine', category: 'GI',
+              doseText: '0.5 mg/kg PO BID',
+              calcDose: 0.5,
+              concentrations: [{value:10,label:'10 mg/tab',unit:'tab'},{value:20,label:'20 mg/tab',unit:'tab'}] },
+            // ─── Antiparasitic ───
+            { name: 'Fenbendazole', category: 'Antiparasitic',
+              doseText: '50 mg/kg PO SID × 3 days',
+              calcDose: 50,
+              concentrations: [{value:100,label:'100 mg/g (paste)',unit:'g'},{value:222,label:'222 mg/g (granule)',unit:'g'}] },
+            { name: 'Pyrantel Pamoate', category: 'Antiparasitic',
+              doseText: '5–10 mg/kg PO once',
+              calcDose: 5,
+              concentrations: [{value:50,label:'50 mg/ml',unit:'ml'}] },
+            // ─── Antihistamines ───
+            { name: 'Chlorpheniramine', category: 'Antihistamine',
+              doseText: 'Dog: 0.4 mg/kg BID | Cat: ~0.5 mg/kg BID',
+              calcDose: {dog:0.4, cat:0.5},
+              concentrations: [{value:4,label:'4 mg/tab',unit:'tab'}] },
+            { name: 'Diphenhydramine', category: 'Antihistamine',
+              doseText: '2–4 mg/kg PO/IM TID',
+              calcDose: 2,
+              concentrations: [{value:25,label:'25 mg/tab',unit:'tab'},{value:50,label:'50 mg/ml (inj)',unit:'ml'}] },
+            // ─── Antifungal ───
+            { name: 'Itraconazole', category: 'Antifungal',
+              doseText: '5–10 mg/kg PO SID',
+              calcDose: 5,
+              concentrations: [{value:100,label:'100 mg/cap',unit:'cap'},{value:10,label:'10 mg/ml (oral soln)',unit:'ml'}] },
+            // ─── Antipruritic ───
+            { name: 'Oclacitinib (Apoquel)', category: 'Antipruritic',
+              doseText: 'Dog: 0.4–0.6 mg/kg PO BID × 4 wks, then SID',
+              calcDose: {dog:0.5, cat:null},
+              concentrations: [{value:3.6,label:'3.6 mg/tab',unit:'tab'},{value:5.4,label:'5.4 mg/tab',unit:'tab'},{value:16,label:'16 mg/tab',unit:'tab'}] },
         ];
 
         function setSpecies(s) {
@@ -724,6 +823,53 @@
                 </div>`.replace('text-3xl font-black text-teal-500">', `text-3xl font-black text-teal-500" id="r20count">`);
             }
 
+            else if (currentActiveTool === 'common_drugs') {
+                const commonCatColors = {
+                    'Antibiotic':    'bg-blue-500/20 text-blue-300',
+                    'NSAID':         'bg-orange-500/20 text-orange-300',
+                    'Corticosteroid':'bg-yellow-500/20 text-yellow-300',
+                    'GI':            'bg-green-500/20 text-green-300',
+                    'Antiparasitic': 'bg-teal-500/20 text-teal-300',
+                    'Antihistamine': 'bg-purple-500/20 text-purple-300',
+                    'Antifungal':    'bg-pink-500/20 text-pink-300',
+                    'Antipruritic':  'bg-indigo-500/20 text-indigo-300'
+                };
+                const rows = commonDrugs.map((drug, idx) => {
+                    const conc = commonConcentrations[idx] !== undefined ? commonConcentrations[idx] : drug.concentrations[0].value;
+                    const isCustomMode = commonConcMode[idx] === 'custom';
+                    const concObj = drug.concentrations.find(c => c.value === conc);
+                    const resultUnit = commonConcUnit[idx] || (concObj ? concObj.unit : drug.concentrations[0].unit);
+                    const dosePerKg = drug.calcDose !== undefined
+                        ? (typeof drug.calcDose === 'object' ? drug.calcDose[patient.species] : drug.calcDose)
+                        : 0;
+                    let result = 0;
+                    if (w > 0 && dosePerKg != null && !isNaN(dosePerKg) && dosePerKg > 0) {
+                        result = (dosePerKg * w) / conc;
+                    }
+                    const resultText = (w > 0 && dosePerKg != null && !isNaN(dosePerKg) && dosePerKg > 0) ? result.toFixed(2) : '—';
+                    const badgeClass = commonCatColors[drug.category] || 'bg-gray-500/20 text-gray-300';
+                    const concOptions = drug.concentrations.map(c =>
+                        `<option value="${c.value}"${!isCustomMode && c.value === conc ? ' selected' : ''}>${c.label}</option>`
+                    ).join('') + `<option value="custom"${isCustomMode ? ' selected' : ''}>อื่นๆ ระบุ</option>`;
+                    const customInput = isCustomMode
+                        ? `<input type="number" class="custom-conc-input" placeholder="mg/unit" value="${conc > 0 ? conc : ''}" onchange="changeCommonCustomConc(${idx},this.value)" min="0.001" step="any">`
+                        : '';
+                    const concCell = `<div class="conc-cell-wrapper"><select class="conc-select" onchange="changeCommonConc(${idx},this.value)">${concOptions}</select>${customInput}<button class="save-conc-btn" data-common-save-btn="${idx}" onclick="saveCommonConc(${idx})" title="บันทึกความเข้มข้นเริ่มต้น">💾</button></div>`;
+                    return `<tr>
+                        <td><div class="font-semibold">${drug.name}</div><span class="badge ${badgeClass}">${drug.category}</span></td>
+                        <td class="text-gray-300 text-sm">${drug.doseText}</td>
+                        <td>${concCell}</td>
+                        <td class="res-val">${resultText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
+                    </tr>`;
+                }).join('');
+                html += `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+                    <table>
+                        <thead><tr><th>Drug</th><th>Dosage</th><th>Formulation</th><th>Dose/admin</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+            }
+
             else {
                 html += `<div class="p-20 text-center border-2 border-dashed border-white/5 rounded-3xl opacity-30">
                     <div class="text-5xl mb-4">⚙️</div>
@@ -827,6 +973,37 @@
             if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
         }
 
+        function changeCommonConc(idx, val) {
+            if (val === 'custom') {
+                commonConcMode[idx] = 'custom';
+            } else {
+                delete commonConcMode[idx];
+                const numVal = parseFloat(val);
+                commonConcentrations[idx] = numVal;
+                const concObj = commonDrugs[idx].concentrations.find(c => c.value === numVal);
+                if (concObj) commonConcUnit[idx] = concObj.unit;
+            }
+            renderCurrentTool();
+        }
+
+        function changeCommonCustomConc(idx, val) {
+            const numVal = parseFloat(val);
+            if (!isNaN(numVal) && numVal >= 0.001) {
+                commonConcentrations[idx] = numVal;
+                renderCurrentTool();
+            }
+        }
+
+        function saveCommonConc(idx) {
+            const drug = commonDrugs[idx];
+            const conc = commonConcentrations[idx] !== undefined ? commonConcentrations[idx] : drug.concentrations[0].value;
+            const isCustom = commonConcMode[idx] === 'custom';
+            const unit = commonConcUnit[idx] || drug.concentrations[0].unit;
+            localStorage.setItem(`commonConc_${idx}`, JSON.stringify({ value: conc, isCustom, unit }));
+            const btn = document.querySelector(`[data-common-save-btn="${idx}"]`);
+            if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
+        }
+
         function setDehydration(pct) {
             dehydrationPercent = pct;
             renderCurrentTool();
@@ -879,6 +1056,17 @@
                         criConcentrations[idx] = data.value;
                         if (data.isCustom) criConcMode[idx] = 'custom';
                     } catch (e) { console.warn('Failed to parse saved CRI concentration:', e); }
+                }
+            });
+            commonDrugs.forEach((drug, idx) => {
+                const saved = localStorage.getItem(`commonConc_${idx}`);
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        commonConcentrations[idx] = data.value;
+                        if (data.isCustom) commonConcMode[idx] = 'custom';
+                        if (data.unit) commonConcUnit[idx] = data.unit;
+                    } catch (e) { console.warn('Failed to parse saved common drug concentration:', e); }
                 }
             });
             setSpecies('dog');
