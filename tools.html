@@ -89,6 +89,19 @@
         .score-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; font-size: 0.85rem; transition: 0.15s; }
         .score-btn:hover { border-color: var(--teal); color: #e2e8f0; }
         .score-btn.selected { background: var(--teal); border-color: var(--teal); color: var(--navy); font-weight: 700; }
+        /* Common Drugs: category tabs */
+        .cat-tab-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+        .cat-tab-btn { padding: 5px 13px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: 0.15s; white-space: nowrap; }
+        .cat-tab-btn:hover { border-color: var(--teal); color: #e2e8f0; }
+        .cat-tab-btn.active { background: var(--teal); border-color: var(--teal); color: var(--navy); font-weight: 700; }
+        /* Dosage dropdown */
+        .dose-select { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 8px; color: #e2e8f0; font-size: 0.78rem; cursor: pointer; outline: none; max-width: 200px; width: 100%; }
+        .dose-select:hover, .dose-select:focus { border-color: var(--teal); }
+        /* Drug search */
+        .drug-search-wrap { position: relative; margin-bottom: 12px; }
+        .drug-search { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 8px 14px 8px 36px; color: #e2e8f0; font-size: 0.9rem; outline: none; width: 100%; box-sizing: border-box; }
+        .drug-search:focus { border-color: var(--teal); }
+        .drug-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #64748b; pointer-events: none; font-size: 0.9rem; }
     </style>
 </head>
 <body class="flex h-screen">
@@ -175,6 +188,9 @@
         let commonConcentrations = {};
         let commonConcMode = {};
         let commonConcUnit = {};
+        let commonActiveTab = '';
+        let commonSearch = '';
+        let commonDoseSelection = {};
 
         const emergencyDrugs = [
             { name: 'Atropine',          category: 'Cardiac',           doseText: '0.04 mg/kg IV',        dosePerKg: 0.04,  concentrations: [{value:0.54,label:'0.54 mg/ml'},{value:1.0,label:'1 mg/ml'}] },
@@ -229,11 +245,15 @@
             { name: 'Amoxicillin', category: 'Antibiotic',
               doseText: '10 mg/kg | q12h',
               calcDose: 10,
+              indications: [
+                { label: 'Standard – 10 mg/kg q12h', dose: 10 },
+                { label: 'High dose – 20 mg/kg q8h', dose: 20 }
+              ],
               concentrations: [{value:50,label:'Inj (LA) 50mg/ml',unit:'ml'}, {value:250,label:'Tab 250mg',unit:'tab'}, {value:500,label:'Tab 500mg',unit:'tab'}, {value:50,label:'Syrup 50mg/ml',unit:'ml'}] },
             { name: 'Amoxicillin-Clavulanate', category: 'Antibiotic',
               doseText: '12.5 mg/kg | q12h',
               calcDose: 12.5,
-              concentrations: [{value:62.5,label:'Clavamox 62.5mg',unit:'ml'}, {value:125,label:'Clavamox 125mg',unit:'ml'}, {value:250,label:'Clavamox 250mg',unit:'ml'}, {value:375,label:'Augmentin 375mg',unit:'ml'}, {value:625,label:'Augmentin 625mg',unit:'ml'}] },
+              concentrations: [{value:62.5,label:'Clavamox 62.5mg',unit:'tab'}, {value:125,label:'Clavamox 125mg',unit:'tab'}, {value:250,label:'Clavamox 250mg',unit:'tab'}, {value:375,label:'Augmentin 375mg',unit:'tab'}, {value:625,label:'Augmentin 625mg',unit:'tab'}] },
             { name: 'Ampicillin', category: 'Antibiotic',
               doseText: '10 mg/kg | q6-8h',
               calcDose: 10,
@@ -261,7 +281,7 @@
             { name: 'Clindamycin', category: 'Antibiotic',
               doseText: '5.5 mg/kg | q12h',
               calcDose: 5.5,
-              concentrations: [{value:75,label:'Antirobe 75mg',unit:'ml'}, {value:150,label:'Cap 150mg',unit:'cap'}, {value:300,label:'Cap 300mg',unit:'cap'}] },
+              concentrations: [{value:75,label:'Antirobe 75mg',unit:'cap'}, {value:150,label:'Cap 150mg',unit:'cap'}, {value:300,label:'Cap 300mg',unit:'cap'}] },
             { name: 'Doxycycline', category: 'Antibiotic',
               doseText: '5 mg/kg | q12-24h',
               calcDose: 5,
@@ -269,6 +289,11 @@
             { name: 'Enrofloxacin', category: 'Antibiotic',
               doseText: '5 mg/kg | q24h',
               calcDose: 5,
+              indications: [
+                { label: 'Standard (UTI/soft tissue) – 5 mg/kg q24h', dose: 5 },
+                { label: 'High dose (resistant infection) – 10 mg/kg q24h', dose: 10 },
+                { label: 'Urinary infection (dog) – 20 mg/kg q24h', dose: {dog:20,cat:null} }
+              ],
               concentrations: [{value:25,label:'Baytril 2.5%',unit:'ml'}, {value:50,label:'Baytril 5%',unit:'ml'}, {value:100,label:'Baytril 10%',unit:'ml'}, {value:15,label:'Tab 15mg',unit:'tab'}, {value:50,label:'Tab 50mg',unit:'tab'}, {value:150,label:'Tab 150mg',unit:'tab'}] },
             { name: 'Erythromycin', category: 'Antibiotic',
               doseText: '0.5 mg/kg | q8h',
@@ -285,6 +310,11 @@
             { name: 'Metronidazole', category: 'Antibiotic',
               doseText: '10 mg/kg | q12h',
               calcDose: 10,
+              indications: [
+                { label: 'Diarrhea/GI – 10 mg/kg q12h', dose: 10 },
+                { label: 'Anaerobic infection – 15 mg/kg q12h', dose: 15 },
+                { label: 'Hepatic encephalopathy – 7.5 mg/kg q12h', dose: 7.5 }
+              ],
               concentrations: [{value:200,label:'Tab 200mg',unit:'tab'}, {value:400,label:'Tab 400mg',unit:'tab'}, {value:5,label:'Inj 5mg/ml (infusion)',unit:'ml'}] },
             { name: 'Rifampin', category: 'Antibiotic',
               doseText: 'Dog: 5 | Cat: 10 mg/kg | q24h',
@@ -305,7 +335,7 @@
             { name: 'Cefpodoxime Proxetil', category: 'Antibiotic',
               doseText: '5 mg/kg | q12-24h',
               calcDose: 5,
-              concentrations: [{value:100,label:'Simplicef 100mg',unit:'ml'}, {value:200,label:'Simplicef 200mg',unit:'ml'}] },
+              concentrations: [{value:100,label:'Simplicef 100mg',unit:'tab'}, {value:200,label:'Simplicef 200mg',unit:'tab'}] },
             { name: 'Tylosin', category: 'Antibiotic',
               doseText: 'Dog: 5 | Cat: 10 mg/kg | q12h',
               calcDose: {dog:5,cat:10},
@@ -314,7 +344,7 @@
             { name: 'Carprofen', category: 'NSAID',
               doseText: 'Dog: 2.2 mg/kg | q12-24h',
               calcDose: {dog:2.2,cat:null},
-              concentrations: [{value:25,label:'Rimadyl 25mg',unit:'ml'}, {value:75,label:'Rimadyl 75mg',unit:'ml'}, {value:100,label:'Rimadyl 100mg',unit:'ml'}, {value:50,label:'Inj 50mg/ml',unit:'ml'}] },
+              concentrations: [{value:25,label:'Rimadyl 25mg',unit:'tab'}, {value:75,label:'Rimadyl 75mg',unit:'tab'}, {value:100,label:'Rimadyl 100mg',unit:'tab'}, {value:50,label:'Inj 50mg/ml',unit:'ml'}] },
             { name: 'Ketoprofen', category: 'NSAID',
               doseText: '1 mg/kg | q24h (max 5 days)',
               calcDose: 1,
@@ -322,6 +352,10 @@
             { name: 'Meloxicam', category: 'NSAID',
               doseText: '0.1 mg/kg | q24h',
               calcDose: 0.1,
+              indications: [
+                { label: 'Maintenance – Dog 0.1 / Cat 0.05 mg/kg q24h', dose: {dog:0.1,cat:0.05} },
+                { label: 'Initial dose (first day) – Dog 0.2 / Cat 0.1 mg/kg', dose: {dog:0.2,cat:0.1} }
+              ],
               concentrations: [{value:5,label:'Metacam Inj 5mg/ml',unit:'ml'}, {value:1.5,label:'Metacam Oral 1.5mg/ml',unit:'ml'}, {value:0.5,label:'Metacam Cat 0.5mg/ml',unit:'ml'}, {value:7.5,label:'Tab 7.5mg',unit:'tab'}] },
             { name: 'Robenacoxib', category: 'NSAID',
               doseText: '1 mg/kg | q24h',
@@ -330,7 +364,7 @@
             { name: 'Firocoxib', category: 'NSAID',
               doseText: 'Dog: 5 mg/kg | q24h',
               calcDose: {dog:5,cat:null},
-              concentrations: [{value:57,label:'Previcox 57mg',unit:'ml'}, {value:227,label:'Previcox 227mg',unit:'ml'}] },
+              concentrations: [{value:57,label:'Previcox 57mg',unit:'tab'}, {value:227,label:'Previcox 227mg',unit:'tab'}] },
             // ─── Corticosteroid ───
             { name: 'Betamethasone', category: 'Corticosteroid',
               doseText: '0.1 mg/kg | q24h or single dose',
@@ -339,6 +373,12 @@
             { name: 'Dexamethasone', category: 'Corticosteroid',
               doseText: '0.1 mg/kg | q24h',
               calcDose: 0.1,
+              indications: [
+                { label: 'Anti-inflammatory – 0.1 mg/kg q24h', dose: 0.1 },
+                { label: 'Shock/emergency – 1 mg/kg once IV', dose: 1 },
+                { label: 'Cerebral edema – 0.5 mg/kg q6-8h', dose: 0.5 },
+                { label: 'Pruritus/allergy – 0.25 mg/kg q24h', dose: 0.25 }
+              ],
               concentrations: [{value:2,label:'Inj 2mg/ml',unit:'ml'}, {value:4,label:'Inj 4mg/ml',unit:'ml'}, {value:0.5,label:'Tab 0.5mg',unit:'tab'}] },
             { name: 'Hydrocortisone', category: 'Corticosteroid',
               doseText: '1 mg/kg | q6-12h',
@@ -347,11 +387,22 @@
             { name: 'Prednisolone', category: 'Corticosteroid',
               doseText: 'Dog: 0.5 | Cat: 1 mg/kg | q12-24h',
               calcDose: {dog:0.5,cat:1},
+              indications: [
+                { label: 'Anti-inflammatory – 0.5/1 mg/kg q12-24h', dose: {dog:0.5,cat:1} },
+                { label: 'Immunosuppressive – 2 mg/kg q24h', dose: 2 },
+                { label: 'Immune-mediated disease – 4 mg/kg q24h', dose: 4 },
+                { label: 'Tapering/maintenance – 0.25/0.5 mg/kg q48h', dose: {dog:0.25,cat:0.5} }
+              ],
               concentrations: [{value:5,label:'Tab 5mg',unit:'tab'}, {value:20,label:'Tab 20mg',unit:'tab'}] },
             { name: 'Methylprednisolone', category: 'Corticosteroid',
               doseText: '0.5 mg/kg | q12-24h (anti-inflam); q24-72h (Depo)',
               calcDose: 0.5,
-              concentrations: [{value:4,label:'Medrol 4mg',unit:'ml'}, {value:16,label:'Medrol 16mg',unit:'ml'}, {value:40,label:'Depo-Medrol 40mg/ml (IM)',unit:'ml'}, {value:125,label:'Solu-Medrol 125mg/vial (IV)',unit:'ml'}] },
+              indications: [
+                { label: 'Anti-inflammatory – 0.5 mg/kg q12-24h', dose: 0.5 },
+                { label: 'Immunosuppressive – 2 mg/kg q24h', dose: 2 },
+                { label: 'Pulse therapy – 10 mg/kg slow IV once', dose: 10 }
+              ],
+              concentrations: [{value:4,label:'Medrol 4mg',unit:'tab'}, {value:16,label:'Medrol 16mg',unit:'tab'}, {value:40,label:'Depo-Medrol 40mg/ml (IM)',unit:'ml'}, {value:125,label:'Solu-Medrol 125mg/vial (IV)',unit:'ml'}] },
             // ─── GI ───
             { name: 'Cimetidine', category: 'GI',
               doseText: '5 mg/kg | q6-8h',
@@ -408,7 +459,7 @@
             { name: 'Chlorpromazine', category: 'GI',
               doseText: 'Dog: 0.5 | Cat: 0.25 mg/kg | q6-8h',
               calcDose: {dog:0.5,cat:0.25},
-              concentrations: [{value:25,label:'Injectable 25mg/ml',unit:'tab'}, {value:10,label:'Tab 10mg',unit:'tab'}, {value:25,label:'Tab 25mg',unit:'tab'}] },
+              concentrations: [{value:25,label:'Injectable 25mg/ml',unit:'ml'}, {value:10,label:'Tab 10mg',unit:'tab'}, {value:25,label:'Tab 25mg',unit:'tab'}] },
             // ─── Antiparasitic ───
             { name: 'Albendazole', category: 'Antiparasitic',
               doseText: '25 mg/kg | q12h (3-5 days)',
@@ -417,7 +468,7 @@
             { name: 'Fenbendazole', category: 'Antiparasitic',
               doseText: '50 mg/kg | q24h (3-5 days)',
               calcDose: 50,
-              concentrations: [{value:222,label:'Panacur 10% (100mg/ml)',unit:'ml'}, {value:500,label:'Tab 500mg',unit:'tab'}] },
+              concentrations: [{value:100,label:'Panacur 10% (100mg/ml)',unit:'ml'}, {value:500,label:'Tab 500mg',unit:'tab'}] },
             { name: 'Ivermectin', category: 'Antiparasitic',
               doseText: 'Dog: 0.006 | Cat: 0.024 mg/kg | Varies by indication',
               calcDose: {dog:0.006,cat:0.024},
@@ -425,11 +476,11 @@
             { name: 'Milbemycin Oxime', category: 'Antiparasitic',
               doseText: 'Dog: 0.5 | Cat: 2 mg/kg | q30d (prevention)',
               calcDose: {dog:0.5,cat:2},
-              concentrations: [{value:2.3,label:'Interceptor 2.3mg',unit:'ml'}, {value:5.75,label:'Interceptor 5.75mg',unit:'ml'}, {value:11.5,label:'Interceptor 11.5mg',unit:'ml'}] },
+              concentrations: [{value:2.3,label:'Interceptor 2.3mg',unit:'tab'}, {value:5.75,label:'Interceptor 5.75mg',unit:'tab'}, {value:11.5,label:'Interceptor 11.5mg',unit:'tab'}] },
             { name: 'Praziquantel', category: 'Antiparasitic',
               doseText: '5 mg/kg | Single dose',
               calcDose: 5,
-              concentrations: [{value:50,label:'Droncit 50mg',unit:'ml'}, {value:56.8,label:'Inj 56.8mg/ml',unit:'ml'}] },
+              concentrations: [{value:50,label:'Droncit 50mg',unit:'tab'}, {value:56.8,label:'Inj 56.8mg/ml',unit:'ml'}] },
             { name: 'Selamectin', category: 'Antiparasitic',
               doseText: '6 mg/kg | q30d',
               calcDose: 6,
@@ -441,15 +492,15 @@
             { name: 'Afoxolaner', category: 'Antiparasitic',
               doseText: 'Dog: 2.5 mg/kg | q30d',
               calcDose: {dog:2.5,cat:null},
-              concentrations: [{value:11.3,label:'NexGard 11.3mg (2-4kg)',unit:'ml'}, {value:28.3,label:'NexGard 28.3mg (4-10kg)',unit:'ml'}, {value:68,label:'NexGard 68mg (10-25kg)',unit:'ml'}, {value:136,label:'NexGard 136mg (25-50kg)',unit:'ml'}] },
+              concentrations: [{value:11.3,label:'NexGard 11.3mg (2-4kg)',unit:'tab'}, {value:28.3,label:'NexGard 28.3mg (4-10kg)',unit:'tab'}, {value:68,label:'NexGard 68mg (10-25kg)',unit:'tab'}, {value:136,label:'NexGard 136mg (25-50kg)',unit:'tab'}] },
             { name: 'Fluralaner', category: 'Antiparasitic',
               doseText: 'Dog: 25 | Cat: 40 mg/kg | q12 weeks',
               calcDose: {dog:25,cat:40},
-              concentrations: [{value:112.5,label:'Bravecto 112.5mg (2-4.5kg)',unit:'ml'}, {value:250,label:'Bravecto 250mg (4.5-10kg)',unit:'ml'}, {value:500,label:'Bravecto 500mg (10-20kg)',unit:'ml'}, {value:1000,label:'Bravecto 1000mg (20-40kg)',unit:'ml'}, {value:1400,label:'Bravecto 1400mg (40-56kg)',unit:'ml'}] },
+              concentrations: [{value:112.5,label:'Bravecto 112.5mg (2-4.5kg)',unit:'tab'}, {value:250,label:'Bravecto 250mg (4.5-10kg)',unit:'tab'}, {value:500,label:'Bravecto 500mg (10-20kg)',unit:'tab'}, {value:1000,label:'Bravecto 1000mg (20-40kg)',unit:'tab'}, {value:1400,label:'Bravecto 1400mg (40-56kg)',unit:'tab'}] },
             { name: 'Sarolaner', category: 'Antiparasitic',
               doseText: 'Dog: 2 mg/kg | q30d',
               calcDose: {dog:2,cat:null},
-              concentrations: [{value:5,label:'Simparica 5mg (1.3-2.5kg)',unit:'ml'}, {value:10,label:'Simparica 10mg (2.5-5kg)',unit:'ml'}, {value:20,label:'Simparica 20mg (5-10kg)',unit:'ml'}, {value:40,label:'Simparica 40mg (10-20kg)',unit:'ml'}, {value:80,label:'Simparica 80mg (20-40kg)',unit:'ml'}, {value:120,label:'Simparica 120mg (40-60kg)',unit:'ml'}] },
+              concentrations: [{value:5,label:'Simparica 5mg (1.3-2.5kg)',unit:'tab'}, {value:10,label:'Simparica 10mg (2.5-5kg)',unit:'tab'}, {value:20,label:'Simparica 20mg (5-10kg)',unit:'tab'}, {value:40,label:'Simparica 40mg (10-20kg)',unit:'tab'}, {value:80,label:'Simparica 80mg (20-40kg)',unit:'tab'}, {value:120,label:'Simparica 120mg (40-60kg)',unit:'tab'}] },
             { name: 'Imidocarb Dipropionate', category: 'Antiparasitic',
               doseText: '5 mg/kg | Once or repeat in 14 days',
               calcDose: 5,
@@ -504,12 +555,12 @@
             { name: 'Oclacitinib', category: 'Antipruritic',
               doseText: 'Dog: 0.4 mg/kg | q12h (14 days) then q24h',
               calcDose: {dog:0.4,cat:null},
-              concentrations: [{value:3.6,label:'Apoquel 3.6mg',unit:'ml'}, {value:5.4,label:'Apoquel 5.4mg',unit:'ml'}, {value:16,label:'Apoquel 16mg',unit:'ml'}] },
+              concentrations: [{value:3.6,label:'Apoquel 3.6mg',unit:'tab'}, {value:5.4,label:'Apoquel 5.4mg',unit:'tab'}, {value:16,label:'Apoquel 16mg',unit:'tab'}] },
             // ─── Sedative ───
             { name: 'Acepromazine', category: 'Sedative',
               doseText: 'Dog: 0.025 | Cat: 0.05 mg/kg | q6-8h',
               calcDose: {dog:0.025,cat:0.05},
-              concentrations: [{value:10,label:'Injectable (10 mg/ml)',unit:'tab'}, {value:10,label:'Tablet (10 mg)',unit:'tab'}, {value:25,label:'Tablet (25 mg)',unit:'tab'}] },
+              concentrations: [{value:10,label:'Injectable (10 mg/ml)',unit:'ml'}, {value:10,label:'Tablet (10 mg)',unit:'tab'}, {value:25,label:'Tablet (25 mg)',unit:'tab'}] },
             { name: 'Alprazolam', category: 'Sedative',
               doseText: 'Dog: 0.02 | Cat: 0.0125 mg/kg | q12h / PRN',
               calcDose: {dog:0.02,cat:0.0125},
@@ -537,6 +588,10 @@
             { name: 'Phenobarbital', category: 'Sedative',
               doseText: 'Dog: 2 | Cat: 1 mg/kg | q12h',
               calcDose: {dog:2,cat:1},
+              indications: [
+                { label: 'Maintenance epilepsy – Dog 2 / Cat 1 mg/kg q12h', dose: {dog:2,cat:1} },
+                { label: 'Cluster/emergency loading – 16 mg/kg slow IV', dose: 16 }
+              ],
               concentrations: [{value:30,label:'Tab 30mg',unit:'tab'}, {value:60,label:'Tab 60mg',unit:'tab'}, {value:100,label:'Tab 100mg',unit:'tab'}, {value:65,label:'Inj 65mg/ml',unit:'ml'}] },
             { name: 'Thiopental', category: 'Sedative',
               doseText: '10 mg/kg | Induction',
@@ -582,6 +637,11 @@
             { name: 'Gabapentin', category: 'Analgesic',
               doseText: 'Dog: 10 | Cat: 5 mg/kg | q8-12h',
               calcDose: {dog:10,cat:5},
+              indications: [
+                { label: 'Neuropathic pain – Dog 10 / Cat 5 mg/kg q8-12h', dose: {dog:10,cat:5} },
+                { label: 'Epilepsy adjunct – 5 mg/kg q8h', dose: 5 },
+                { label: 'Pre-anesthetic – Dog 5 / Cat 50 mg/kg once', dose: {dog:5,cat:50} }
+              ],
               concentrations: [{value:100,label:'Cap 100mg',unit:'cap'}, {value:300,label:'Cap 300mg',unit:'cap'}, {value:400,label:'Cap 400mg',unit:'cap'}] },
             { name: 'Loperamide', category: 'Analgesic',
               doseText: 'Dog: 0.1 mg/kg | q8-12h',
@@ -732,7 +792,7 @@
             { name: 'Benazepril', category: 'Cardiac',
               doseText: '0.25 mg/kg | q24h',
               calcDose: 0.25,
-              concentrations: [{value:5,label:'Fortekor 5mg',unit:'ml'}, {value:20,label:'Fortekor 20mg',unit:'ml'}] },
+              concentrations: [{value:5,label:'Fortekor 5mg',unit:'tab'}, {value:20,label:'Fortekor 20mg',unit:'tab'}] },
             { name: 'Digoxin', category: 'Cardiac',
               doseText: '0.005 mg/kg | q12h',
               calcDose: 0.005,
@@ -801,6 +861,11 @@
             { name: 'Furosemide', category: 'Diuretic',
               doseText: 'Dog: 2 | Cat: 1 mg/kg | q8-12h',
               calcDose: {dog:2,cat:1},
+              indications: [
+                { label: 'Mild CHF – Dog 1 / Cat 0.5 mg/kg q12-24h', dose: {dog:1,cat:0.5} },
+                { label: 'Moderate CHF – Dog 2 / Cat 1 mg/kg q8-12h', dose: {dog:2,cat:1} },
+                { label: 'Acute severe – Dog 4 / Cat 2 mg/kg q2-4h', dose: {dog:4,cat:2} }
+              ],
               concentrations: [{value:10,label:'Lasix Inj 10mg/ml',unit:'ml'}, {value:40,label:'Tab 40mg',unit:'tab'}, {value:500,label:'Tab 500mg',unit:'tab'}] },
             { name: 'Hydrochlorothiazide', category: 'Diuretic',
               doseText: 'Dog: 2 | Cat: 1 mg/kg | q12h',
@@ -813,11 +878,15 @@
             { name: 'Spironolactone', category: 'Diuretic',
               doseText: '1 mg/kg | q12h',
               calcDose: 1,
-              concentrations: [{value:25,label:'Tab 25mg',unit:'tab'}, {value:50,label:'Prilactone 50mg',unit:'ml'}] },
+              concentrations: [{value:25,label:'Tab 25mg',unit:'tab'}, {value:50,label:'Prilactone 50mg',unit:'tab'}] },
             // ─── Anticonvulsant ───
             { name: 'Levetiracetam', category: 'Anticonvulsant',
               doseText: '20 mg/kg | q8h',
               calcDose: 20,
+              indications: [
+                { label: 'Maintenance – 20 mg/kg q8h', dose: 20 },
+                { label: 'Status epilepticus – 60 mg/kg IV loading', dose: 60 }
+              ],
               concentrations: [{value:250,label:'Tab 250mg',unit:'tab'}, {value:500,label:'Tab 500mg',unit:'tab'}, {value:100,label:'Inj 100mg/ml',unit:'ml'}] },
             { name: 'Potassium Bromide', category: 'Anticonvulsant',
               doseText: 'Dog: 20 mg/kg | q24h',
@@ -839,11 +908,11 @@
             { name: 'Cyclosporine', category: 'Immunosuppressant',
               doseText: '5 mg/kg | q12-24h',
               calcDose: 5,
-              concentrations: [{value:25,label:'Atopica 25mg',unit:'ml'}, {value:50,label:'Atopica 50mg',unit:'ml'}, {value:100,label:'Atopica 100mg',unit:'ml'}] },
+              concentrations: [{value:25,label:'Atopica 25mg',unit:'cap'}, {value:50,label:'Atopica 50mg',unit:'cap'}, {value:100,label:'Atopica 100mg',unit:'cap'}] },
             { name: 'Mycophenolate Mofetil', category: 'Immunosuppressant',
               doseText: 'Dog: 10 mg/kg | q12h',
               calcDose: {dog:10,cat:null},
-              concentrations: [{value:250,label:'CellCept 250mg',unit:'ml'}, {value:500,label:'CellCept 500mg',unit:'ml'}] },
+              concentrations: [{value:250,label:'CellCept 250mg',unit:'cap'}, {value:500,label:'CellCept 500mg',unit:'cap'}] },
             { name: 'Methotrexate', category: 'Immunosuppressant',
               doseText: '2.5 mg/kg | Weekly or per protocol',
               calcDose: 2.5,
@@ -852,7 +921,7 @@
             { name: 'Clomipramine', category: 'Behavioral',
               doseText: 'Dog: 1 | Cat: 0.25 mg/kg | q12-24h',
               calcDose: {dog:1,cat:0.25},
-              concentrations: [{value:20,label:'Clomicalm 20mg',unit:'ml'}, {value:40,label:'Clomicalm 40mg',unit:'ml'}, {value:80,label:'Clomicalm 80mg',unit:'ml'}] },
+              concentrations: [{value:20,label:'Clomicalm 20mg',unit:'tab'}, {value:40,label:'Clomicalm 40mg',unit:'tab'}, {value:80,label:'Clomicalm 80mg',unit:'tab'}] },
             { name: 'Fluoxetine', category: 'Behavioral',
               doseText: 'Dog: 1 | Cat: 0.5 mg/kg | q24h',
               calcDose: {dog:1,cat:0.5},
@@ -881,11 +950,11 @@
             { name: 'Levothyroxine', category: 'Endocrine',
               doseText: 'Dog: 0.02 mg/kg | q12h',
               calcDose: {dog:0.02,cat:null},
-              concentrations: [{value:0.1,label:'Soloxine 0.1mg',unit:'ml'}, {value:0.2,label:'Soloxine 0.2mg',unit:'ml'}, {value:0.3,label:'Soloxine 0.3mg',unit:'ml'}, {value:0.5,label:'Soloxine 0.5mg',unit:'ml'}, {value:0.8,label:'Soloxine 0.8mg',unit:'ml'}] },
+              concentrations: [{value:0.1,label:'Soloxine 0.1mg',unit:'tab'}, {value:0.2,label:'Soloxine 0.2mg',unit:'tab'}, {value:0.3,label:'Soloxine 0.3mg',unit:'tab'}, {value:0.5,label:'Soloxine 0.5mg',unit:'tab'}, {value:0.8,label:'Soloxine 0.8mg',unit:'tab'}] },
             { name: 'Methimazole', category: 'Endocrine',
               doseText: 'Cat: 1.25 mg/kg | q12h',
               calcDose: {dog:null,cat:1.25},
-              concentrations: [{value:5,label:'Tapazole 5mg',unit:'ml'}, {value:2.5,label:'Felimazole 2.5mg',unit:'ml'}] },
+              concentrations: [{value:5,label:'Tapazole 5mg',unit:'tab'}, {value:2.5,label:'Felimazole 2.5mg',unit:'tab'}] },
             { name: 'Desmopressin (DDAVP)', category: 'Endocrine',
               doseText: '1 mg/kg | q12-24h',
               calcDose: 1,
@@ -893,7 +962,7 @@
             { name: 'Selegiline', category: 'Endocrine',
               doseText: 'Dog: 0.5 mg/kg | q24h (morning)',
               calcDose: {dog:0.5,cat:null},
-              concentrations: [{value:5,label:'Anipryl 5mg',unit:'ml'}, {value:10,label:'Anipryl 10mg',unit:'ml'}] },
+              concentrations: [{value:5,label:'Anipryl 5mg',unit:'tab'}, {value:10,label:'Anipryl 10mg',unit:'tab'}] },
             // ─── Muscle Relaxant ───
             { name: 'Dantrolene', category: 'Muscle Relaxant',
               doseText: 'Dog: 1 | Cat: 0.5 mg/kg | q8h',
@@ -902,12 +971,12 @@
             { name: 'Methocarbamol', category: 'Muscle Relaxant',
               doseText: '15 mg/kg | q8-12h',
               calcDose: 15,
-              concentrations: [{value:500,label:'Robaxin 500mg',unit:'ml'}, {value:100,label:'Inj 100mg/ml',unit:'ml'}] },
+              concentrations: [{value:500,label:'Robaxin 500mg',unit:'tab'}, {value:100,label:'Inj 100mg/ml',unit:'ml'}] },
             // ─── Antidote ───
             { name: 'Acetylcysteine', category: 'Antidote',
               doseText: '140 mg/kg | Loading then q4-6h',
               calcDose: 140,
-              concentrations: [{value:200,label:'Injectable 20%',unit:'tab'}] },
+              concentrations: [{value:200,label:'Injectable 20%',unit:'ml'}] },
             { name: 'Atipamezole', category: 'Antidote',
               doseText: '0.1 mg/kg | Once (reversal)',
               calcDose: 0.1,
@@ -975,7 +1044,7 @@
             { name: 'Toceranib', category: 'Chemotherapy',
               doseText: 'Dog: 2.5 mg/kg | q48h (every other day)',
               calcDose: {dog:2.5,cat:null},
-              concentrations: [{value:10,label:'Palladia 10mg',unit:'ml'}, {value:15,label:'Palladia 15mg',unit:'ml'}, {value:50,label:'Palladia 50mg',unit:'ml'}] },
+              concentrations: [{value:10,label:'Palladia 10mg',unit:'tab'}, {value:15,label:'Palladia 15mg',unit:'tab'}, {value:50,label:'Palladia 50mg',unit:'tab'}] },
             { name: 'Vincristine', category: 'Chemotherapy',
               doseText: '0.5 mg/kg | Weekly (per protocol)',
               calcDose: 0.5,
@@ -1028,7 +1097,7 @@
             { name: 'Pimobendan', category: 'Other',
               doseText: '0.25 mg/kg | q12h',
               calcDose: 0.25,
-              concentrations: [{value:1.25,label:'Vetmedin 1.25mg',unit:'ml'}, {value:2.5,label:'Vetmedin 2.5mg',unit:'ml'}, {value:5,label:'Vetmedin 5mg',unit:'ml'}] },
+              concentrations: [{value:1.25,label:'Vetmedin 1.25mg',unit:'tab'}, {value:2.5,label:'Vetmedin 2.5mg',unit:'tab'}, {value:5,label:'Vetmedin 5mg',unit:'tab'}] },
             { name: 'Sildenafil', category: 'Other',
               doseText: '1 mg/kg | q8-12h',
               calcDose: 1,
@@ -1056,7 +1125,7 @@
             { name: 'S-Adenosylmethionine (SAMe)', category: 'Other',
               doseText: '18 mg/kg | q24h',
               calcDose: 18,
-              concentrations: [{value:90,label:'Denosyl 90mg',unit:'ml'}, {value:225,label:'Denosyl 225mg',unit:'ml'}, {value:425,label:'Denosyl 425mg',unit:'ml'}] },
+              concentrations: [{value:90,label:'Denosyl 90mg',unit:'tab'}, {value:225,label:'Denosyl 225mg',unit:'tab'}, {value:425,label:'Denosyl 425mg',unit:'tab'}] },
             { name: 'Aluminum Hydroxide', category: 'Other',
               doseText: '30 mg/kg | With meals',
               calcDose: 30,
@@ -1634,21 +1703,58 @@
                     'Chemotherapy':    'bg-gray-700/20 text-gray-200',
                     'Other':           'bg-gray-500/20 text-gray-300'
                 };
-                const rows = commonDrugs.map((drug, idx) => {
+
+                // Build ordered unique category list
+                const cdCategories = [];
+                commonDrugs.forEach(d => { if (!cdCategories.includes(d.category)) cdCategories.push(d.category); });
+                if (!commonActiveTab || !cdCategories.includes(commonActiveTab)) commonActiveTab = cdCategories[0];
+
+                // Category tab bar
+                const tabBarHtml = `<div class="cat-tab-bar">${cdCategories.map(cat => {
+                    const cnt = commonDrugs.filter(d => d.category === cat).length;
+                    return `<button onclick="setCommonTab('${cat}')" class="cat-tab-btn${cat === commonActiveTab ? ' active' : ''}">${cat} <span style="opacity:0.6">(${cnt})</span></button>`;
+                }).join('')}</div>`;
+
+                // Search box
+                const safeSearch = (commonSearch || '').replace(/"/g, '&quot;');
+                const searchHtml = `<div class="drug-search-wrap"><span class="drug-search-icon">🔍</span><input type="text" class="drug-search" placeholder="ค้นหาชื่อยา..." value="${safeSearch}" oninput="setCommonSearch(this.value)"></div>`;
+
+                // Filter drugs
+                const query = (commonSearch || '').toLowerCase();
+                const filteredDrugs = commonDrugs
+                    .map((drug, idx) => ({drug, idx}))
+                    .filter(({drug}) => drug.category === commonActiveTab)
+                    .filter(({drug}) => !query || drug.name.toLowerCase().includes(query));
+
+                const rows = filteredDrugs.map(({drug, idx}) => {
                     const conc = commonConcentrations[idx] !== undefined ? commonConcentrations[idx] : drug.concentrations[0].value;
                     const isCustomMode = commonConcMode[idx] === 'custom';
                     const concObj = drug.concentrations.find(c => c.value === conc);
                     const resultUnit = commonConcUnit[idx] || (concObj ? concObj.unit : drug.concentrations[0].unit);
-                    const dosePerKg = drug.calcDose !== undefined
-                        ? (typeof drug.calcDose === 'object' ? drug.calcDose[patient.species] : drug.calcDose)
-                        : 0;
-                    let result = 0;
-                    if (w > 0 && dosePerKg != null && !isNaN(dosePerKg) && dosePerKg > 0) {
-                        result = (dosePerKg * w) / conc;
-                    }
-                    const resultText = (w > 0 && dosePerKg != null && !isNaN(dosePerKg) && dosePerKg > 0) ? result.toFixed(2) : '—';
-                    const fractionText = (w > 0 && dosePerKg != null && !isNaN(dosePerKg) && dosePerKg > 0) ? formatFraction(result) : '—';
                     const badgeClass = commonCatColors[drug.category] || 'bg-gray-500/20 text-gray-300';
+
+                    // Dosage cell: dropdown if indications exist, else plain text
+                    let doseCell, doseForCalc;
+                    if (drug.indications && drug.indications.length > 0) {
+                        const selIdx = commonDoseSelection[idx] || 0;
+                        const ind = drug.indications[selIdx];
+                        const doseOptions = drug.indications.map((d, i) =>
+                            `<option value="${i}"${i === selIdx ? ' selected' : ''}>${d.label}</option>`
+                        ).join('');
+                        doseCell = `<select class="dose-select" onchange="setCommonDoseSelection(${idx}, this.value)">${doseOptions}</select>`;
+                        doseForCalc = typeof ind.dose === 'object' ? ind.dose[patient.species] : ind.dose;
+                    } else {
+                        doseCell = `<span class="text-gray-300 text-sm">${drug.doseText}</span>`;
+                        doseForCalc = typeof drug.calcDose === 'object' ? drug.calcDose[patient.species] : drug.calcDose;
+                    }
+
+                    let result = 0;
+                    if (w > 0 && doseForCalc != null && !isNaN(doseForCalc) && doseForCalc > 0) {
+                        result = (doseForCalc * w) / conc;
+                    }
+                    const resultText = (w > 0 && doseForCalc != null && !isNaN(doseForCalc) && doseForCalc > 0) ? result.toFixed(2) : '—';
+                    const fractionText = (w > 0 && doseForCalc != null && !isNaN(doseForCalc) && doseForCalc > 0) ? formatFraction(result) : '—';
+
                     const concOptions = drug.concentrations.map(c =>
                         `<option value="${c.value}"${!isCustomMode && c.value === conc ? ' selected' : ''}>${c.label}</option>`
                     ).join('') + `<option value="custom"${isCustomMode ? ' selected' : ''}>อื่นๆ ระบุ</option>`;
@@ -1658,16 +1764,21 @@
                     const concCell = `<div class="conc-cell-wrapper"><select class="conc-select" onchange="changeCommonConc(${idx},this.value)">${concOptions}</select>${customInput}<button class="save-conc-btn" data-common-save-btn="${idx}" onclick="saveCommonConc(${idx})" title="บันทึกความเข้มข้นเริ่มต้น">💾</button></div>`;
                     return `<tr>
                         <td><div class="font-semibold">${drug.name}</div><span class="badge ${badgeClass}">${drug.category}</span></td>
-                        <td class="text-gray-300 text-sm">${drug.doseText}</td>
+                        <td>${doseCell}</td>
                         <td>${concCell}</td>
                         <td class="res-val">${resultText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
                         <td class="res-val">${fractionText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
                     </tr>`;
                 }).join('');
-                html += `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+
+                const emptyMsg = filteredDrugs.length === 0
+                    ? `<tr><td colspan="5" class="text-center py-8 text-gray-600">ไม่พบยาที่ค้นหา "${commonSearch}"</td></tr>`
+                    : '';
+
+                html += tabBarHtml + searchHtml + `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
                     <table>
-                        <thead><tr><th>Drug</th><th>Dosage</th><th>Formulation</th><th>Dose/admin</th><th>เม็ด/ครั้ง</th></tr></thead>
-                        <tbody>${rows}</tbody>
+                        <thead><tr><th>Drug</th><th>Dosage / Indication</th><th>Formulation</th><th>Dose/admin</th><th>เม็ด/ครั้ง</th></tr></thead>
+                        <tbody>${rows || emptyMsg}</tbody>
                     </table>
                 </div>`;
             }
@@ -1822,6 +1933,22 @@
             if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
         }
 
+        function setCommonTab(cat) {
+            commonActiveTab = cat;
+            commonSearch = '';
+            renderCurrentTool();
+        }
+
+        function setCommonSearch(query) {
+            commonSearch = query;
+            renderCurrentTool();
+        }
+
+        function setCommonDoseSelection(idx, selIdx) {
+            commonDoseSelection[idx] = parseInt(selIdx);
+            renderCurrentTool();
+        }
+
         function setDehydration(pct) {
             dehydrationPercent = pct;
             renderCurrentTool();
@@ -1887,6 +2014,9 @@
                     } catch (e) { console.warn('Failed to parse saved common drug concentration:', e); }
                 }
             });
+            const cdCats = [];
+            commonDrugs.forEach(d => { if (!cdCats.includes(d.category)) cdCats.push(d.category); });
+            commonActiveTab = cdCats[0] || '';
             setSpecies('dog');
         };
     </script>
