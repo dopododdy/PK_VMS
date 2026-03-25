@@ -63,6 +63,42 @@
             .history-content { padding: 0 16px 16px 16px; }
             .modal-content { border-radius: 16px !important; }
         }
+
+        /* ─── Split Form View (เมื่อกด + เพิ่มประวัติการรักษา) ─── */
+        #form-view-container:not(.view-hidden) {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            background: var(--navy);
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+        }
+        .split-pane-left {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid rgba(255,255,255,0.08);
+            background: #0a1628;
+            overflow: hidden;
+        }
+        .split-pane-right {
+            width: 50%;
+            overflow-y: auto;
+            padding: 1.25rem;
+        }
+        #tools-iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+            display: block;
+            min-height: 0;
+        }
+        @media (max-width: 900px) {
+            #form-view-container:not(.view-hidden) { flex-direction: column; }
+            .split-pane-left { width: 100%; height: 50vh; }
+            .split-pane-right { width: 100%; height: 50vh; }
+        }
     </style>
 </head>
 <body class="p-4 md:p-10">
@@ -124,11 +160,15 @@
         </div>
 
         <div id="form-view-container" class="view-hidden">
+            <div class="split-pane-left">
+                <iframe id="tools-iframe" src="about:blank" title="💊 Common Drugs"></iframe>
+            </div>
+            <div class="split-pane-right">
             <div class="section-card border-l-8 border-teal-400">
                 <h3 class="text-2xl font-bold text-white mb-8" id="form-title">🏥 บันทึกการตรวจรักษา</h3>
                 <div class="grid grid-cols-12 gap-5">
                     <div class="col-span-12 md:col-span-2"><label class="label-clinical text-sky-400">📅 วันที่รักษา</label><input type="text" id="f_visit_date" class="input-box datepicker-visit font-bold text-sky-400"></div>
-                    <div class="col-span-12 md:col-span-2"><label class="label-clinical text-yellow-400">น้ำหนัก (กก.)</label><input type="number" id="f_weight" class="input-box font-bold text-yellow-400 text-2xl" step="0.1" oninput="renderCatalog()"></div>
+                    <div class="col-span-12 md:col-span-2"><label class="label-clinical text-yellow-400">น้ำหนัก (กก.)</label><input type="number" id="f_weight" class="input-box font-bold text-yellow-400 text-2xl" step="0.1" oninput="renderCatalog(); syncWeightToToolsFrame();"></div>
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical">CC</label><textarea id="f_cc" class="input-box h-24" placeholder="อาการสำคัญ..."></textarea></div>
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical">Hx</label><textarea id="f_hx" class="input-box h-24" placeholder="ประวัติย้อนหลัง..."></textarea></div>
                     <div class="col-span-12 md:col-span-4"><label class="label-clinical">PE</label><textarea id="f_pe" class="input-box h-32" placeholder="ร่างกาย..."></textarea></div>
@@ -158,6 +198,7 @@
                     <button onclick="openDldModal()" class="btn-base btn-teal flex-1 text-2xl py-5 shadow-2xl" id="btn-save-main">💾 บันทึกการรักษา</button>
                     <button onclick="showHistoryView()" class="btn-base btn-red px-10">ยกเลิก</button>
                 </div>
+            </div>
             </div>
         </div>
     </div>
@@ -843,7 +884,46 @@
 
         async function deleteRecord(id) { if(confirm("ลบประวัติ?")) { await db.from('medical_records').delete().eq('id', id); location.reload(); } }
         function drawBullets(arr, mode = null) { if (!arr || arr.length === 0) return "-"; return `<ul class="bullet-list">${arr.map((n, idx) => `<li onclick="${mode==='form_item'?'removeItem('+idx+')':''}"><span>${n}</span></li>`).join('')}</ul>`; }
-        function showFormView() { document.getElementById('history-view-container').classList.add('view-hidden'); document.getElementById('form-view-container').classList.remove('view-hidden'); }
+        function showFormView() {
+            document.getElementById('history-view-container').classList.add('view-hidden');
+            document.getElementById('form-view-container').classList.remove('view-hidden');
+            const frame = document.getElementById('tools-iframe');
+            if (!frame.dataset.loaded) {
+                frame.addEventListener('load', function onLoad() {
+                    frame.removeEventListener('load', onLoad);
+                    try {
+                        if (frame.contentWindow && frame.contentWindow.showTool) {
+                            frame.contentWindow.showTool('common_drugs');
+                            const w = parseFloat(document.getElementById('f_weight').value) || 0;
+                            if (w > 0) {
+                                const gw = frame.contentWindow.document.getElementById('global-weight');
+                                if (gw && frame.contentWindow.calculateAll) {
+                                    gw.value = w;
+                                    frame.contentWindow.calculateAll();
+                                }
+                            }
+                        }
+                    } catch(e) { console.warn('tools frame error:', e); }
+                    frame.dataset.loaded = '1';
+                }, false);
+                frame.src = 'tools.html';
+            }
+        }
+        let _syncWeightTimer = null;
+        function syncWeightToToolsFrame() {
+            clearTimeout(_syncWeightTimer);
+            _syncWeightTimer = setTimeout(function() {
+                const frame = document.getElementById('tools-iframe');
+                if (!frame || !frame.dataset.loaded) return;
+                try {
+                    const gw = frame.contentWindow.document.getElementById('global-weight');
+                    if (gw && frame.contentWindow.calculateAll) {
+                        gw.value = document.getElementById('f_weight').value || '';
+                        frame.contentWindow.calculateAll();
+                    }
+                } catch(e) {}
+            }, 300);
+        }
         function showHistoryView() { location.reload(); }
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
         function goBack() { location.href = 'animals.html'; }
