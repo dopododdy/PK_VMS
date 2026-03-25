@@ -85,14 +85,51 @@
         .split-pane-right {
             width: 50%;
             overflow-y: auto;
-            padding: 1.25rem;
+            padding: 0;
+        }
+        .right-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--navy);
+            padding: 0.6rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            flex-shrink: 0;
+        }
+        .right-pane-content {
+            padding: 1rem 1.25rem 1.25rem;
         }
         .left-top-pane {
             flex: 1 1 50%;
             display: flex;
             flex-direction: column;
             min-height: 0;
-            border-bottom: 2px solid rgba(255,255,255,0.08);
+        }
+        .split-divider {
+            height: 6px;
+            background: rgba(255,255,255,0.08);
+            cursor: row-resize;
+            flex-shrink: 0;
+            position: relative;
+            transition: background 0.2s;
+            user-select: none;
+        }
+        .split-divider:hover, .split-divider.dragging {
+            background: var(--teal);
+        }
+        .split-divider::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 32px;
+            height: 2px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.35);
         }
         .left-bottom-pane {
             flex: 1 1 50%;
@@ -103,7 +140,7 @@
         }
         .left-bottom-pane-header {
             padding: 0.5rem 0.75rem;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             font-weight: 700;
             color: #94a3b8;
             background: #0d1e35;
@@ -116,11 +153,11 @@
             padding: 0.5rem;
         }
         .left-hist-item {
-            padding: 0.5rem 0.6rem;
+            padding: 0.6rem 0.75rem;
             border-radius: 8px;
             background: rgba(255,255,255,0.03);
             border: 1px solid rgba(255,255,255,0.06);
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.5rem;
         }
         #tools-iframe {
             flex: 1;
@@ -196,18 +233,21 @@
 
         <div id="form-view-container" class="view-hidden">
             <div class="split-pane-left">
-                <div class="left-top-pane">
+                <div class="left-top-pane" id="left-top-pane">
                     <iframe id="tools-iframe" src="about:blank" title="💊 Common Drugs"></iframe>
                 </div>
-                <div class="left-bottom-pane">
+                <div id="split-divider" class="split-divider" title="ลากเพื่อปรับขนาด"></div>
+                <div class="left-bottom-pane" id="left-bottom-pane">
                     <div class="left-bottom-pane-header">⏳ ประวัติการรักษาครั้งก่อน</div>
                     <div id="left-history-list"></div>
                 </div>
             </div>
             <div class="split-pane-right">
-            <div class="flex justify-end mb-3">
+            <div class="right-sticky-header">
+                <button onclick="showHistoryView()" class="btn-base bg-white/10 hover:bg-white/20 text-base px-4">⬅ ย้อนกลับ</button>
                 <a href="index.html" class="btn-base bg-white/10 hover:bg-white/20 text-base px-5">🏠 หน้าหลัก</a>
             </div>
+            <div class="right-pane-content">
             <div class="section-card border-l-4 border-blue-500" style="padding:1rem 1.25rem; margin-bottom:1rem;">
                 <h3 class="text-base font-bold text-blue-400 flex items-center gap-2 mb-3">👤 ข้อมูลเจ้าของสัตว์</h3>
                 <div class="grid grid-cols-12 gap-3">
@@ -258,6 +298,7 @@
                     <button onclick="openDldModal()" class="btn-base btn-teal flex-1 text-2xl py-5 shadow-2xl" id="btn-save-main">💾 บันทึกการรักษา</button>
                     <button onclick="showHistoryView()" class="btn-base btn-red px-10">ยกเลิก</button>
                 </div>
+            </div>
             </div>
             </div>
         </div>
@@ -348,6 +389,7 @@
         let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
         let selectedItems = [], petType = 'สุนัข', petGender = '-', editingId = null;
         let selectedDldCategories = [], activeDldMain = null;
+        let _splitDragInitialized = false;
 
         const DLD_CATEGORIES = {
             vaccine: {
@@ -948,7 +990,7 @@
             const list = document.getElementById('left-history-list');
             if (!list) return;
             if (!records || records.length === 0) {
-                list.innerHTML = '<p style="color:#64748b;font-size:0.7rem;text-align:center;padding:1rem;">ยังไม่มีประวัติการรักษา</p>';
+                list.innerHTML = '<p style="color:#64748b;font-size:0.85rem;text-align:center;padding:1rem;">ยังไม่มีประวัติการรักษา</p>';
                 return;
             }
             list.innerHTML = records.map(rec => {
@@ -958,20 +1000,58 @@
                 const rxText = rxItems.map(i => i.item_name).join(', ');
                 return `<div class="left-hist-item">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <span style="color:#2dd4bf;font-weight:700;font-size:0.7rem;">${formatThaiDate(rec.created_at, 'short')}</span>
-                        <span style="color:#64748b;font-size:0.65rem;">${rec.weight} กก.</span>
+                        <span style="color:#2dd4bf;font-weight:700;font-size:0.9rem;">${formatThaiDate(rec.created_at, 'short')}</span>
+                        <span style="color:#94a3b8;font-size:0.85rem;">${rec.weight} กก.</span>
                     </div>
-                    ${rec.cc ? `<div style="color:#fde047;font-size:0.68rem;margin-top:2px;">CC: ${rec.cc}</div>` : ''}
-                    ${rec.dx ? `<div style="color:#93c5fd;font-size:0.68rem;margin-top:1px;">Dx: ${rec.dx}</div>` : ''}
-                    ${txText ? `<div style="color:#f9a8d4;font-size:0.65rem;margin-top:1px;">💉 ${txText}</div>` : ''}
-                    ${rxText ? `<div style="color:#6ee7b7;font-size:0.65rem;margin-top:1px;">💊 ${rxText}</div>` : ''}
+                    ${rec.cc ? `<div style="color:#fde047;font-size:0.85rem;margin-top:3px;">CC: ${rec.cc}</div>` : ''}
+                    ${rec.dx ? `<div style="color:#93c5fd;font-size:0.85rem;margin-top:2px;">Dx: ${rec.dx}</div>` : ''}
+                    ${txText ? `<div style="color:#f9a8d4;font-size:0.82rem;margin-top:2px;">💉 ${txText}</div>` : ''}
+                    ${rxText ? `<div style="color:#6ee7b7;font-size:0.82rem;margin-top:2px;">💊 ${rxText}</div>` : ''}
                 </div>`;
             }).join('');
+        }
+        function initSplitDrag() {
+            if (_splitDragInitialized) return;
+            _splitDragInitialized = true;
+            const divider = document.getElementById('split-divider');
+            const topPane = document.getElementById('left-top-pane');
+            const bottomPane = document.getElementById('left-bottom-pane');
+            const container = document.querySelector('.split-pane-left');
+            if (!divider || !topPane || !bottomPane || !container) return;
+            let isDragging = false, startY = 0, startTopH = 0;
+            divider.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startY = e.clientY;
+                startTopH = topPane.offsetHeight;
+                divider.classList.add('dragging');
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                const delta = e.clientY - startY;
+                const containerH = container.offsetHeight;
+                const dividerH = divider.offsetHeight;
+                const newTopH = Math.max(80, Math.min(containerH - dividerH - 80, startTopH + delta));
+                topPane.style.flex = 'none';
+                topPane.style.height = newTopH + 'px';
+                bottomPane.style.flex = '1 1 0';
+                bottomPane.style.height = '';
+            });
+            document.addEventListener('mouseup', function() {
+                if (!isDragging) return;
+                isDragging = false;
+                divider.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            });
         }
         function showFormView() {
             document.getElementById('history-view-container').classList.add('view-hidden');
             document.getElementById('form-view-container').classList.remove('view-hidden');
             renderLeftHistoryPanel();
+            initSplitDrag();
             document.getElementById('rp-owner-name').innerText = document.getElementById('info-owner-name')?.innerText || '-';
             document.getElementById('rp-owner-phone').innerText = document.getElementById('info-owner-phone')?.innerText || '-';
             document.getElementById('rp-owner-address').innerText = document.getElementById('info-owner-address')?.innerText || '-';
