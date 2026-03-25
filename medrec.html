@@ -897,7 +897,10 @@
                             const w = parseFloat(document.getElementById('f_weight').value) || 0;
                             if (w > 0) {
                                 const gw = frame.contentWindow.document.getElementById('global-weight');
-                                if (gw) { gw.value = w; frame.contentWindow.calculateAll(); }
+                                if (gw && frame.contentWindow.calculateAll) {
+                                    gw.value = w;
+                                    frame.contentWindow.calculateAll();
+                                }
                             }
                         }
                     } catch(e) { console.warn('tools frame error:', e); }
@@ -906,13 +909,20 @@
                 frame.src = 'tools.html';
             }
         }
+        let _syncWeightTimer = null;
         function syncWeightToToolsFrame() {
-            const frame = document.getElementById('tools-iframe');
-            if (!frame || !frame.dataset.loaded) return;
-            try {
-                const gw = frame.contentWindow.document.getElementById('global-weight');
-                if (gw) { gw.value = document.getElementById('f_weight').value || ''; frame.contentWindow.calculateAll(); }
-            } catch(e) {}
+            clearTimeout(_syncWeightTimer);
+            _syncWeightTimer = setTimeout(function() {
+                const frame = document.getElementById('tools-iframe');
+                if (!frame || !frame.dataset.loaded) return;
+                try {
+                    const gw = frame.contentWindow.document.getElementById('global-weight');
+                    if (gw && frame.contentWindow.calculateAll) {
+                        gw.value = document.getElementById('f_weight').value || '';
+                        frame.contentWindow.calculateAll();
+                    }
+                } catch(e) {}
+            }, 300);
         }
         function showHistoryView() { location.reload(); }
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
