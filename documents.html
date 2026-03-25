@@ -1898,6 +1898,28 @@ if (activeDocType === 'doc_consent') {
             });
         }
 
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function buildThermalElements(config, pw, ph, dataMap) {
+            return [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
+                const base = `position:absolute; top:${parseFloat(l.y)}mm; left:${l.x}mm;`;
+                if (l.type === 'image') {
+                    return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                } else if (l.type === 'rect') {
+                    return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
+                } else {
+                    const content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => { const val = dataMap[k.trim()]; return val !== undefined ? val : m; });
+                    const fw = l.bold ? 'font-weight:bold;' : '';
+                    const fs = l.italic ? 'font-style:italic;' : '';
+                    const td = l.underline ? 'text-decoration:underline;' : '';
+                    const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' :
+                                       l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
+                    const widthStyle = alignStyle ? '' : `width:${pw - parseFloat(l.x)}mm;`;
+                    return `<div style="${base} ${widthStyle} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
+                }
+            }).join('');
+        }
         async function printShippingLabel() {
             if (!currentOwner) return alert("❌ กรุณาเลือกเจ้าของสัตว์");
             const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'sticker_shipping').single();
@@ -1917,26 +1939,37 @@ if (activeDocType === 'doc_consent') {
                 sender_address: SENDER_ADDRESS,
                 sender_phone: SENDER_PHONE,
             };
-            executeThermalPrint(config, pw, ph, dataMap);
+
+            // Page 1: sticker_shipping template
+            const elements1 = buildThermalElements(config, pw, ph, dataMap);
+
+            // Page 2: sender address (Sarabun 10pt, fixed positions)
+            const senderItems = [
+                { text: 'ผู้ส่ง',                          x: 3, y: 2  },
+                { text: escapeHtml(VET_NAME),               x: 3, y: 10 },
+                { text: escapeHtml(SENDER_ADDRESS),         x: 3, y: 15 },
+                { text: `โทร. ${escapeHtml(SENDER_PHONE)}`, x: 3, y: 44 },
+            ];
+            const elements2 = senderItems.map(l =>
+                `<div style="position:absolute; top:${l.y}mm; left:${l.x}mm; font-family:'Sarabun',sans-serif; font-size:10pt; color:#000;">${l.text}</div>`
+            ).join('');
+
+            const iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
+            document.body.appendChild(iframe);
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;} .page{position:relative; width:${pw}mm; height:${ph}mm; page-break-after:always;} .page:last-child{page-break-after:auto;}</style></head><body><div class="page">${elements1}</div><div class="page">${elements2}</div></body></html>`);
+            iframeDoc.close();
+            iframe.contentWindow.document.fonts.ready.then(function() {
+                iframe.contentWindow.addEventListener('afterprint', function() {
+                    try { document.body.removeChild(iframe); } catch(e) { console.warn(e); }
+                }, { once: true });
+                iframe.contentWindow.print();
+            });
         }
         function executeThermalPrint(config, pw, ph, dataMap) {
-            const elements = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
-                const base = `position:absolute; top:${parseFloat(l.y)}mm; left:${l.x}mm;`;
-                if (l.type === 'image') {
-                    return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
-                } else if (l.type === 'rect') {
-                    return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
-                } else {
-                    const content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => { const val = dataMap[k.trim()]; return val !== undefined ? val : m; });
-                    const fw = l.bold ? 'font-weight:bold;' : '';
-                    const fs = l.italic ? 'font-style:italic;' : '';
-                    const td = l.underline ? 'text-decoration:underline;' : '';
-                    const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' :
-                                       l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
-                    const widthStyle = alignStyle ? '' : `width:${pw - parseFloat(l.x)}mm;`;
-                    return `<div style="${base} ${widthStyle} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
-                }
-            }).join('');
+            const elements = buildThermalElements(config, pw, ph, dataMap);
             const iframe = document.createElement('iframe');
             iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
             document.body.appendChild(iframe);
