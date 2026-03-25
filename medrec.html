@@ -640,7 +640,7 @@
                 document.getElementById('lab-price-name').innerText = item.name;
                 document.getElementById('lab-final-price').value = finalPrice;
                 document.getElementById('lab-price-modal').style.display = 'flex';
-            } else { addItem(item.type, item.name, item.price, { drug_name_th: item.data?.name_th || "", is_external: item.data?.category === 'External', unit: item.data?.unit || "", qty: 1 }); }
+            } else { const isExt = item.data?.category === 'External'; addItem(item.type, item.name, item.price, { drug_name_th: item.data?.name_th || "", is_external: isExt, indication: isExt ? (item.data?.side_effects || "") : "", unit: item.data?.unit || "", qty: 1 }); }
         };
 
         function calculateInjMl() {
@@ -782,13 +782,14 @@
                     : (i.is_liquid_bottle ? `${i.qty} ขวด` : `${i.qty} ${i.unit}`);
                 return {
                     clinic_name: "PK-VMS Clinic",
-                    pet_name: isExternal ? (i.drug_name_th || i.name) : document.getElementById('v-pet-name').innerText,
+                    pet_name: document.getElementById('v-pet-name').innerText,
                     owner_name: document.getElementById('info-owner-name').innerText,
                     species: petType,
                     hn: ownerHN,
                     drug_name: i.name,
                     drug_name_th: i.drug_name_th || "",
                     warning: i.warning || "",
+                    indication: isExternal ? (i.indication || "") : "",
                     dose_per_time: isExternal ? totalQty : i.dose,
                     unit: isExternal ? "" : i.unit,
                     frequency: i.freq,
@@ -901,7 +902,7 @@
                 const { data: drug } = await db.from('pharmacy').select('name_th, side_effects, category').eq('item_name', i.item_name).maybeSingle();
                 const isExternal = drug?.category === 'External';
                 const totalQty = `${i.quantity} ${i.unit || 'ขวด'}`.trim();
-                return { clinic_name: "PK-VMS Clinic", pet_name: isExternal ? (drug?.name_th || i.item_name) : document.getElementById('v-pet-name').innerText, owner_name: document.getElementById('info-owner-name').innerText, species: petType, hn: ownerHN, drug_name: i.item_name, drug_name_th: drug?.name_th || "", warning: drug?.side_effects || "", dose_per_time: isExternal ? totalQty : i.dose_per_time, unit: isExternal ? "" : i.unit, frequency: i.frequency, meal_timing: i.meal_timing, day_timing: i.day_timing, duration_days: i.duration_days, total_qty: totalQty, dose_label: isExternal ? "ข้อบ่งใช้" : "ป้อนครั้งละ", date: new Date(rec.created_at).toLocaleDateString('th-TH') };
+                return { clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, owner_name: document.getElementById('info-owner-name').innerText, species: petType, hn: ownerHN, drug_name: i.item_name, drug_name_th: drug?.name_th || "", warning: isExternal ? "" : (drug?.side_effects || ""), indication: isExternal ? (drug?.side_effects || "") : "", dose_per_time: isExternal ? totalQty : i.dose_per_time, unit: isExternal ? "" : i.unit, frequency: i.frequency, meal_timing: i.meal_timing, day_timing: i.day_timing, duration_days: i.duration_days, total_qty: totalQty, dose_label: isExternal ? "ข้อบ่งใช้" : "ป้อนครั้งละ", date: new Date(rec.created_at).toLocaleDateString('th-TH') };
             }));
             await executeDynamicPrint(batch, 'sticker_drug');
         }
