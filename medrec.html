@@ -769,18 +769,20 @@
                 dose_label: "ป้อนครั้งละ",
                 date: new Date().toLocaleDateString('th-TH')
             };
-            await executeDynamicPrint([rxData], 'sticker_drug');
+            const isCurrentExternal = pendingItem.data?.category === 'External';
+            await executeDynamicPrint([rxData], isCurrentExternal ? 'sticker_topicaldrug' : 'sticker_drug');
         }
 
         async function printAllRx() {
             const rxItems = selectedItems.filter(i => i.type === 'Rx');
             if (rxItems.length === 0) return alert("กรุณาเลือกยาในช่อง Rx ก่อนกดพิมพ์");
-            const batch = rxItems.map(i => {
+            const regularBatch = [], topicalBatch = [];
+            rxItems.forEach(i => {
                 const isExternal = i.is_external === true;
                 const totalQty = isExternal
                     ? `${i.qty || 1} ${i.unit || 'ขวด'}`.trim()
                     : (i.is_liquid_bottle ? `${i.qty} ขวด` : `${i.qty} ${i.unit}`);
-                return {
+                const data = {
                     clinic_name: "PK-VMS Clinic",
                     pet_name: document.getElementById('v-pet-name').innerText,
                     owner_name: document.getElementById('info-owner-name').innerText,
@@ -800,8 +802,10 @@
                     dose_label: isExternal ? "ข้อบ่งใช้" : "ป้อนครั้งละ",
                     date: new Date().toLocaleDateString('th-TH')
                 };
+                (isExternal ? topicalBatch : regularBatch).push(data);
             });
-            await executeDynamicPrint(batch, 'sticker_drug');
+            if (regularBatch.length > 0) await executeDynamicPrint(regularBatch, 'sticker_drug');
+            if (topicalBatch.length > 0) await executeDynamicPrint(topicalBatch, 'sticker_topicaldrug');
         }
 
         async function saveMedicalRecord() {
@@ -898,13 +902,38 @@
             const ids = Array.from(document.querySelectorAll(`.rx-select-${recordId}:checked`)).map(cb => cb.value);
             const items = rec.medical_record_items.filter(i => ids.includes(i.id));
             if (items.length === 0) return alert("เลือกยา");
-            const batch = await Promise.all(items.map(async (i) => {
+            const resolved = await Promise.all(items.map(async (i) => {
                 const { data: drug } = await db.from('pharmacy').select('name_th, side_effects, category').eq('item_name', i.item_name).maybeSingle();
                 const isExternal = drug?.category === 'External';
                 const totalQty = `${i.quantity} ${i.unit || 'ขวด'}`.trim();
-                return { clinic_name: "PK-VMS Clinic", pet_name: document.getElementById('v-pet-name').innerText, owner_name: document.getElementById('info-owner-name').innerText, species: petType, hn: ownerHN, drug_name: i.item_name, drug_name_th: drug?.name_th || "", warning: isExternal ? "" : (drug?.side_effects || ""), indication: isExternal ? (drug?.side_effects || "") : "", dose_per_time: isExternal ? totalQty : i.dose_per_time, unit: isExternal ? "" : i.unit, frequency: i.frequency, meal_timing: i.meal_timing, day_timing: i.day_timing, duration_days: i.duration_days, total_qty: totalQty, dose_label: isExternal ? "ข้อบ่งใช้" : "ป้อนครั้งละ", date: new Date(rec.created_at).toLocaleDateString('th-TH') };
+                return {
+                    isExternal,
+                    data: {
+                        clinic_name: "PK-VMS Clinic",
+                        pet_name: document.getElementById('v-pet-name').innerText,
+                        owner_name: document.getElementById('info-owner-name').innerText,
+                        species: petType,
+                        hn: ownerHN,
+                        drug_name: i.item_name,
+                        drug_name_th: drug?.name_th || "",
+                        warning: isExternal ? "" : (drug?.side_effects || ""),
+                        indication: isExternal ? (drug?.side_effects || "") : "",
+                        dose_per_time: isExternal ? totalQty : i.dose_per_time,
+                        unit: isExternal ? "" : i.unit,
+                        frequency: i.frequency,
+                        meal_timing: i.meal_timing,
+                        day_timing: i.day_timing,
+                        duration_days: i.duration_days,
+                        total_qty: totalQty,
+                        dose_label: isExternal ? "ข้อบ่งใช้" : "ป้อนครั้งละ",
+                        date: new Date(rec.created_at).toLocaleDateString('th-TH')
+                    }
+                };
             }));
-            await executeDynamicPrint(batch, 'sticker_drug');
+            const regularBatch = resolved.filter(r => !r.isExternal).map(r => r.data);
+            const topicalBatch = resolved.filter(r => r.isExternal).map(r => r.data);
+            if (regularBatch.length > 0) await executeDynamicPrint(regularBatch, 'sticker_drug');
+            if (topicalBatch.length > 0) await executeDynamicPrint(topicalBatch, 'sticker_topicaldrug');
         }
 
         async function printBothLabels(petId) {
