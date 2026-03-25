@@ -2345,7 +2345,18 @@
         }
 
         window.onload = () => {
-            if (sessionStorage.getItem("isLoggedIn") !== "true") window.location.href = "index.html";
+            const isEmbedded = window.self !== window.top;
+            if (sessionStorage.getItem("isLoggedIn") !== "true") {
+                if (!isEmbedded) window.location.href = "index.html";
+                return;
+            }
+            if (isEmbedded) {
+                const sb = document.getElementById('main-sidebar');
+                if (sb) sb.style.display = 'none';
+                const sbt = document.getElementById('sidebar-toggle-btn');
+                if (sbt) sbt.style.display = 'none';
+                currentActiveTool = 'common_drugs';
+            }
             emergencyDrugs.forEach((drug, idx) => {
                 const saved = localStorage.getItem(`emgConc_${idx}`);
                 if (saved) {
