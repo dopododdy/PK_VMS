@@ -178,6 +178,9 @@
                         <button id="btn-print-queue" onclick="printQueueCard()" class="hidden bg-orange-700 hover:bg-orange-600 px-6 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
                             🎫 พิมพ์บัตรคิว
                         </button>
+                        <button onclick="printShippingLabel()" class="bg-pink-700 hover:bg-pink-600 px-6 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
+                            📦 พิมพ์ที่อยู่ Shipping
+                        </button>
                         <button onclick="printCurrentDoc()" class="bg-teal-600 hover:bg-teal-500 px-10 py-5 rounded-2xl font-black text-xl flex items-center gap-3 shadow-xl transition-all">
                             <i data-lucide="printer"></i> พิมพ์เอกสาร
                         </button>
@@ -228,6 +231,8 @@
         let activeDocType = 'doc_consent'; 
         const VET_NAME = "ผศ.น.สพ.ดร.ปิติพัฒน์ กิตติ์พิภัทร์กุล";
         const VET_LICENSE = "01-6186/2550";
+        const SENDER_ADDRESS = "194/90 ม. 11 ต.หนองขาม อ.ศรีราชา จ.ชลบุรี 20110";
+        const SENDER_PHONE = "085-5251545";
         const CLINIC_PHONE = "02-123-4567";
         const CLINIC_TAX_ID = "0105560001234";
         const CLINIC_NAME = "PK-VMS Animal Clinic";
@@ -1893,6 +1898,27 @@ if (activeDocType === 'doc_consent') {
             });
         }
 
+        async function printShippingLabel() {
+            if (!currentOwner) return alert("❌ กรุณาเลือกเจ้าของสัตว์");
+            const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'sticker-shipping').single();
+            if (!template) return alert('❌ ไม่พบรูปแบบพิมพ์ "sticker-shipping"');
+            const config = template.config;
+            const pw = parseFloat(config.width) || 100;
+            const ph = parseFloat(config.height) || 150;
+            const dataMap = {
+                clinic_name: CLINIC_NAME, clinic_address: CLINIC_ADDRESS,
+                phone: CLINIC_PHONE,
+                owner_name: currentOwner?.owner_name || "-",
+                owner_address: currentOwner?.address || "-",
+                address: currentOwner?.address || "-",
+                owner_phone: currentOwner?.phone || "-",
+                hn: currentOwner?.hn || "-",
+                sender_name: VET_NAME,
+                sender_address: SENDER_ADDRESS,
+                sender_phone: SENDER_PHONE,
+            };
+            executeThermalPrint(config, pw, ph, dataMap);
+        }
         function executeThermalPrint(config, pw, ph, dataMap) {
             const elements = [...config.lines].sort((a, b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
                 const base = `position:absolute; top:${parseFloat(l.y)}mm; left:${l.x}mm;`;
