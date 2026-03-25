@@ -140,6 +140,7 @@
             <div class="doc-tab" data-type="doc_referral" onclick="switchDocType('doc_referral')">📨 ใบส่งตัว</div>
             <div class="doc-tab" data-type="doc_dld" onclick="switchDocType('doc_dld')">📊 รายงานกรมปศุสัตว์</div>
             <div class="doc-tab" data-type="doc_history" onclick="switchDocType('doc_history')">📋 ประวัติการรักษา</div>
+            <div class="doc-tab" data-type="doc_echo" onclick="switchDocType('doc_echo')">🫀 ใบยินยิมรักษาโรคหัวใจ</div>
         </nav>
 
         <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-[#020617]">
@@ -325,6 +326,20 @@
                 }
                 return;
             }
+            if (activeDocType === 'doc_echo') {
+                if (selectedPetIds.has(id.toString())) {
+                    selectedPetIds.delete(id.toString());
+                    card.classList.remove('selected');
+                    clearEchoPetFields();
+                } else {
+                    selectedPetIds.forEach(prevId => document.getElementById(`p-card-${prevId}`)?.classList.remove('selected'));
+                    selectedPetIds.clear();
+                    selectedPetIds.add(id.toString());
+                    card.classList.add('selected');
+                    loadEchoDataForPet(id);
+                }
+                return;
+            }
             if (selectedPetIds.has(id.toString())) { selectedPetIds.delete(id.toString()); card.classList.remove('selected'); }
             else { selectedPetIds.add(id.toString()); card.classList.add('selected'); }
             if (activeDocType === 'doc_consent') refreshSurgeryRows();
@@ -408,6 +423,52 @@
             if (i.frequency) s += ` ${i.frequency}`;
             if (i.duration_days) s += ` ${i.duration_days} วัน`;
             return s;
+        }
+
+        function clearEchoPetFields() {
+            const petFields = document.getElementById('echo-pet-fields');
+            const petInfo = document.getElementById('echo-pet-info-section');
+            if (petFields) petFields.classList.add('hidden');
+            if (petInfo) petInfo.classList.remove('hidden');
+            ['echo-pet-name','echo-pet-species','echo-pet-gender','echo-pet-weight',
+             'echo-dx','echo-treatment','echo-note'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+
+        async function loadEchoDataForPet(petId) {
+            const pet = ownerPets.find(p => p.id.toString() === petId.toString());
+            if (!pet) return;
+            const petFields = document.getElementById('echo-pet-fields');
+            const petInfo = document.getElementById('echo-pet-info-section');
+            if (petFields) {
+                petFields.classList.remove('hidden');
+                document.getElementById('echo-pet-name').value = pet.pet_name || '';
+                document.getElementById('echo-pet-species').value = [pet.pet_type, pet.breed].filter(Boolean).join(' / ');
+                document.getElementById('echo-pet-gender').value = pet.gender || '';
+                document.getElementById('echo-pet-weight').value = pet.weight ? `${pet.weight} กก.` : '';
+            }
+            if (petInfo) petInfo.classList.add('hidden');
+            const { data: records } = await db
+                .from('medical_records')
+                .select('*, medical_record_items(*)')
+                .eq('animal_id', petId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            if (!records || records.length === 0) return;
+            const rec = records[0];
+            const dxEl = document.getElementById('echo-dx');
+            if (dxEl && !dxEl.value && rec.dx) dxEl.value = rec.dx;
+            const txItems = (rec.medical_record_items || []).filter(i => i.item_type === 'Tx');
+            const rxItems = (rec.medical_record_items || []).filter(i => i.item_type === 'Rx');
+            const treatmentEl = document.getElementById('echo-treatment');
+            if (treatmentEl && !treatmentEl.value) {
+                const parts = [];
+                if (txItems.length > 0) parts.push(`Tx: ${txItems.map(i => i.item_name).join(', ')}`);
+                if (rxItems.length > 0) parts.push(`Rx: ${rxItems.map(formatRxItem).join(', ')}`);
+                if (parts.length > 0) treatmentEl.value = parts.join('\n');
+            }
         }
 
         function newlinesToBr(s) { return (s || '-').replace(/\n/g, '<br>'); }
@@ -554,6 +615,57 @@
                         </div>
                     </div>`;
                 if (selectedPetIds.size > 0) refreshHistoryPreview();
+            } else if (type === 'doc_echo') {
+                title.innerText = "ใบยินยิมรักษาโรคหัวใจ";
+                const lbl = 'text-[10px] font-black text-gray-500 uppercase block mb-2';
+                form.innerHTML = `
+                    <div class="section-card space-y-4">
+                        <h3 class="${lbl} tracking-[0.2em]">1. ข้อมูลเจ้าของสัตว์</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="${lbl}">ชื่อ-นามสกุล</label><input type="text" id="echo-owner-name" class="input-box opacity-70" readonly></div>
+                            <div><label class="${lbl}">เบอร์โทรศัพท์</label><input type="text" id="echo-owner-phone" class="input-box opacity-70" readonly></div>
+                        </div>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <h3 class="${lbl} tracking-[0.2em]">2. ข้อมูลสัตว์</h3>
+                        <p id="echo-pet-info-section" class="text-gray-500 italic text-sm">กรุณาเลือกสัตว์เลี้ยงด้านบน...</p>
+                        <div id="echo-pet-fields" class="grid grid-cols-2 md:grid-cols-4 gap-4 hidden">
+                            <div><label class="${lbl}">ชื่อสัตว์</label><input type="text" id="echo-pet-name" class="input-box opacity-70" readonly></div>
+                            <div><label class="${lbl}">ชนิด / สายพันธุ์</label><input type="text" id="echo-pet-species" class="input-box opacity-70" readonly></div>
+                            <div><label class="${lbl}">เพศ</label><input type="text" id="echo-pet-gender" class="input-box opacity-70" readonly></div>
+                            <div><label class="${lbl}">น้ำหนัก</label><input type="text" id="echo-pet-weight" class="input-box opacity-70" readonly></div>
+                        </div>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="${lbl} tracking-[0.2em] mb-0">3. การวินิจฉัยโรคหัวใจ</h3>
+                            <span class="text-[10px] text-teal-500 font-bold">Cardiac Dx</span>
+                        </div>
+                        <textarea id="echo-dx" class="input-box" rows="3" placeholder="เช่น Mitral Valve Disease Stage B2, Dilated Cardiomyopathy..."></textarea>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="${lbl} tracking-[0.2em] mb-0">4. แผนการรักษาและยา</h3>
+                            <span class="text-[10px] text-teal-500 font-bold">Tx / Rx</span>
+                        </div>
+                        <textarea id="echo-treatment" class="input-box" rows="4" placeholder="แผนการรักษา ยาที่ใช้ ขนาดยา ความถี่ในการให้ยา..."></textarea>
+                    </div>
+
+                    <div class="section-card space-y-4">
+                        <h3 class="${lbl} tracking-[0.2em]">5. หมายเหตุ / คำแนะนำ</h3>
+                        <textarea id="echo-note" class="input-box" rows="3" placeholder="หมายเหตุเพิ่มเติม คำแนะนำสำหรับเจ้าของสัตว์..."></textarea>
+                    </div>`;
+                if (currentOwner) {
+                    document.getElementById('echo-owner-name').value = currentOwner.owner_name || '';
+                    document.getElementById('echo-owner-phone').value = currentOwner.phone || '';
+                }
+                if (selectedPetIds.size === 1) {
+                    const petId = Array.from(selectedPetIds)[0];
+                    loadEchoDataForPet(petId);
+                }
             }
             lucide.createIcons();
         }
@@ -1409,6 +1521,109 @@ ${tableHtml}
                 return;
             }
 
+            // ใบยินยิมรักษาโรคหัวใจ: ถ้าไม่มี template ในฐานข้อมูล ให้ใช้ layout สำเร็จรูปเป็น fallback
+            if (activeDocType === 'doc_echo' && !template) {
+                const echoDx        = document.getElementById('echo-dx')?.value || '-';
+                const echoTreatment = document.getElementById('echo-treatment')?.value || '-';
+                const echoNote      = document.getElementById('echo-note')?.value || '';
+                const selectedPet   = ownerPets.find(p => selectedPetIds.has(p.id.toString()));
+                const petInfo       = selectedPet ? `${selectedPet.pet_name} (${selectedPet.pet_type}${selectedPet.breed ? '/' + selectedPet.breed : ''}, ${selectedPet.gender}${selectedPet.weight ? ', ' + selectedPet.weight + ' กก.' : ''})` : '-';
+                const dateStr       = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+                const _echoHtml = `<html><head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
+  * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
+  body { margin: 0; padding: 18mm 18mm; background: white; color: #111; font-size: 11pt; }
+  h1 { font-size: 18pt; font-weight: 800; margin: 0 0 4px; }
+  h2 { font-size: 14pt; font-weight: 700; margin: 0 0 10px; }
+  .header { border-bottom: 3px solid #dc2626; padding-bottom: 10px; margin-bottom: 14px; }
+  .clinic { font-size: 9pt; color: #555; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  td { padding: 6px 10px; border: 1px solid #ccc; vertical-align: top; }
+  td.label { font-weight: 700; background: #fff5f5; width: 34%; color: #b91c1c; white-space: nowrap; }
+  .section-title { font-size: 9.5pt; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.08em; margin: 12px 0 3px; border-left: 3px solid #dc2626; padding-left: 6px; }
+  .consent-text { font-size: 10pt; line-height: 1.7; color: #333; }
+  .consent-text ul { margin: 4px 0 8px; padding-left: 18px; }
+  .consent-text li { margin-bottom: 3px; }
+  .signature-row { display: flex; justify-content: space-between; margin-top: 28px; }
+  .signature-block { text-align: center; width: 45%; }
+  .sig-line { border-top: 1px solid #333; margin-bottom: 4px; padding-top: 4px; font-size: 9pt; }
+  @media print { @page { size: A4; margin: 0; } body { padding: 18mm 18mm; } }
+</style>
+</head><body>
+  <div class="header">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        <h1>ใบยินยิมรักษาโรคหัวใจ</h1>
+        <h2>Cardiac Treatment Consent Form</h2>
+        <div class="clinic">PK-VMS Animal Clinic | 123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:9pt; color:#555;">วันที่: ${dateStr}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">1. ข้อมูลเจ้าของสัตว์</div>
+  <table>
+    <tr><td class="label">ชื่อ-นามสกุล</td><td>${currentOwner?.owner_name || '-'} (HN: ${currentOwner?.hn || '-'})</td></tr>
+    <tr><td class="label">เบอร์โทรศัพท์</td><td>${currentOwner?.phone || '-'}</td></tr>
+    <tr><td class="label">ที่อยู่</td><td>${currentOwner?.address || '-'}</td></tr>
+  </table>
+
+  <div class="section-title">2. ข้อมูลสัตว์</div>
+  <table>
+    <tr><td class="label">สัตว์เลี้ยง</td><td>${petInfo}</td></tr>
+    <tr><td class="label">สัตวแพทย์ผู้ดูแล</td><td>${VET_NAME}</td></tr>
+  </table>
+
+  <div class="section-title">3. การวินิจฉัยโรคหัวใจ</div>
+  <table><tr><td style="padding:7px 10px;">${newlinesToBr(echoDx)}</td></tr></table>
+
+  <div class="section-title">4. แผนการรักษาและยา</div>
+  <table><tr><td style="padding:7px 10px;">${newlinesToBr(echoTreatment)}</td></tr></table>
+
+  <div class="section-title">5. ข้อตกลงและการยินยิม</div>
+  <div class="consent-text">
+    <p>ข้าพเจ้าในฐานะเจ้าของสัตว์เลี้ยง ขอให้ความยินยิมในการรักษาโรคหัวใจดังกล่าว โดยได้รับทราบและเข้าใจข้อมูลต่อไปนี้แล้ว</p>
+    <ul>
+      <li>โรคหัวใจในสัตว์เป็นภาวะเรื้อรังที่ต้องการการติดตามรักษาอย่างต่อเนื่อง</li>
+      <li>การให้ยาต้องปฏิบัติตามคำแนะนำของสัตวแพทย์อย่างเคร่งครัด</li>
+      <li>หากพบอาการผิดปกติ เช่น หายใจลำบาก ไอ อ่อนเพลียมากผิดปกติ ให้รีบนำสัตว์มาพบสัตวแพทย์ทันที</li>
+      <li>ควรนำสัตว์มาติดตามผลการรักษาตามนัด เพื่อปรับการรักษาให้เหมาะสม</li>
+    </ul>
+    ${echoNote ? `<p><strong>หมายเหตุ / คำแนะนำ:</strong> ${echoNote}</p>` : ''}
+  </div>
+
+  <div class="signature-row">
+    <div class="signature-block">
+      <div style="height:30px;"></div>
+      <div class="sig-line">ลายมือชื่อเจ้าของสัตว์</div>
+      <div style="font-size:9pt;">(${currentOwner?.owner_name || ''})</div>
+    </div>
+    <div class="signature-block">
+      <div style="height:30px;"></div>
+      <div class="sig-line">ลายมือชื่อสัตวแพทย์</div>
+      <div style="font-size:9pt;">(${VET_NAME})</div>
+    </div>
+  </div>
+</body></html>`;
+                if (mode === 'share') {
+                    await shareHtmlAsFile(_echoHtml, `ใบยินยิมรักษาโรคหัวใจ_${(selectedPet?.pet_name || 'สัตว์').replace(/[<>]/g, '')}.html`, `ใบยินยิมรักษาโรคหัวใจ - ${petInfo}`);
+                    return;
+                }
+                const _echoTitleStr = JSON.stringify('ใบยินยิมรักษาโรคหัวใจ_' + (selectedPet?.pet_name || 'สัตว์').replace(/[<>]/g, ''));
+                const _echoScript = mode === 'pdf'
+                    ? `<script>window.onload=()=>{ document.title=${_echoTitleStr}; window.print(); };<\/script>`
+                    : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
+                const win = window.open('', '_blank');
+                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+                win.document.write(_echoHtml.replace('</body>', _echoScript + '</body>'));
+                win.document.close();
+                return;
+            }
+
             if (!template) return alert(`❌ ไม่พบรูปแบบพิมพ์ "${activeDocType}"`);
             
             const config = template.config;
@@ -1458,6 +1673,10 @@ ${tableHtml}
                 preliminary_diagnosis: document.getElementById('ref-dx')?.value || '-',
                 treatment: document.getElementById('ref-treatment')?.value || '-',
                 referral_reason: document.getElementById('ref-reason')?.value || '-',
+                // doc_echo fields
+                echo_dx: document.getElementById('echo-dx')?.value || '-',
+                echo_treatment: document.getElementById('echo-treatment')?.value || '-',
+                echo_note: document.getElementById('echo-note')?.value || '-',
             };
 
             const printContent = config.lines.map(l => {
