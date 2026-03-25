@@ -100,6 +100,7 @@
                 <button onclick="setCategory('Injection')" id="btn-injection" class="sidebar-btn"><span>💉</span> ยาฉีด</button>
                 <button onclick="setCategory('Lab')" id="btn-lab" class="sidebar-btn"><span>🏥</span> Lab/หัตถการ</button>
                 <button onclick="setCategory('General')" id="btn-general" class="sidebar-btn"><span>📦</span> สินค้าทั่วไป</button>
+                <button onclick="setCategory('External')" id="btn-external" class="sidebar-btn"><span>🧴</span> ยาใช้ภายนอก</button>
             </div>
         </aside>
 
@@ -183,6 +184,11 @@
                     <div id="warning-box" class="mb-8"><label class="label-clinical text-red-400">🚨 คำเตือน / ข้อควรระวัง (Special Note)</label><textarea id="f_side_effects" class="input-box h-24" placeholder="แสดงบนสติ๊กเกอร์..."></textarea></div>
                 </div>
 
+                <div id="external-config-section" style="display:none;" class="mb-8">
+                    <label class="label-clinical">ข้อบ่งใช้</label>
+                    <textarea id="f_indications" class="input-box h-24" placeholder="ข้อบ่งใช้ เช่น สำหรับรักษาการอักเสบ ใช้หยอดตาวันละ 2-3 ครั้ง..."></textarea>
+                </div>
+
                 <div class="flex justify-between items-center pt-8 border-t border-white/10 mt-auto">
                     <button onclick="deleteItem()" id="btn-delete" class="hidden px-8 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 font-bold hover:bg-red-500/20 transition-all">🗑️ ลบรายการนี้</button>
                     <div class="flex gap-4 ml-auto">
@@ -224,12 +230,13 @@
             currentCat = cat;
             document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`btn-${cat.toLowerCase()}`).classList.add('active');
-            const labels = { 'TakeHome': 'ยาจ่ายกลับบ้าน', 'Injection': 'ยาฉีด', 'Lab': 'Lab/หัตถการ', 'General': 'สินค้าทั่วไป' };
+            const labels = { 'TakeHome': 'ยาจ่ายกลับบ้าน', 'Injection': 'ยาฉีด', 'Lab': 'Lab/หัตถการ', 'General': 'สินค้าทั่วไป', 'External': 'ยาใช้ภายนอก' };
             document.getElementById('current-mode-label').innerText = `หมวด: ${labels[cat]}`;
             const isTiered = (cat === 'Injection' || cat === 'Lab');
             document.getElementById('tiered-price-section').classList.toggle('hidden', !isTiered);
             document.getElementById('fixed-price-section').classList.toggle('hidden', isTiered);
             document.getElementById('med-config-section').style.display = (cat === 'TakeHome' || cat === 'Injection') ? 'block' : 'none';
+            document.getElementById('external-config-section').style.display = (cat === 'External') ? 'block' : 'none';
             await fetchData(); addNewItem();
         }
 
@@ -244,6 +251,9 @@
             } else if (currentCat === 'Lab') {
                 const res = await db.from('services').select('*').in('category', ['Lab', 'หัตถการ']);
                 data = (res.data || []).map(i => ({ ...i, source: 'services', item_name: i.service_name, price_per_unit: i.price }));
+            } else if (currentCat === 'External') {
+                const res = await db.from('pharmacy').select('*').eq('category', 'External');
+                data = (res.data || []).map(i => ({ ...i, source: 'pharmacy' }));
             } else {
                 const res = await db.from('pharmacy').select('*').eq('category', 'General');
                 data = (res.data || []).map(i => ({ ...i, source: 'pharmacy' }));
@@ -284,6 +294,8 @@
             document.getElementById('f_conc').value = selectedItem.concentration_mg_unit || 1;
             document.getElementById('f_sub_cat').value = selectedItem.sub_category || '';
             document.getElementById('f_side_effects').value = selectedItem.side_effects || '';
+            // For External category, side_effects stores ข้อบ่งใช้ (indications)
+            if (currentCat === 'External') document.getElementById('f_indications').value = selectedItem.side_effects || '';
             
             // Load Dosages 1-5
             for(let i=1; i<=5; i++) {
@@ -311,6 +323,9 @@
             let payload = {};
             if (table === 'services') {
                 payload = { service_name: nameEN, name_th: nameTH, category: (selectedItem?.category || 'Lab'), price: parseFloat(document.getElementById('f_price').value) || 0, price_config: tierData.length > 0 ? tierData : null, unit: document.getElementById('f_unit').value };
+            } else if (currentCat === 'External') {
+                // External medicines (eye drops, ear drops, topical) reuse side_effects column for ข้อบ่งใช้ (indications)
+                payload = { item_name: nameEN, name_th: nameTH, category: 'External', unit: document.getElementById('f_unit').value, price_per_unit: parseFloat(document.getElementById('f_price').value) || 0, side_effects: document.getElementById('f_indications').value, is_medication: true };
             } else {
                 payload = { item_name: nameEN, name_th: nameTH, category: (currentCat === 'TakeHome' ? 'TakeHome' : (currentCat === 'Injection' ? 'Injection' : 'General')), sub_category: document.getElementById('f_sub_cat').value, unit: document.getElementById('f_unit').value, price_per_unit: parseFloat(document.getElementById('f_price').value) || 0, price_config: tierData.length > 0 ? tierData : null, concentration_mg_unit: parseFloat(document.getElementById('f_conc').value) || 1, side_effects: document.getElementById('f_side_effects').value, is_medication: true };
                 for(let i=1; i<=5; i++) {
