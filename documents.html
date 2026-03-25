@@ -127,7 +127,7 @@
             </div>
             <div class="relative">
                 <i data-lucide="search" class="absolute left-3 top-3.5 w-4 h-4 text-gray-500"></i>
-                <input type="text" id="search-owner" class="input-box pl-10 h-11" placeholder="ค้นหา HN หรือชื่อ..." oninput="searchOwners()">
+                <input type="text" id="search-owner" class="input-box pl-10 h-11" placeholder="ค้นหา HN, ชื่อสัตว์, เจ้าของ, เบอร์โทร, ที่อยู่..." oninput="searchOwners()">
             </div>
         </div>
         <div id="owner-list" class="flex-1 overflow-y-auto custom-scroll"></div>
@@ -267,10 +267,27 @@
         }
 
         async function searchOwners() {
-            const term = document.getElementById('search-owner').value;
-            const { data } = await db.from('owners').select('*').or(`owner_name.ilike.%${term}%,hn.ilike.%${term}%`).order('hn', { ascending: false }).limit(20);
-            renderOwnerList(data);
-            return data;
+            const term = document.getElementById('search-owner').value.trim();
+            if (!term) { await fetchOwners(); return; }
+            const safeTerm = term.replace(/[%_\\]/g, c => '\\' + c);
+            const [
+                { data: byOwner },
+                { data: byPet },
+                { data: byPhone }
+            ] = await Promise.all([
+                db.from('owners').select('*').or(`owner_name.ilike.%${safeTerm}%,hn.ilike.%${safeTerm}%,address.ilike.%${safeTerm}%`).order('hn', { ascending: false }).limit(20),
+                db.from('animals').select('owner_hn').ilike('pet_name', `%${safeTerm}%`).limit(20),
+                db.from('owner_phones').select('owner_hn').ilike('phone_number', `%${safeTerm}%`).limit(20)
+            ]);
+            const relatedOwnerHns = [...new Set([...(byPet||[]).map(p=>p.owner_hn), ...(byPhone||[]).map(p=>p.owner_hn)])];
+            const combinedMap = new Map((byOwner||[]).map(o => [o.hn, o]));
+            if (relatedOwnerHns.length > 0) {
+                const { data: extra } = await db.from('owners').select('*').in('hn', relatedOwnerHns).order('hn', { ascending: false });
+                for (const o of (extra||[])) { if (!combinedMap.has(o.hn)) combinedMap.set(o.hn, o); }
+            }
+            const combined = [...combinedMap.values()].sort((a,b) => (b.hn||'').localeCompare(a.hn||''));
+            renderOwnerList(combined.slice(0,20));
+            return combined;
         }
 
         function renderOwnerList(owners) {
@@ -1118,20 +1135,20 @@ ${tableHtml}
                 const d = new Date(rec.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
                 const txItems = (rec.medical_record_items||[]).filter(i=>i.item_type==='Tx').map(i=>i.item_name).join(', ');
                 const rxItems = (rec.medical_record_items||[]).filter(i=>i.item_type==='Rx').map(i=>i.item_name).join(', ');
+                const txrx = [txItems, rxItems].filter(Boolean).join(' / ');
                 return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <td class="py-2 pr-4 text-teal-400 font-bold whitespace-nowrap text-sm">${d}</td>
-                    <td class="py-2 pr-3 text-yellow-300 text-sm">${rec.cc||''}</td>
-                    <td class="py-2 pr-3 text-blue-300 text-sm">${rec.dx||''}</td>
-                    <td class="py-2 pr-3 text-pink-300 text-sm">${txItems}</td>
-                    <td class="py-2 text-emerald-300 text-sm">${rxItems}</td>
+                    <td class="py-2 pr-2 text-teal-400 font-bold whitespace-nowrap text-sm" style="width:25%">${d}</td>
+                    <td class="py-2 pr-2 text-yellow-300 text-sm" style="width:25%">${rec.cc||''}</td>
+                    <td class="py-2 pr-2 text-blue-300 text-sm" style="width:25%">${rec.dx||''}</td>
+                    <td class="py-2 text-pink-300 text-sm" style="width:25%">${txrx}</td>
                 </tr>`;
             }).join('');
             container.innerHTML = `
                 <div class="text-sm text-gray-400 mb-3">พบ <b class="text-white">${records.length}</b> ครั้ง | สัตว์: <b class="text-teal-400">${pet?.pet_name||''}</b></div>
                 <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="w-full" style="table-layout:fixed">
                     <thead><tr class="text-left text-[10px] font-black text-gray-500 uppercase border-b border-white/10">
-                        <th class="pb-2 pr-4">วันที่</th><th class="pb-2 pr-3">CC</th><th class="pb-2 pr-3">Dx</th><th class="pb-2 pr-3">Tx</th><th class="pb-2">Rx</th>
+                        <th class="pb-2 pr-2" style="width:25%">วันที่</th><th class="pb-2 pr-2" style="width:25%">CC</th><th class="pb-2 pr-2" style="width:25%">Dx</th><th class="pb-2" style="width:25%">Tx/Rx</th>
                     </tr></thead>
                     <tbody>${rows}</tbody>
                 </table></div>`;
