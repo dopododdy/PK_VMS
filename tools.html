@@ -1979,7 +1979,8 @@
                         if (commonActiveTab === 'oral mL') return cdHasOralMl(drug);
                         return drug.category === commonActiveTab;
                     })
-                    .filter(({drug}) => !query || drug.name.toLowerCase().includes(query));
+                    .filter(({drug}) => !query || drug.name.toLowerCase().includes(query))
+                    .sort((a, b) => (!!commonDrugChecked[b.idx]) - (!!commonDrugChecked[a.idx]));
 
                 const buildDrugRow = ({drug, idx}) => {
                     const conc = commonConcentrations[idx] !== undefined ? commonConcentrations[idx] : drug.concentrations[0].value;
@@ -2063,10 +2064,22 @@
                     </tr>`;
                 };
 
-                const rows = filteredDrugs.map(buildDrugRow).join('');
+                // Split filtered drugs into checked (top) and unchecked (rest)
+                const checkedFilteredRows = filteredDrugs.filter(({idx}) => !!commonDrugChecked[idx]);
+                const uncheckedFilteredRows = filteredDrugs.filter(({idx}) => !commonDrugChecked[idx]);
+                let rows = '';
+                if (checkedFilteredRows.length > 0) {
+                    rows += `<tr style="background:rgba(20,184,177,0.12)"><td colspan="6" style="padding:6px 12px;font-size:0.75rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.05em">⭐ Selected (${checkedFilteredRows.length})</td></tr>`;
+                    rows += checkedFilteredRows.map(buildDrugRow).join('');
+                    if (uncheckedFilteredRows.length > 0) {
+                        rows += `<tr style="border-top:1px solid rgba(255,255,255,0.06)"><td colspan="6" style="padding:4px 12px;font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Other Drugs</td></tr>`;
+                    }
+                }
+                rows += uncheckedFilteredRows.map(buildDrugRow).join('');
 
-                // Selected List group at the bottom of the table
-                const checkedEntries = commonDrugs.map((drug, idx) => ({drug, idx})).filter(({idx}) => !!commonDrugChecked[idx]);
+                // Selected List group at the bottom: show checked items NOT already visible in the filtered list
+                const filteredIdxSet = new Set(filteredDrugs.map(({idx}) => idx));
+                const checkedEntries = commonDrugs.map((drug, idx) => ({drug, idx})).filter(({idx}) => !!commonDrugChecked[idx] && !filteredIdxSet.has(idx));
                 const selectedGroupRows = checkedEntries.length > 0
                     ? `<tr style="background:rgba(20,184,177,0.12)"><td colspan="6" style="padding:6px 12px;font-size:0.75rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.05em">⭐ Selected List (${checkedEntries.length})</td></tr>` +
                       checkedEntries.map(buildDrugRow).join('')
