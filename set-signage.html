@@ -148,16 +148,38 @@
         #lp-top { display: flex; }
         #lp-video {
             flex: 0 0 56%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #020617;
+            overflow: hidden;
+        }
+        #lp-video-area {
+            width: 100%;
+            aspect-ratio: 16 / 9;
             background: #0a0a1a;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.55rem;
             color: #334155;
             font-weight: 700;
-            gap: 4px;
+            gap: 3px;
             flex-direction: column;
-            border-right: 1px solid #020617;
+            border-bottom: 1px solid #020617;
+        }
+        #lp-video-bottom {
+            flex: 1;
+            min-height: 0;
+            background: #060c1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5rem;
+            color: #1e293b;
+            font-weight: 700;
+            gap: 3px;
+            flex-direction: column;
         }
         #lp-slide {
             flex: 1;
@@ -327,7 +349,10 @@
             <div class="section-title">🗺️ ตัวอย่างเค้าโครงหน้าจอ</div>
             <div id="layout-preview">
                 <div id="lp-top">
-                    <div id="lp-video"><span>🎬</span><span>วิดีโอ 16:9</span></div>
+                    <div id="lp-video">
+                        <div id="lp-video-area"><span>🎬</span><span>วิดีโอ 16:9</span></div>
+                        <div id="lp-video-bottom"><span>🖼️</span><span>รูปภาพ</span></div>
+                    </div>
                     <div id="lp-slide"><span>🎞️</span><span>Slideshow</span></div>
                 </div>
                 <div id="lp-ticker">📢 ข้อความวิ่ง</div>
@@ -341,6 +366,23 @@
             <div>
                 <label>URL วิดีโอ</label>
                 <input type="url" id="cfg-video-url" class="input-field" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+        </div>
+
+        <!-- Section 1b: Below-video image -->
+        <div class="settings-section">
+            <div class="section-title">🖼️ ส่วนที่ 1b — รูปภาพใต้วิดีโอ (ซ้ายล่าง)</div>
+            <p class="text-sm text-gray-500 mb-4">พื้นที่ที่เหลือด้านล่างวิดีโอ — ใส่ URL หรืออัปโหลดรูปภาพ 1 รูป</p>
+            <div class="mb-4">
+                <label>URL รูปภาพ</label>
+                <input type="url" id="cfg-video-bottom-url" class="input-field" placeholder="https://example.com/image.jpg">
+            </div>
+            <div class="mb-4">
+                <label>หรืออัปโหลดรูปภาพ (จะแทนที่ URL ข้างบน)</label>
+                <input type="file" id="cfg-video-bottom-upload" accept="image/*" class="input-field" style="padding:6px;">
+            </div>
+            <div id="cfg-video-bottom-preview" class="hidden mb-2" style="height:120px;border-radius:10px;overflow:hidden;">
+                <img id="cfg-video-bottom-preview-el" src="" alt="ตัวอย่างรูปภาพใต้วิดีโอ" style="width:100%;height:100%;object-fit:cover;">
             </div>
         </div>
 
@@ -458,14 +500,37 @@ function loadConfig() {
     document.getElementById("cfg-ticker-color").value        = col;
     document.getElementById("cfg-ticker-color-txt").value    = col;
 
+    // Below-video image
+    const bottomSrc = cfg.videoBottomSrc || "";
+    const urlField = document.getElementById("cfg-video-bottom-url");
+    const prevEl   = document.getElementById("cfg-video-bottom-preview-el");
+    const prev     = document.getElementById("cfg-video-bottom-preview");
+    if (bottomSrc && bottomSrc.startsWith("data:")) {
+        // uploaded base64 – show preview but leave URL field empty
+        urlField.value = "";
+        prevEl.src = bottomSrc;
+        prev.classList.remove("hidden");
+    } else {
+        urlField.value = bottomSrc;
+        if (bottomSrc) { prevEl.src = bottomSrc; prev.classList.remove("hidden"); }
+        else prev.classList.add("hidden");
+    }
+
     slides = cfg.slides || [];
     renderSlides();
 }
 
 // ---- Save ----
+let _videoBottomBase64 = null; // temp for upload
+
 function saveSettings() {
+    // Determine below-video image source: URL takes priority over upload when non-empty
+    const bottomUrl = document.getElementById("cfg-video-bottom-url").value.trim();
+    const videoBottomSrc = bottomUrl || _videoBottomBase64 || "";
+
     const cfg = {
         videoUrl:        document.getElementById("cfg-video-url").value.trim(),
+        videoBottomSrc:  videoBottomSrc,
         slideInterval:   parseInt(document.getElementById("cfg-slide-interval").value) || 5,
         slides:          slides,
         tickerText:      document.getElementById("cfg-ticker-text").value.trim(),
@@ -741,6 +806,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     document.getElementById("cfg-ticker-color-txt").addEventListener("input", function() {
         document.getElementById("cfg-ticker-color").value = this.value;
+    });
+
+    // below-video image: URL live preview
+    document.getElementById("cfg-video-bottom-url").addEventListener("input", function() {
+        const prev   = document.getElementById("cfg-video-bottom-preview");
+        const prevEl = document.getElementById("cfg-video-bottom-preview-el");
+        if (this.value) { prevEl.src = this.value; prev.classList.remove("hidden"); }
+        else {
+            // If URL cleared and an upload exists, show the upload preview
+            if (_videoBottomBase64) { prevEl.src = _videoBottomBase64; prev.classList.remove("hidden"); }
+            else prev.classList.add("hidden");
+        }
+    });
+
+    // below-video image: file upload
+    document.getElementById("cfg-video-bottom-upload").addEventListener("change", function() {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            _videoBottomBase64 = e.target.result;
+            const prev   = document.getElementById("cfg-video-bottom-preview");
+            const prevEl = document.getElementById("cfg-video-bottom-preview-el");
+            prevEl.src = _videoBottomBase64;
+            prev.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
     });
 
     loadConfig();
