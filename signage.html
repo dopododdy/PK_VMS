@@ -33,18 +33,27 @@
         /* Section 1 – Video (left top) */
         #sec-video {
             flex: 0 0 56%;
-            position: relative;
+            display: flex;
+            flex-direction: column;
             background: #000;
             overflow: hidden;
         }
-        #sec-video iframe,
-        #sec-video video {
+        /* Video area: natural 16:9 ratio, pinned to top */
+        #video-area {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            position: relative;
+            flex-shrink: 0;
+            background: #000;
+        }
+        #video-area iframe,
+        #video-area video {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
             border: none;
-            object-fit: contain;
+            object-fit: cover;
         }
         #video-placeholder {
             position: absolute;
@@ -58,6 +67,33 @@
         }
         #video-placeholder .icon { font-size: 3rem; }
         #video-placeholder .msg { font-size: 1rem; font-weight: 600; }
+        /* Below-video image panel */
+        #sec-video-bottom {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            background: #020617;
+            overflow: hidden;
+        }
+        #sec-video-bottom img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #video-bottom-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #1e293b;
+        }
+        #video-bottom-placeholder .icon { font-size: 2rem; }
+        #video-bottom-placeholder .msg { font-size: 0.85rem; font-weight: 600; }
 
         /* Section 2 – Slideshow (right top) */
         #sec-slideshow {
@@ -185,9 +221,19 @@
 
         <!-- Section 1: Video -->
         <div id="sec-video">
-            <div id="video-placeholder">
-                <div class="icon">🎬</div>
-                <div class="msg">ยังไม่ได้ตั้งค่า URL วิดีโอ</div>
+            <!-- 16:9 video pinned to top -->
+            <div id="video-area">
+                <div id="video-placeholder">
+                    <div class="icon">🎬</div>
+                    <div class="msg">ยังไม่ได้ตั้งค่า URL วิดีโอ</div>
+                </div>
+            </div>
+            <!-- Remaining space below video -->
+            <div id="sec-video-bottom">
+                <div id="video-bottom-placeholder">
+                    <div class="icon">🖼️</div>
+                    <div class="msg">ยังไม่ได้ตั้งค่ารูปภาพ</div>
+                </div>
             </div>
         </div>
 
@@ -225,7 +271,7 @@ function getConfig() {
 // ---- Section 1: Video ----
 function initVideo(cfg) {
     const url = (cfg.videoUrl || "").trim();
-    const container = document.getElementById("sec-video");
+    const container = document.getElementById("video-area");
     if (!url) return;
 
     document.getElementById("video-placeholder").style.display = "none";
@@ -250,6 +296,20 @@ function initVideo(cfg) {
     video.playsInline = true;
     video.controls = false;
     container.appendChild(video);
+}
+
+// ---- Section 1b: Below-video image ----
+function initVideoBottomImage(cfg) {
+    const src = (cfg.videoBottomSrc || "").trim();
+    const bottom = document.getElementById("sec-video-bottom");
+    if (!src) return;
+
+    document.getElementById("video-bottom-placeholder").style.display = "none";
+
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "รูปภาพแสดงผลใต้วิดีโอ";
+    bottom.appendChild(img);
 }
 
 // ---- Section 2: Slideshow ----
@@ -387,6 +447,7 @@ function initTicker(cfg) {
 function boot() {
     const cfg = getConfig();
     initVideo(cfg);
+    initVideoBottomImage(cfg);
     initSlideshow(cfg);
     initTicker(cfg);
 }
