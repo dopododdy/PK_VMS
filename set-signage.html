@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>ตั้งค่าหน้าจอโฆษณา | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --navy:     #020617;
+            --navy-mid: #0f172a;
+            --teal:     #14b8b1;
+            --border:   rgba(255, 255, 255, 0.1);
+        }
+        body { font-family: "Sarabun", sans-serif; background: var(--navy); color: #e2e8f0; min-height: 100vh; }
+        * { font-family: "Sarabun", sans-serif; }
+        html { font-size: var(--base-font-size, 14px); }
+
+        .mesh-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%); }
+
+        .settings-section {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.75rem 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .input-field {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            outline: none;
+            color: #e2e8f0;
+            font-size: 1rem;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { border-color: var(--teal); }
+
+        .btn-primary {
+            background: var(--teal);
+            color: #020617;
+            font-weight: 800;
+            border-radius: 12px;
+            padding: 12px 28px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+        }
+        .btn-primary:hover { background: #0d9488; }
+
+        .btn-danger {
+            background: rgba(239,68,68,0.1);
+            color: #f87171;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 8px 18px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+        .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #e2e8f0;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 8px 18px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+
+        .slide-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            transition: 0.2s;
+            position: relative;
+        }
+        .slide-card:hover { border-color: rgba(20,184,177,0.4); }
+
+        .slide-preview {
+            width: 100%;
+            height: 100px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-align: center;
+        }
+        .slide-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #0d9488;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            z-index: 200;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+
+        label { font-weight: 600; color: #94a3b8; font-size: 0.9rem; display: block; margin-bottom: 6px; }
+
+        /* Layout preview */
+        #layout-preview {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #020617;
+            aspect-ratio: 16/9;
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-rows: 52% 34% 14%;
+        }
+        #lp-top { display: flex; }
+        #lp-video {
+            flex: 0 0 56%;
+            background: #0a0a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55rem;
+            color: #334155;
+            font-weight: 700;
+            gap: 4px;
+            flex-direction: column;
+            border-right: 1px solid #020617;
+        }
+        #lp-slide {
+            flex: 1;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55rem;
+            color: #334155;
+            font-weight: 700;
+            gap: 4px;
+            flex-direction: column;
+        }
+        #lp-imgs {
+            display: flex;
+            border-top: 1px solid #020617;
+        }
+        .lp-img {
+            flex: 1;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5rem;
+            color: #1e293b;
+            font-weight: 700;
+        }
+        .lp-img + .lp-img { border-left: 1px solid #020617; }
+        #lp-ticker {
+            background: #0d9488;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5rem;
+            color: #e2e8f0;
+            font-weight: 700;
+            border-top: 1px solid #14b8b1;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+    </script>
+
+    <div class="mesh-bg"></div>
+    <div class="toast" id="toast">บันทึกสำเร็จ ✓</div>
+
+    <!-- Slide modal -->
+    <div id="slide-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;align-items:center;justify-content:center;padding:20px;" class="flex">
+        <div style="background:#0f172a;border:1px solid var(--border);border-radius:24px;width:100%;max-width:560px;padding:32px;max-height:90vh;overflow-y:auto;">
+            <h3 class="text-xl font-bold text-white mb-6" id="modal-title-label">แก้ไขสไลด์</h3>
+            <input type="hidden" id="modal-slide-idx" value="-1">
+            <input type="hidden" id="modal-slide-type" value="text">
+
+            <!-- Text fields -->
+            <div id="modal-text-fields">
+                <div class="mb-4">
+                    <label>หัวข้อ (Title)</label>
+                    <input type="text" id="modal-title-text" class="input-field" placeholder="เช่น 🐾 ยินดีต้อนรับ">
+                </div>
+                <div class="mb-4">
+                    <label>คำบรรยาย (Subtitle) — ขึ้นบรรทัดใหม่ด้วย \n</label>
+                    <textarea id="modal-subtitle-text" class="input-field" rows="3" placeholder="บรรยายเพิ่มเติม"></textarea>
+                </div>
+                <div class="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <label>สีหัวข้อ</label>
+                        <div class="flex gap-2 items-center">
+                            <input type="color" id="modal-title-color" value="#14b8b1" class="h-10 w-16 rounded cursor-pointer bg-transparent border border-white/20">
+                            <input type="text" id="modal-title-color-txt" class="input-field" value="#14b8b1" style="font-family:monospace;">
+                        </div>
+                    </div>
+                    <div>
+                        <label>ขนาดตัวอักษร Title (px)</label>
+                        <input type="number" id="modal-title-size" class="input-field" min="10" max="200" step="1" placeholder="auto">
+                    </div>
+                </div>
+                <div class="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <label>สีคำบรรยาย</label>
+                        <div class="flex gap-2 items-center">
+                            <input type="color" id="modal-subtitle-color" value="#e2e8f0" class="h-10 w-16 rounded cursor-pointer bg-transparent border border-white/20">
+                            <input type="text" id="modal-subtitle-color-txt" class="input-field" value="#e2e8f0" style="font-family:monospace;">
+                        </div>
+                    </div>
+                    <div>
+                        <label>ขนาดตัวอักษร Subtitle (px)</label>
+                        <input type="number" id="modal-subtitle-size" class="input-field" min="10" max="200" step="1" placeholder="auto">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label>สีพื้นหลัง (Gradient)</label>
+                    <select id="modal-bg-preset" class="input-field" style="cursor:pointer;">
+                        <option value="linear-gradient(135deg, #020617 0%, #0f172a 100%)">Navy (ค่าเริ่มต้น)</option>
+                        <option value="linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)">Navy Blue</option>
+                        <option value="linear-gradient(135deg, #0f172a 0%, #1a2744 100%)">Deep Blue</option>
+                        <option value="linear-gradient(135deg, #0f172a 0%, #1a1a3e 100%)">Deep Purple</option>
+                        <option value="linear-gradient(135deg, #020617 0%, #0d2020 100%)">Dark Teal</option>
+                        <option value="custom">กำหนดเอง...</option>
+                    </select>
+                    <input type="text" id="modal-bg-custom" class="input-field mt-2 hidden" placeholder="เช่น linear-gradient(...)">
+                </div>
+            </div>
+
+            <!-- Image fields (URL) -->
+            <div id="modal-image-fields" class="hidden">
+                <div class="mb-4">
+                    <label>URL รูปภาพ</label>
+                    <input type="url" id="modal-img-url" class="input-field" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="mb-4">
+                    <label>คำบรรยายใต้ภาพ (ถ้ามี)</label>
+                    <input type="text" id="modal-img-caption" class="input-field" placeholder="คำบรรยาย">
+                </div>
+                <div id="modal-img-preview" class="hidden mb-4" style="height:120px;border-radius:10px;overflow:hidden;">
+                    <img id="modal-img-preview-el" src="" alt="preview" style="width:100%;height:100%;object-fit:cover;">
+                </div>
+            </div>
+
+            <!-- Upload fields -->
+            <div id="modal-upload-fields" class="hidden">
+                <div class="mb-4">
+                    <label>อัปโหลดรูปภาพ</label>
+                    <input type="file" id="modal-upload-input" accept="image/*" class="input-field" style="padding:6px;">
+                </div>
+                <div id="modal-upload-preview" class="hidden mb-4" style="height:120px;border-radius:10px;overflow:hidden;">
+                    <img id="modal-upload-preview-el" src="" alt="preview" style="width:100%;height:100%;object-fit:cover;">
+                </div>
+                <div class="mb-4">
+                    <label>คำบรรยายใต้ภาพ (ถ้ามี)</label>
+                    <input type="text" id="modal-upload-caption" class="input-field" placeholder="คำบรรยาย">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal()" class="btn-secondary">ยกเลิก</button>
+                <button onclick="saveSlide()" class="btn-primary">บันทึกสไลด์</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="p-6 border-b border-white/5 bg-navy/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex items-center gap-4">
+            <a href="settings.html" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-teal-500/20 hover:text-teal-400 transition-all text-gray-300 font-bold text-sm">
+                <span class="text-xl">⚙️</span><span>ตั้งค่าระบบ</span>
+            </a>
+            <div class="flex items-center gap-3 border-l pl-4 border-white/20">
+                <span class="text-4xl">📢</span>
+                <h1 class="text-xl font-bold text-white">ตั้งค่าหน้าจอโฆษณา</h1>
+            </div>
+            <div class="ml-auto">
+                <button onclick="openSignage()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/40 text-teal-400 font-bold text-sm transition-all">
+                    <span>🖥️</span><span>เปิดหน้าจอโฆษณา</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-6">
+        <p class="text-gray-400 mb-8">กำหนดเนื้อหาทั้ง 7 ส่วนของหน้าจอโฆษณา (Signage Display)</p>
+
+        <!-- Layout preview -->
+        <div class="settings-section mb-6">
+            <div class="section-title">🗺️ ตัวอย่างเค้าโครงหน้าจอ</div>
+            <div id="layout-preview">
+                <div id="lp-top">
+                    <div id="lp-video"><span>🎬</span><span>วิดีโอ 16:9</span></div>
+                    <div id="lp-slide"><span>🎞️</span><span>Slideshow</span></div>
+                </div>
+                <div id="lp-imgs">
+                    <div class="lp-img">🖼️<br>1</div>
+                    <div class="lp-img">🖼️<br>2</div>
+                    <div class="lp-img">🖼️<br>3</div>
+                    <div class="lp-img">🖼️<br>4</div>
+                </div>
+                <div id="lp-ticker">📢 ข้อความวิ่ง</div>
+            </div>
+        </div>
+
+        <!-- Section 1: Video -->
+        <div class="settings-section">
+            <div class="section-title">🎬 ส่วนที่ 1 — วิดีโอ (ซ้ายบน)</div>
+            <p class="text-sm text-gray-500 mb-4">รองรับ YouTube URL หรือ URL ไฟล์วิดีโอโดยตรง (mp4, webm ฯลฯ)</p>
+            <div>
+                <label>URL วิดีโอ</label>
+                <input type="url" id="cfg-video-url" class="input-field" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+        </div>
+
+        <!-- Section 2: Slideshow -->
+        <div class="settings-section">
+            <div class="section-title">🎞️ ส่วนที่ 2 — สไลด์โชว์ (ขวาบน)</div>
+            <p class="text-sm text-gray-500 mb-4">เพิ่มสไลด์ข้อความ รูปภาพ URL หรือรูปภาพ Upload</p>
+
+            <div class="mb-4">
+                <label>ระยะเวลาต่อสไลด์ (วินาที)</label>
+                <input type="number" id="cfg-slide-interval" class="input-field" min="2" max="60" value="5" placeholder="5">
+            </div>
+
+            <div id="slides-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
+
+            <div class="flex gap-3 flex-wrap">
+                <button onclick="addSlide('text')" class="btn-secondary flex items-center gap-2">
+                    <span>✏️</span> เพิ่มสไลด์ข้อความ
+                </button>
+                <button onclick="addSlide('image')" class="btn-secondary flex items-center gap-2">
+                    <span>🖼️</span> เพิ่มสไลด์รูปภาพ (URL)
+                </button>
+                <button onclick="addSlide('upload')" class="btn-secondary flex items-center gap-2">
+                    <span>📤</span> เพิ่มสไลด์รูปภาพ (Upload)
+                </button>
+            </div>
+        </div>
+
+        <!-- Sections 3-6: 4 images -->
+        <div class="settings-section">
+            <div class="section-title">🖼️ ส่วนที่ 3-6 — รูปภาพ 4 รูป (กลาง)</div>
+            <p class="text-sm text-gray-500 mb-4">กรอก URL รูปภาพหรืออัปโหลดสำหรับแต่ละช่อง (แนะนำอัตราส่วน 4:3 หรือ 16:9)</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div id="img-slot-1">
+                    <label>รูปที่ 1</label>
+                    <input type="url" id="cfg-img1-url" class="input-field mb-2" placeholder="https://...">
+                    <div class="flex gap-2">
+                        <button onclick="uploadImg(1)" class="btn-secondary text-sm flex items-center gap-1"><span>📤</span>อัปโหลด</button>
+                        <button onclick="clearImg(1)" class="btn-danger text-sm">ลบ</button>
+                    </div>
+                    <div id="img1-preview" class="hidden mt-2" style="height:80px;border-radius:8px;overflow:hidden;">
+                        <img id="img1-preview-el" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <input type="hidden" id="cfg-img1-data">
+                </div>
+                <div id="img-slot-2">
+                    <label>รูปที่ 2</label>
+                    <input type="url" id="cfg-img2-url" class="input-field mb-2" placeholder="https://...">
+                    <div class="flex gap-2">
+                        <button onclick="uploadImg(2)" class="btn-secondary text-sm flex items-center gap-1"><span>📤</span>อัปโหลด</button>
+                        <button onclick="clearImg(2)" class="btn-danger text-sm">ลบ</button>
+                    </div>
+                    <div id="img2-preview" class="hidden mt-2" style="height:80px;border-radius:8px;overflow:hidden;">
+                        <img id="img2-preview-el" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <input type="hidden" id="cfg-img2-data">
+                </div>
+                <div id="img-slot-3">
+                    <label>รูปที่ 3</label>
+                    <input type="url" id="cfg-img3-url" class="input-field mb-2" placeholder="https://...">
+                    <div class="flex gap-2">
+                        <button onclick="uploadImg(3)" class="btn-secondary text-sm flex items-center gap-1"><span>📤</span>อัปโหลด</button>
+                        <button onclick="clearImg(3)" class="btn-danger text-sm">ลบ</button>
+                    </div>
+                    <div id="img3-preview" class="hidden mt-2" style="height:80px;border-radius:8px;overflow:hidden;">
+                        <img id="img3-preview-el" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <input type="hidden" id="cfg-img3-data">
+                </div>
+                <div id="img-slot-4">
+                    <label>รูปที่ 4</label>
+                    <input type="url" id="cfg-img4-url" class="input-field mb-2" placeholder="https://...">
+                    <div class="flex gap-2">
+                        <button onclick="uploadImg(4)" class="btn-secondary text-sm flex items-center gap-1"><span>📤</span>อัปโหลด</button>
+                        <button onclick="clearImg(4)" class="btn-danger text-sm">ลบ</button>
+                    </div>
+                    <div id="img4-preview" class="hidden mt-2" style="height:80px;border-radius:8px;overflow:hidden;">
+                        <img id="img4-preview-el" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <input type="hidden" id="cfg-img4-data">
+                </div>
+            </div>
+            <!-- Hidden file inputs -->
+            <input type="file" id="img-file-1" accept="image/*" class="hidden" onchange="handleImgUpload(1,this)">
+            <input type="file" id="img-file-2" accept="image/*" class="hidden" onchange="handleImgUpload(2,this)">
+            <input type="file" id="img-file-3" accept="image/*" class="hidden" onchange="handleImgUpload(3,this)">
+            <input type="file" id="img-file-4" accept="image/*" class="hidden" onchange="handleImgUpload(4,this)">
+        </div>
+
+        <!-- Section 7: Ticker -->
+        <div class="settings-section">
+            <div class="section-title">📢 ส่วนที่ 7 — ตัวอักษรวิ่ง (ล่างสุด)</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2">
+                    <label>ข้อความที่จะวิ่ง</label>
+                    <textarea id="cfg-ticker-text" class="input-field" rows="3" placeholder="เช่น ยินดีต้อนรับสู่คลินิก PK-VMS • บริการด้วยใจ ตรวจสอบสุขภาพสัตว์เลี้ยงของท่านวันนี้!"></textarea>
+                </div>
+                <div>
+                    <label>ความเร็ว (px/วินาที)</label>
+                    <input type="number" id="cfg-ticker-speed" class="input-field mb-4" min="10" max="300" value="60" placeholder="60">
+                    <label>ขนาดตัวอักษร</label>
+                    <select id="cfg-ticker-size" class="input-field" style="cursor:pointer;">
+                        <option value="normal">ปกติ</option>
+                        <option value="large">ใหญ่</option>
+                        <option value="xlarge">ใหญ่มาก</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save/Reset -->
+        <div class="flex justify-between items-center mt-4">
+            <button onclick="resetToDefaults()" class="btn-danger">รีเซ็ตค่าเริ่มต้น</button>
+            <div class="flex gap-3">
+                <button onclick="openSignage()" class="btn-secondary flex items-center gap-2">
+                    <span>🖥️</span> เปิดหน้าจอโฆษณา
+                </button>
+                <button onclick="saveSettings()" class="btn-primary flex items-center gap-2">
+                    <span>💾</span> บันทึกการตั้งค่า
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
+        PK-VMS © 2026 Signage Settings
+    </footer>
+
+<script>
+// ============================================================
+//  set-signage.html — manages "signageCfg" in localStorage
+// ============================================================
+
+const STORAGE_KEY = "signageCfg";
+let slides = [];          // array of slide objects
+let _uploadBase64 = null; // temp storage for upload modal
+
+// ---- Load ----
+function loadConfig() {
+    let cfg = {};
+    try { cfg = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch(e) {}
+
+    document.getElementById("cfg-video-url").value      = cfg.videoUrl || "";
+    document.getElementById("cfg-slide-interval").value = cfg.slideInterval || 5;
+    document.getElementById("cfg-ticker-text").value    = cfg.tickerText || "";
+    document.getElementById("cfg-ticker-speed").value   = cfg.tickerSpeed || 60;
+    document.getElementById("cfg-ticker-size").value    = cfg.tickerSize || "normal";
+
+    for (let i = 1; i <= 4; i++) {
+        const urlEl  = document.getElementById("cfg-img" + i + "-url");
+        const dataEl = document.getElementById("cfg-img" + i + "-data");
+        const prev   = document.getElementById("img" + i + "-preview");
+        const prevEl = document.getElementById("img" + i + "-preview-el");
+        const src = cfg["img" + i] || "";
+        if (src.startsWith("http") || src === "") {
+            urlEl.value  = src;
+            dataEl.value = "";
+        } else {
+            // base64
+            dataEl.value = src;
+            urlEl.value  = "";
+        }
+        if (src) {
+            prevEl.src = src;
+            prev.classList.remove("hidden");
+        }
+    }
+
+    slides = cfg.slides || [];
+    renderSlides();
+}
+
+// ---- Save ----
+function saveSettings() {
+    const cfg = {
+        videoUrl:      document.getElementById("cfg-video-url").value.trim(),
+        slideInterval: parseInt(document.getElementById("cfg-slide-interval").value) || 5,
+        slides:        slides,
+        tickerText:    document.getElementById("cfg-ticker-text").value.trim(),
+        tickerSpeed:   parseInt(document.getElementById("cfg-ticker-speed").value) || 60,
+        tickerSize:    document.getElementById("cfg-ticker-size").value,
+    };
+
+    for (let i = 1; i <= 4; i++) {
+        const dataEl = document.getElementById("cfg-img" + i + "-data");
+        const urlEl  = document.getElementById("cfg-img" + i + "-url");
+        cfg["img" + i] = dataEl.value || urlEl.value.trim();
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+    showToast("บันทึกสำเร็จ ✓");
+}
+
+function resetToDefaults() {
+    if (!confirm("รีเซ็ตค่าทั้งหมดหน้าจอโฆษณา?")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    slides = [];
+    loadConfig();
+    showToast("รีเซ็ตแล้ว");
+}
+
+function openSignage() {
+    window.open("signage.html", "_blank");
+}
+
+// ---- Toast ----
+function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ============================================================
+//  SLIDESHOW management
+// ============================================================
+
+function renderSlides() {
+    const list = document.getElementById("slides-list");
+    list.innerHTML = "";
+    if (!slides.length) {
+        list.innerHTML = '<p class="text-gray-600 text-sm col-span-2">ยังไม่มีสไลด์ — กดปุ่มด้านล่างเพื่อเพิ่ม</p>';
+        return;
+    }
+    slides.forEach((s, i) => {
+        const card = document.createElement("div");
+        card.className = "slide-card";
+
+        // Preview
+        const prev = document.createElement("div");
+        prev.className = "slide-preview";
+        if (s.type === "image" || s.type === "upload") {
+            prev.style.background = "#0f172a";
+            const img = document.createElement("img");
+            img.src = s.src || s.url || "";
+            img.onerror = () => { prev.innerHTML = "⚠️ โหลดรูปไม่ได้"; };
+            prev.appendChild(img);
+        } else {
+            prev.style.background = s.bg || "linear-gradient(135deg,#020617 0%,#0f172a 100%)";
+            prev.style.flexDirection = "column";
+            prev.style.padding = "8px";
+
+            const titleDiv = document.createElement("div");
+            titleDiv.style.cssText = `color:${s.titleColor||'#14b8b1'};font-weight:800;font-size:0.95rem;`;
+            titleDiv.textContent = s.title || "(ไม่มีหัวข้อ)";
+            prev.appendChild(titleDiv);
+
+            if (s.subtitle) {
+                const subDiv = document.createElement("div");
+                subDiv.style.cssText = `color:${s.subtitleColor||'#cbd5e1'};font-size:0.75rem;margin-top:4px;`;
+                const lines = s.subtitle.split(/\\n/);
+                lines.forEach((line, li) => {
+                    if (li > 0) subDiv.appendChild(document.createElement("br"));
+                    subDiv.appendChild(document.createTextNode(line));
+                });
+                prev.appendChild(subDiv);
+            }
+        }
+        card.appendChild(prev);
+
+        // Label
+        const label = document.createElement("div");
+        label.style.cssText = "font-size:0.8rem;color:#64748b;font-weight:700;margin-bottom:8px;";
+        label.textContent = s.type === "text" ? "✏️ ข้อความ" : (s.type === "upload" ? "📤 อัปโหลด" : "🖼️ รูปภาพ URL");
+        card.appendChild(label);
+
+        // Actions
+        const actions = document.createElement("div");
+        actions.className = "flex gap-2";
+        actions.innerHTML =
+            `<button class="btn-secondary text-sm flex-1" onclick="editSlide(${i})">✏️ แก้ไข</button>` +
+            `<button class="btn-secondary text-sm" onclick="moveSlide(${i},-1)">↑</button>` +
+            `<button class="btn-secondary text-sm" onclick="moveSlide(${i},1)">↓</button>` +
+            `<button class="btn-danger text-sm" onclick="removeSlide(${i})">🗑️</button>`;
+        card.appendChild(actions);
+
+        list.appendChild(card);
+    });
+}
+
+function addSlide(type) {
+    openModal(type, -1);
+}
+
+function editSlide(idx) {
+    openModal(slides[idx].type, idx);
+}
+
+function removeSlide(idx) {
+    if (!confirm("ลบสไลด์นี้?")) return;
+    slides.splice(idx, 1);
+    renderSlides();
+}
+
+function moveSlide(idx, dir) {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= slides.length) return;
+    [slides[idx], slides[newIdx]] = [slides[newIdx], slides[idx]];
+    renderSlides();
+}
+
+// ============================================================
+//  Modal
+// ============================================================
+function openModal(type, idx) {
+    _uploadBase64 = null;
+    document.getElementById("modal-slide-idx").value  = idx;
+    document.getElementById("modal-slide-type").value = type;
+    document.getElementById("modal-title-label").textContent = idx === -1 ? "เพิ่มสไลด์ใหม่" : "แก้ไขสไลด์";
+
+    // Hide all field groups
+    document.getElementById("modal-text-fields").classList.add("hidden");
+    document.getElementById("modal-image-fields").classList.add("hidden");
+    document.getElementById("modal-upload-fields").classList.add("hidden");
+
+    const s = (idx >= 0) ? slides[idx] : null;
+
+    if (type === "text") {
+        document.getElementById("modal-text-fields").classList.remove("hidden");
+        document.getElementById("modal-title-text").value    = s ? (s.title || "") : "";
+        document.getElementById("modal-subtitle-text").value = s ? (s.subtitle || "") : "";
+        document.getElementById("modal-title-color").value   = s ? (s.titleColor || "#14b8b1") : "#14b8b1";
+        document.getElementById("modal-title-color-txt").value = s ? (s.titleColor || "#14b8b1") : "#14b8b1";
+        document.getElementById("modal-subtitle-color").value   = s ? (s.subtitleColor || "#e2e8f0") : "#e2e8f0";
+        document.getElementById("modal-subtitle-color-txt").value = s ? (s.subtitleColor || "#e2e8f0") : "#e2e8f0";
+        document.getElementById("modal-title-size").value    = s ? (s.titleSize || "") : "";
+        document.getElementById("modal-subtitle-size").value = s ? (s.subtitleSize || "") : "";
+        const bgPreset = document.getElementById("modal-bg-preset");
+        const bgCustom = document.getElementById("modal-bg-custom");
+        if (s && s.bg) {
+            const opt = Array.from(bgPreset.options).find(o => o.value === s.bg);
+            if (opt) { bgPreset.value = s.bg; bgCustom.classList.add("hidden"); }
+            else { bgPreset.value = "custom"; bgCustom.value = s.bg; bgCustom.classList.remove("hidden"); }
+        } else {
+            bgPreset.value = "linear-gradient(135deg, #020617 0%, #0f172a 100%)";
+            bgCustom.classList.add("hidden");
+        }
+    } else if (type === "image") {
+        document.getElementById("modal-image-fields").classList.remove("hidden");
+        document.getElementById("modal-img-url").value     = s ? (s.url || "") : "";
+        document.getElementById("modal-img-caption").value = s ? (s.caption || "") : "";
+        const prev = document.getElementById("modal-img-preview");
+        const prevEl = document.getElementById("modal-img-preview-el");
+        if (s && s.url) { prevEl.src = s.url; prev.classList.remove("hidden"); }
+        else { prev.classList.add("hidden"); }
+    } else {
+        document.getElementById("modal-upload-fields").classList.remove("hidden");
+        document.getElementById("modal-upload-caption").value = s ? (s.caption || "") : "";
+        const prev = document.getElementById("modal-upload-preview");
+        const prevEl = document.getElementById("modal-upload-preview-el");
+        if (s && s.src) { prevEl.src = s.src; prev.classList.remove("hidden"); _uploadBase64 = s.src; }
+        else { prev.classList.add("hidden"); }
+        document.getElementById("modal-upload-input").value = "";
+    }
+
+    const modal = document.getElementById("slide-modal");
+    modal.style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById("slide-modal").style.display = "none";
+}
+
+function saveSlide() {
+    const idx  = parseInt(document.getElementById("modal-slide-idx").value);
+    const type = document.getElementById("modal-slide-type").value;
+    let slide = { type };
+
+    if (type === "text") {
+        slide.title         = document.getElementById("modal-title-text").value.trim();
+        slide.subtitle      = document.getElementById("modal-subtitle-text").value.trim();
+        slide.titleColor    = document.getElementById("modal-title-color-txt").value.trim() || "#14b8b1";
+        slide.subtitleColor = document.getElementById("modal-subtitle-color-txt").value.trim() || "#e2e8f0";
+        const ts = document.getElementById("modal-title-size").value;
+        const ss = document.getElementById("modal-subtitle-size").value;
+        if (ts) slide.titleSize    = parseInt(ts);
+        if (ss) slide.subtitleSize = parseInt(ss);
+        const bgPreset = document.getElementById("modal-bg-preset").value;
+        slide.bg = bgPreset === "custom"
+            ? document.getElementById("modal-bg-custom").value.trim()
+            : bgPreset;
+        if (!slide.title) { alert("กรุณากรอกหัวข้อ"); return; }
+    } else if (type === "image") {
+        slide.url     = document.getElementById("modal-img-url").value.trim();
+        slide.caption = document.getElementById("modal-img-caption").value.trim();
+        if (!slide.url) { alert("กรุณากรอก URL รูปภาพ"); return; }
+    } else {
+        if (!_uploadBase64 && idx < 0) { alert("กรุณาเลือกไฟล์รูปภาพ"); return; }
+        slide.src     = _uploadBase64 || (idx >= 0 ? slides[idx].src : "");
+        slide.caption = document.getElementById("modal-upload-caption").value.trim();
+        if (!slide.src) { alert("กรุณาเลือกไฟล์รูปภาพ"); return; }
+    }
+
+    if (idx >= 0) {
+        slides[idx] = slide;
+    } else {
+        slides.push(slide);
+    }
+
+    closeModal();
+    renderSlides();
+}
+
+// modal file upload preview
+document.addEventListener("DOMContentLoaded", () => {
+    // upload in slide modal
+    document.getElementById("modal-upload-input").addEventListener("change", function() {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            _uploadBase64 = e.target.result;
+            const prev = document.getElementById("modal-upload-preview");
+            document.getElementById("modal-upload-preview-el").src = _uploadBase64;
+            prev.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // image url live preview
+    document.getElementById("modal-img-url").addEventListener("input", function() {
+        const prev = document.getElementById("modal-img-preview");
+        const prevEl = document.getElementById("modal-img-preview-el");
+        if (this.value) { prevEl.src = this.value; prev.classList.remove("hidden"); }
+        else prev.classList.add("hidden");
+    });
+
+    // bg preset toggle
+    document.getElementById("modal-bg-preset").addEventListener("change", function() {
+        const custom = document.getElementById("modal-bg-custom");
+        if (this.value === "custom") custom.classList.remove("hidden");
+        else custom.classList.add("hidden");
+    });
+
+    // title color sync
+    document.getElementById("modal-title-color").addEventListener("input", function() {
+        document.getElementById("modal-title-color-txt").value = this.value;
+    });
+    document.getElementById("modal-title-color-txt").addEventListener("input", function() {
+        document.getElementById("modal-title-color").value = this.value;
+    });
+    document.getElementById("modal-subtitle-color").addEventListener("input", function() {
+        document.getElementById("modal-subtitle-color-txt").value = this.value;
+    });
+    document.getElementById("modal-subtitle-color-txt").addEventListener("input", function() {
+        document.getElementById("modal-subtitle-color").value = this.value;
+    });
+
+    loadConfig();
+});
+
+// ============================================================
+//  Middle image upload helpers
+// ============================================================
+function uploadImg(n) {
+    document.getElementById("img-file-" + n).click();
+}
+
+function handleImgUpload(n, input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById("cfg-img" + n + "-data").value = e.target.result;
+        document.getElementById("cfg-img" + n + "-url").value  = "";
+        const prev   = document.getElementById("img" + n + "-preview");
+        const prevEl = document.getElementById("img" + n + "-preview-el");
+        prevEl.src = e.target.result;
+        prev.classList.remove("hidden");
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearImg(n) {
+    document.getElementById("cfg-img" + n + "-url").value  = "";
+    document.getElementById("cfg-img" + n + "-data").value = "";
+    document.getElementById("img" + n + "-preview").classList.add("hidden");
+    document.getElementById("img-file-" + n).value = "";
+}
+
+// Sync URL input → clear data
+for (let i = 1; i <= 4; i++) {
+    (function(n) {
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("cfg-img" + n + "-url").addEventListener("input", function() {
+                if (this.value) {
+                    document.getElementById("cfg-img" + n + "-data").value = "";
+                    const prev   = document.getElementById("img" + n + "-preview");
+                    const prevEl = document.getElementById("img" + n + "-preview-el");
+                    prevEl.src = this.value;
+                    prev.classList.remove("hidden");
+                }
+            });
+        });
+    })(i);
+}
+</script>
+</body>
+</html>

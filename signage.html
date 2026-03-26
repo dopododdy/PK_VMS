@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>หน้าจอโฆษณา | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100vw; height: 100vh;
+            overflow: hidden;
+            background: #020617;
+            font-family: "Sarabun", sans-serif;
+            color: #e2e8f0;
+        }
+
+        /* ===== LAYOUT ===== */
+        #signage-root {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* --- Top row: video + slideshow --- */
+        #row-top {
+            display: flex;
+            flex: 0 0 52%;
+            min-height: 0;
+        }
+
+        /* Section 1 – Video (left top) */
+        #sec-video {
+            flex: 0 0 56%;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+        }
+        #sec-video iframe,
+        #sec-video video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            object-fit: contain;
+        }
+        #video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #334155;
+        }
+        #video-placeholder .icon { font-size: 3rem; }
+        #video-placeholder .msg { font-size: 1rem; font-weight: 600; }
+
+        /* Section 2 – Slideshow (right top) */
+        #sec-slideshow {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #0f172a;
+        }
+        .slide-item {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            overflow: hidden;
+        }
+        .slide-item.active { opacity: 1; z-index: 1; }
+        .slide-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .slide-text-wrap {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+            text-align: center;
+        }
+        .slide-text-wrap .slide-title {
+            font-size: clamp(1.2rem, 3vw, 2.4rem);
+            font-weight: 800;
+            color: #14b8b1;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+        .slide-text-wrap .slide-subtitle {
+            font-size: clamp(0.9rem, 2vw, 1.5rem);
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+        #slide-dots {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        .slide-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transition: background 0.3s;
+        }
+        .slide-dot.active { background: #14b8b1; }
+        #slideshow-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #334155;
+        }
+        #slideshow-placeholder .icon { font-size: 3rem; }
+        #slideshow-placeholder .msg { font-size: 1rem; font-weight: 600; }
+
+        /* --- Middle row: 4 images --- */
+        #row-middle {
+            display: flex;
+            flex: 0 0 34%;
+            min-height: 0;
+        }
+
+        /* Sections 3-6: image panels */
+        .sec-img {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #0f172a;
+        }
+        .sec-img + .sec-img {
+            border-left: 2px solid #020617;
+        }
+        .sec-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .sec-img .img-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #1e293b;
+        }
+        .sec-img .img-placeholder .icon { font-size: 2rem; }
+        .sec-img .img-placeholder .num {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        /* --- Bottom row: scrolling ticker --- */
+        #row-ticker {
+            flex: 0 0 14%;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(90deg, #0d9488 0%, #0f172a 30%, #0f172a 70%, #0d9488 100%);
+            overflow: hidden;
+            position: relative;
+            border-top: 2px solid #14b8b1;
+        }
+        #ticker-track {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            animation: ticker-scroll linear infinite;
+            font-size: clamp(1rem, 2.5vh, 1.6rem);
+            font-weight: 700;
+            color: #e2e8f0;
+            padding-right: 80px;
+        }
+        #ticker-track .ticker-sep {
+            display: inline-block;
+            margin: 0 48px;
+            color: #14b8b1;
+            font-size: 1.5em;
+        }
+        @keyframes ticker-scroll {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        #ticker-placeholder {
+            width: 100%;
+            text-align: center;
+            color: #334155;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Divider lines */
+        #row-top { border-bottom: 2px solid #020617; }
+        #row-middle { border-bottom: 0; }
+    </style>
+</head>
+<body>
+
+<div id="signage-root">
+
+    <!-- Row 1: Top -->
+    <div id="row-top">
+
+        <!-- Section 1: Video -->
+        <div id="sec-video">
+            <div id="video-placeholder">
+                <div class="icon">🎬</div>
+                <div class="msg">ยังไม่ได้ตั้งค่า URL วิดีโอ</div>
+            </div>
+        </div>
+
+        <!-- Section 2: Slideshow -->
+        <div id="sec-slideshow">
+            <div id="slideshow-placeholder">
+                <div class="icon">🖼️</div>
+                <div class="msg">ยังไม่ได้เพิ่มสไลด์</div>
+            </div>
+            <div id="slide-dots"></div>
+        </div>
+
+    </div>
+
+    <!-- Row 2: Middle – 4 images -->
+    <div id="row-middle">
+        <div class="sec-img" id="img-panel-1">
+            <div class="img-placeholder"><div class="icon">🖼️</div><div class="num">รูปที่ 1</div></div>
+        </div>
+        <div class="sec-img" id="img-panel-2">
+            <div class="img-placeholder"><div class="icon">🖼️</div><div class="num">รูปที่ 2</div></div>
+        </div>
+        <div class="sec-img" id="img-panel-3">
+            <div class="img-placeholder"><div class="icon">🖼️</div><div class="num">รูปที่ 3</div></div>
+        </div>
+        <div class="sec-img" id="img-panel-4">
+            <div class="img-placeholder"><div class="icon">🖼️</div><div class="num">รูปที่ 4</div></div>
+        </div>
+    </div>
+
+    <!-- Row 3: Ticker (bottom) -->
+    <div id="row-ticker">
+        <div id="ticker-placeholder">ยังไม่ได้ตั้งค่าข้อความวิ่ง</div>
+        <div id="ticker-track" style="display:none;"></div>
+    </div>
+
+</div>
+
+<script>
+// ==========================================
+//  signage.html – reads config from localStorage
+//  Key: "signageCfg"
+// ==========================================
+
+function getConfig() {
+    try {
+        return JSON.parse(localStorage.getItem("signageCfg") || "{}");
+    } catch(e) { return {}; }
+}
+
+// ---- Section 1: Video ----
+function initVideo(cfg) {
+    const url = (cfg.videoUrl || "").trim();
+    const container = document.getElementById("sec-video");
+    if (!url) return;
+
+    document.getElementById("video-placeholder").style.display = "none";
+
+    // Detect YouTube (supports watch, short URL, embed, and /v/ formats)
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    if (ytMatch) {
+        const iframe = document.createElement("iframe");
+        iframe.src = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&modestbranding=1`;
+        iframe.allow = "autoplay; fullscreen";
+        iframe.allowFullscreen = true;
+        container.appendChild(iframe);
+        return;
+    }
+
+    // Direct video file
+    const video = document.createElement("video");
+    video.src = url;
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.controls = false;
+    container.appendChild(video);
+}
+
+// ---- Section 2: Slideshow ----
+let slideIndex = 0;
+let slideTimer = null;
+
+function initSlideshow(cfg) {
+    const slides = cfg.slides || [];
+    const interval = (cfg.slideInterval || 5) * 1000;
+    const container = document.getElementById("sec-slideshow");
+    const dotsContainer = document.getElementById("slide-dots");
+
+    if (!slides.length) return;
+
+    document.getElementById("slideshow-placeholder").remove();
+
+    slides.forEach((s, i) => {
+        const el = document.createElement("div");
+        el.className = "slide-item" + (i === 0 ? " active" : "");
+
+        if (s.type === "image" || s.type === "upload") {
+            const img = document.createElement("img");
+            img.src = s.src || s.url || "";
+            img.alt = s.caption || "";
+            el.appendChild(img);
+        } else {
+            // text slide
+            const wrap = document.createElement("div");
+            wrap.className = "slide-text-wrap";
+            wrap.style.background = s.bg || "linear-gradient(135deg,#020617 0%,#0f172a 100%)";
+
+            const title = document.createElement("div");
+            title.className = "slide-title";
+            title.style.color = s.titleColor || "#14b8b1";
+            if (s.titleSize) title.style.fontSize = s.titleSize + "px";
+            title.textContent = s.title || "";
+            wrap.appendChild(title);
+
+            if (s.subtitle) {
+                const sub = document.createElement("div");
+                sub.className = "slide-subtitle";
+                sub.style.color = s.subtitleColor || "#cbd5e1";
+                if (s.subtitleSize) sub.style.fontSize = s.subtitleSize + "px";
+                // Split on literal "\n" and insert <br> elements safely (no innerHTML)
+                const lines = (s.subtitle || "").split(/\\n/);
+                lines.forEach((line, li) => {
+                    if (li > 0) sub.appendChild(document.createElement("br"));
+                    sub.appendChild(document.createTextNode(line));
+                });
+                wrap.appendChild(sub);
+            }
+            el.style.background = s.bg || "linear-gradient(135deg,#020617 0%,#0f172a 100%)";
+            el.appendChild(wrap);
+        }
+
+        container.appendChild(el);
+
+        // dot
+        const dot = document.createElement("div");
+        dot.className = "slide-dot" + (i === 0 ? " active" : "");
+        dotsContainer.appendChild(dot);
+    });
+
+    function showSlide(idx) {
+        const items = container.querySelectorAll(".slide-item");
+        const dots  = dotsContainer.querySelectorAll(".slide-dot");
+        items.forEach((el, i) => el.classList.toggle("active", i === idx));
+        dots.forEach((d, i)  => d.classList.toggle("active", i === idx));
+        slideIndex = idx;
+    }
+
+    function nextSlide() {
+        const items = container.querySelectorAll(".slide-item");
+        showSlide((slideIndex + 1) % items.length);
+    }
+
+    slideTimer = setInterval(nextSlide, interval);
+
+    // Restart timer on visibility change
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            clearInterval(slideTimer);
+        } else {
+            slideTimer = setInterval(nextSlide, interval);
+        }
+    });
+}
+
+// ---- Sections 3-6: Middle images ----
+function initImages(cfg) {
+    for (let i = 1; i <= 4; i++) {
+        const url = (cfg["img" + i] || "").trim();
+        const panel = document.getElementById("img-panel-" + i);
+        if (!url) continue;
+        panel.querySelector(".img-placeholder").remove();
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "รูปที่ " + i;
+        panel.appendChild(img);
+    }
+}
+
+// ---- Section 7: Ticker ----
+function initTicker(cfg) {
+    const text = (cfg.tickerText || "").trim();
+    const speed = cfg.tickerSpeed || 60; // pixels per second (approx)
+    if (!text) return;
+
+    document.getElementById("ticker-placeholder").style.display = "none";
+    const track = document.getElementById("ticker-track");
+    track.style.display = "flex";
+
+    // Build ticker content safely using DOM (no innerHTML with user data)
+    function makeSep() {
+        const s = document.createElement("span");
+        s.className = "ticker-sep";
+        s.textContent = "◆";
+        return s;
+    }
+    function makeTextSpan(t) {
+        const s = document.createElement("span");
+        s.textContent = t;
+        return s;
+    }
+    // Duplicate 4× so the CSS translateX(-50%) loop is seamless
+    for (let i = 0; i < 4; i++) {
+        track.appendChild(makeTextSpan(text));
+        track.appendChild(makeSep());
+    }
+
+    // Calculate animation duration based on speed (px/s).
+    // The animation scrolls 50% of the total track width (half = 2 copies).
+    // Approximate total content width as innerWidth × 2; minimum 8 s to avoid
+    // an imperceptibly fast animation on very wide screens.
+    const duration = Math.max(8, Math.round((window.innerWidth * 2) / speed));
+    track.style.animationDuration = duration + "s";
+}
+
+// ---- Boot ----
+function boot() {
+    const cfg = getConfig();
+    initVideo(cfg);
+    initSlideshow(cfg);
+    initImages(cfg);
+    initTicker(cfg);
+}
+
+// Listen for storage updates (live reload when settings saved)
+window.addEventListener("storage", (e) => {
+    if (e.key === "signageCfg") {
+        window.location.reload();
+    }
+});
+
+window.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>
