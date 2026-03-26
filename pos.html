@@ -330,10 +330,11 @@
                     <div class="bg-slate-900/50 rounded-xl overflow-hidden border border-white/10">
                         <div class="grid grid-cols-12 p-3 border-b border-white/10 txt-label text-xs bg-black/20">
                             <div class="col-span-3">เลขบิล</div>
-                            <div class="col-span-3">เจ้าของ</div>
+                            <div class="col-span-2">เจ้าของ</div>
                             <div class="col-span-2">สัตว์เลี้ยง</div>
                             <div class="col-span-2 text-center">เวลา</div>
                             <div class="col-span-2 text-right">ยอดสุทธิ (฿)</div>
+                            <div class="col-span-1"></div>
                         </div>
                         <div id="daily-bills-list" class="max-h-64 overflow-y-auto custom-scroll">
                             <p class="text-gray-500 text-center py-6 text-sm">กำลังโหลด...</p>
@@ -1034,7 +1035,7 @@
             const container = document.getElementById('daily-bills-list');
             container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">กำลังโหลด...</p>';
             const { data } = await db.from('medical_records')
-                .select('receipt_no, net_amount, discount, total_cost, paid_at, owners(owner_name), animals(pet_name)')
+                .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owners(owner_name), animals(pet_name)')
                 .eq('payment_status', 'paid')
                 .gte('paid_at', startDate)
                 .order('paid_at', { ascending: false });
@@ -1045,12 +1046,25 @@
             container.innerHTML = data.map((r, i) => `
                 <div class="grid grid-cols-12 p-3 border-b border-white/5 text-sm hover:bg-white/5 transition ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}">
                     <div class="col-span-3 font-mono text-teal-400 text-xs truncate">${r.receipt_no || '-'}</div>
-                    <div class="col-span-3 text-white truncate">${r.owners?.owner_name || '-'}</div>
+                    <div class="col-span-2 text-white truncate">${r.owners?.owner_name || '-'}</div>
                     <div class="col-span-2 text-gray-300 truncate">${r.animals?.pet_name || '-'}</div>
                     <div class="col-span-2 text-center text-gray-400 text-xs">${r.paid_at ? new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : '-'}</div>
                     <div class="col-span-2 text-right font-bold text-white">${parseFloat(r.net_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                    <div class="col-span-1 flex justify-center items-center">
+                        <button onclick="deleteDailyBill('${r.id}', '${r.receipt_no || ''}')" class="text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded p-1 transition" title="ลบบิล">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+                        </button>
+                    </div>
                 </div>
             `).join('');
+        }
+
+        async function deleteDailyBill(recordId, receiptNo) {
+            const label = receiptNo ? `บิล ${receiptNo}` : 'บิลนี้';
+            if (!confirm(`ยืนยันการลบ ${label}?\nบิลนี้จะถูกยกเลิกและไม่นับในยอดขายประจำวัน`)) return;
+            const { error } = await db.from('medical_records').update({ payment_status: 'void' }).eq('id', recordId);
+            if (error) { alert('เกิดข้อผิดพลาด: ' + error.message); return; }
+            await openSummaryModal();
         }
 
         async function printDailyReport() {
@@ -1058,20 +1072,71 @@
             const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
             const reset = localStorage.getItem('pos_reset_day');
             const effectiveStart = (reset && reset > periodStart) ? reset : periodStart;
+
+            // Fetch bills
             const { data } = await db.from('medical_records')
-                .select('receipt_no, net_amount, discount, total_cost, paid_at, owners(owner_name), animals(pet_name)')
+                .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owners(owner_name), animals(pet_name)')
                 .eq('payment_status', 'paid')
                 .gte('paid_at', effectiveStart)
                 .order('paid_at', { ascending: true });
             const bills = data || [];
+
+            // Fetch all items for these bills in one query
+            const billIds = bills.map(b => b.id);
+            let allItems = [];
+            if (billIds.length > 0) {
+                const { data: itemsData } = await db.from('medical_record_items').select('record_id, item_type, item_name, quantity, unit_price, total_price').in('record_id', billIds);
+                allItems = itemsData || [];
+            }
+
+            // Fetch service categories to distinguish Lab vs หัตถการ
+            const labItemNames = [...new Set(allItems.filter(i => i.item_type === 'Lab').map(i => i.item_name))];
+            let serviceCatMap = {};
+            if (labItemNames.length > 0) {
+                const { data: svcData } = await db.from('services').select('service_name, category').in('service_name', labItemNames);
+                (svcData || []).forEach(s => { serviceCatMap[s.service_name] = s.category; });
+            }
+
+            // Group items by bill and by category
+            const itemsByBill = {};
+            allItems.forEach(item => {
+                if (!itemsByBill[item.record_id]) itemsByBill[item.record_id] = { g1: [], g2: [] };
+                const isG2 = item.item_type === 'Tx' || (item.item_type === 'Lab' && serviceCatMap[item.item_name] === 'หัตถการ');
+                itemsByBill[item.record_id][isG2 ? 'g2' : 'g1'].push(item);
+            });
+
             const grandTotal = bills.reduce((s, r) => s + parseFloat(r.net_amount || 0), 0);
             const grandDiscount = bills.reduce((s, r) => s + parseFloat(r.discount || 0), 0);
             const grandRaw = bills.reduce((s, r) => s + parseFloat(r.total_cost || 0), 0);
-            const thaiDate = formatThaiDate(now.toISOString());
+
+            // Build Thai date with day-of-week
+            const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+            const thaiDateFull = `วัน${thaiDays[now.getDay()]}ที่ ${formatThaiDate(now.toISOString())}`;
+
+            function itemRowsHtml(items) {
+                if (!items || items.length === 0) return '';
+                return items.map(it => `<tr style="background:#f8fafc;">
+                    <td style="padding:2px 8px 2px 24px;border:1px solid #e2e8f0;color:#475569;font-size:8pt;" colspan="4">• ${it.item_name}</td>
+                    <td style="padding:2px 8px;text-align:center;border:1px solid #e2e8f0;color:#475569;font-size:8pt;">${Math.floor(it.quantity)}</td>
+                    <td style="padding:2px 8px;text-align:right;border:1px solid #e2e8f0;color:#475569;font-size:8pt;">${parseFloat(it.unit_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td style="padding:2px 8px;border:1px solid #e2e8f0;" colspan="1"></td>
+                    <td style="padding:2px 8px;text-align:right;border:1px solid #e2e8f0;color:#334155;font-size:8pt;">${parseFloat(it.total_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                </tr>`).join('');
+            }
+
+            function groupHeaderRow(label) {
+                return `<tr><td colspan="8" style="padding:2px 8px 2px 16px;background:#f1f5f9;font-size:7.5pt;font-weight:700;color:#64748b;border:1px solid #e2e8f0;">${label}</td></tr>`;
+            }
+
             const rowsHtml = bills.length === 0
                 ? '<tr><td colspan="8" style="text-align:center;padding:20px;color:#64748b;">ไม่มีรายการ</td></tr>'
-                : bills.map((r, i) => `<tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">
-                    <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;">${i + 1}</td>
+                : bills.map((r, i) => {
+                    const bg = i % 2 === 0 ? '#fff' : '#f0f9ff';
+                    const grps = itemsByBill[r.id] || { g1: [], g2: [] };
+                    const g1Rows = grps.g1.length > 0 ? groupHeaderRow('Lab / Rx / สินค้า / ยาภาพนอก') + itemRowsHtml(grps.g1) : '';
+                    const g2Rows = grps.g2.length > 0 ? groupHeaderRow('หัตถการ / Tx') + itemRowsHtml(grps.g2) : '';
+                    return `<tr style="background:${bg}">
+                    <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-weight:700;">${i + 1}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-family:monospace;font-size:8pt;">${r.receipt_no || '-'}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.owners?.owner_name || '-'}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.animals?.pet_name || '-'}</td>
@@ -1079,7 +1144,9 @@
                     <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;">${parseFloat(r.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                     <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;color:#dc2626;">${parseFloat(r.discount || 0) > 0 ? parseFloat(r.discount).toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td>
                     <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;font-weight:700;">${parseFloat(r.net_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                </tr>`).join('');
+                </tr>${g1Rows}${g2Rows}`;
+                }).join('');
+
             const resetNote = (reset && reset > periodStart)
                 ? `<div style="margin-top:4px;font-size:8pt;color:#dc2626;">* นับจากการรีเซ็ตเมื่อ ${new Date(reset).toLocaleTimeString('th-TH')}</div>` : '';
             const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
@@ -1097,18 +1164,18 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
 .divider { border: none; border-top: 1px solid #e2e8f0; margin: 8px 0; }
 </style></head><body>
 <h1>สรุปบิลประจำวัน</h1>
-<div class="subtitle">วันที่ ${thaiDate} &nbsp;|&nbsp; พิมพ์เมื่อ ${now.toLocaleTimeString('th-TH')}</div>
+<div class="subtitle">${thaiDateFull} &nbsp;|&nbsp; พิมพ์เมื่อ ${now.toLocaleTimeString('th-TH')}</div>
 ${resetNote}
 <table>
 <thead><tr>
-    <th style="width:5%">#</th>
-    <th style="width:17%">เลขบิล</th>
-    <th style="width:22%">เจ้าของ</th>
-    <th style="width:15%">สัตว์เลี้ยง</th>
-    <th style="width:9%">เวลา</th>
-    <th style="width:12%">ยอดรวม</th>
+    <th style="width:4%">#</th>
+    <th style="width:16%">เลขบิล</th>
+    <th style="width:20%">เจ้าของ</th>
+    <th style="width:13%">สัตว์เลี้ยง</th>
+    <th style="width:8%">เวลา</th>
+    <th style="width:13%">ยอดรวม</th>
     <th style="width:9%">ส่วนลด</th>
-    <th style="width:11%">ยอดสุทธิ</th>
+    <th style="width:17%">ยอดสุทธิ</th>
 </tr></thead>
 <tbody>${rowsHtml}</tbody>
 <tfoot><tr>
