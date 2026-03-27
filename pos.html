@@ -55,7 +55,7 @@
         /* Modal Context Styles */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: #0f172a; border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
-        .cat-tab { padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; border: 1px solid transparent; color: #64748b; }
+        .cat-tab { padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; border: 1px solid transparent; color: #64748b; white-space: nowrap; flex-shrink: 0; }
         .cat-tab.active { background: rgba(20, 184, 177, 0.1); color: var(--teal-accent); border-color: rgba(20, 184, 177, 0.3); }
         .item-grid-box { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
         
@@ -243,6 +243,7 @@
                 <div class="cat-tab active" id="tab-rx" onclick="switchCatalogTab('rx')">💊 ยา/สินค้า</div>
                 <div class="cat-tab" id="tab-tx" onclick="switchCatalogTab('tx')">💉 ยาฉีด</div>
                 <div class="cat-tab" id="tab-lab" onclick="switchCatalogTab('lab')">🔬 Lab/หัตถการ</div>
+                <div class="cat-tab" id="tab-ext" onclick="switchCatalogTab('ext')">🧴 ยาภายนอก</div>
             </div>
             <div class="p-6 border-b border-white/10">
                 <input type="text" id="catalog-search" class="search-input" placeholder="ค้นหาชื่อรายการ..." oninput="filterCatalogItems()">
@@ -751,6 +752,9 @@
             } else if (type === 'tx') {
                 const res = await db.from('pharmacy').select('*').eq('category', 'Injection');
                 data = (res.data || []).map(i => ({ id: i.id, name: i.item_name, price: i.price_per_unit, type: 'Tx', data: i }));
+            } else if (type === 'ext') {
+                const res = await db.from('pharmacy').select('*').eq('category', 'External');
+                data = (res.data || []).map(i => ({ id: i.id, name: i.item_name, price: i.price_per_unit, type: 'Ext', data: i }));
             } else {
                 const res = await db.from('pharmacy').select('*').in('category', ['TakeHome', 'General', 'Oral', 'ยา']);
                 data = (res.data || []).map(i => ({ id: i.id, name: i.item_name, price: i.price_per_unit, type: 'Rx', data: i }));
@@ -839,7 +843,7 @@
             const price = parseFloat(document.getElementById('catalog-custom-price').value) || 0;
             if (!name) return alert("กรุณาพิมพ์ชื่อรายการ");
             if (!activeRecordId) return alert("เลือกรายการก่อน");
-            const typeMap = { rx: 'Rx', tx: 'Tx', lab: 'Lab' };
+            const typeMap = { rx: 'Rx', tx: 'Tx', lab: 'Lab', ext: 'Ext' };
             const type = typeMap[currentCatType] || 'Rx';
             const { error } = await db.from('medical_record_items').insert([{
                 record_id: activeRecordId, item_type: type, item_name: name, quantity: 1, unit_price: price, total_price: price
