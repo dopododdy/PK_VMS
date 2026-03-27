@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>ตั้งค่า Screen Saver | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --navy:     #020617;
+            --navy-mid: #0f172a;
+            --teal:     #14b8b1;
+            --border:   rgba(255, 255, 255, 0.1);
+        }
+        body {
+            font-family: "Sarabun", sans-serif;
+            background: var(--navy);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        * { font-family: "Sarabun", sans-serif; }
+        html { font-size: var(--base-font-size, 14px); }
+
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%);
+        }
+
+        .settings-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 56px;
+            height: 30px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            transition: 0.3s;
+            border: 1px solid var(--border);
+        }
+        .toggle-slider:before {
+            content: "";
+            position: absolute;
+            height: 22px; width: 22px;
+            left: 3px; bottom: 3px;
+            background: #94a3b8;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        input:checked + .toggle-slider { background: var(--teal); border-color: var(--teal); }
+        input:checked + .toggle-slider:before { transform: translateX(26px); background: white; }
+
+        .option-btn {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem 1.25rem;
+            background: rgba(255,255,255,0.03);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .option-btn:hover { background: rgba(20,184,177,0.1); border-color: var(--teal); color: #e2e8f0; }
+        .option-btn.active { background: rgba(20,184,177,0.2); border-color: var(--teal); color: var(--teal); }
+
+        /* Preview window */
+        #ss-preview {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ===== Animation: Floating Paws ===== */
+        @keyframes floatUp {
+            0%   { transform: translateY(110%) rotate(0deg); opacity: 0; }
+            10%  { opacity: 0.6; }
+            90%  { opacity: 0.6; }
+            100% { transform: translateY(-110%) rotate(360deg); opacity: 0; }
+        }
+        .paw-particle {
+            position: absolute;
+            font-size: 2rem;
+            animation: floatUp linear infinite;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* ===== Animation: Bouncing Ball ===== */
+        @keyframes bounceX { 0%,100% { left: 5%; } 50% { left: 85%; } }
+        @keyframes bounceY { 0%,100% { top: 5%; } 50% { top: 75%; } }
+        .bounce-ball {
+            position: absolute;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #2dd4bf, #0d9488);
+            box-shadow: 0 0 30px rgba(20,184,177,0.6);
+            animation: bounceX 3.1s ease-in-out infinite, bounceY 2.3s ease-in-out infinite;
+        }
+
+        /* ===== Animation: Matrix Rain ===== */
+        #matrix-canvas { position: absolute; inset: 0; }
+
+        /* ===== Animation: Clock ===== */
+        .clock-preview {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #000;
+        }
+        .clock-time {
+            font-size: 5rem;
+            font-weight: 800;
+            color: var(--teal);
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 30px rgba(20,184,177,0.5);
+        }
+        .clock-date {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+        .clock-clinic {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.3);
+            margin-top: 2rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: var(--teal);
+            cursor: pointer;
+        }
+
+        .save-btn {
+            background: var(--teal);
+            color: #020617;
+            font-weight: 800;
+            padding: 0.85rem 2rem;
+            border-radius: 14px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .save-btn:hover { background: #0d9488; transform: translateY(-2px); }
+        .save-btn:active { transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+    </script>
+
+    <div class="mesh-bg"></div>
+
+    <header class="p-6 border-b border-white/5 bg-navy/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex items-center gap-4">
+            <a href="settings.html" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-teal-500/20 hover:text-teal-400 transition-all text-gray-300 font-bold text-sm">
+                <span class="text-xl">⚙️</span><span>ตั้งค่าระบบ</span>
+            </a>
+            <div class="flex items-center gap-3 border-l pl-4 border-white/20">
+                <span class="text-4xl">🖥️</span>
+                <h1 class="text-xl font-bold text-white">ตั้งค่า Screen Saver</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-6 space-y-6">
+
+        <!-- Enable / Disable -->
+        <div class="settings-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-white text-lg">เปิดใช้งาน Screen Saver</h3>
+                    <p class="text-sm text-gray-400 mt-1">เปิดสกรีนเซฟเวอร์เมื่อไม่มีการใช้งานตามเวลาที่กำหนด</p>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="ss-enabled" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Timeout -->
+        <div class="settings-card">
+            <h3 class="font-bold text-white text-lg mb-4">ระยะเวลาก่อนเริ่มสกรีนเซฟเวอร์</h3>
+            <div class="flex items-center gap-4">
+                <input type="range" id="ss-timeout" min="1" max="30" step="1" value="5" class="flex-1" oninput="document.getElementById('timeout-val').textContent=this.value" />
+                <span class="text-teal-400 font-black text-xl w-20 text-center"><span id="timeout-val">5</span> นาที</span>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500 mt-1 px-1">
+                <span>1 นาที</span><span>30 นาที</span>
+            </div>
+        </div>
+
+        <!-- Animation type -->
+        <div class="settings-card">
+            <h3 class="font-bold text-white text-lg mb-4">รูปแบบ Animation</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="anim-options">
+                <div class="option-btn active" data-anim="paws" onclick="selectAnim(this,'paws')">🐾 รอยเท้า</div>
+                <div class="option-btn" data-anim="bounce" onclick="selectAnim(this,'bounce')">⚽ ลูกบอล</div>
+                <div class="option-btn" data-anim="matrix" onclick="selectAnim(this,'matrix')">💻 Matrix</div>
+                <div class="option-btn" data-anim="clock" onclick="selectAnim(this,'clock')">🕐 นาฬิกา</div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="settings-card">
+            <h3 class="font-bold text-white text-lg mb-4">ตัวอย่าง</h3>
+            <div id="ss-preview">
+                <!-- preview content injected by JS -->
+            </div>
+            <p class="text-xs text-gray-500 mt-2 text-center">คลิกที่หน้าจอหลักหรือขยับเมาส์เพื่อปิดสกรีนเซฟเวอร์</p>
+        </div>
+
+        <!-- Save -->
+        <div class="flex justify-end">
+            <button class="save-btn" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+        </div>
+
+        <div id="save-toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-teal-600 text-white font-bold px-6 py-3 rounded-2xl shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50">
+            ✅ บันทึกการตั้งค่าแล้ว
+        </div>
+    </main>
+
+    <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
+        PK-VMS © 2026 Screen Saver Settings
+    </footer>
+
+    <script>
+        // ─── State ───────────────────────────────────────────────────
+        let currentAnim = 'paws';
+        let previewInterval = null;
+        let matrixAnimFrame = null;
+
+        const DAYS_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+        const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+        // ─── Load settings ───────────────────────────────────────────
+        function loadSettings() {
+            const s = JSON.parse(localStorage.getItem('screensaver-settings') || '{}');
+            document.getElementById('ss-enabled').checked = s.enabled !== false;
+            const timeout = s.timeout || 5;
+            document.getElementById('ss-timeout').value = timeout;
+            document.getElementById('timeout-val').textContent = timeout;
+            currentAnim = s.anim || 'paws';
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.anim === currentAnim);
+            });
+            renderPreview(currentAnim);
+        }
+
+        // ─── Save settings ───────────────────────────────────────────
+        function saveSettings() {
+            const s = {
+                enabled: document.getElementById('ss-enabled').checked,
+                timeout: parseInt(document.getElementById('ss-timeout').value),
+                anim: currentAnim
+            };
+            localStorage.setItem('screensaver-settings', JSON.stringify(s));
+            const toast = document.getElementById('save-toast');
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+        }
+
+        // ─── Select animation ────────────────────────────────────────
+        function selectAnim(el, anim) {
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            currentAnim = anim;
+            renderPreview(anim);
+        }
+
+        // ─── Preview renderer ─────────────────────────────────────────
+        function renderPreview(anim) {
+            stopPreview();
+            const preview = document.getElementById('ss-preview');
+            preview.innerHTML = '';
+
+            if (anim === 'paws') renderPawsPreview(preview);
+            else if (anim === 'bounce') renderBouncePreview(preview);
+            else if (anim === 'matrix') renderMatrixPreview(preview);
+            else if (anim === 'clock') renderClockPreview(preview);
+        }
+
+        function stopPreview() {
+            if (previewInterval) { clearInterval(previewInterval); previewInterval = null; }
+            if (matrixAnimFrame) { cancelAnimationFrame(matrixAnimFrame); matrixAnimFrame = null; }
+        }
+
+        // ─── Paws ─────────────────────────────────────────────────────
+        function renderPawsPreview(container) {
+            container.style.background = '#000';
+            const EMOJIS = ['🐾','🐾','🐾','🐱','🐶','🐰','🐹'];
+            function spawnPaw() {
+                const el = document.createElement('div');
+                el.className = 'paw-particle';
+                el.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+                el.style.left = (Math.random() * 90) + '%';
+                const dur = 4 + Math.random() * 4;
+                el.style.animationDuration = dur + 's';
+                el.style.animationDelay = '0s';
+                el.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
+                container.appendChild(el);
+                setTimeout(() => el.remove(), dur * 1000 + 200);
+            }
+            for (let i = 0; i < 6; i++) setTimeout(spawnPaw, i * 400);
+            previewInterval = setInterval(spawnPaw, 600);
+        }
+
+        // ─── Bounce ───────────────────────────────────────────────────
+        function renderBouncePreview(container) {
+            container.style.background = 'linear-gradient(135deg, #000 0%, #0f172a 100%)';
+            const ball = document.createElement('div');
+            ball.className = 'bounce-ball';
+            container.appendChild(ball);
+
+            // Trailing particles
+            function sparkle() {
+                const s = document.createElement('div');
+                const rect = ball.getBoundingClientRect();
+                const cr = container.getBoundingClientRect();
+                s.style.cssText = `position:absolute;width:8px;height:8px;border-radius:50%;background:rgba(20,184,177,0.5);pointer-events:none;`;
+                s.style.left = (rect.left - cr.left + 26) + 'px';
+                s.style.top  = (rect.top  - cr.top  + 26) + 'px';
+                s.style.transition = 'all 0.6s ease';
+                container.appendChild(s);
+                requestAnimationFrame(() => { s.style.transform = 'scale(0)'; s.style.opacity = '0'; });
+                setTimeout(() => s.remove(), 600);
+            }
+            previewInterval = setInterval(sparkle, 80);
+        }
+
+        // ─── Matrix ───────────────────────────────────────────────────
+        function renderMatrixPreview(container) {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'matrix-canvas';
+            container.style.background = '#000';
+            container.appendChild(canvas);
+
+            function resize() {
+                canvas.width  = container.offsetWidth;
+                canvas.height = container.offsetHeight;
+            }
+            resize();
+
+            const ctx = canvas.getContext('2d');
+            const cols = Math.floor(canvas.width / 16);
+            const drops = Array(cols).fill(0);
+            const chars = 'アイウエオカキクケコABCDEF0123456789@#$%&';
+
+            function drawMatrix() {
+                ctx.fillStyle = 'rgba(0,0,0,0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#14b8b1';
+                ctx.font = '14px monospace';
+                drops.forEach((y, i) => {
+                    const ch = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(ch, i * 16, y * 16);
+                    if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                });
+                matrixAnimFrame = requestAnimationFrame(drawMatrix);
+            }
+            drawMatrix();
+        }
+
+        // ─── Clock ────────────────────────────────────────────────────
+        function renderClockPreview(container) {
+            container.style.background = '#000';
+            container.innerHTML = `
+                <div class="clock-preview">
+                    <div class="clock-time" id="prev-clock-time">00:00:00</div>
+                    <div class="clock-date" id="prev-clock-date"></div>
+                    <div class="clock-clinic">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+                </div>`;
+
+            function tick() {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2,'0');
+                const mm = String(now.getMinutes()).padStart(2,'0');
+                const ss = String(now.getSeconds()).padStart(2,'0');
+                const timeEl = document.getElementById('prev-clock-time');
+                const dateEl = document.getElementById('prev-clock-date');
+                if (timeEl) timeEl.textContent = `${hh}:${mm}:${ss}`;
+                if (dateEl) dateEl.textContent =
+                    `วัน${DAYS_TH[now.getDay()]}ที่ ${now.getDate()} ${MONTHS_TH[now.getMonth()]} ${now.getFullYear() + 543}`; // +543 = พุทธศักราช
+            }
+            tick();
+            previewInterval = setInterval(tick, 1000);
+        }
+
+        // ─── Init ─────────────────────────────────────────────────────
+        loadSettings();
+    </script>
+</body>
+</html>
