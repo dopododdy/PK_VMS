@@ -216,7 +216,7 @@
                 </div>
             </div>
             
-            <div class="flex flex-wrap justify-between items-center gap-3 mb-8">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
                 <h3 class="text-2xl font-black text-white flex items-center gap-3">
                     ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
                 </h3>
@@ -227,6 +227,9 @@
                     <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-xs">🪪 บัตรประจำตัวสัตว์</button>
                     <button onclick="printApptLabel(animalId)" class="btn-base bg-orange-600 hover:bg-orange-500 shadow-lg text-xs">📅 ใบนัดหมาย</button>
                 </div>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="history-search" class="input-box" placeholder="ค้นหาประวัติ: วันที่รักษา, CC, PE, Dx..." oninput="filterHistoryList()">
             </div>
             <div id="history-list" class="space-y-3"></div>
         </div>
@@ -571,12 +574,28 @@
             renderRecordsList();
         }
 
+        function filterHistoryList() { renderRecordsList(); }
+
         function renderRecordsList() {
             const list = document.getElementById('history-list');
-            document.getElementById('record-count').innerText = records.length;
-            if (records.length === 0) { list.innerHTML = `<p class="text-gray-500 py-10 text-center">ยังไม่มีประวัติการรักษา</p>`; return; }
+            const term = (document.getElementById('history-search')?.value || '').toLowerCase().trim();
+
+            const filtered = !term ? records : records.filter(rec => {
+                const dateStr = (rec.created_at || '').slice(0, 10);
+                const itemNames = (rec.medical_record_items || []).map(i => i.item_name || '').join(' ');
+                return [dateStr, rec.cc, rec.hx, rec.pe, rec.dx, itemNames]
+                    .filter(Boolean).some(f => f.toLowerCase().includes(term));
+            });
+
+            document.getElementById('record-count').innerText = term ? `${filtered.length}/${records.length}` : records.length;
+            if (filtered.length === 0) {
+                list.innerHTML = records.length === 0
+                    ? `<p class="text-gray-500 py-10 text-center">ยังไม่มีประวัติการรักษา</p>`
+                    : `<p class="text-gray-500 py-10 text-center">ไม่พบประวัติที่ค้นหา</p>`;
+                return;
+            }
             
-            list.innerHTML = records.map(rec => {
+            list.innerHTML = filtered.map(rec => {
                 const labItems = rec.medical_record_items.filter(i => i.item_type === 'Lab');
                 const txItems = rec.medical_record_items.filter(i => i.item_type === 'Tx');
                 const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
