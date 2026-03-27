@@ -67,7 +67,7 @@
         }
         #video-placeholder .icon { font-size: 3rem; }
         #video-placeholder .msg { font-size: 1rem; font-weight: 600; }
-        /* Below-video image panel */
+        /* Below-video slide panel */
         #sec-video-bottom {
             flex: 1;
             min-height: 0;
@@ -75,12 +75,33 @@
             background: #020617;
             overflow: hidden;
         }
-        #sec-video-bottom img {
+        /* Section 1B slide items */
+        .vb-slide-item {
             position: absolute;
             inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            overflow: hidden;
+        }
+        .vb-slide-item.active { opacity: 1; z-index: 1; }
+        .vb-slide-item img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+        .vb-slide-text {
+            font-size: clamp(1rem, 3.5vw, 2.8rem);
+            font-weight: 800;
+            color: #14b8b1;
+            text-align: center;
+            padding: 16px 24px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
         #video-bottom-placeholder {
             position: absolute;
@@ -298,18 +319,79 @@ function initVideo(cfg) {
     container.appendChild(video);
 }
 
-// ---- Section 1b: Below-video image ----
-function initVideoBottomImage(cfg) {
-    const src = (cfg.videoBottomSrc || "").trim();
-    const bottom = document.getElementById("sec-video-bottom");
-    if (!src) return;
+// ---- Section 1b: Below-video slideshow ----
+let vbSlideIndex = 0;
+let vbSlideTimer = null;
+
+function initVideoBottomSlide(cfg) {
+    const slides = cfg.videoBottomSlides || [];
+    const interval = (cfg.videoBottomInterval || 5) * 1000;
+    const container = document.getElementById("sec-video-bottom");
+
+    if (!slides.length) {
+        // Backward compatibility: legacy single image
+        const src = (cfg.videoBottomSrc || "").trim();
+        if (src) {
+            document.getElementById("video-bottom-placeholder").style.display = "none";
+            const item = document.createElement("div");
+            item.className = "vb-slide-item active";
+            const img = document.createElement("img");
+            img.src = src;
+            img.alt = "รูปภาพแสดงผลใต้วิดีโอ";
+            item.appendChild(img);
+            container.appendChild(item);
+        }
+        return;
+    }
 
     document.getElementById("video-bottom-placeholder").style.display = "none";
 
-    const img = document.createElement("img");
-    img.src = src;
-    img.alt = "รูปภาพแสดงผลใต้วิดีโอ";
-    bottom.appendChild(img);
+    slides.forEach((s, i) => {
+        const el = document.createElement("div");
+        el.className = "vb-slide-item" + (i === 0 ? " active" : "");
+
+        if (s.type === "image" || s.type === "upload") {
+            el.style.background = "#000";
+            const img = document.createElement("img");
+            img.src = s.src || s.url || "";
+            img.alt = s.caption || "";
+            el.appendChild(img);
+        } else {
+            // text – 1 line
+            el.style.background = s.bg || "linear-gradient(135deg,#020617 0%,#0f172a 100%)";
+            const textEl = document.createElement("div");
+            textEl.className = "vb-slide-text";
+            textEl.style.color = s.textColor || "#14b8b1";
+            if (s.textSize) textEl.style.fontSize = s.textSize + "px";
+            textEl.textContent = s.text || "";
+            el.appendChild(textEl);
+        }
+
+        container.appendChild(el);
+    });
+
+    if (slides.length <= 1) return;
+
+    function showVBSlide(idx) {
+        const items = container.querySelectorAll(".vb-slide-item");
+        items.forEach((el, i) => el.classList.toggle("active", i === idx));
+        vbSlideIndex = idx;
+    }
+
+    function nextVBSlide() {
+        const items = container.querySelectorAll(".vb-slide-item");
+        showVBSlide((vbSlideIndex + 1) % items.length);
+    }
+
+    vbSlideTimer = setInterval(nextVBSlide, interval);
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            clearInterval(vbSlideTimer);
+        } else {
+            vbSlideTimer = setInterval(nextVBSlide, interval);
+        }
+    });
 }
 
 // ---- Section 2: Slideshow ----
@@ -447,7 +529,7 @@ function initTicker(cfg) {
 function boot() {
     const cfg = getConfig();
     initVideo(cfg);
-    initVideoBottomImage(cfg);
+    initVideoBottomSlide(cfg);
     initSlideshow(cfg);
     initTicker(cfg);
 }
