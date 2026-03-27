@@ -8,6 +8,10 @@
     <script src="ui-settings.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
 
@@ -316,13 +320,23 @@
 
                 <!-- สรุปบิลประจำวัน -->
                 <div class="mt-8">
-                    <div class="flex justify-between items-center mb-4">
+                    <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
                         <h3 class="text-lg font-black text-white flex items-center gap-2">
-                            <i data-lucide="file-text" class="text-teal-400 w-5 h-5"></i> สรุปบิลประจำวัน
+                            <i data-lucide="file-text" class="text-teal-400 w-5 h-5"></i>
+                            <span>สรุปบิล:</span>
+                            <span id="bills-date-label" class="text-teal-400">-</span>
                         </h3>
-                        <button onclick="printDailyReport()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition flex items-center gap-2">
-                            <i data-lucide="printer" class="w-4 h-4"></i> พิมพ์รายงาน A4
-                        </button>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <input type="text" id="bills-datepicker" placeholder="📅 เลือกวันที่ย้อนหลัง"
+                                class="bg-slate-800/80 border border-white/15 rounded-xl px-3 py-1.5 text-white text-sm w-48 cursor-pointer focus:outline-none focus:border-teal-400/60 transition">
+                            <button id="bills-today-btn" onclick="resetBillsDateToToday()" title="กลับไปวันนี้"
+                                class="hidden text-xs text-teal-400 hover:text-teal-300 border border-teal-400/30 hover:border-teal-400 px-3 py-1.5 rounded-xl transition font-bold">
+                                วันนี้
+                            </button>
+                            <button onclick="printDailyReport()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition flex items-center gap-2">
+                                <i data-lucide="printer" class="w-4 h-4"></i> พิมพ์รายงาน A4
+                            </button>
+                        </div>
                     </div>
                     <div class="bg-slate-900/50 rounded-xl overflow-hidden border border-white/10">
                         <div class="grid grid-cols-12 p-3 border-b border-white/10 txt-label text-xs bg-black/20">
@@ -1033,6 +1047,72 @@
             calculateChange();
         }
 
+        function getBillsDateRange(date) {
+            const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
+            return {
+                startDate: new Date(y, m, d).toISOString(),
+                endDate:   new Date(y, m, d, 23, 59, 59, 999).toISOString()
+            };
+        }
+
+        let _billsDatePicker = null;
+
+        function updateCalendarYearToBE(instance) {
+            if (!instance.calendarContainer) return;
+            const yearInput = instance.calendarContainer.querySelector('.cur-year');
+            if (yearInput) yearInput.value = instance.currentYear + 543;
+        }
+
+        function makeDashboardDatePickerConfig() {
+            return {
+                locale: "th",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "j F Y",
+                maxDate: "today",
+                onReady: (selectedDates, dateStr, instance) => {
+                    if (dateStr && instance.altInput) {
+                        const y = new Date(dateStr).getFullYear();
+                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
+                    }
+                    updateCalendarYearToBE(instance);
+                },
+                onOpen: (_, __, instance) => updateCalendarYearToBE(instance),
+                onMonthChange: (_, __, instance) => updateCalendarYearToBE(instance),
+                onYearChange: (_, __, instance) => updateCalendarYearToBE(instance),
+                onChange: (selectedDates, dateStr, instance) => {
+                    if (dateStr && instance.altInput) {
+                        const y = new Date(dateStr).getFullYear();
+                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
+                    }
+                    onBillsDateChange(selectedDates[0] || null);
+                }
+            };
+        }
+
+        function onBillsDateChange(selectedDate) {
+            const labelEl = document.getElementById('bills-date-label');
+            const todayBtn = document.getElementById('bills-today-btn');
+            if (selectedDate) {
+                const { startDate, endDate } = getBillsDateRange(selectedDate);
+                if (labelEl) labelEl.textContent = formatThaiDate(startDate);
+                if (todayBtn) todayBtn.classList.remove('hidden');
+                loadDailyBills(startDate, endDate);
+            } else {
+                const now = new Date();
+                const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+                const reset = localStorage.getItem('pos_reset_day');
+                const effectiveStart = (reset && reset > periodStart) ? reset : periodStart;
+                if (labelEl) labelEl.textContent = formatThaiDate(now.toISOString());
+                if (todayBtn) todayBtn.classList.add('hidden');
+                loadDailyBills(effectiveStart);
+            }
+        }
+
+        function resetBillsDateToToday() {
+            if (_billsDatePicker) _billsDatePicker.clear();
+        }
+
         async function openSummaryModal() {
             document.getElementById('summary-modal').style.display = 'flex';
             lucide.createIcons();
@@ -1069,7 +1149,20 @@
             document.getElementById('sum-month-count').innerText = monthly.count;
             document.getElementById('sum-year-amt').innerText = yearly.total.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-year-count').innerText = yearly.count;
-            loadDailyBills(effectiveStart.day);
+            // Initialize datepicker on first open
+            if (!_billsDatePicker) {
+                const dpEl = document.getElementById('bills-datepicker');
+                if (dpEl) _billsDatePicker = flatpickr(dpEl, makeDashboardDatePickerConfig());
+            }
+            // Load bills for the currently selected date (or today if none)
+            if (_billsDatePicker && _billsDatePicker.selectedDates.length) {
+                const { startDate, endDate } = getBillsDateRange(_billsDatePicker.selectedDates[0]);
+                loadDailyBills(startDate, endDate);
+            } else {
+                const labelEl = document.getElementById('bills-date-label');
+                if (labelEl) labelEl.textContent = formatThaiDate(now.toISOString());
+                loadDailyBills(effectiveStart.day);
+            }
         }
 
         function closeSummaryModal() { document.getElementById('summary-modal').style.display = 'none'; }
@@ -1088,14 +1181,15 @@
             await openSummaryModal();
         }
 
-        async function loadDailyBills(startDate) {
+        async function loadDailyBills(startDate, endDate = null) {
             const container = document.getElementById('daily-bills-list');
             container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">กำลังโหลด...</p>';
-            const { data } = await db.from('medical_records')
+            let query = db.from('medical_records')
                 .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)')
                 .eq('payment_status', 'paid')
-                .gte('paid_at', startDate)
-                .order('paid_at', { ascending: false });
+                .gte('paid_at', startDate);
+            if (endDate) query = query.lte('paid_at', endDate);
+            const { data } = await query.order('paid_at', { ascending: false });
             if (!data || data.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">ยังไม่มีบิลในช่วงเวลานี้</p>';
                 return;
@@ -1126,16 +1220,24 @@
 
         async function printDailyReport() {
             const now = new Date();
-            const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-            const reset = localStorage.getItem('pos_reset_day');
-            const effectiveStart = (reset && reset > periodStart) ? reset : periodStart;
+            let effectiveStart, effectiveEnd = null, reportDate, reset = null;
+            if (_billsDatePicker && _billsDatePicker.selectedDates.length) {
+                reportDate = _billsDatePicker.selectedDates[0];
+                ({ startDate: effectiveStart, endDate: effectiveEnd } = getBillsDateRange(reportDate));
+            } else {
+                reportDate = now;
+                const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+                reset = localStorage.getItem('pos_reset_day');
+                effectiveStart = (reset && reset > periodStart) ? reset : periodStart;
+            }
 
             // Fetch bills
-            const { data } = await db.from('medical_records')
+            let query = db.from('medical_records')
                 .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)')
                 .eq('payment_status', 'paid')
-                .gte('paid_at', effectiveStart)
-                .order('paid_at', { ascending: true });
+                .gte('paid_at', effectiveStart);
+            if (effectiveEnd) query = query.lte('paid_at', effectiveEnd);
+            const { data } = await query.order('paid_at', { ascending: true });
             const bills = data || [];
 
             // Fetch all items for these bills in one query
@@ -1168,7 +1270,7 @@
 
             // Build Thai date with day-of-week
             const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-            const thaiDateFull = `วัน${thaiDays[now.getDay()]}ที่ ${formatThaiDate(now.toISOString())}`;
+            const thaiDateFull = `วัน${thaiDays[reportDate.getDay()]}ที่ ${formatThaiDate(reportDate.toISOString())}`;
 
             function itemRowsHtml(items) {
                 if (!items || items.length === 0) return '';
@@ -1204,7 +1306,7 @@
                 </tr>${g1Rows}${g2Rows}`;
                 }).join('');
 
-            const resetNote = (reset && reset > periodStart)
+            const resetNote = reset
                 ? `<div style="margin-top:4px;font-size:8pt;color:#dc2626;">* นับจากการรีเซ็ตเมื่อ ${new Date(reset).toLocaleTimeString('th-TH')}</div>` : '';
             const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
