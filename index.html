@@ -101,6 +101,76 @@
         .btn-size.active { background: var(--teal); color: var(--navy); border-color: var(--teal); }
 
         #login-overlay { position: fixed; inset: 0; z-index: 1000; background: var(--navy); display: flex; align-items: center; justify-content: center; }
+
+        /* ===== Screen Saver ===== */
+        #screensaver-overlay {
+            position: fixed; inset: 0; z-index: 900;
+            background: #000;
+            display: none;
+            align-items: center; justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        #screensaver-overlay.active { display: flex; }
+
+        /* Paws */
+        @keyframes ssPawFloat {
+            0%   { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+            10%  { opacity: 0.7; }
+            90%  { opacity: 0.7; }
+            100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+        }
+        .ss-paw {
+            position: absolute;
+            animation: ssPawFloat linear infinite;
+            pointer-events: none; user-select: none;
+        }
+
+        /* Bounce */
+        @keyframes ssBounceX { 0%,100% { left: 3%;  } 50% { left: 88%;  } }
+        @keyframes ssBounceY { 0%,100% { top:  3%;  } 50% { top:  82%;  } }
+        .ss-ball {
+            position: absolute;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #2dd4bf, #0d9488);
+            box-shadow: 0 0 40px rgba(20,184,177,0.7);
+            animation: ssBounceX 3.1s ease-in-out infinite, ssBounceY 2.3s ease-in-out infinite;
+        }
+
+        /* Clock */
+        .ss-clock-wrap {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center;
+        }
+        .ss-clock-time {
+            font-size: clamp(4rem, 15vw, 10rem);
+            font-weight: 900;
+            color: var(--teal);
+            letter-spacing: 0.05em;
+            text-shadow: 0 0 60px rgba(20,184,177,0.5);
+            line-height: 1;
+        }
+        .ss-clock-date {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            color: #94a3b8;
+            margin-top: 1rem;
+        }
+        .ss-clock-clinic {
+            font-size: clamp(0.8rem, 2vw, 1.1rem);
+            color: rgba(255,255,255,0.2);
+            margin-top: 2rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+        #ss-matrix-canvas { position: absolute; inset: 0; }
+
+        .ss-hint {
+            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.2); font-size: 0.85rem;
+            letter-spacing: 0.15em; pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -200,6 +270,13 @@
         </footer>
     </div>
 
+    <!-- ===== Screen Saver Overlay ===== -->
+    <div id="screensaver-overlay" onclick="dismissScreensaver()" title="คลิกหรือกดปุ่มใดๆ เพื่อปิด">
+        <canvas id="ss-matrix-canvas" style="position:absolute;inset:0;display:none;"></canvas>
+        <div id="ss-inner"></div>
+        <div class="ss-hint">คลิกหรือเลื่อนเมาส์เพื่อปิด Screen Saver</div>
+    </div>
+
     <script>
         const MASTER_PW = "044641460";
 
@@ -276,6 +353,7 @@
                 document.getElementById("login-overlay").style.display = "none";
                 document.getElementById("main-content").style.display = "block";
                 fetchStats();
+                initScreensaver();
             }, 300);
         }
 
@@ -284,6 +362,173 @@
         document.getElementById("pw-input").addEventListener("keypress", (e) => {
             if (e.key === "Enter") checkPassword();
         });
+
+        // ─── Screen Saver ───────────────────────────────────────────
+        const DAYS_TH_SS   = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+        const MONTHS_TH_SS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+        let ssTimer = null;
+        let ssActive = false;
+        let ssClockInterval = null;
+        let ssMatrixFrame = null;
+        let ssPawInterval = null;
+        let ssBallInterval = null;
+
+        function getSsSettings() {
+            return Object.assign({ enabled: true, timeout: 5, anim: 'paws' },
+                JSON.parse(localStorage.getItem('screensaver-settings') || '{}'));
+        }
+
+        function resetSsTimer() {
+            if (ssActive) return;
+            const cfg = getSsSettings();
+            if (!cfg.enabled) return;
+            clearTimeout(ssTimer);
+            ssTimer = setTimeout(activateScreensaver, cfg.timeout * 60 * 1000);
+        }
+
+        function activateScreensaver() {
+            if (sessionStorage.getItem("isLoggedIn") !== "true") return;
+            ssActive = true;
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.classList.add('active');
+            buildSsContent(getSsSettings().anim);
+        }
+
+        function dismissScreensaver() {
+            ssActive = false;
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.classList.remove('active');
+            clearSsContent();
+            resetSsTimer();
+        }
+
+        function clearSsContent() {
+            if (ssClockInterval)  { clearInterval(ssClockInterval);  ssClockInterval = null; }
+            if (ssMatrixFrame)    { cancelAnimationFrame(ssMatrixFrame); ssMatrixFrame = null; }
+            if (ssPawInterval)    { clearInterval(ssPawInterval);    ssPawInterval = null; }
+            if (ssBallInterval)   { clearInterval(ssBallInterval);   ssBallInterval = null; }
+            document.getElementById('ss-inner').innerHTML = '';
+            const mc = document.getElementById('ss-matrix-canvas');
+            mc.style.display = 'none';
+        }
+
+        function buildSsContent(anim) {
+            clearSsContent();
+            const inner = document.getElementById('ss-inner');
+            if (anim === 'paws') buildSsPaws(inner);
+            else if (anim === 'bounce') buildSsBounce(inner);
+            else if (anim === 'matrix') buildSsMatrix();
+            else if (anim === 'clock')  buildSsClock(inner);
+        }
+
+        function buildSsPaws(container) {
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.style.background = '#000';
+            const EMOJIS = ['🐾','🐾','🐾','🐱','🐶','🐰','🐹','🐻','🦊'];
+            function spawnPaw() {
+                if (!ssActive) return;
+                const el = document.createElement('div');
+                el.className = 'ss-paw';
+                el.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+                el.style.left = (Math.random() * 95) + '%';
+                const dur = 5 + Math.random() * 6;
+                el.style.fontSize = (1.5 + Math.random() * 3) + 'rem';
+                el.style.animationDuration = dur + 's';
+                overlay.appendChild(el);
+                setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur * 1000 + 500);
+            }
+            for (let i = 0; i < 8; i++) setTimeout(spawnPaw, i * 300);
+            ssPawInterval = setInterval(spawnPaw, 500);
+        }
+
+        function buildSsBounce(container) {
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.style.background = 'linear-gradient(135deg, #000 0%, #0f172a 100%)';
+            const ball = document.createElement('div');
+            ball.className = 'ss-ball';
+            overlay.appendChild(ball);
+
+            ssBallInterval = setInterval(() => {
+                if (!ssActive) return;
+                const s = document.createElement('div');
+                const br = ball.getBoundingClientRect();
+                s.style.cssText = `position:fixed;width:12px;height:12px;border-radius:50%;background:rgba(20,184,177,0.4);pointer-events:none;z-index:901;transition:all 0.8s ease;left:${br.left+34}px;top:${br.top+34}px;`;
+                document.body.appendChild(s);
+                requestAnimationFrame(() => { s.style.transform='scale(0)'; s.style.opacity='0'; });
+                setTimeout(() => { if(s.parentNode) s.parentNode.removeChild(s); }, 800);
+            }, 100);
+        }
+
+        function buildSsMatrix() {
+            const canvas = document.getElementById('ss-matrix-canvas');
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.style.background = '#000';
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.display = 'block';
+
+            const ctx   = canvas.getContext('2d');
+            const cols  = Math.floor(canvas.width / 16);
+            const drops = Array(cols).fill(0);
+            const chars = 'アイウエオカキクケコサシスセソABCDEF0123456789@#$%&';
+
+            function draw() {
+                if (!ssActive) return;
+                ctx.fillStyle = 'rgba(0,0,0,0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#14b8b1';
+                ctx.font = '14px monospace';
+                drops.forEach((y, i) => {
+                    const ch = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(ch, i * 16, y * 16);
+                    if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                });
+                ssMatrixFrame = requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function buildSsClock(container) {
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.style.background = '#000';
+            container.innerHTML = `
+                <div class="ss-clock-wrap">
+                    <div class="ss-clock-time" id="ss-clock-time">00:00:00</div>
+                    <div class="ss-clock-date" id="ss-clock-date"></div>
+                    <div class="ss-clock-clinic">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+                </div>`;
+            function tick() {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2,'0');
+                const mm = String(now.getMinutes()).padStart(2,'0');
+                const ss = String(now.getSeconds()).padStart(2,'0');
+                const tEl = document.getElementById('ss-clock-time');
+                const dEl = document.getElementById('ss-clock-date');
+                if (tEl) tEl.textContent = `${hh}:${mm}:${ss}`;
+                if (dEl) dEl.textContent =
+                    `วัน${DAYS_TH_SS[now.getDay()]}ที่ ${now.getDate()} ${MONTHS_TH_SS[now.getMonth()]} ${now.getFullYear() + 543}`; // +543 = พุทธศักราช
+            }
+            tick();
+            ssClockInterval = setInterval(tick, 1000);
+        }
+
+        function initScreensaver() {
+            ['mousemove','touchstart','scroll'].forEach(evt => {
+                document.addEventListener(evt, () => {
+                    if (ssActive) { dismissScreensaver(); return; }
+                    resetSsTimer();
+                }, { passive: true });
+            });
+            ['mousedown','keydown','click'].forEach(evt => {
+                document.addEventListener(evt, () => {
+                    if (ssActive) { dismissScreensaver(); return; }
+                    resetSsTimer();
+                });
+            });
+            resetSsTimer();
+        }
     </script>
 </body>
 </html>
