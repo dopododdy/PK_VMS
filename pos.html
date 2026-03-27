@@ -352,6 +352,31 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- พิมพ์รายงานตามช่วงเวลา -->
+                <div class="mt-6 bg-slate-900/50 border border-white/10 rounded-2xl p-5">
+                    <h3 class="text-base font-black text-white flex items-center gap-2 mb-4">
+                        <i data-lucide="file-bar-chart" class="text-purple-400 w-5 h-5"></i> พิมพ์รายงานตามช่วงเวลา
+                    </h3>
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-xs text-gray-400 font-bold">ตั้งแต่วันที่</span>
+                            <input type="text" id="print-from-datepicker" placeholder="📅 วันที่เริ่มต้น"
+                                class="bg-slate-800/80 border border-white/15 rounded-xl px-3 py-1.5 text-white text-sm w-44 cursor-pointer focus:outline-none focus:border-purple-400/60 transition">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-xs text-gray-400 font-bold">ถึงวันที่</span>
+                            <input type="text" id="print-to-datepicker" placeholder="📅 วันที่สิ้นสุด"
+                                class="bg-slate-800/80 border border-white/15 rounded-xl px-3 py-1.5 text-white text-sm w-44 cursor-pointer focus:outline-none focus:border-purple-400/60 transition">
+                        </div>
+                        <button onclick="printRangeReport()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold text-sm transition flex items-center gap-2 self-end">
+                            <i data-lucide="printer" class="w-4 h-4"></i> พิมพ์รายงาน A4
+                        </button>
+                        <button onclick="printAnnualReport()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-sm transition flex items-center gap-2 self-end">
+                            <i data-lucide="calendar-range" class="w-4 h-4"></i> พิมพ์รายงานรายปี (ม.ค.–ธ.ค.)
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="p-6 border-t border-white/10 bg-black/20 flex justify-end">
                 <button onclick="closeSummaryModal()" class="px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition">ปิดหน้าต่าง</button>
@@ -1056,6 +1081,8 @@
         }
 
         let _billsDatePicker = null;
+        let _printFromDatePicker = null;
+        let _printToDatePicker = null;
 
         function updateCalendarYearToBE(instance) {
             if (!instance.calendarContainer) return;
@@ -1086,6 +1113,32 @@
                         instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
                     }
                     onBillsDateChange(selectedDates[0] || null);
+                }
+            };
+        }
+
+        function makePrintDatePickerConfig() {
+            return {
+                locale: "th",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "j F Y",
+                maxDate: "today",
+                onReady: (selectedDates, dateStr, instance) => {
+                    if (dateStr && instance.altInput) {
+                        const y = new Date(dateStr).getFullYear();
+                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
+                    }
+                    updateCalendarYearToBE(instance);
+                },
+                onOpen: (_, __, instance) => updateCalendarYearToBE(instance),
+                onMonthChange: (_, __, instance) => updateCalendarYearToBE(instance),
+                onYearChange: (_, __, instance) => updateCalendarYearToBE(instance),
+                onChange: (selectedDates, dateStr, instance) => {
+                    if (dateStr && instance.altInput) {
+                        const y = new Date(dateStr).getFullYear();
+                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
+                    }
                 }
             };
         }
@@ -1154,6 +1207,14 @@
                 const dpEl = document.getElementById('bills-datepicker');
                 if (dpEl) _billsDatePicker = flatpickr(dpEl, makeDashboardDatePickerConfig());
             }
+            if (!_printFromDatePicker) {
+                const fromEl = document.getElementById('print-from-datepicker');
+                if (fromEl) _printFromDatePicker = flatpickr(fromEl, makePrintDatePickerConfig());
+            }
+            if (!_printToDatePicker) {
+                const toEl = document.getElementById('print-to-datepicker');
+                if (toEl) _printToDatePicker = flatpickr(toEl, makePrintDatePickerConfig());
+            }
             // Load bills for the currently selected date (or today if none)
             if (_billsDatePicker && _billsDatePicker.selectedDates.length) {
                 const { startDate, endDate } = getBillsDateRange(_billsDatePicker.selectedDates[0]);
@@ -1218,25 +1279,13 @@
             await openSummaryModal();
         }
 
-        async function printDailyReport() {
-            const now = new Date();
-            let effectiveStart, effectiveEnd = null, reportDate, reset = null;
-            if (_billsDatePicker && _billsDatePicker.selectedDates.length) {
-                reportDate = _billsDatePicker.selectedDates[0];
-                ({ startDate: effectiveStart, endDate: effectiveEnd } = getBillsDateRange(reportDate));
-            } else {
-                reportDate = now;
-                const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-                reset = localStorage.getItem('pos_reset_day');
-                effectiveStart = (reset && reset > periodStart) ? reset : periodStart;
-            }
-
+        async function printSalesReport(startIso, endIso, reportTitle, subtitle, showDate = false) {
             // Fetch bills
             let query = db.from('medical_records')
                 .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)')
                 .eq('payment_status', 'paid')
-                .gte('paid_at', effectiveStart);
-            if (effectiveEnd) query = query.lte('paid_at', effectiveEnd);
+                .gte('paid_at', startIso);
+            if (endIso) query = query.lte('paid_at', endIso);
             const { data } = await query.order('paid_at', { ascending: true });
             const bills = data || [];
 
@@ -1268,10 +1317,6 @@
             const grandDiscount = bills.reduce((s, r) => s + parseFloat(r.discount || 0), 0);
             const grandRaw = bills.reduce((s, r) => s + parseFloat(r.total_cost || 0), 0);
 
-            // Build Thai date with day-of-week
-            const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-            const thaiDateFull = `วัน${thaiDays[reportDate.getDay()]}ที่ ${formatThaiDate(reportDate.toISOString())}`;
-
             function itemRowsHtml(items) {
                 if (!items || items.length === 0) return '';
                 return items.map(it => `<tr style="background:#f8fafc;">
@@ -1282,10 +1327,7 @@
                 </tr>`).join('');
             }
 
-            function groupHeaderRow(label) {
-                return `<tr><td colspan="8" style="padding:2px 8px 2px 16px;background:#f1f5f9;font-size:7.5pt;font-weight:700;color:#64748b;border:1px solid #e2e8f0;">${label}</td></tr>`;
-            }
-
+            const timeColHeader = showDate ? 'วันที่/เวลา' : 'เวลา';
             const rowsHtml = bills.length === 0
                 ? '<tr><td colspan="8" style="text-align:center;padding:20px;color:#64748b;">ไม่มีรายการ</td></tr>'
                 : bills.map((r, i) => {
@@ -1293,20 +1335,24 @@
                     const grps = itemsByBill[r.id] || { g1: [], g2: [] };
                     const g1Rows = itemRowsHtml(grps.g1);
                     const g2Rows = itemRowsHtml(grps.g2);
+                    const timeCell = r.paid_at
+                        ? (showDate
+                            ? `${formatThaiDate(r.paid_at, 'short')} ${new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}`
+                            : new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}))
+                        : '-';
                     return `<tr style="background:${bg}">
                     <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-weight:700;">${i + 1}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-family:monospace;font-size:8pt;">${r.receipt_no || '-'}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.owners?.owner_name || (r.owner_hn ? '-' : 'Walk-in')}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.animals?.pet_name || (r.owner_hn ? '-' : 'Walk-in')}</td>
-                    <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;">${r.paid_at ? new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : '-'}</td>
+                    <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-size:8pt;">${timeCell}</td>
                     <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;">${parseFloat(r.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                     <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;color:#dc2626;">${parseFloat(r.discount || 0) > 0 ? parseFloat(r.discount).toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td>
                     <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;font-weight:700;">${parseFloat(r.net_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 </tr>${g1Rows}${g2Rows}`;
                 }).join('');
 
-            const resetNote = reset
-                ? `<div style="margin-top:4px;font-size:8pt;color:#dc2626;">* นับจากการรีเซ็ตเมื่อ ${new Date(reset).toLocaleTimeString('th-TH')}</div>` : '';
+            const now = new Date();
             const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1321,17 +1367,16 @@ td { font-size: 9pt; }
 tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2px solid #0f172a; padding: 7px 8px; }
 .divider { border: none; border-top: 1px solid #e2e8f0; margin: 8px 0; }
 </style></head><body>
-<h1>สรุปบิลประจำวัน</h1>
-<div class="subtitle">${thaiDateFull} &nbsp;|&nbsp; พิมพ์เมื่อ ${now.toLocaleTimeString('th-TH')}</div>
-${resetNote}
+<h1>${reportTitle}</h1>
+<div class="subtitle">${subtitle} &nbsp;|&nbsp; พิมพ์เมื่อ ${now.toLocaleTimeString('th-TH')}</div>
 <table>
 <thead><tr>
     <th style="width:4%">#</th>
     <th style="width:16%">เลขบิล</th>
     <th style="width:20%">เจ้าของ</th>
     <th style="width:13%">สัตว์เลี้ยง</th>
-    <th style="width:8%">เวลา</th>
-    <th style="width:13%">ยอดรวม</th>
+    <th style="width:${showDate ? '14%' : '8%'}">${timeColHeader}</th>
+    <th style="width:${showDate ? '7%' : '13%'}">ยอดรวม</th>
     <th style="width:9%">ส่วนลด</th>
     <th style="width:17%">ยอดสุทธิ</th>
 </tr></thead>
@@ -1357,6 +1402,45 @@ ${resetNote}
                 }, { once: true });
                 iframe.contentWindow.print();
             });
+        }
+
+        async function printDailyReport() {
+            const now = new Date();
+            let effectiveStart, effectiveEnd = null, reportDate, reset = null;
+            if (_billsDatePicker && _billsDatePicker.selectedDates.length) {
+                reportDate = _billsDatePicker.selectedDates[0];
+                ({ startDate: effectiveStart, endDate: effectiveEnd } = getBillsDateRange(reportDate));
+            } else {
+                reportDate = now;
+                const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+                reset = localStorage.getItem('pos_reset_day');
+                effectiveStart = (reset && reset > periodStart) ? reset : periodStart;
+            }
+            const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+            const thaiDateFull = `วัน${thaiDays[reportDate.getDay()]}ที่ ${formatThaiDate(reportDate.toISOString())}`;
+            const resetNote = reset ? ` (นับจากการรีเซ็ตเมื่อ ${new Date(reset).toLocaleTimeString('th-TH')})` : '';
+            await printSalesReport(effectiveStart, effectiveEnd, 'สรุปบิลประจำวัน', thaiDateFull + resetNote, false);
+        }
+
+        async function printRangeReport() {
+            const fromDate = _printFromDatePicker && _printFromDatePicker.selectedDates.length ? _printFromDatePicker.selectedDates[0] : null;
+            const toDate = _printToDatePicker && _printToDatePicker.selectedDates.length ? _printToDatePicker.selectedDates[0] : null;
+            if (!fromDate || !toDate) { alert('กรุณาเลือก "ตั้งแต่วันที่" และ "ถึงวันที่" ให้ครบก่อนพิมพ์รายงาน'); return; }
+            if (fromDate > toDate) { alert('"ตั้งแต่วันที่" ต้องไม่เกิน "ถึงวันที่"'); return; }
+            const startIso = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()).toISOString();
+            const endIso = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59, 999).toISOString();
+            const subtitle = `${formatThaiDate(startIso)} – ${formatThaiDate(endIso)}`;
+            await printSalesReport(startIso, endIso, 'สรุปรายงานยอดขาย', subtitle, true);
+        }
+
+        async function printAnnualReport() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const startIso = new Date(year, 0, 1).toISOString();
+            const endIso = new Date(year, 11, 31, 23, 59, 59, 999).toISOString();
+            const thaiYear = year + 543;
+            const subtitle = `มกราคม – ธันวาคม ${thaiYear}`;
+            await printSalesReport(startIso, endIso, `สรุปรายงานยอดขายประจำปี ${thaiYear}`, subtitle, true);
         }
 
         /* ─── Combined Receipt (multiple pets, same owner) ─── */
