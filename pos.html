@@ -146,6 +146,9 @@
                 <i data-lucide="search" class="absolute left-4 top-4 w-5 h-5 text-gray-500"></i>
             </div>
         </div>
+        <button type="button" onclick="newWalkInSale()" class="w-full flex items-center justify-center gap-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-black py-4 rounded-xl transition-all text-lg mb-4">
+            <span class="text-xl">🧾</span> ขายของ Walk-in (ไม่ต้องลงทะเบียน)
+        </button>
         <div class="flex-1 overflow-hidden flex flex-col gap-4">
             <div class="flex flex-col" style="max-height:33%">
                 <span class="txt-label mb-3">รายการรอชำระเงิน (<span id="count-pending">0</span>)</span>
@@ -543,8 +546,12 @@
                 .eq('payment_status', 'pending')
                 .order('created_at', { ascending: true });
             const list = (data || []).map(r => {
-                const patient = allPatients.find(p => p.owner_hn === r.owner_hn);
-                return { ...r, pet_name: r.animals?.pet_name || patient?.pet_name || '-', pet_type: r.animals?.pet_type || patient?.pet_type || null, owner_name: r.owners?.owner_name || patient?.owners?.owner_name || '-' };
+                const isWalkIn = !r.owner_hn;
+                const patient = isWalkIn ? null : allPatients.find(p => p.owner_hn === r.owner_hn);
+                return { ...r,
+                    pet_name: isWalkIn ? '🧾 Walk-in' : (r.animals?.pet_name || patient?.pet_name || '-'),
+                    pet_type: isWalkIn ? null : (r.animals?.pet_type || patient?.pet_type || null),
+                    owner_name: isWalkIn ? 'Walk-in' : (r.owners?.owner_name || patient?.owners?.owner_name || '-') };
             });
             pendingRecordsMap = {};
             list.forEach(r => { pendingRecordsMap[r.id] = r; });
@@ -567,7 +574,7 @@
                             <span class="text-amber-400 font-bold text-sm">${getAnimalIcon(r.pet_type)} ${r.pet_name}</span>
                             <span class="text-amber-400 font-bold text-sm">฿${parseFloat(r.net_amount || r.total_cost || 0).toLocaleString()}</span>
                         </div>
-                        <div class="text-gray-400 text-[11px]">${r.owner_hn} | ${formatThaiDate(r.created_at, 'short')}</div>
+                        <div class="text-gray-400 text-[11px]">${r.owner_hn || 'Walk-in'} | ${formatThaiDate(r.created_at, 'short')}</div>
                     </div>`).join('');
                 if (g.records.length > 1) {
                     const totalAmt = g.records.reduce((s, r) => s + parseFloat(r.net_amount || r.total_cost || 0), 0);
@@ -586,8 +593,63 @@
         async function loadPendingRecord(recordId) {
             const r = pendingRecordsMap[recordId];
             if (!r) return;
+            if (!r.owner_hn) {
+                // Walk-in record – no patient history needed
+                setWalkInActivePatient();
+                await viewRecordDetail(recordId, 'pending');
+                if (window.innerWidth <= 1023) switchPosTab('main');
+                return;
+            }
             await loadPatientHistory(r.owner_hn, r.pet_name, r.owner_name);
             await viewRecordDetail(recordId, 'pending');
+        }
+
+        async function newWalkInSale() {
+            const { data: record, error } = await db.from('medical_records').insert([{
+                owner_hn: null,
+                animal_id: null,
+                total_cost: 0,
+                net_amount: 0,
+                payment_status: 'pending',
+                dld_categories: []
+            }]).select().single();
+            if (error) { alert('ไม่สามารถสร้างรายการ Walk-in ได้: ' + error.message); return; }
+            setWalkInActivePatient();
+            await viewRecordDetail(record.id, 'pending');
+            fetchPendingPayments();
+            if (window.innerWidth <= 1023) switchPosTab('main');
+        }
+
+        function setWalkInActivePatient() {
+            activePatient = { hn: null, petName: 'ลูกค้า Walk-in', ownerName: 'Walk-in' };
+            document.getElementById('display-pet-name').innerText = '🧾 ลูกค้า Walk-in';
+            document.getElementById('display-owner-info').innerText = 'ขายปลีก / Walk-in Sale';
+            document.getElementById('payment-history').innerHTML = '';
+        }
+
+        function resetCartDisplay() {
+            activeRecordId = null;
+            activePatient = null;
+            currentRecordData = null;
+            document.getElementById('display-pet-name').innerText = 'รายการรอชำระเงิน';
+            document.getElementById('display-owner-info').innerText = 'กรุณาเลือกรายการจากคอลัมน์ซ้าย';
+            document.getElementById('cart-items').innerHTML = '';
+            document.getElementById('sum-total').innerText = '0.00';
+            document.getElementById('net-total').innerText = '0.00';
+            document.getElementById('input-discount').value = 0;
+            document.getElementById('input-discount').disabled = false;
+            document.getElementById('received-cash').value = '';
+            document.getElementById('received-cash').disabled = false;
+            document.getElementById('change-amount').innerText = '0.00';
+            document.getElementById('btn-add-item').classList.add('hidden');
+            document.getElementById('manual-item-row').classList.add('hidden');
+            document.getElementById('view-mode-tag').classList.add('hidden');
+            const btn = document.getElementById('btn-pay');
+            document.getElementById('btn-text').innerText = 'ยืนยันการชำระเงิน';
+            document.getElementById('btn-icon').setAttribute('data-lucide', 'check-circle');
+            btn.className = 'w-full h-20 bg-teal-500 rounded-xl text-navy-dark font-black text-xl hover:bg-teal-400 transition-all flex items-center justify-center gap-3 mt-2';
+            btn.onclick = processPayment;
+            lucide.createIcons();
         }
 
         async function loadPatientHistory(hn, petName, ownerName) {
@@ -862,7 +924,7 @@
             const yyyy = now.getFullYear() + 543, mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
             const { count } = await db.from('medical_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'paid').gte('paid_at', startOfDay);
-            const receiptNo = `${yyyy}${mm}${dd}${activePatient.hn}${String((count || 0) + 1).padStart(2, '0')}`;
+            const receiptNo = `${yyyy}${mm}${dd}${activePatient.hn || 'WI'}${String((count || 0) + 1).padStart(2, '0')}`;
 
             const { error } = await db.from('medical_records').update({
                 payment_status: 'paid', receipt_no: receiptNo, discount: parseFloat(document.getElementById('input-discount').value),
@@ -877,7 +939,11 @@
             }
             sendToCustomerDisplay({ type: 'payment_done' });
             printReceipt(activeRecordId);
-            loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
+            if (activePatient && activePatient.hn) {
+                loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
+            } else {
+                resetCartDisplay();
+            }
             fetchPendingPayments();
         }
 
@@ -900,15 +966,15 @@
                     clinic_name: "PK-VMS Animal Clinic",
                     clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
                     phone: "02-123-4567", tax_id: "0105560001234",
-                    owner_name: record.owners?.owner_name || "-",
+                    owner_name: record.owners?.owner_name || (record.owner_hn ? "-" : "ลูกค้า Walk-in"),
                     owner_phone: record.owners?.phone || "-",
                     owner_address: record.owners?.address || "-",
-                    pet_name: record.animals?.pet_name || "-",
+                    pet_name: record.animals?.pet_name || (record.owner_hn ? "-" : "Walk-in"),
                     species: record.animals?.pet_type || "-",
                     sex: record.animals?.gender || "-",
                     weight: record.animals?.weight ? record.animals.weight + ' กก.' : "-",
                     breed: record.animals?.breed || "-",
-                    hn: record.owner_hn || "-",
+                    hn: record.owner_hn || "Walk-in",
                     receipt_no: record.receipt_no || "-", time: record.paid_at ? new Date(record.paid_at).toLocaleTimeString('th-TH') : "-",
                     total_price: parseFloat(record.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     discount_val: parseFloat(record.discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
@@ -1035,7 +1101,7 @@
             const container = document.getElementById('daily-bills-list');
             container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">กำลังโหลด...</p>';
             const { data } = await db.from('medical_records')
-                .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owners(owner_name), animals(pet_name)')
+                .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)')
                 .eq('payment_status', 'paid')
                 .gte('paid_at', startDate)
                 .order('paid_at', { ascending: false });
@@ -1046,8 +1112,8 @@
             container.innerHTML = data.map((r, i) => `
                 <div class="grid grid-cols-12 p-3 border-b border-white/5 text-sm hover:bg-white/5 transition ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}">
                     <div class="col-span-3 font-mono text-teal-400 text-xs truncate">${r.receipt_no || '-'}</div>
-                    <div class="col-span-2 text-white truncate">${r.owners?.owner_name || '-'}</div>
-                    <div class="col-span-2 text-gray-300 truncate">${r.animals?.pet_name || '-'}</div>
+                    <div class="col-span-2 text-white truncate">${r.owners?.owner_name || (r.owner_hn ? '-' : 'Walk-in')}</div>
+                    <div class="col-span-2 text-gray-300 truncate">${r.animals?.pet_name || (r.owner_hn ? '-' : '🧾 Walk-in')}</div>
                     <div class="col-span-2 text-center text-gray-400 text-xs">${r.paid_at ? new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : '-'}</div>
                     <div class="col-span-2 text-right font-bold text-white">${parseFloat(r.net_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                     <div class="col-span-1 flex justify-center items-center">
@@ -1075,7 +1141,7 @@
 
             // Fetch bills
             const { data } = await db.from('medical_records')
-                .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owners(owner_name), animals(pet_name)')
+                .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)')
                 .eq('payment_status', 'paid')
                 .gte('paid_at', effectiveStart)
                 .order('paid_at', { ascending: true });
@@ -1138,8 +1204,8 @@
                     return `<tr style="background:${bg}">
                     <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-weight:700;">${i + 1}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-family:monospace;font-size:8pt;">${r.receipt_no || '-'}</td>
-                    <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.owners?.owner_name || '-'}</td>
-                    <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.animals?.pet_name || '-'}</td>
+                    <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.owners?.owner_name || (r.owner_hn ? '-' : 'Walk-in')}</td>
+                    <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.animals?.pet_name || (r.owner_hn ? '-' : 'Walk-in')}</td>
                     <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;">${r.paid_at ? new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : '-'}</td>
                     <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;">${parseFloat(r.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                     <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;color:#dc2626;">${parseFloat(r.discount || 0) > 0 ? parseFloat(r.discount).toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td>
