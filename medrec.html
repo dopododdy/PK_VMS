@@ -171,10 +171,92 @@
             .split-pane-left { width: 100%; height: 50vh; }
             .split-pane-right { width: 100%; height: 50vh; }
         }
+
+        /* ─── Sidebar (same as animals.html) ─── */
+        .sidebar-container { position: relative; width: 420px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .pet-card {
+            padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
+            display: grid; grid-template-columns: 75px 1fr 70px; gap: 10px; align-items: stretch; transition: 0.2s;
+        }
+        .pet-card:hover { background: rgba(255,255,255,0.07); }
+        .pet-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
+        .pet-main-name { color: #fff; font-weight: 800; font-size: 1rem; line-height: 1.2; }
+        .hn-col { background: rgba(30, 41, 59, 1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #60a5fa; font-size: 0.95rem; border: 1px solid rgba(255,255,255,0.1); }
+        .owner-subtext { color: #94a3b8; font-size: 0.8rem; }
+        .phone-badge { color: var(--teal); font-weight: 700; font-size: 0.8rem; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 60;
+            background: var(--teal);
+            color: #020617;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-weight: 900;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(20,184,177,0.4);
+            white-space: nowrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 49;
+            backdrop-filter: blur(2px);
+        }
+        @media (max-width: 767px) {
+            .sidebar-container {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                height: 100%;
+                width: min(85vw, 380px) !important;
+                z-index: 50;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+            .sidebar-container.sidebar-open { left: 0; }
+            .sidebar-backdrop.sidebar-open { display: block; }
+            .sidebar-toggle { display: flex; }
+            #medrec-content { padding: 1rem; min-height: 100vh; overflow-y: auto; }
+        }
     </style>
 </head>
-<body class="p-4 md:p-10">
+<body>
 
+    <div class="flex h-screen overflow-hidden" id="medrec-app-wrapper">
+        <div class="sidebar-backdrop" id="sidebar-backdrop-medrec" onclick="closeMedrecSidebar()"></div>
+        <aside class="sidebar-container custom-scroll" id="main-sidebar-medrec">
+            <div class="p-5 flex-shrink-0 border-b border-white/5">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🐾</span>
+                        <h2 class="text-xl font-black text-white">เวชระเบียน</h2>
+                    </div>
+                    <a href="index.html" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-teal-500/20 hover:text-teal-400 transition-all text-gray-300 font-bold text-sm">
+                        <span class="text-xl">🏠</span><span>หน้าหลัก</span>
+                    </a>
+                </div>
+                <input type="text" id="sidebar-search-medrec" class="input-box text-sm" placeholder="ค้นหา HN, ชื่อสัตว์, ชื่อเจ้าของ, เบอร์โทร..." oninput="renderMedrecSidebar()">
+            </div>
+            <div class="flex gap-2 px-4 py-2 flex-shrink-0 border-b border-white/5">
+                <button id="mtab-all" onclick="switchMedrecTab('all')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-teal-500/20 text-teal-400 border border-teal-500/30">📋 เวชระเบียน</button>
+                <button id="mtab-today" onclick="switchMedrecTab('today')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent relative">📅 นัดหมายวันนี้<span id="mtab-today-badge" class="hidden absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center"></span></button>
+            </div>
+            <div id="medrec-owner-list" class="flex-1 overflow-y-auto px-2 pb-4 custom-scroll"></div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-4 md:p-10 bg-[#020617] custom-scroll" id="medrec-content">
     <div id="main-ui" class="max-w-6xl mx-auto">
         <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
             <div class="flex items-center gap-4 md:gap-6">
@@ -306,6 +388,8 @@
             </div>
         </div>
     </div>
+        </main>
+    </div>
 
     <div id="catalog-modal" class="modal-overlay"><div class="modal-content"><div class="p-6 border-b border-white/10 flex justify-between bg-slate-900/50"><h3 id="modal-title" class="text-2xl font-bold">เลือกรายการ</h3><button onclick="closeCatalog()" class="text-3xl">✕</button></div><div class="p-4 bg-white/5"><input type="text" id="catalog-search" class="input-box" placeholder="ค้นหา..." oninput="filterCatalog()"></div><div class="px-4 py-3 bg-amber-500/5 border-t border-amber-500/20 flex gap-3 items-center"><input type="text" id="custom-item-name" class="input-box flex-1" placeholder="พิมพ์ชื่อรายการเอง..."><input type="number" id="custom-item-price" class="input-box w-28 text-right" placeholder="ราคา" step="0.01" min="0"><button onclick="addCustomItem()" class="btn-base btn-teal px-4 shrink-0">➕ เพิ่ม</button></div><div id="catalog-items" class="flex-1 overflow-y-auto p-4 space-y-3 bg-black/20"></div><div class="p-5 bg-teal-500/10 border-t border-teal-500/20"><div id="modal-session-list" class="flex flex-wrap gap-3"></div></div><div class="p-6 border-t border-white/10 bg-slate-900/50"><button onclick="closeCatalog()" class="btn-base btn-blue w-full text-xl py-4">เสร็จสิ้น</button></div></div></div>
     
@@ -385,6 +469,8 @@
             </div>
         </div>
     </div>
+
+    <button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleMedrecSidebar()">☰ เวชระเบียน</button>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
@@ -517,11 +603,225 @@
             };
         }
 
+        // ─── Sidebar data & functions ───
+        let _sbAnimals = [], _sbOwners = [], _sbPhones = [], _sbMedRecs = [];
+        let _sbPrimaryPhoneMap = new Map(), _sbAllPhonesMap = new Map(), _sbMedTextByAnimalId = new Map();
+        let _sbCurrentTab = 'all';
+
+        function toggleMedrecSidebar() {
+            const sb = document.getElementById('main-sidebar-medrec');
+            const bd = document.getElementById('sidebar-backdrop-medrec');
+            const btn = document.getElementById('sidebar-toggle-btn');
+            const isOpen = sb.classList.contains('sidebar-open');
+            if (isOpen) {
+                closeMedrecSidebar();
+            } else {
+                sb.classList.add('sidebar-open');
+                bd.classList.add('sidebar-open');
+                if (btn) btn.textContent = '✕ ปิด';
+            }
+        }
+        function closeMedrecSidebar() {
+            const sb = document.getElementById('main-sidebar-medrec');
+            const bd = document.getElementById('sidebar-backdrop-medrec');
+            const btn = document.getElementById('sidebar-toggle-btn');
+            sb.classList.remove('sidebar-open');
+            bd.classList.remove('sidebar-open');
+            if (btn) btn.textContent = '☰ เวชระเบียน';
+        }
+
+        function getAnimalIconSb(petType) {
+            if (!petType) return '🐾';
+            const t = petType.replace(/^[^\u0E00-\u0E7F]+/, '').trim();
+            if (t.startsWith('สุนัข') || t.startsWith('หมา')) return '🐶';
+            if (t.startsWith('แมว')) return '🐱';
+            return '🐾';
+        }
+
+        function formatThaiDateSb(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
+        }
+
+        async function fetchAllRowsSb(queryBuilder) {
+            const PAGE_SIZE = 1000;
+            let all = [], from = 0;
+            while (true) {
+                const { data, error } = await queryBuilder.range(from, from + PAGE_SIZE - 1);
+                if (error) break;
+                if (!data || data.length === 0) break;
+                all = all.concat(data);
+                if (data.length < PAGE_SIZE) break;
+                from += PAGE_SIZE;
+            }
+            return all;
+        }
+
+        async function loadSidebarData() {
+            try {
+                const [animals, owners, phones, medRecs] = await Promise.all([
+                    fetchAllRowsSb(db.from('animals').select('id, owner_hn, pet_name, pet_type').order('owner_hn', { ascending: false })),
+                    fetchAllRowsSb(db.from('owners').select('hn, owner_name')),
+                    fetchAllRowsSb(db.from('owner_phones').select('owner_hn, phone_number, label')),
+                    fetchAllRowsSb(db.from('medical_records').select('id, animal_id, owner_hn, created_at, appointment, appointment_2, appointment_note, appointment_note_2'))
+                ]);
+                _sbAnimals = animals;
+                _sbOwners = owners;
+                _sbPhones = phones;
+                _sbMedRecs = medRecs;
+                _sbPrimaryPhoneMap = new Map();
+                _sbAllPhonesMap = new Map();
+                phones.forEach(p => {
+                    if (p.label === 'เบอร์หลัก' && !_sbPrimaryPhoneMap.has(p.owner_hn)) _sbPrimaryPhoneMap.set(p.owner_hn, p.phone_number);
+                    if (!_sbAllPhonesMap.has(p.owner_hn)) _sbAllPhonesMap.set(p.owner_hn, []);
+                    _sbAllPhonesMap.get(p.owner_hn).push(p.phone_number);
+                });
+                _sbMedTextByAnimalId = new Map();
+                medRecs.forEach(rec => {
+                    const dateStr = (rec.created_at || '').slice(0, 10);
+                    const text = dateStr.toLowerCase();
+                    const prev = _sbMedTextByAnimalId.get(rec.animal_id) || '';
+                    _sbMedTextByAnimalId.set(rec.animal_id, prev + ' ' + text);
+                });
+                updateSbTodayBadge();
+                renderMedrecSidebar();
+                markActiveSidebarAnimal();
+            } catch (e) { console.warn('Sidebar data load error:', e); }
+        }
+
+        function markActiveSidebarAnimal() {
+            if (!animalId) return;
+            document.querySelectorAll('#medrec-owner-list .pet-card').forEach(el => el.classList.remove('active'));
+            const activeCard = document.getElementById(`sb-pet-${animalId}`);
+            if (activeCard) activeCard.classList.add('active');
+        }
+
+        function getTodayStrSb() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        }
+
+        function updateSbTodayBadge() {
+            const today = getTodayStrSb();
+            const seenAnimals = new Set();
+            _sbMedRecs.forEach(r => { if (r.appointment === today || r.appointment_2 === today) seenAnimals.add(r.animal_id); });
+            const badge = document.getElementById('mtab-today-badge');
+            if (!badge) return;
+            if (seenAnimals.size > 0) { badge.textContent = seenAnimals.size; badge.classList.remove('hidden'); }
+            else { badge.classList.add('hidden'); }
+        }
+
+        function switchMedrecTab(tab) {
+            _sbCurrentTab = tab;
+            const searchBox = document.getElementById('sidebar-search-medrec');
+            const tabAll = document.getElementById('mtab-all');
+            const tabToday = document.getElementById('mtab-today');
+            if (tab === 'all') {
+                tabAll.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-teal-500/20 text-teal-400 border border-teal-500/30';
+                tabToday.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent relative';
+                if (searchBox) searchBox.style.display = '';
+                renderMedrecSidebar();
+            } else {
+                tabAll.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent';
+                tabToday.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-orange-500/20 text-orange-400 border border-orange-500/30 relative';
+                if (searchBox) searchBox.style.display = 'none';
+                renderMedrecSidebarToday();
+            }
+        }
+
+        function renderMedrecSidebarToday() {
+            const today = getTodayStrSb();
+            const container = document.getElementById('medrec-owner-list');
+            const ownerMap = new Map(_sbOwners.map(o => [o.hn, o]));
+            const animalApptMap = new Map();
+            _sbMedRecs.forEach(r => {
+                const notes = [];
+                if (r.appointment === today) notes.push(r.appointment_note || 'นัดหมาย');
+                if (r.appointment_2 === today) notes.push(r.appointment_note_2 || 'นัดหมาย');
+                if (!notes.length) return;
+                if (!animalApptMap.has(r.animal_id)) animalApptMap.set(r.animal_id, new Set());
+                notes.forEach(n => animalApptMap.get(r.animal_id).add(n));
+            });
+            const animalsWithAppt = _sbAnimals.filter(a => animalApptMap.has(a.id));
+            if (!animalsWithAppt.length) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-12 px-4"><div class="text-4xl mb-3">📅</div><div class="font-bold">ไม่มีนัดหมายวันนี้</div></div>`;
+                return;
+            }
+            container.innerHTML = animalsWithAppt.map(animal => {
+                const owner = ownerMap.get(animal.owner_hn);
+                const p1 = _sbPrimaryPhoneMap.get(animal.owner_hn) || '-';
+                const typeIcon = getAnimalIconSb(animal.pet_type);
+                const isActive = String(animal.id) === String(animalId);
+                return `<div class="pet-card${isActive ? ' active' : ''}" id="sb-pet-${animal.id}" onclick="gotoSidebarAnimal('${animal.id}','${animal.owner_hn}')">
+                    <div class="hn-col text-sm">#${animal.owner_hn}</div>
+                    <div class="flex flex-col justify-center min-w-0 px-1 gap-0.5">
+                        <span class="pet-main-name truncate">${animal.pet_name}</span>
+                        <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
+                        <span class="phone-badge">📞 ${p1}</span>
+                    </div>
+                    <div class="flex items-center justify-end text-xl pr-1"><span>${typeIcon}</span></div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderMedrecSidebar() {
+            if (_sbCurrentTab === 'today') { renderMedrecSidebarToday(); return; }
+            const term = (document.getElementById('sidebar-search-medrec')?.value || '').toLowerCase();
+            const container = document.getElementById('medrec-owner-list');
+            const ownerMap = new Map(_sbOwners.map(o => [o.hn, o]));
+            const ownersWithPets = new Set(_sbAnimals.map(a => a.owner_hn));
+            const ownerOnlyEntries = _sbOwners.filter(o => !ownersWithPets.has(o.hn)).map(o => ({ _ownerOnly: true, owner_hn: o.hn }));
+            const allItems = [..._sbAnimals, ...ownerOnlyEntries].sort((a, b) => Number(b.owner_hn) - Number(a.owner_hn));
+            const filtered = !term ? allItems : allItems.filter(item => {
+                const owner = ownerMap.get(item.owner_hn);
+                const phones = _sbAllPhonesMap.get(item.owner_hn) || [];
+                const ownerName = (owner?.owner_name || '').toLowerCase();
+                const basicMatch = item.owner_hn.includes(term) || ownerName.includes(term) || phones.some(p => p.includes(term));
+                if (item._ownerOnly) return basicMatch;
+                const medText = _sbMedTextByAnimalId.get(item.id) || '';
+                return basicMatch || item.pet_name.toLowerCase().includes(term) || medText.includes(term);
+            });
+            container.innerHTML = filtered.map(item => {
+                const owner = ownerMap.get(item.owner_hn);
+                const p1 = _sbPrimaryPhoneMap.get(item.owner_hn) || '-';
+                if (item._ownerOnly) {
+                    return `<div class="pet-card" onclick="location.href='animals.html?hn=${item.owner_hn}'" id="sb-owner-${item.owner_hn}">
+                        <div class="hn-col text-sm">#${item.owner_hn}</div>
+                        <div class="flex flex-col justify-center min-w-0 px-1 gap-0.5">
+                            <span class="pet-main-name truncate text-slate-400">ยังไม่มีสัตว์เลี้ยง</span>
+                            <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
+                            <span class="phone-badge">📞 ${p1}</span>
+                        </div>
+                        <div class="flex items-center justify-end text-xl pr-1"><span>👤</span></div>
+                    </div>`;
+                }
+                const typeIcon = getAnimalIconSb(item.pet_type);
+                const isActive = String(item.id) === String(animalId);
+                return `<div class="pet-card${isActive ? ' active' : ''}" id="sb-pet-${item.id}" onclick="gotoSidebarAnimal('${item.id}','${item.owner_hn}')">
+                    <div class="hn-col text-sm">#${item.owner_hn}</div>
+                    <div class="flex flex-col justify-center min-w-0 px-1 gap-0.5">
+                        <span class="pet-main-name truncate">${item.pet_name}</span>
+                        <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
+                        <span class="phone-badge">📞 ${p1}</span>
+                    </div>
+                    <div class="flex items-center justify-end text-xl pr-1"><span>${typeIcon}</span></div>
+                </div>`;
+            }).join('');
+        }
+
+        function gotoSidebarAnimal(id, hn) {
+            closeMedrecSidebar();
+            location.href = `medrec.html?id=${id}&hn=${hn}`;
+        }
+
         window.onload = async () => {
             if (!animalId || !ownerHN) return location.href='animals.html';
             flatpickr(".datepicker", makeDatePickerConfig());
             flatpickr("#f_visit_date", makeDatePickerConfig({ defaultDate: "today" }));
             await fetchInfo(); await fetchRecords();
+            loadSidebarData(); // non-blocking
         };
 
         async function fetchInfo() {
