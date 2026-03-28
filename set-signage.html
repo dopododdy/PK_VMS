@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="ui-settings.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -557,7 +559,7 @@
 
 <script>
 // ============================================================
-//  set-signage.html — manages "signageCfg" in localStorage
+//  set-signage.html — manages "signageCfg" in localStorage + Supabase
 // ============================================================
 
 const STORAGE_KEY = "signageCfg";
@@ -566,16 +568,13 @@ let _uploadBase64 = null;     // temp for Section 2 upload modal
 let videoBottomSlides = [];   // Section 1B slides
 let _vbUploadBase64 = null;   // temp for Section 1B upload modal
 
-// ---- Load ----
-function loadConfig() {
-    let cfg = {};
-    try { cfg = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch(e) {}
-
+// ---- Apply config to DOM ----
+function applyConfig(cfg) {
     document.getElementById("cfg-video-url").value           = cfg.videoUrl || "";
     document.getElementById("cfg-slide-interval").value      = cfg.slideInterval || 5;
     document.getElementById("cfg-ticker-text").value         = cfg.tickerText || "";
     document.getElementById("cfg-ticker-speed").value        = cfg.tickerSpeed || 60;
-    document.getElementById("cfg-ticker-font-size").value         = cfg.tickerFontSize || 28;
+    document.getElementById("cfg-ticker-font-size").value    = cfg.tickerFontSize || 28;
     document.getElementById("cfg-ticker-font-family").value  = cfg.tickerFontFamily || "Sarabun, sans-serif";
     document.getElementById("cfg-ticker-font-style").value   = cfg.tickerFontStyle || "normal";
     const col = cfg.tickerColor || "#e2e8f0";
@@ -589,6 +588,22 @@ function loadConfig() {
 
     slides = cfg.slides || [];
     renderSlides();
+}
+
+// ---- Load ----
+function loadConfig() {
+    let cfg = {};
+    try { cfg = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch(e) {}
+    applyConfig(cfg);
+    // Load from Supabase and refresh if available
+    db.from('app_settings').select('value').eq('key', STORAGE_KEY).maybeSingle()
+        .then(({ data }) => {
+            if (data?.value) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data.value));
+                applyConfig(data.value);
+            }
+        })
+        .catch(e => console.warn('Supabase load error:', e));
 }
 
 // ---- Save ----
@@ -608,14 +623,21 @@ function saveSettings() {
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+    db.from('app_settings').upsert(
+        { key: STORAGE_KEY, value: cfg, updated_at: new Date().toISOString() },
+        { onConflict: 'key' }
+    ).then(({ error }) => { if (error) console.warn('Supabase save error:', error); });
     showToast("บันทึกสำเร็จ ✓");
 }
 
 function resetToDefaults() {
     if (!confirm("รีเซ็ตค่าทั้งหมดหน้าจอโฆษณา?")) return;
     localStorage.removeItem(STORAGE_KEY);
+    db.from('app_settings').delete().eq('key', STORAGE_KEY)
+        .then(({ error }) => { if (error) console.warn('Supabase reset error:', error); });
     slides = [];
-    loadConfig();
+    videoBottomSlides = [];
+    applyConfig({});
     showToast("รีเซ็ตแล้ว");
 }
 

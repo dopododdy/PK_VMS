@@ -562,7 +562,18 @@ INSERT INTO public.print_templates (template_type, config) VALUES
 ON CONFLICT (template_type) DO NOTHING;
 
 -- ==========================================================
--- 19) Refresh PostgREST schema cache
+-- 19) App Settings (key-value store for display/signage config)
+-- ==========================================================
+CREATE TABLE IF NOT EXISTS public.app_settings (
+    key         TEXT PRIMARY KEY,
+    value       JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE public.app_settings DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE public.app_settings TO anon, authenticated, service_role;
+
+-- ==========================================================
+-- 20) Refresh PostgREST schema cache
 -- ==========================================================
 NOTIFY pgrst, 'reload schema';
 

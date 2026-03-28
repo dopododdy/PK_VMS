@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="ui-settings.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -389,12 +391,38 @@
                 document.getElementById('cfg-font-size').value = s.fontSize || 'normal';
             } catch(e) {}
             renderSlideList();
+            // Load from Supabase and refresh if available
+            Promise.all([
+                db.from('app_settings').select('value').eq('key', 'display2_ads').maybeSingle(),
+                db.from('app_settings').select('value').eq('key', 'display2_settings').maybeSingle()
+            ]).then(([{ data: adsRow }, { data: settingsRow }]) => {
+                let changed = false;
+                if (adsRow?.value) {
+                    slides = adsRow.value;
+                    localStorage.setItem('pos_display2_ads', JSON.stringify(slides));
+                    changed = true;
+                }
+                if (settingsRow?.value) {
+                    const s = settingsRow.value;
+                    document.getElementById('cfg-interval').value = s.adInterval || 5;
+                    document.getElementById('cfg-clinic-name').value = s.clinicName || 'PK-VMS Animal Clinic';
+                    document.getElementById('cfg-theme').value = s.theme || 'dark';
+                    document.getElementById('cfg-font-size').value = s.fontSize || 'normal';
+                    localStorage.setItem('pos_display2_settings', JSON.stringify(s));
+                    changed = true;
+                }
+                if (changed) renderSlideList();
+            }).catch(e => console.warn('Supabase load error:', e));
         }
 
         // ── Auto-save helpers ──────────────────────────────
         function autoSaveSlides() {
             localStorage.setItem('pos_display2_ads', JSON.stringify(slides));
             channel.postMessage({ type: 'reload_settings' });
+            db.from('app_settings').upsert(
+                { key: 'display2_ads', value: slides, updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            ).then(({ error }) => { if (error) console.warn('Supabase save error:', error); });
         }
 
         function autoSaveSettings() {
@@ -406,6 +434,10 @@
             };
             localStorage.setItem('pos_display2_settings', JSON.stringify(settings));
             channel.postMessage({ type: 'reload_settings' });
+            db.from('app_settings').upsert(
+                { key: 'display2_settings', value: settings, updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            ).then(({ error }) => { if (error) console.warn('Supabase save error:', error); });
         }
 
         // Auto-save general settings when inputs change
