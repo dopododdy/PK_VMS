@@ -184,8 +184,9 @@ $$;</code>
                 หรือ <code class="bg-white/10 px-1 rounded text-red-300">Could not find the 'updated_at' column of 'owners'</code>
                 หรือ <code class="bg-white/10 px-1 rounded text-red-300">Could not find the 'email' column of 'owners'</code>
                 หรือ <code class="bg-white/10 px-1 rounded text-red-300">column medical_records.dld_categories does not exist</code>
+                หรือ <code class="bg-white/10 px-1 rounded text-red-300">Could not find the table 'public.vaccine_catalog' in the schema cache</code>
                 ให้รัน SQL ด้านล่างนี้ใน
-                <strong class="text-white">Supabase → SQL Editor</strong> เพื่อเพิ่ม Column ที่ขาดหายไป
+                <strong class="text-white">Supabase → SQL Editor</strong> เพื่อเพิ่ม Column หรือ Table ที่ขาดหายไป
             </p>
             <pre id="migration-sql" class="bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-teal-300 whitespace-pre-wrap overflow-x-auto leading-relaxed">ALTER TABLE medical_records
   ADD COLUMN IF NOT EXISTS discount        NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -212,7 +213,39 @@ ALTER TABLE mas_lab_parameters
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 ALTER TABLE medical_records
-  ADD COLUMN IF NOT EXISTS dld_categories JSONB NOT NULL DEFAULT '[]'::jsonb;</pre>
+  ADD COLUMN IF NOT EXISTS dld_categories JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- Vaccine catalog & vaccination records
+CREATE TABLE IF NOT EXISTS public.vaccine_catalog (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    for_dog BOOLEAN NOT NULL DEFAULT true,
+    for_cat BOOLEAN NOT NULL DEFAULT false,
+    prevents_disease TEXT,
+    image_data TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.vaccination_records (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    animal_id uuid NOT NULL REFERENCES public.animals(id) ON DELETE CASCADE,
+    vaccine_id uuid REFERENCES public.vaccine_catalog(id) ON DELETE SET NULL,
+    vaccine_name TEXT NOT NULL,
+    vaccinated_date DATE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_vaccination_records_animal_id ON public.vaccination_records(animal_id);
+CREATE INDEX IF NOT EXISTS idx_vaccination_records_date ON public.vaccination_records(vaccinated_date DESC);
+
+ALTER TABLE public.vaccine_catalog DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vaccination_records DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON TABLE public.vaccine_catalog TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.vaccination_records TO anon, authenticated, service_role;
+
+NOTIFY pgrst, 'reload schema';</pre>
             <button onclick="copyMigrationSQL()" class="btn-secondary mt-3 text-sm">
                 📋 คัดลอก SQL
             </button>
