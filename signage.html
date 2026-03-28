@@ -5,6 +5,8 @@
     <title>หน้าจอโฆษณา | PK-VMS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -279,7 +281,7 @@
 
 <script>
 // ==========================================
-//  signage.html – reads config from localStorage
+//  signage.html – reads config from localStorage + Supabase
 //  Key: "signageCfg"
 // ==========================================
 
@@ -287,6 +289,17 @@ function getConfig() {
     try {
         return JSON.parse(localStorage.getItem("signageCfg") || "{}");
     } catch(e) { return {}; }
+}
+
+async function getConfigFromSupabase() {
+    try {
+        const { data } = await db.from('app_settings').select('value').eq('key', 'signageCfg').maybeSingle();
+        if (data?.value) {
+            localStorage.setItem('signageCfg', JSON.stringify(data.value));
+            return data.value;
+        }
+    } catch(e) { console.warn('Supabase load error:', e); }
+    return null;
 }
 
 // ---- Section 1: Video ----
@@ -526,12 +539,24 @@ function initTicker(cfg) {
 }
 
 // ---- Boot ----
-function boot() {
-    const cfg = getConfig();
-    initVideo(cfg);
-    initVideoBottomSlide(cfg);
-    initSlideshow(cfg);
-    initTicker(cfg);
+async function boot() {
+    // Load from localStorage first for immediate display
+    const cfgLocal = getConfig();
+    initVideo(cfgLocal);
+    initVideoBottomSlide(cfgLocal);
+    initSlideshow(cfgLocal);
+    initTicker(cfgLocal);
+    // After reloading due to Supabase data, skip another Supabase check to prevent loops
+    if (sessionStorage.getItem('_supabase_boot')) {
+        sessionStorage.removeItem('_supabase_boot');
+        return;
+    }
+    // Load from Supabase and reload page if config differs from localStorage
+    const cfgSupabase = await getConfigFromSupabase();
+    if (cfgSupabase && JSON.stringify(cfgSupabase) !== JSON.stringify(cfgLocal)) {
+        sessionStorage.setItem('_supabase_boot', '1');
+        window.location.reload();
+    }
 }
 
 // Listen for storage updates (live reload when settings saved)

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PK-VMS | หน้าจอลูกค้า</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -300,7 +302,7 @@
         let adInterval = 5000;
         let thankyouTimeout = null;
 
-        // ── Load settings from localStorage ──────────────────────
+        // ── Load settings from localStorage + Supabase ──────────
         function loadSettings() {
             try {
                 const s = JSON.parse(localStorage.getItem('pos_display2_settings') || '{}');
@@ -312,6 +314,26 @@
             } catch(e) {
                 adSlides = getDefaultAds();
             }
+        }
+
+        function loadSettingsFromSupabase() {
+            return Promise.all([
+                db.from('app_settings').select('value').eq('key', 'display2_settings').maybeSingle(),
+                db.from('app_settings').select('value').eq('key', 'display2_ads').maybeSingle()
+            ]).then(([{ data: settingsRow }, { data: adsRow }]) => {
+                let changed = false;
+                if (settingsRow?.value) {
+                    adInterval = ((settingsRow.value.adInterval) || 5) * 1000;
+                    localStorage.setItem('pos_display2_settings', JSON.stringify(settingsRow.value));
+                    changed = true;
+                }
+                if (adsRow?.value) {
+                    adSlides = adsRow.value;
+                    localStorage.setItem('pos_display2_ads', JSON.stringify(adSlides));
+                    changed = true;
+                }
+                return changed;
+            }).catch(e => { console.warn('Supabase load error:', e); return false; });
         }
 
         function getDefaultAds() {
@@ -465,7 +487,7 @@
                 showAds();
             } else if (msg.type === 'reload_settings') {
                 loadSettings();
-                renderAds();
+                loadSettingsFromSupabase().then(changed => { if (changed) renderAds(); });
             }
         };
 
@@ -489,6 +511,7 @@
         // ── Init ──────────────────────────────────────────────────
         loadSettings();
         showAds();
+        loadSettingsFromSupabase().then(changed => { if (changed) renderAds(); });
     </script>
 </body>
 </html>
