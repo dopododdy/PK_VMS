@@ -123,15 +123,6 @@
         }
         .passport-preview-sub { font-size: 0.72rem; color: rgba(255,255,255,0.5); }
 
-        .stamp-preview {
-            width: 72px; height: 72px; border-radius: 50%;
-            border: 3px dashed rgba(201,168,76,0.4);
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
-        }
-        .stamp-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .stamp-placeholder { font-size: 2rem; opacity: 0.4; }
-
         /* ─── Vaccine catalog items ──────── */
         .vaccine-catalog-item {
             display: flex; align-items: center; gap: 12px;
@@ -241,7 +232,7 @@
     </header>
 
     <main class="max-w-3xl mx-auto p-6">
-        <p class="text-gray-400 mb-6 text-sm">กำหนดชื่อคลินิก โลโก้ และชื่อสัตวแพทย์ สำหรับแสดงใน e-Passport ของสัตว์เลี้ยง</p>
+        <p class="text-gray-400 mb-6 text-sm">กำหนดชื่อคลินิก และโลโก้ สำหรับแสดงใน e-Passport ของสัตว์เลี้ยง</p>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -275,19 +266,6 @@
                     </label>
                     <div id="logo-actions" class="text-right mt-2" style="display:none;">
                         <button class="btn-clear" onclick="clearLogo()">✕ ลบโลโก้</button>
-                    </div>
-                </div>
-
-                <!-- Vet Info -->
-                <div class="form-card">
-                    <div class="card-title">👨‍⚕️ ข้อมูลสัตวแพทย์</div>
-                    <div class="mb-4">
-                        <label>ชื่อสัตวแพทย์</label>
-                        <input type="text" id="vet_name" placeholder="เช่น น.สพ.สมชาย ใจดี">
-                    </div>
-                    <div>
-                        <label>ใบอนุญาตสัตวแพทย์ (ถ้ามี)</label>
-                        <input type="text" id="vet_license" placeholder="เช่น ก.สพ. 12345">
                     </div>
                 </div>
 
@@ -417,7 +395,7 @@
 
                 <!-- Recent vaccination records -->
                 <div class="form-card">
-                    <div class="card-title">📅 ประวัติวัคซีนล่าสุด</div>
+                    <div class="card-title">🗓️ ประวัติวัคซีนล่าสุด</div>
                     <div id="recent-vacc-records">
                         <div class="text-center py-4" style="color:#64748b; font-size:0.85rem;">กำลังโหลด...</div>
                     </div>
@@ -490,12 +468,6 @@ document.addEventListener('input', e => {
     if (e.target.id === 'clinic_subtitle') {
         document.getElementById('prev-clinic-sub').textContent = e.target.value || 'Animal Clinic';
     }
-    if (e.target.id === 'vet_name') {
-        document.getElementById('prev-vet-name').textContent = e.target.value || 'ชื่อสัตวแพทย์';
-    }
-    if (e.target.id === 'vet_license') {
-        document.getElementById('prev-vet-license').textContent = e.target.value ? `ใบอนุญาต ${e.target.value}` : 'ใบอนุญาต –';
-    }
 });
 
 /* ─── Save ──────────────────────────────── */
@@ -503,8 +475,6 @@ async function saveConfig() {
     const config = {
         clinic_name:     document.getElementById('clinic_name').value.trim() || 'คลินิกรักษาสัตว์',
         clinic_subtitle: document.getElementById('clinic_subtitle').value.trim() || 'Animal Clinic',
-        vet_name:        document.getElementById('vet_name').value.trim() || 'สัตวแพทย์',
-        vet_license:     document.getElementById('vet_license').value.trim() || '',
         clinic_logo:     logoBase64 || currentConfig.clinic_logo || '',
         updated_at:      new Date().toISOString()
     };
@@ -532,13 +502,9 @@ async function loadConfig() {
 
         document.getElementById('clinic_name').value     = cfg.clinic_name || '';
         document.getElementById('clinic_subtitle').value = cfg.clinic_subtitle || '';
-        document.getElementById('vet_name').value        = cfg.vet_name || '';
-        document.getElementById('vet_license').value     = cfg.vet_license || '';
 
         document.getElementById('prev-clinic-name').textContent = cfg.clinic_name || 'คลินิกรักษาสัตว์';
         document.getElementById('prev-clinic-sub').textContent  = cfg.clinic_subtitle || 'Animal Clinic';
-        document.getElementById('prev-vet-name').textContent    = cfg.vet_name || 'ชื่อสัตวแพทย์';
-        document.getElementById('prev-vet-license').textContent = cfg.vet_license ? `ใบอนุญาต ${cfg.vet_license}` : 'ใบอนุญาต –';
 
         if (cfg.clinic_logo) {
             logoBase64 = cfg.clinic_logo;
@@ -758,7 +724,7 @@ function updateVaccDateDisplay() {
     const disp = document.getElementById('vacc_date_display');
     if (!val) { disp.textContent = ''; return; }
     const d = new Date(val + 'T00:00:00');
-    disp.textContent = '📅 ' + d.toLocaleDateString('th-TH', {
+    disp.textContent = '🗓️ ' + d.toLocaleDateString('th-TH', {
         year: 'numeric', month: 'long', day: 'numeric', calendar: 'buddhist'
     });
 }
@@ -813,7 +779,7 @@ async function loadRecentVaccinationRecords() {
                 <span style="font-size:1.3rem;">${getSpeciesIcon(pet?.pet_type)}</span>
                 <div class="vacc-record-info">
                     <div class="vacc-record-animal">${escHtml(pet?.pet_name || '–')}</div>
-                    <div class="vacc-record-detail">💉 ${escHtml(r.vaccine_name)} · 📅 ${escHtml(dateTH)}</div>
+                    <div class="vacc-record-detail">💉 ${escHtml(r.vaccine_name)} · 🗓️ ${escHtml(dateTH)}</div>
                 </div>
                 <button class="btn-danger-sm" data-delete-record="${escHtml(r.id)}">🗑️</button>
             </div>`;

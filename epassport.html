@@ -262,15 +262,6 @@
         .vaccine-vet {
             font-size: 0.7rem; color: #6b7280; margin-top: 3px;
         }
-        .vet-stamp-mini {
-            position: absolute; right: 10px; bottom: 8px;
-            width: 38px; height: 38px; border-radius: 50%;
-            border: 2px dashed rgba(22,163,74,0.4);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.5rem; color: rgba(22,163,74,0.5); text-align: center;
-            overflow: hidden; line-height: 1.2;
-        }
-        .vet-stamp-mini img { width: 100%; height: 100%; object-fit: cover; }
         .no-vaccine {
             text-align: center; padding: 40px 20px; color: #9ca3af;
         }
@@ -319,15 +310,6 @@
         .appt-none .icon { font-size: 3.5rem; }
         .appt-none-title { font-size: 1.1rem; font-weight: 700; color: #cbd5e1; }
         .appt-none-sub { font-size: 0.85rem; color: #64748b; }
-        .appt-pet-reminder {
-            background: rgba(14,165,160,0.1);
-            border: 1px solid rgba(14,165,160,0.3);
-            border-radius: 14px; padding: 14px 16px;
-            display: flex; align-items: center; gap: 12px;
-        }
-        .appt-pet-reminder-icon { font-size: 1.8rem; }
-        .appt-pet-reminder-text { font-size: 0.82rem; color: #94a3b8; line-height: 1.5; }
-        .appt-pet-reminder-text strong { color: #5eead4; display: block; margin-bottom: 2px; }
 
         /* ─── Navigation ────────────── */
         .nav-area {
@@ -498,7 +480,7 @@
                     <div class="page-crease"></div>
                     <div class="appt-header" style="width:100%;">
                         <div style="flex:1;">
-                            <div class="appt-header-title">📅 นัดหมายถัดไป / Next Appointment</div>
+                            <div class="appt-header-title">🗓️ นัดหมายถัดไป / Next Appointment</div>
                         </div>
                         <div style="font-size:0.62rem; color:rgba(147,197,253,0.5);">3 / 4</div>
                     </div>
@@ -530,7 +512,7 @@ const PAGE_LABELS = ['ปกหน้า', 'ข้อมูลสัตว์', 
 const TOTAL_PAGES = 4;
 let currentPage = 0;
 let petData = null, ownerData = null;
-let vaccineRecords = [], newVaccRecords = [], nextAppt = null, nextAppt2 = null;
+let vaccineRecords = [], newVaccRecords = [], allAppts = [];
 let epassportConfig = {};
 let touchStartX = 0, touchStartY = 0;
 
@@ -635,12 +617,6 @@ function renderVaccines() {
         return;
     }
 
-    const stampSrc = epassportConfig.vet_stamp || '';
-    const vetName = epassportConfig.vet_name || 'สัตวแพทย์';
-    const stampHtml = stampSrc
-        ? `<img src="${esc(stampSrc)}" alt="stamp">`
-        : `<span style="font-size:0.45rem; line-height:1.3; text-align:center;">${esc(vetName)}</span>`;
-
     let html = '';
     let entryCount = 0;
 
@@ -659,11 +635,9 @@ function renderVaccines() {
             <div class="vaccine-sticker">${stickerInner}</div>
             <div class="vaccine-details">
                 <div class="vaccine-name">${esc(rec.vaccine_name)}</div>
-                <div class="vaccine-date">📅 ${esc(formatDateTH(rec.vaccinated_date + 'T00:00:00'))}</div>
-                <div class="vaccine-vet">👨‍⚕️ ${esc(vetName)}</div>
+                <div class="vaccine-date">🗓️ ${esc(formatDateTH(rec.vaccinated_date + 'T00:00:00'))}</div>
                 ${diseaseLine}
             </div>
-            <div class="vet-stamp-mini">${stampHtml}</div>
         </div>`;
     }
 
@@ -689,10 +663,8 @@ function renderVaccines() {
                 </div>
                 <div class="vaccine-details">
                     <div class="vaccine-name">${esc(vax)}</div>
-                    <div class="vaccine-date">📅 ${esc(formatDateTH(rec.created_at))}</div>
-                    <div class="vaccine-vet">👨‍⚕️ ${esc(vetName)}</div>
+                    <div class="vaccine-date">🗓️ ${esc(formatDateTH(rec.created_at))}</div>
                 </div>
-                <div class="vet-stamp-mini">${stampHtml}</div>
             </div>`;
         }
     }
@@ -706,54 +678,25 @@ function renderVaccines() {
 /* ─── Render appointment page ──────────────── */
 function renderAppointment() {
     const body = document.getElementById('appt-body');
-    const petName = petData?.pet_name || '–';
-    const petIcon = getAnimalIcon(petData?.pet_type);
 
-    if (!nextAppt && !nextAppt2) {
+    if (!allAppts.length) {
         body.innerHTML = `
         <div class="appt-none">
-            <div class="icon">📅</div>
+            <div class="icon">🗓️</div>
             <div class="appt-none-title">ยังไม่มีนัดหมาย</div>
             <div class="appt-none-sub">No upcoming appointments</div>
-        </div>
-        <div class="appt-pet-reminder">
-            <div class="appt-pet-reminder-icon">${petIcon}</div>
-            <div class="appt-pet-reminder-text">
-                <strong>${esc(petName)}</strong>
-                พาน้องมาตรวจตามคำแนะนำของสัตวแพทย์<br>เพื่อสุขภาพที่ดีของสัตว์เลี้ยงของท่าน 🐾
-            </div>
         </div>`;
         return;
     }
 
-    let html = '';
-    if (nextAppt) {
-        html += `<div class="appt-card">
-            <div class="appt-card-icon">📅</div>
-            <div class="appt-card-label">นัดหมายถัดไป</div>
-            <div class="appt-card-date">${esc(formatDateTH(nextAppt))}</div>
-            ${nextApptNote ? `<div class="appt-card-note">📝 ${esc(nextApptNote)}</div>` : ''}
-        </div>`;
-    }
-    if (nextAppt2) {
-        html += `<div class="appt-card" style="animation-delay:0.1s">
+    body.innerHTML = allAppts.map((appt, i) => `
+        <div class="appt-card" style="animation-delay:${i * 0.1}s">
             <div class="appt-card-icon">🗓️</div>
-            <div class="appt-card-label">นัดหมายลำดับที่ 2</div>
-            <div class="appt-card-date">${esc(formatDateTH(nextAppt2))}</div>
-            ${nextApptNote2 ? `<div class="appt-card-note">📝 ${esc(nextApptNote2)}</div>` : ''}
-        </div>`;
-    }
-    html += `<div class="appt-pet-reminder">
-        <div class="appt-pet-reminder-icon">${petIcon}</div>
-        <div class="appt-pet-reminder-text">
-            <strong>${esc(petName)}</strong>
-            พาน้องมาตามนัดอย่าลืมนะคะ 🐾<br>ทีมสัตวแพทย์รอดูแลท่านอยู่เสมอ
-        </div>
-    </div>`;
-    body.innerHTML = html;
+            <div class="appt-card-label">นัดหมาย</div>
+            <div class="appt-card-date">${esc(formatDateTH(appt.date))}</div>
+            ${appt.note ? `<div class="appt-card-note">📝 ${esc(appt.note)}</div>` : ''}
+        </div>`).join('');
 }
-
-let nextApptNote = '', nextApptNote2 = '';
 
 /* ─── Fill cover & info pages ──────────────── */
 function fillPages() {
@@ -843,30 +786,18 @@ async function loadData() {
         // New vaccination records (from vaccination_records table with catalog join)
         newVaccRecords = resVaccRec.data || [];
 
-        // Find next appointment (most recent upcoming)
-        const today = new Date().toISOString().split('T')[0];
-        const upcoming = allRecords.find(r => (r.appointment && r.appointment >= today) || (r.appointment_2 && r.appointment_2 >= today));
-        if (upcoming) {
-            if (upcoming.appointment && upcoming.appointment >= today) {
-                nextAppt = upcoming.appointment;
-                nextApptNote = upcoming.appointment_note || '';
+        // Collect all appointments from all records, sorted ascending (nearest date first)
+        const apptList = [];
+        for (const rec of allRecords) {
+            if (rec.appointment) {
+                apptList.push({ date: rec.appointment, note: rec.appointment_note || '' });
             }
-            if (upcoming.appointment_2 && upcoming.appointment_2 >= today) {
-                nextAppt2 = upcoming.appointment_2;
-                nextApptNote2 = upcoming.appointment_note_2 || '';
+            if (rec.appointment_2) {
+                apptList.push({ date: rec.appointment_2, note: rec.appointment_note_2 || '' });
             }
         }
-
-        // If no upcoming, get latest appointment
-        if (!nextAppt) {
-            const latest = allRecords.find(r => r.appointment || r.appointment_2);
-            if (latest) {
-                nextAppt = latest.appointment || null;
-                nextApptNote = latest.appointment_note || '';
-                nextAppt2 = latest.appointment_2 || null;
-                nextApptNote2 = latest.appointment_note_2 || '';
-            }
-        }
+        apptList.sort((a, b) => a.date.localeCompare(b.date));
+        allAppts = apptList;
 
         // Build UI
         buildIndicators();
