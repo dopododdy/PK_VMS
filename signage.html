@@ -301,7 +301,27 @@ async function getConfigFromSupabase() {
     return null;
 }
 
+// ---- IndexedDB helpers (video blobs stored here to avoid localStorage quota) ----
+function openSignageDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open("signageDB", 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore("videoStore");
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+function loadVideoDB() {
+    return openSignageDB().then(idb => new Promise((resolve, reject) => {
+        const tx  = idb.transaction("videoStore", "readonly");
+        const req = tx.objectStore("videoStore").get("videoUpload");
+        req.onsuccess = e => resolve(e.target.result || null);
+        req.onerror   = e => reject(e.target.error);
+    }));
+}
+
 // ---- Section 1: Video ----
+let _signageVideoObjectURL = null; // track blob URL for cleanup on unload
+
 function initVideo(cfg) {
     const mode = cfg.videoMode || "url";
     const container = document.getElementById("video-area");
@@ -309,7 +329,26 @@ function initVideo(cfg) {
     if (mode === "upload") {
         const src = (cfg.videoSrc || "").trim();
         if (!src) return;
-        // Only accept data URIs with a video MIME type
+
+        if (src === "__indexeddb__") {
+            // Video blob was saved locally via IndexedDB
+            loadVideoDB().then(blob => {
+                if (!blob) return;
+                document.getElementById("video-placeholder").style.display = "none";
+                const video = document.createElement("video");
+                _signageVideoObjectURL = URL.createObjectURL(blob);
+                video.src = _signageVideoObjectURL;
+                video.autoplay = true;
+                video.muted = true;
+                video.loop = true;
+                video.playsInline = true;
+                video.controls = false;
+                container.appendChild(video);
+            }).catch(err => console.warn("IndexedDB load error:", err));
+            return;
+        }
+
+        // Backward compat: data URI stored directly in config
         if (!src.startsWith("data:video/")) return;
         document.getElementById("video-placeholder").style.display = "none";
         const video = document.createElement("video");
@@ -586,6 +625,14 @@ async function boot() {
 window.addEventListener("storage", (e) => {
     if (e.key === "signageCfg") {
         window.location.reload();
+    }
+});
+
+// Revoke video blob URL on page unload to free browser memory
+window.addEventListener("pagehide", () => {
+    if (_signageVideoObjectURL) {
+        URL.revokeObjectURL(_signageVideoObjectURL);
+        _signageVideoObjectURL = null;
     }
 });
 
