@@ -241,7 +241,7 @@
     </header>
 
     <main class="max-w-3xl mx-auto p-6">
-        <p class="text-gray-400 mb-6 text-sm">กำหนดชื่อคลินิก โลโก้ ชื่อสัตวแพทย์ และตราประทับ สำหรับแสดงใน e-Passport ของสัตว์เลี้ยง</p>
+        <p class="text-gray-400 mb-6 text-sm">กำหนดชื่อคลินิก โลโก้ และชื่อสัตวแพทย์ สำหรับแสดงใน e-Passport ของสัตว์เลี้ยง</p>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -291,23 +291,6 @@
                     </div>
                 </div>
 
-                <!-- Stamp Upload -->
-                <div class="form-card">
-                    <div class="card-title">🔖 ตราประทับสัตวแพทย์</div>
-                    <p class="text-xs text-gray-500 mb-3">รูปทรงกลม PNG พื้นหลังใส (transparent) จะดูสวยที่สุด</p>
-                    <label class="upload-area" for="stamp-input" id="stamp-drop">
-                        <input type="file" id="stamp-input" accept="image/*" onchange="handleStampUpload(event)">
-                        <div id="stamp-preview-wrap">
-                            <div class="upload-icon">🔖</div>
-                            <div class="upload-text">แตะเพื่อเลือกรูปตราประทับ <span>อัปโหลด</span></div>
-                            <div class="upload-text" style="margin-top:4px;">PNG พื้นหลังใส ≤ 2 MB</div>
-                        </div>
-                    </label>
-                    <div id="stamp-actions" class="text-right mt-2" style="display:none;">
-                        <button class="btn-clear" onclick="clearStamp()">✕ ลบตราประทับ</button>
-                    </div>
-                </div>
-
                 <!-- Save -->
                 <button class="btn-save" onclick="saveConfig()">
                     💾 บันทึกการตั้งค่า
@@ -328,18 +311,6 @@
                         <div class="passport-preview-sub" id="prev-clinic-sub">Animal Clinic</div>
                         <div class="passport-preview-title">e-PASSPORT</div>
                         <div class="passport-preview-sub">สมุดวัคซีนอิเล็กทรอนิกส์</div>
-                    </div>
-
-                    <!-- Stamp Preview -->
-                    <div class="form-card" style="display:flex; align-items:center; gap:16px;">
-                        <div class="stamp-preview" id="prev-stamp">
-                            <div class="stamp-placeholder">🔖</div>
-                        </div>
-                        <div>
-                            <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">ตราประทับ</div>
-                            <div class="text-sm font-bold text-white" id="prev-vet-name">ชื่อสัตวแพทย์</div>
-                            <div class="text-xs text-gray-500" id="prev-vet-license">ใบอนุญาต –</div>
-                        </div>
                     </div>
 
                     <div class="mt-4 p-4 rounded-xl border border-teal-500/20 bg-teal-500/5">
@@ -395,21 +366,6 @@
                     <div class="mb-4">
                         <label>ป้องกันโรค</label>
                         <input type="text" id="vac_disease" placeholder="เช่น พิษสุนัขบ้า, โรคหัด, ลำไส้อักเสบ">
-                    </div>
-
-                    <div class="mb-4">
-                        <label>รูปวัคซีน</label>
-                        <label class="upload-area" for="vac-img-input" id="vac-img-drop">
-                            <input type="file" id="vac-img-input" accept="image/*" onchange="handleVaccineImgUpload(event)">
-                            <div id="vac-img-preview-wrap">
-                                <div class="upload-icon">🖼️</div>
-                                <div class="upload-text">แตะเพื่ออัปโหลดรูปวัคซีน <span>อัปโหลด</span></div>
-                                <div class="upload-text" style="margin-top:4px;">PNG, JPG ≤ 2 MB</div>
-                            </div>
-                        </label>
-                        <div id="vac-img-actions" class="text-right mt-2" style="display:none;">
-                            <button class="btn-clear" onclick="clearVaccineImg()">✕ ลบรูป</button>
-                        </div>
                     </div>
 
                     <button class="btn-add" onclick="saveVaccine()">＋ เพิ่มวัคซีนในฐานข้อมูล</button>
@@ -480,7 +436,6 @@
 <script>
 let currentConfig = {};
 let logoBase64 = '';
-let stampBase64 = '';
 
 /* ─── Toast ─────────────────────────────── */
 function showToast(msg, duration = 2500) {
@@ -527,31 +482,6 @@ function clearLogo() {
     document.getElementById('prev-crest').innerHTML = '🐾';
 }
 
-/* ─── Stamp handlers ────────────────────── */
-async function handleStampUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-        stampBase64 = await fileToBase64(file);
-        document.getElementById('stamp-preview-wrap').innerHTML =
-            `<img src="${stampBase64}" class="upload-preview round" alt="stamp">
-             <div class="upload-text" style="margin-top:6px;">แตะเพื่อเปลี่ยนรูป</div>`;
-        document.getElementById('stamp-actions').style.display = '';
-        const prev = document.getElementById('prev-stamp');
-        prev.innerHTML = `<img src="${stampBase64}" style="width:100%;height:100%;object-fit:cover;">`;
-    } catch (err) { showToast('❌ ' + err.message); }
-}
-function clearStamp() {
-    stampBase64 = '';
-    document.getElementById('stamp-input').value = '';
-    document.getElementById('stamp-preview-wrap').innerHTML =
-        `<div class="upload-icon">🔖</div>
-         <div class="upload-text">แตะเพื่อเลือกรูปตราประทับ <span>อัปโหลด</span></div>
-         <div class="upload-text" style="margin-top:4px;">PNG พื้นหลังใส ≤ 2 MB</div>`;
-    document.getElementById('stamp-actions').style.display = 'none';
-    document.getElementById('prev-stamp').innerHTML = '<div class="stamp-placeholder">🔖</div>';
-}
-
 /* ─── Live preview update ─────────────── */
 document.addEventListener('input', e => {
     if (e.target.id === 'clinic_name') {
@@ -576,7 +506,6 @@ async function saveConfig() {
         vet_name:        document.getElementById('vet_name').value.trim() || 'สัตวแพทย์',
         vet_license:     document.getElementById('vet_license').value.trim() || '',
         clinic_logo:     logoBase64 || currentConfig.clinic_logo || '',
-        vet_stamp:       stampBase64 || currentConfig.vet_stamp || '',
         updated_at:      new Date().toISOString()
     };
     try {
@@ -620,15 +549,6 @@ async function loadConfig() {
             document.getElementById('prev-crest').innerHTML =
                 `<img src="${logoBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
         }
-        if (cfg.vet_stamp) {
-            stampBase64 = cfg.vet_stamp;
-            document.getElementById('stamp-preview-wrap').innerHTML =
-                `<img src="${stampBase64}" class="upload-preview round" alt="stamp">
-                 <div class="upload-text" style="margin-top:6px;">แตะเพื่อเปลี่ยนรูป</div>`;
-            document.getElementById('stamp-actions').style.display = '';
-            document.getElementById('prev-stamp').innerHTML =
-                `<img src="${stampBase64}" style="width:100%;height:100%;object-fit:cover;">`;
-        }
     } catch (err) {
         console.error('loadConfig:', err);
     }
@@ -667,7 +587,6 @@ window.addEventListener('DOMContentLoaded', () => {
    ═══════════════════════════════════════════════════════════ */
 
 let vaccineCatalog = [];
-let vaccineImgBase64 = '';
 let selectedAnimalId = null;
 let selectedAnimalName = '';
 let selectedAnimalType = '';
@@ -692,29 +611,6 @@ function getSpeciesIcon(type) {
     return '🐾';
 }
 
-/* ─── Vaccine image upload ──────────────── */
-async function handleVaccineImgUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-        vaccineImgBase64 = await fileToBase64(file);
-        document.getElementById('vac-img-preview-wrap').innerHTML =
-            `<img src="${vaccineImgBase64}" class="upload-preview" alt="vaccine">
-             <div class="upload-text" style="margin-top:6px;">แตะเพื่อเปลี่ยนรูป</div>`;
-        document.getElementById('vac-img-actions').style.display = '';
-    } catch (err) { showToast('❌ ' + err.message); }
-}
-
-function clearVaccineImg() {
-    vaccineImgBase64 = '';
-    document.getElementById('vac-img-input').value = '';
-    document.getElementById('vac-img-preview-wrap').innerHTML =
-        `<div class="upload-icon">🖼️</div>
-         <div class="upload-text">แตะเพื่ออัปโหลดรูปวัคซีน <span>อัปโหลด</span></div>
-         <div class="upload-text" style="margin-top:4px;">PNG, JPG ≤ 2 MB</div>`;
-    document.getElementById('vac-img-actions').style.display = 'none';
-}
-
 /* ─── Save vaccine to catalog ───────────── */
 async function saveVaccine() {
     const name = document.getElementById('vac_name').value.trim();
@@ -728,8 +624,7 @@ async function saveVaccine() {
             name,
             for_dog: forDog,
             for_cat: forCat,
-            prevents_disease: disease || null,
-            image_data: vaccineImgBase64 || null
+            prevents_disease: disease || null
         });
         if (error) throw error;
         showToast('✅ เพิ่มวัคซีนในฐานข้อมูลสำเร็จ');
@@ -737,7 +632,6 @@ async function saveVaccine() {
         document.getElementById('vac_disease').value = '';
         document.getElementById('vac_for_dog').checked = true;
         document.getElementById('vac_for_cat').checked = false;
-        clearVaccineImg();
         await loadVaccineCatalog();
     } catch (err) {
         showToast('❌ ' + (err.message || 'บันทึกไม่สำเร็จ'));
@@ -768,12 +662,9 @@ function renderVaccineCatalog() {
     }
     cont.innerHTML = vaccineCatalog.map(v => {
         const forLabel = [v.for_dog && '🐶 สุนัข', v.for_cat && '🐱 แมว'].filter(Boolean).join(' / ');
-        const imgHtml = v.image_data
-            ? `<div class="vaccine-catalog-img"><img src="${escHtml(v.image_data)}" alt="vaccine"></div>`
-            : `<div class="vaccine-catalog-img">💉</div>`;
         return `
         <div class="vaccine-catalog-item">
-            ${imgHtml}
+            <div class="vaccine-catalog-img">💉</div>
             <div class="vaccine-catalog-info">
                 <div class="vaccine-catalog-name">${escHtml(v.name)}</div>
                 <div class="vaccine-catalog-meta">${forLabel}${v.prevents_disease ? ' · ป้องกัน: ' + escHtml(v.prevents_disease) : ''}</div>
