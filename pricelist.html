@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="ui-settings.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -171,10 +173,6 @@
     <header class="px-4 py-3">
         <div class="max-w-2xl mx-auto flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <a href="index.html"
-                   class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-teal-500/20 transition text-gray-400 hover:text-teal-400 text-xl">
-                    🏠
-                </a>
                 <div>
                     <h1 class="font-black text-white text-lg leading-tight">ราคาค่ารักษา / บริการ</h1>
                     <p class="text-xs text-gray-500 leading-none">PK-VMS Price List</p>
@@ -223,16 +221,40 @@
 
     <script>
     // ══════════════════════════════════════════════════════
-    //  DATA  —  โหลดจาก localStorage  key: pk-pricelist
+    //  DATA  —  โหลดจาก Supabase  table: pricelist_items
     // ══════════════════════════════════════════════════════
-    const STORAGE_KEY = 'pk-pricelist';
+    let allItems = [];
+
+    async function loadFromSupabase() {
+        try {
+            const { data, error } = await db
+                .from('pricelist_items')
+                .select('*')
+                .eq('active', true)
+                .order('category')
+                .order('item_name');
+            if (error) throw error;
+            allItems = (data || []).map(function(r) {
+                return {
+                    id:        r.id,
+                    type:      r.item_type,
+                    category:  r.category,
+                    name:      r.item_name,
+                    price_min: r.price_min,
+                    price_max: r.price_max,
+                    unit:      r.unit,
+                    note:      r.note,
+                    active:    r.active
+                };
+            });
+        } catch (e) {
+            console.error('โหลดข้อมูลล้มเหลว:', e);
+            allItems = [];
+        }
+    }
 
     function getItems() {
-        try {
-            return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        } catch (e) {
-            return [];
-        }
+        return allItems;
     }
 
     // ══════════════════════════════════════════════════════
@@ -303,7 +325,6 @@
               + '<p class="font-semibold text-gray-400">'
               + (q ? 'ไม่พบรายการที่ค้นหา' : 'ยังไม่มีรายการ' + (currentTab === 'service' ? 'บริการ' : 'สินค้า'))
               + '</p>'
-              + (q ? '' : '<p class="text-sm mt-1">เพิ่มข้อมูลได้ที่ <a href="set-pricelist.html" class="underline" style="color:var(--teal)">ตั้งค่า Pricelist</a></p>')
               + '</div>';
             return;
         }
@@ -346,7 +367,8 @@
     // ══════════════════════════════════════════════════════
     //  INIT
     // ══════════════════════════════════════════════════════
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadFromSupabase();
         renderList();
     });
     </script>
