@@ -436,10 +436,25 @@
         <!-- Section 1: Video -->
         <div class="settings-section">
             <div class="section-title">🎬 ส่วนที่ 1 — วิดีโอ (ซ้ายบน)</div>
-            <p class="text-sm text-gray-500 mb-4">รองรับ YouTube URL หรือ URL ไฟล์วิดีโอโดยตรง (mp4, webm ฯลฯ)</p>
-            <div>
+            <p class="text-sm text-gray-500 mb-4">เลือกแหล่งวิดีโอ: ป้อน URL หรืออัปโหลดไฟล์วิดีโอ</p>
+            <div class="flex gap-2 mb-4">
+                <button id="video-mode-url-btn" onclick="setVideoMode('url')" class="btn-primary text-sm">🔗 URL</button>
+                <button id="video-mode-upload-btn" onclick="setVideoMode('upload')" class="btn-secondary text-sm">📤 อัปโหลดวิดีโอ</button>
+            </div>
+            <input type="hidden" id="cfg-video-mode" value="url">
+            <!-- URL fields -->
+            <div id="video-url-fields">
                 <label>URL วิดีโอ</label>
                 <input type="url" id="cfg-video-url" class="input-field" placeholder="https://www.youtube.com/watch?v=...">
+                <p class="text-xs text-gray-600 mt-1">รองรับ YouTube URL หรือ URL ไฟล์วิดีโอโดยตรง (mp4, webm ฯลฯ)</p>
+            </div>
+            <!-- Upload fields -->
+            <div id="video-upload-fields" class="hidden">
+                <label>อัปโหลดไฟล์วิดีโอ</label>
+                <input type="file" id="cfg-video-upload" accept="video/*" class="input-field" style="padding:6px;">
+                <div id="cfg-video-upload-preview" class="hidden mt-3" style="border-radius:10px;overflow:hidden;aspect-ratio:16/9;max-width:320px;">
+                    <video id="cfg-video-upload-preview-el" controls muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+                </div>
             </div>
         </div>
 
@@ -567,10 +582,23 @@ let slides = [];              // Section 2 slides
 let _uploadBase64 = null;     // temp for Section 2 upload modal
 let videoBottomSlides = [];   // Section 1B slides
 let _vbUploadBase64 = null;   // temp for Section 1B upload modal
+let _videoUploadBase64 = null; // temp for Section 1 video upload
 
 // ---- Apply config to DOM ----
 function applyConfig(cfg) {
-    document.getElementById("cfg-video-url").value           = cfg.videoUrl || "";
+    const videoMode = cfg.videoMode || "url";
+    document.getElementById("cfg-video-mode").value = videoMode;
+    document.getElementById("cfg-video-url").value  = cfg.videoUrl || "";
+    setVideoMode(videoMode);
+    if (videoMode === "upload" && cfg.videoSrc) {
+        _videoUploadBase64 = cfg.videoSrc;
+        const prevEl = document.getElementById("cfg-video-upload-preview-el");
+        const prev   = document.getElementById("cfg-video-upload-preview");
+        prevEl.src = cfg.videoSrc;
+        prev.classList.remove("hidden");
+    } else {
+        _videoUploadBase64 = null;
+    }
     document.getElementById("cfg-slide-interval").value      = cfg.slideInterval || 5;
     document.getElementById("cfg-ticker-text").value         = cfg.tickerText || "";
     document.getElementById("cfg-ticker-speed").value        = cfg.tickerSpeed || 60;
@@ -608,8 +636,11 @@ function loadConfig() {
 
 // ---- Save ----
 function saveSettings() {
+    const videoMode = document.getElementById("cfg-video-mode").value;
     const cfg = {
-        videoUrl:             document.getElementById("cfg-video-url").value.trim(),
+        videoMode,
+        videoUrl:             videoMode === "url" ? document.getElementById("cfg-video-url").value.trim() : "",
+        videoSrc:             videoMode === "upload" ? (_videoUploadBase64 || "") : "",
         videoBottomSlides:    videoBottomSlides,
         videoBottomInterval:  parseInt(document.getElementById("cfg-vb-interval").value) || 5,
         slideInterval:        parseInt(document.getElementById("cfg-slide-interval").value) || 5,
@@ -637,6 +668,7 @@ function resetToDefaults() {
         .then(({ error }) => { if (error) console.warn('Supabase reset error:', error); });
     slides = [];
     videoBottomSlides = [];
+    _videoUploadBase64 = null;
     applyConfig({});
     showToast("รีเซ็ตแล้ว");
 }
@@ -651,6 +683,28 @@ function showToast(msg) {
     t.textContent = msg;
     t.classList.add("show");
     setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ============================================================
+//  Section 1 Video Mode Toggle
+// ============================================================
+function setVideoMode(mode) {
+    document.getElementById("cfg-video-mode").value = mode;
+    const urlFields    = document.getElementById("video-url-fields");
+    const uploadFields = document.getElementById("video-upload-fields");
+    const urlBtn       = document.getElementById("video-mode-url-btn");
+    const uploadBtn    = document.getElementById("video-mode-upload-btn");
+    if (mode === "upload") {
+        urlFields.classList.add("hidden");
+        uploadFields.classList.remove("hidden");
+        urlBtn.className    = "btn-secondary text-sm";
+        uploadBtn.className = "btn-primary text-sm";
+    } else {
+        urlFields.classList.remove("hidden");
+        uploadFields.classList.add("hidden");
+        urlBtn.className    = "btn-primary text-sm";
+        uploadBtn.className = "btn-secondary text-sm";
+    }
 }
 
 // ============================================================
@@ -996,6 +1050,21 @@ function saveSlide() {
 
 // modal file upload preview
 document.addEventListener("DOMContentLoaded", () => {
+    // Section 1: video file upload preview
+    document.getElementById("cfg-video-upload").addEventListener("change", function() {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            _videoUploadBase64 = e.target.result;
+            const prevEl = document.getElementById("cfg-video-upload-preview-el");
+            const prev   = document.getElementById("cfg-video-upload-preview");
+            prevEl.src = _videoUploadBase64;
+            prev.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+    });
+
     // VB modal: file upload preview
     document.getElementById("vb-modal-upload-input").addEventListener("change", function() {
         const file = this.files[0];
