@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>บันทึกวัคซีน | PK-VMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <style>
+        :root {
+            --navy:     #020617;
+            --navy-mid: #0f172a;
+            --teal:     #14b8b1;
+            --border:   rgba(255, 255, 255, 0.1);
+            --gold:     #c9a84c;
+            --green:    #16a34a;
+        }
+        body {
+            font-family: "Sarabun", sans-serif;
+            background: var(--navy);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        * { font-family: "Sarabun", sans-serif; }
+
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background:
+                radial-gradient(circle at 50% 10%, rgba(22,163,74,0.06) 0%, transparent 55%),
+                radial-gradient(circle at 80% 80%, rgba(14,165,160,0.05) 0%, transparent 60%);
+        }
+
+        /* ─── Toast ───────────────────── */
+        #toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #1e293b; border: 1px solid var(--border); color: #e2e8f0;
+            padding: 12px 24px; border-radius: 50px; font-size: 0.9rem; font-weight: 600;
+            z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+            white-space: nowrap;
+        }
+        #toast.show { opacity: 1; }
+
+        /* ─── Form card ─────────────────── */
+        .form-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .card-title {
+            font-size: 1rem; font-weight: 800; color: var(--teal);
+            margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;
+            padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+        }
+
+        /* ─── Inputs ───────────────────── */
+        label.field-label {
+            display: block; font-size: 0.82rem; font-weight: 600;
+            color: #94a3b8; margin-bottom: 6px;
+        }
+        input[type="date"], select.input-select {
+            width: 100%; padding: 11px 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(255,255,255,0.05);
+            color: #e2e8f0; font-size: 0.95rem; outline: none;
+            transition: border-color 0.2s; color-scheme: dark; cursor: pointer;
+        }
+        input[type="date"]:focus, select.input-select:focus { border-color: var(--teal); }
+
+        /* ─── Buttons ──────────────────── */
+        .btn-save {
+            width: 100%; padding: 14px; border-radius: 14px;
+            background: linear-gradient(135deg, var(--teal), #0f766e);
+            color: white; font-size: 1rem; font-weight: 800;
+            border: none; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-save:active { transform: scale(0.98); }
+        .btn-danger-sm {
+            padding: 6px 10px; border-radius: 8px; font-size: 0.75rem;
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+            color: #f87171; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+        }
+        .btn-danger-sm:hover { background: rgba(239,68,68,0.2); }
+
+        /* ─── Animal info card ─────────── */
+        .animal-card {
+            background: linear-gradient(135deg, rgba(22,163,74,0.12), rgba(14,165,160,0.08));
+            border: 1px solid rgba(22,163,74,0.3);
+            border-radius: 20px; padding: 1.25rem 1.5rem;
+            display: flex; align-items: center; gap: 16px;
+            margin-bottom: 1.25rem;
+        }
+        .animal-icon {
+            font-size: 2.8rem; flex-shrink: 0;
+            width: 60px; height: 60px; border-radius: 50%;
+            background: rgba(22,163,74,0.15);
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid rgba(22,163,74,0.3);
+        }
+        .animal-name {
+            font-family: "Kanit", sans-serif;
+            font-size: 1.3rem; font-weight: 700; color: white; line-height: 1.2;
+        }
+        .animal-meta { font-size: 0.82rem; color: #94a3b8; margin-top: 4px; }
+        .animal-hn { font-size: 0.78rem; color: var(--teal); font-weight: 600; margin-top: 2px; }
+
+        /* ─── Vaccine record items ──────── */
+        .vacc-record-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 14px; border-radius: 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border); margin-bottom: 8px;
+            animation: fadeIn 0.3s ease both;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .vacc-sticker {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border: 2px solid #22c55e;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; flex-shrink: 0;
+        }
+        .vacc-info { flex: 1; min-width: 0; }
+        .vacc-name { font-size: 0.9rem; font-weight: 700; color: #e2e8f0; }
+        .vacc-date { font-size: 0.75rem; color: #22c55e; font-weight: 600; margin-top: 2px; }
+        .vacc-disease { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+
+        /* ─── Date display hint ─────────── */
+        .date-hint { color: #5eead4; font-size: 0.82rem; margin-top: 6px; min-height: 18px; }
+
+        /* ─── No records placeholder ─────── */
+        .empty-state {
+            text-align: center; padding: 28px 16px; color: #475569;
+        }
+        .empty-state .icon { font-size: 2.8rem; margin-bottom: 8px; }
+        .empty-state .msg { font-size: 0.9rem; font-weight: 600; }
+
+        /* ─── View passport link button ─── */
+        .btn-view-passport {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 11px; border-radius: 12px; width: 100%;
+            background: rgba(201,168,76,0.08);
+            border: 1px solid rgba(201,168,76,0.3);
+            color: var(--gold); font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; transition: all 0.2s; text-decoration: none;
+        }
+        .btn-view-passport:hover { background: rgba(201,168,76,0.16); }
+
+        /* ─── Main content grid ─────── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        @media (max-width: 600px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .animal-card { flex-wrap: wrap; gap: 12px; }
+            .animal-card .btn-view-passport { width: 100% !important; }
+        }
+
+        /* ─── Loading / Error screen ────── */
+        #init-screen {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            min-height: 60vh; gap: 16px;
+        }
+        .init-icon { font-size: 3.5rem; animation: pulse 1.4s ease-in-out infinite; }
+        @keyframes pulse {
+            0%,100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.12); opacity: 0.75; }
+        }
+        .init-text { color: var(--teal); font-size: 1rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+<script>
+    if (sessionStorage.getItem("isLoggedIn") !== "true") {
+        window.location.href = "index.html";
+    }
+</script>
+
+<div class="mesh-bg"></div>
+<div id="toast"></div>
+
+<!-- Header -->
+<header style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+               background: rgba(2,6,23,0.85); backdrop-filter: blur(12px);
+               position: sticky; top: 0; z-index: 50;">
+    <div style="max-width: 700px; margin: 0 auto; display: flex; align-items: center; gap: 12px;">
+        <button onclick="history.length > 1 ? history.back() : window.close()"
+                style="padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,0.05);
+                       border: 1px solid var(--border); color: #94a3b8; font-size: 0.85rem;
+                       font-weight: 700; cursor: pointer; display: flex; align-items: center;
+                       gap: 6px; transition: all 0.2s; white-space: nowrap;"
+                onmouseover="this.style.background='rgba(255,255,255,0.1)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+            ← กลับ
+        </button>
+        <div style="display: flex; align-items: center; gap: 10px; padding-left: 12px;
+                    border-left: 1px solid rgba(255,255,255,0.15);">
+            <span style="font-size: 1.8rem;">💉</span>
+            <div>
+                <div style="font-size: 1rem; font-weight: 800; color: white;">บันทึกวัคซีน</div>
+                <div style="font-size: 0.72rem; color: #64748b;">Vaccination Record</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main content -->
+<main style="max-width: 700px; margin: 0 auto; padding: 1.25rem;">
+
+    <!-- Init / Loading screen -->
+    <div id="init-screen">
+        <div class="init-icon">💉</div>
+        <div class="init-text">กำลังโหลดข้อมูล...</div>
+    </div>
+
+    <!-- Main UI (hidden until data loaded) -->
+    <div id="main-ui" style="display: none;">
+
+        <!-- Animal info -->
+        <div class="animal-card" id="animal-card">
+            <div class="animal-icon" id="animal-icon">🐾</div>
+            <div style="flex: 1; min-width: 0;">
+                <div class="animal-name" id="animal-name">–</div>
+                <div class="animal-meta" id="animal-meta">–</div>
+                <div class="animal-hn" id="animal-hn"></div>
+            </div>
+            <a id="btn-view-passport" href="#" target="_blank" class="btn-view-passport"
+               style="width: auto; padding: 10px 14px; white-space: nowrap;">
+                🛂 ดู e-Passport
+            </a>
+        </div>
+
+        <div class="main-grid">
+
+            <!-- Left: Add vaccine form -->
+            <div>
+                <div class="form-card">
+                    <div class="card-title">＋ เพิ่มประวัติวัคซีน</div>
+
+                    <div style="margin-bottom: 14px;">
+                        <label class="field-label">วันที่ฉีดวัคซีน</label>
+                        <input type="date" id="vacc_date" onchange="updateDateHint()">
+                        <div class="date-hint" id="date_hint"></div>
+                    </div>
+
+                    <div style="margin-bottom: 18px;">
+                        <label class="field-label">วัคซีน</label>
+                        <select class="input-select" id="vacc_select">
+                            <option value="">– เลือกวัคซีน –</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-save" onclick="saveVaccRecord()">
+                        💉 บันทึกวัคซีน
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Vaccination history -->
+            <div>
+                <div class="form-card" style="margin-bottom: 0;">
+                    <div class="card-title" style="justify-content: space-between;">
+                        <span>📋 ประวัติวัคซีน</span>
+                        <span id="vacc-count" style="font-size: 0.72rem; color: #64748b; font-weight: 600;"></span>
+                    </div>
+                    <div id="vacc-list">
+                        <div class="empty-state">
+                            <div class="icon">💉</div>
+                            <div class="msg">กำลังโหลด...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /grid -->
+
+    </div><!-- /main-ui -->
+
+</main>
+
+<script>
+/* ─── Globals ───────────────────────────── */
+const params   = new URLSearchParams(window.location.search);
+const petId    = params.get('pet_id') || '';
+let petData    = null;
+let ownerData  = null;
+let vaccCatalog = [];
+let vaccRecords = [];
+
+/* ─── HTML escape ──────────────────────── */
+function esc(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
+/* ─── Toast ─────────────────────────────── */
+function showToast(msg, ms = 2600) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ─── Animal icon ───────────────────────── */
+function getAnimalIcon(t) {
+    if (!t) return '🐾';
+    if (t.startsWith('สุนัข') || t === 'หมา') return '🐶';
+    if (t.startsWith('แมว')) return '🐱';
+    if (t.startsWith('กระต่าย')) return '🐰';
+    if (t.startsWith('นก')) return '🦜';
+    if (t.startsWith('เต่า')) return '🐢';
+    return '🐾';
+}
+
+/* ─── Format date (Thai) ────────────────── */
+function formatDateTH(dateStr) {
+    if (!dateStr) return '–';
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d)) return dateStr;
+    return d.toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'long', day: 'numeric', calendar: 'buddhist'
+    });
+}
+
+/* ─── Date hint ─────────────────────────── */
+function updateDateHint() {
+    const val = document.getElementById('vacc_date').value;
+    document.getElementById('date_hint').textContent = val ? '🗓️ ' + formatDateTH(val) : '';
+}
+
+/* ─── Populate vaccine select ───────────── */
+function populateSelect() {
+    const sel = document.getElementById('vacc_select');
+    const petType = petData?.pet_type || '';
+    const isCat = petType.startsWith('แมว');
+    const isDog = petType.startsWith('สุนัข') || petType === 'หมา';
+
+    // Filter catalog to relevant species when possible
+    let filtered = vaccCatalog;
+    if (isCat)      filtered = vaccCatalog.filter(v => v.for_cat);
+    else if (isDog) filtered = vaccCatalog.filter(v => v.for_dog);
+
+    sel.innerHTML = '<option value="">– เลือกวัคซีน –</option>' +
+        filtered.map(v =>
+            `<option value="${esc(v.id)}">${esc(v.name)}${v.prevents_disease ? ' (' + esc(v.prevents_disease) + ')' : ''}</option>`
+        ).join('');
+}
+
+/* ─── Render vaccine history list ───────── */
+function renderVaccList() {
+    const cont = document.getElementById('vacc-list');
+    const count = document.getElementById('vacc-count');
+
+    if (!vaccRecords.length) {
+        cont.innerHTML = `<div class="empty-state">
+            <div class="icon">💉</div>
+            <div class="msg">ยังไม่มีประวัติวัคซีน</div>
+        </div>`;
+        count.textContent = '';
+        return;
+    }
+
+    count.textContent = vaccRecords.length + ' รายการ';
+    cont.innerHTML = vaccRecords.map((r, i) => {
+        const catalog = r.vaccine_catalog;
+        const disease = catalog?.prevents_disease || '';
+        return `
+        <div class="vacc-record-item" style="animation-delay:${i * 40}ms">
+            <div class="vacc-sticker">💉</div>
+            <div class="vacc-info">
+                <div class="vacc-name">${esc(r.vaccine_name)}</div>
+                <div class="vacc-date">🗓️ ${esc(formatDateTH(r.vaccinated_date))}</div>
+                ${disease ? `<div class="vacc-disease">🛡️ ${esc(disease)}</div>` : ''}
+            </div>
+            <button class="btn-danger-sm" data-delete-id="${esc(r.id)}">🗑️</button>
+        </div>`;
+    }).join('');
+}
+
+/* ─── Save vaccination record ───────────── */
+async function saveVaccRecord() {
+    const vaccDate = document.getElementById('vacc_date').value;
+    if (!vaccDate) { showToast('⚠️ กรุณาเลือกวันที่ฉีดวัคซีน'); return; }
+    const vaccId = document.getElementById('vacc_select').value;
+    if (!vaccId) { showToast('⚠️ กรุณาเลือกวัคซีน'); return; }
+    const vac = vaccCatalog.find(v => v.id === vaccId);
+    if (!vac) { showToast('⚠️ ไม่พบวัคซีนที่เลือก'); return; }
+
+    try {
+        const { error } = await db.from('vaccination_records').insert({
+            animal_id:      petId,
+            vaccine_id:     vaccId,
+            vaccine_name:   vac.name,
+            vaccinated_date: vaccDate
+        });
+        if (error) throw error;
+        showToast('✅ บันทึกวัคซีนสำเร็จ');
+        document.getElementById('vacc_select').value = '';
+        await loadVaccRecords();
+    } catch (err) {
+        showToast('❌ ' + (err.message || 'บันทึกไม่สำเร็จ'));
+    }
+}
+
+/* ─── Delete vaccination record ─────────── */
+async function deleteVaccRecord(id) {
+    if (!confirm('ลบประวัติวัคซีนนี้?')) return;
+    try {
+        const { error } = await db.from('vaccination_records').delete().eq('id', id);
+        if (error) throw error;
+        showToast('🗑️ ลบประวัติวัคซีนแล้ว');
+        await loadVaccRecords();
+    } catch (err) {
+        showToast('❌ ' + (err.message || 'ลบไม่สำเร็จ'));
+    }
+}
+
+/* ─── Load vaccination records ──────────── */
+async function loadVaccRecords() {
+    try {
+        const { data, error } = await db
+            .from('vaccination_records')
+            .select('id, vaccinated_date, vaccine_name, vaccine_catalog(name, prevents_disease)')
+            .eq('animal_id', petId)
+            .order('vaccinated_date', { ascending: false });
+        if (error) throw error;
+        vaccRecords = data || [];
+        renderVaccList();
+    } catch (err) {
+        document.getElementById('vacc-list').innerHTML =
+            `<div class="empty-state"><div class="msg" style="color:#f87171;">❌ โหลดไม่สำเร็จ</div></div>`;
+    }
+}
+
+/* ─── Load vaccine catalog ──────────────── */
+async function loadVaccCatalog() {
+    try {
+        const { data, error } = await db.from('vaccine_catalog').select('*').order('name');
+        if (error) throw error;
+        vaccCatalog = data || [];
+        populateSelect();
+    } catch (err) {
+        console.error('loadVaccCatalog:', err);
+    }
+}
+
+/* ─── Main init ─────────────────────────── */
+async function init() {
+    if (!petId) {
+        document.getElementById('init-screen').innerHTML = `
+            <div style="font-size:2.5rem;">❌</div>
+            <div style="color:#ef4444; font-size:1rem; text-align:center;">
+                ไม่พบรหัสสัตว์เลี้ยง<br>
+                <small style="color:#64748b; margin-top:8px; display:block;">กรุณาเปิดผ่านหน้าประวัติการรักษา (medrec)</small>
+            </div>`;
+        return;
+    }
+
+    try {
+        // Parallel: animal data + vaccine catalog
+        const [resAnimal, resCatalog] = await Promise.all([
+            db.from('animals').select('*').eq('id', petId).single(),
+            db.from('vaccine_catalog').select('*').order('name')
+        ]);
+
+        if (resAnimal.error || !resAnimal.data) throw new Error('ไม่พบข้อมูลสัตว์');
+        petData = resAnimal.data;
+        vaccCatalog = resCatalog.data || [];
+
+        // Fetch owner
+        const resOwner = await db.from('owners')
+            .select('hn, owner_name').eq('hn', petData.owner_hn).single();
+        ownerData = resOwner.data;
+
+        // Fill animal info card
+        const icon = getAnimalIcon(petData.pet_type);
+        document.getElementById('animal-icon').textContent = icon;
+        document.getElementById('animal-name').textContent = petData.pet_name || '–';
+        const meta = [petData.pet_type, petData.breed].filter(Boolean).join(' · ');
+        document.getElementById('animal-meta').textContent = meta || '–';
+        if (ownerData?.hn) {
+            document.getElementById('animal-hn').textContent = `👤 ${ownerData.owner_name || ''} (HN: ${ownerData.hn})`;
+        }
+
+        // Set view passport link
+        document.getElementById('btn-view-passport').href =
+            `epassport.html?pet_id=${encodeURIComponent(petId)}`;
+
+        // Set title
+        document.title = `บันทึกวัคซีน: ${petData.pet_name || ''} | PK-VMS`;
+
+        // Set default date to today (local timezone)
+        const today = new Date();
+        const localDate = [
+            today.getFullYear(),
+            String(today.getMonth() + 1).padStart(2, '0'),
+            String(today.getDate()).padStart(2, '0')
+        ].join('-');
+        document.getElementById('vacc_date').value = localDate;
+        updateDateHint();
+
+        // Populate vaccine select
+        populateSelect();
+
+        // Load vaccine records
+        await loadVaccRecords();
+
+        // Show main UI
+        document.getElementById('init-screen').style.display = 'none';
+        document.getElementById('main-ui').style.display = '';
+
+    } catch (err) {
+        document.getElementById('init-screen').innerHTML = `
+            <div style="font-size:2.5rem;">❌</div>
+            <div style="color:#ef4444; font-size:1rem; text-align:center;">${esc(err.message || 'เกิดข้อผิดพลาด')}</div>`;
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    // Event delegation for delete buttons in vaccine list
+    document.getElementById('vacc-list').addEventListener('click', e => {
+        const btn = e.target.closest('[data-delete-id]');
+        if (btn) deleteVaccRecord(btn.dataset.deleteId);
+    });
+    init();
+});
+</script>
+</body>
+</html>
