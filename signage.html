@@ -304,8 +304,27 @@ async function getConfigFromSupabase() {
 
 // ---- Section 1: Video ----
 function initVideo(cfg) {
-    const url = (cfg.videoUrl || "").trim();
+    const mode = cfg.videoMode || "url";
     const container = document.getElementById("video-area");
+
+    if (mode === "upload") {
+        const src = (cfg.videoSrc || "").trim();
+        if (!src) return;
+        // Only accept data URIs with a video MIME type
+        if (!src.startsWith("data:video/")) return;
+        document.getElementById("video-placeholder").style.display = "none";
+        const video = document.createElement("video");
+        video.src = src;
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.controls = false;
+        container.appendChild(video);
+        return;
+    }
+
+    const url = (cfg.videoUrl || "").trim();
     if (!url) return;
 
     document.getElementById("video-placeholder").style.display = "none";
