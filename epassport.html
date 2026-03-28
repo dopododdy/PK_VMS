@@ -530,7 +530,7 @@ const PAGE_LABELS = ['ปกหน้า', 'ข้อมูลสัตว์', 
 const TOTAL_PAGES = 4;
 let currentPage = 0;
 let petData = null, ownerData = null;
-let vaccineRecords = [], nextAppt = null, nextAppt2 = null;
+let vaccineRecords = [], newVaccRecords = [], nextAppt = null, nextAppt2 = null;
 let epassportConfig = {};
 let touchStartX = 0, touchStartY = 0;
 
@@ -620,7 +620,13 @@ function buildIndicators() {
 /* ─── Render vaccine page ──────────────────── */
 function renderVaccines() {
     const body = document.getElementById('vaccine-body');
-    if (!vaccineRecords.length) {
+
+    const hasNew = newVaccRecords.length > 0;
+    const hasLegacy = vaccineRecords.some(r =>
+        Array.isArray(r.dld_categories) && r.dld_categories.some(k => k.startsWith('vaccine:'))
+    );
+
+    if (!hasNew && !hasLegacy) {
         body.innerHTML = `<div class="no-vaccine">
             <div class="icon">💉</div>
             <div style="font-weight:700; color:#9ca3af; font-size:1rem;">ยังไม่มีประวัติวัคซีน</div>
@@ -628,15 +634,45 @@ function renderVaccines() {
         </div>`;
         return;
     }
+
     const stampSrc = epassportConfig.vet_stamp || '';
     const vetName = epassportConfig.vet_name || 'สัตวแพทย์';
+    const stampHtml = stampSrc
+        ? `<img src="${esc(stampSrc)}" alt="stamp">`
+        : `<span style="font-size:0.45rem; line-height:1.3; text-align:center;">${esc(vetName)}</span>`;
+
+    let html = '';
+    let entryCount = 0;
+
+    // ── New records from vaccination_records table ──
+    for (const rec of newVaccRecords) {
+        const catalog = rec.vaccine_catalog;
+        const delayMs = entryCount * 60;
+        entryCount++;
+        const stickerInner = catalog?.image_data
+            ? `<img src="${esc(catalog.image_data)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="vaccine">`
+            : `<div class="vaccine-sticker-inner"></div><span>💉</span>`;
+        const diseaseLine = catalog?.prevents_disease
+            ? `<div class="vaccine-vet">🛡️ ${esc(catalog.prevents_disease)}</div>` : '';
+        html += `
+        <div class="vaccine-entry" style="animation-delay:${delayMs}ms">
+            <div class="vaccine-sticker">${stickerInner}</div>
+            <div class="vaccine-details">
+                <div class="vaccine-name">${esc(rec.vaccine_name)}</div>
+                <div class="vaccine-date">📅 ${esc(formatDateTH(rec.vaccinated_date + 'T00:00:00'))}</div>
+                <div class="vaccine-vet">👨‍⚕️ ${esc(vetName)}</div>
+                ${diseaseLine}
+            </div>
+            <div class="vet-stamp-mini">${stampHtml}</div>
+        </div>`;
+    }
+
+    // ── Legacy records from medical_records.dld_categories ──
     const vaccineIcons = {
         'Rabies': '🦠', 'Canine Distemper': '🐶', 'Canine Parvovirus': '🧬',
         'Canine Coronavirus': '🦠', 'Feline Panleukopenia': '🐱',
         'Feline Leukemia': '🔬', 'FIP (Feline Infectious Peritonitis)': '🐱'
     };
-    let html = '';
-    let entryCount = 0;
     for (const rec of vaccineRecords) {
         const cats = Array.isArray(rec.dld_categories) ? rec.dld_categories : [];
         const vaccines = cats.filter(k => k.startsWith('vaccine:')).map(k => k.replace('vaccine:', ''));
@@ -645,9 +681,6 @@ function renderVaccines() {
             const icon = vaccineIcons[vax] || '💉';
             const delayMs = entryCount * 60;
             entryCount++;
-            const stampHtml = stampSrc
-                ? `<img src="${esc(stampSrc)}" alt="stamp">`
-                : `<span style="font-size:0.45rem; line-height:1.3; text-align:center;">${esc(vetName)}</span>`;
             html += `
             <div class="vaccine-entry" style="animation-delay:${delayMs}ms">
                 <div class="vaccine-sticker">
@@ -663,6 +696,7 @@ function renderVaccines() {
             </div>`;
         }
     }
+
     body.innerHTML = html || `<div class="no-vaccine">
         <div class="icon">💉</div>
         <div style="font-weight:700; color:#9ca3af;">ไม่พบข้อมูลวัคซีน</div>
@@ -777,14 +811,18 @@ async function loadData() {
         return;
     }
     try {
-        // Parallel fetch: animal, epassport config, medical records
-        const [resAnimal, resConfig, resRecords] = await Promise.all([
+        // Parallel fetch: animal, epassport config, medical records, vaccination records
+        const [resAnimal, resConfig, resRecords, resVaccRec] = await Promise.all([
             db.from('animals').select('*').eq('id', petId).single(),
             db.from('print_templates').select('config').eq('template_type', 'epassport').maybeSingle(),
             db.from('medical_records')
                 .select('id, created_at, dld_categories, appointment, appointment_note, appointment_2, appointment_note_2')
                 .eq('animal_id', petId)
-                .order('created_at', { ascending: false })
+                .order('created_at', { ascending: false }),
+            db.from('vaccination_records')
+                .select('id, vaccinated_date, vaccine_name, vaccine_catalog(name, image_data, prevents_disease)')
+                .eq('animal_id', petId)
+                .order('vaccinated_date', { ascending: false })
         ]);
 
         if (resAnimal.error || !resAnimal.data) throw new Error('ไม่พบข้อมูลสัตว์');
@@ -796,11 +834,14 @@ async function loadData() {
             .eq('hn', petData.owner_hn).single();
         ownerData = resOwner.data;
 
-        // Filter vaccine records
+        // Filter vaccine records (legacy: from medical_records dld_categories)
         const allRecords = resRecords.data || [];
         vaccineRecords = allRecords.filter(r =>
             Array.isArray(r.dld_categories) && r.dld_categories.some(k => k.startsWith('vaccine:'))
         );
+
+        // New vaccination records (from vaccination_records table with catalog join)
+        newVaccRecords = resVaccRec.data || [];
 
         // Find next appointment (most recent upcoming)
         const today = new Date().toISOString().split('T')[0];

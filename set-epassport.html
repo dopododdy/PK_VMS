@@ -132,6 +132,78 @@
         .stamp-preview img { width: 100%; height: 100%; object-fit: cover; }
         .stamp-placeholder { font-size: 2rem; opacity: 0.4; }
 
+        /* ─── Vaccine catalog items ──────── */
+        .vaccine-catalog-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+        .vaccine-catalog-img {
+            width: 44px; height: 44px; border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; flex-shrink: 0; overflow: hidden;
+        }
+        .vaccine-catalog-img img { width: 100%; height: 100%; object-fit: cover; }
+        .vaccine-catalog-info { flex: 1; min-width: 0; }
+        .vaccine-catalog-name { font-size: 0.9rem; font-weight: 700; color: #e2e8f0; }
+        .vaccine-catalog-meta { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+        .btn-danger-sm {
+            padding: 6px 10px; border-radius: 8px; font-size: 0.75rem;
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+            color: #f87171; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+        }
+        .btn-danger-sm:hover { background: rgba(239,68,68,0.2); }
+        .btn-add {
+            padding: 12px; border-radius: 12px; width: 100%;
+            background: linear-gradient(135deg, rgba(14,165,160,0.15), rgba(14,165,160,0.08));
+            border: 1px solid rgba(14,165,160,0.35);
+            color: var(--teal); font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-add:hover { background: rgba(14,165,160,0.25); }
+        .search-result-item {
+            padding: 10px 12px; cursor: pointer; border-radius: 8px;
+            margin-bottom: 4px; background: rgba(255,255,255,0.04);
+            transition: background 0.15s; font-size: 0.9rem;
+        }
+        .search-result-item:hover { background: rgba(14,165,160,0.1); color: #5eead4; }
+        .vacc-record-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border); margin-bottom: 8px;
+        }
+        .vacc-record-info { flex: 1; min-width: 0; }
+        .vacc-record-animal { font-size: 0.85rem; font-weight: 700; color: #e2e8f0; }
+        .vacc-record-detail { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--teal); cursor: pointer; }
+        input[type="date"] {
+            width: 100%; padding: 12px 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(255,255,255,0.05);
+            color: #e2e8f0; font-size: 0.95rem; outline: none;
+            transition: border-color 0.2s; color-scheme: dark;
+        }
+        input[type="date"]:focus { border-color: var(--teal); }
+        select.input-select {
+            width: 100%; padding: 12px 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(15,23,42,0.95);
+            color: #e2e8f0; font-size: 0.95rem; outline: none;
+            transition: border-color 0.2s; cursor: pointer;
+        }
+        select.input-select:focus { border-color: var(--teal); }
+        .section-divider {
+            margin: 2rem 0 1.5rem;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .section-divider-line { flex: 1; height: 1px; background: var(--border); }
+        .section-divider-title {
+            font-size: 1rem; font-weight: 800; color: var(--gold);
+            display: flex; align-items: center; gap: 8px; white-space: nowrap;
+        }
+
         /* ─── Toast ───────────────────── */
         #toast {
             position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -284,6 +356,121 @@
             </div>
 
         </div><!-- /grid -->
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- Vaccine Management Section                          -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="section-divider">
+            <div class="section-divider-line"></div>
+            <div class="section-divider-title">💉 จัดการวัคซีน</div>
+            <div class="section-divider-line"></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Left: Vaccine catalog CRUD -->
+            <div class="space-y-4">
+
+                <!-- Add vaccine form -->
+                <div class="form-card">
+                    <div class="card-title">💉 ฐานข้อมูลวัคซีน</div>
+
+                    <div class="mb-4">
+                        <label>ชื่อวัคซีน</label>
+                        <input type="text" id="vac_name" placeholder="เช่น Rabies, DHLPPi, FVRCP">
+                    </div>
+
+                    <div class="mb-4">
+                        <label>สำหรับ</label>
+                        <div style="display:flex; gap:24px; margin-top:8px;">
+                            <label style="display:flex; align-items:center; gap:8px; color:#e2e8f0; font-size:0.9rem; margin-bottom:0; cursor:pointer;">
+                                <input type="checkbox" id="vac_for_dog" checked> 🐶 สุนัข
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; color:#e2e8f0; font-size:0.9rem; margin-bottom:0; cursor:pointer;">
+                                <input type="checkbox" id="vac_for_cat"> 🐱 แมว
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label>ป้องกันโรค</label>
+                        <input type="text" id="vac_disease" placeholder="เช่น พิษสุนัขบ้า, โรคหัด, ลำไส้อักเสบ">
+                    </div>
+
+                    <div class="mb-4">
+                        <label>รูปวัคซีน</label>
+                        <label class="upload-area" for="vac-img-input" id="vac-img-drop">
+                            <input type="file" id="vac-img-input" accept="image/*" onchange="handleVaccineImgUpload(event)">
+                            <div id="vac-img-preview-wrap">
+                                <div class="upload-icon">🖼️</div>
+                                <div class="upload-text">แตะเพื่ออัปโหลดรูปวัคซีน <span>อัปโหลด</span></div>
+                                <div class="upload-text" style="margin-top:4px;">PNG, JPG ≤ 2 MB</div>
+                            </div>
+                        </label>
+                        <div id="vac-img-actions" class="text-right mt-2" style="display:none;">
+                            <button class="btn-clear" onclick="clearVaccineImg()">✕ ลบรูป</button>
+                        </div>
+                    </div>
+
+                    <button class="btn-add" onclick="saveVaccine()">＋ เพิ่มวัคซีนในฐานข้อมูล</button>
+                </div>
+
+                <!-- Vaccine list -->
+                <div class="form-card">
+                    <div class="card-title">📋 รายการวัคซีนทั้งหมด</div>
+                    <div id="vaccine-catalog-list">
+                        <div class="text-center py-4" style="color:#64748b; font-size:0.85rem;">กำลังโหลด...</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right: Add vaccination record -->
+            <div class="space-y-4">
+
+                <div class="form-card">
+                    <div class="card-title">📝 บันทึกประวัติวัคซีน</div>
+
+                    <div class="mb-4">
+                        <label>ค้นหาสัตว์เลี้ยง</label>
+                        <input type="text" id="vacc_animal_search" placeholder="พิมพ์ชื่อสัตว์เลี้ยง..." oninput="onAnimalSearch(this.value)" autocomplete="off">
+                        <div id="vacc-animal-results" style="margin-top:6px; max-height:180px; overflow-y:auto; display:none; background:rgba(15,23,42,0.95); border:1px solid var(--border); border-radius:10px; padding:4px;"></div>
+                        <div id="vacc-selected-animal" style="display:none; margin-top:8px; padding:10px 14px; border-radius:12px; background:rgba(14,165,160,0.08); border:1px solid rgba(14,165,160,0.3);">
+                            <div style="font-size:0.85rem; font-weight:700; color:#5eead4;" id="vacc-animal-label">–</div>
+                            <button class="btn-clear" style="margin-top:6px;" onclick="clearSelectedAnimal()">✕ เปลี่ยนสัตว์</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label>วันที่ฉีดวัคซีน</label>
+                        <input type="date" id="vacc_date" onchange="updateVaccDateDisplay()">
+                        <div id="vacc_date_display" style="color:#5eead4; font-size:0.82rem; margin-top:6px; min-height:18px;"></div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label>เลือกวัคซีน</label>
+                        <select class="input-select" id="vacc_vaccine_select">
+                            <option value="">– เลือกวัคซีน –</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-save" onclick="saveVaccinationRecord()">
+                        💉 บันทึกประวัติการฉีดวัคซีน
+                    </button>
+                </div>
+
+                <!-- Recent vaccination records -->
+                <div class="form-card">
+                    <div class="card-title">📅 ประวัติวัคซีนล่าสุด</div>
+                    <div id="recent-vacc-records">
+                        <div class="text-center py-4" style="color:#64748b; font-size:0.85rem;">กำลังโหลด...</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div><!-- /vaccine grid -->
+
     </main>
 
     <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
@@ -447,7 +634,316 @@ async function loadConfig() {
     }
 }
 
-window.addEventListener('DOMContentLoaded', loadConfig);
+window.addEventListener('DOMContentLoaded', () => {
+    loadConfig();
+    loadVaccineCatalog();
+    loadRecentVaccinationRecords();
+    // Set today as default date
+    document.getElementById('vacc_date').value = new Date().toISOString().split('T')[0];
+    updateVaccDateDisplay();
+
+    // Event delegation: animal search result click
+    document.getElementById('vacc-animal-results').addEventListener('click', e => {
+        const item = e.target.closest('.search-result-item');
+        if (!item) return;
+        selectAnimal(item.dataset.id, item.dataset.name, item.dataset.type);
+    });
+
+    // Event delegation: vaccine catalog delete
+    document.getElementById('vaccine-catalog-list').addEventListener('click', e => {
+        const btn = e.target.closest('[data-delete-vaccine]');
+        if (btn) deleteVaccine(btn.dataset.deleteVaccine);
+    });
+
+    // Event delegation: vaccination record delete
+    document.getElementById('recent-vacc-records').addEventListener('click', e => {
+        const btn = e.target.closest('[data-delete-record]');
+        if (btn) deleteVaccinationRecord(btn.dataset.deleteRecord);
+    });
+});
+
+/* ═══════════════════════════════════════════════════════════
+   VACCINE CATALOG
+   ═══════════════════════════════════════════════════════════ */
+
+let vaccineCatalog = [];
+let vaccineImgBase64 = '';
+let selectedAnimalId = null;
+let selectedAnimalName = '';
+let selectedAnimalType = '';
+let animalSearchTimer = null;
+
+/* ─── HTML escape ────────────────────────── */
+function escHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
+/* ─── Species icon helper ───────────────── */
+function getSpeciesIcon(type) {
+    if (!type) return '🐾';
+    if (type.startsWith('สุนัข') || type === 'หมา') return '🐶';
+    if (type.startsWith('แมว')) return '🐱';
+    return '🐾';
+}
+
+/* ─── Vaccine image upload ──────────────── */
+async function handleVaccineImgUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+        vaccineImgBase64 = await fileToBase64(file);
+        document.getElementById('vac-img-preview-wrap').innerHTML =
+            `<img src="${vaccineImgBase64}" class="upload-preview" alt="vaccine">
+             <div class="upload-text" style="margin-top:6px;">แตะเพื่อเปลี่ยนรูป</div>`;
+        document.getElementById('vac-img-actions').style.display = '';
+    } catch (err) { showToast('❌ ' + err.message); }
+}
+
+function clearVaccineImg() {
+    vaccineImgBase64 = '';
+    document.getElementById('vac-img-input').value = '';
+    document.getElementById('vac-img-preview-wrap').innerHTML =
+        `<div class="upload-icon">🖼️</div>
+         <div class="upload-text">แตะเพื่ออัปโหลดรูปวัคซีน <span>อัปโหลด</span></div>
+         <div class="upload-text" style="margin-top:4px;">PNG, JPG ≤ 2 MB</div>`;
+    document.getElementById('vac-img-actions').style.display = 'none';
+}
+
+/* ─── Save vaccine to catalog ───────────── */
+async function saveVaccine() {
+    const name = document.getElementById('vac_name').value.trim();
+    if (!name) { showToast('⚠️ กรุณาใส่ชื่อวัคซีน'); return; }
+    const forDog = document.getElementById('vac_for_dog').checked;
+    const forCat = document.getElementById('vac_for_cat').checked;
+    if (!forDog && !forCat) { showToast('⚠️ กรุณาเลือกสำหรับสุนัข หรือแมว อย่างน้อย 1 ประเภท'); return; }
+    const disease = document.getElementById('vac_disease').value.trim();
+    try {
+        const { error } = await db.from('vaccine_catalog').insert({
+            name,
+            for_dog: forDog,
+            for_cat: forCat,
+            prevents_disease: disease || null,
+            image_data: vaccineImgBase64 || null
+        });
+        if (error) throw error;
+        showToast('✅ เพิ่มวัคซีนในฐานข้อมูลสำเร็จ');
+        document.getElementById('vac_name').value = '';
+        document.getElementById('vac_disease').value = '';
+        document.getElementById('vac_for_dog').checked = true;
+        document.getElementById('vac_for_cat').checked = false;
+        clearVaccineImg();
+        await loadVaccineCatalog();
+    } catch (err) {
+        showToast('❌ ' + (err.message || 'บันทึกไม่สำเร็จ'));
+    }
+}
+
+/* ─── Load vaccine catalog ──────────────── */
+async function loadVaccineCatalog() {
+    try {
+        const { data, error } = await db.from('vaccine_catalog')
+            .select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        vaccineCatalog = data || [];
+        renderVaccineCatalog();
+        populateVaccineSelect();
+    } catch (err) {
+        document.getElementById('vaccine-catalog-list').innerHTML =
+            '<div class="text-center py-4" style="color:#f87171; font-size:0.85rem;">❌ ไม่สามารถโหลดได้</div>';
+    }
+}
+
+/* ─── Render vaccine catalog list ───────── */
+function renderVaccineCatalog() {
+    const cont = document.getElementById('vaccine-catalog-list');
+    if (!vaccineCatalog.length) {
+        cont.innerHTML = '<div class="text-center py-4" style="color:#64748b; font-size:0.85rem;">ยังไม่มีวัคซีนในฐานข้อมูล</div>';
+        return;
+    }
+    cont.innerHTML = vaccineCatalog.map(v => {
+        const forLabel = [v.for_dog && '🐶 สุนัข', v.for_cat && '🐱 แมว'].filter(Boolean).join(' / ');
+        const imgHtml = v.image_data
+            ? `<div class="vaccine-catalog-img"><img src="${escHtml(v.image_data)}" alt="vaccine"></div>`
+            : `<div class="vaccine-catalog-img">💉</div>`;
+        return `
+        <div class="vaccine-catalog-item">
+            ${imgHtml}
+            <div class="vaccine-catalog-info">
+                <div class="vaccine-catalog-name">${escHtml(v.name)}</div>
+                <div class="vaccine-catalog-meta">${forLabel}${v.prevents_disease ? ' · ป้องกัน: ' + escHtml(v.prevents_disease) : ''}</div>
+            </div>
+            <button class="btn-danger-sm" data-delete-vaccine="${escHtml(v.id)}">🗑️</button>
+        </div>`;
+    }).join('');
+}
+
+/* ─── Delete vaccine ────────────────────── */
+async function deleteVaccine(id) {
+    if (!confirm('ลบวัคซีนนี้ออกจากฐานข้อมูล?\n(ประวัติวัคซีนที่มีอยู่จะยังคงอยู่)')) return;
+    try {
+        const { error } = await db.from('vaccine_catalog').delete().eq('id', id);
+        if (error) throw error;
+        showToast('🗑️ ลบวัคซีนแล้ว');
+        await loadVaccineCatalog();
+    } catch (err) {
+        showToast('❌ ' + (err.message || 'ลบไม่สำเร็จ'));
+    }
+}
+
+/* ─── Populate vaccine select ────────────── */
+function populateVaccineSelect() {
+    const sel = document.getElementById('vacc_vaccine_select');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">– เลือกวัคซีน –</option>' +
+        vaccineCatalog.map(v =>
+            `<option value="${escHtml(v.id)}">${escHtml(v.name)}${v.prevents_disease ? ' (' + escHtml(v.prevents_disease) + ')' : ''}</option>`
+        ).join('');
+    if (cur) sel.value = cur;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VACCINATION RECORD
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Animal search ──────────────────────── */
+function onAnimalSearch(term) {
+    clearTimeout(animalSearchTimer);
+    const res = document.getElementById('vacc-animal-results');
+    if (!term || term.trim().length < 2) { res.style.display = 'none'; return; }
+    animalSearchTimer = setTimeout(() => searchAnimals(term.trim()), 350);
+}
+
+async function searchAnimals(term) {
+    const res = document.getElementById('vacc-animal-results');
+    try {
+        const { data } = await db.from('animals')
+            .select('id, pet_name, pet_type, breed')
+            .ilike('pet_name', `%${term}%`)
+            .limit(8);
+        if (!data || !data.length) {
+            res.innerHTML = '<div style="padding:8px 12px; color:#64748b; font-size:0.85rem;">ไม่พบสัตว์เลี้ยง</div>';
+        } else {
+            res.innerHTML = data.map(a =>
+                `<div class="search-result-item"
+                    data-id="${escHtml(a.id)}"
+                    data-name="${escHtml(a.pet_name)}"
+                    data-type="${escHtml(a.pet_type || '')}">
+                    ${getSpeciesIcon(a.pet_type)} <strong>${escHtml(a.pet_name)}</strong>
+                    <span style="color:#64748b; font-size:0.8rem;"> · ${escHtml(a.pet_type || '')}${a.breed ? ' · ' + escHtml(a.breed) : ''}</span>
+                </div>`
+            ).join('');
+        }
+        res.style.display = '';
+    } catch { res.style.display = 'none'; }
+}
+
+function selectAnimal(id, name, type) {
+    selectedAnimalId = id;
+    selectedAnimalName = name;
+    selectedAnimalType = type;
+    document.getElementById('vacc_animal_search').value = '';
+    document.getElementById('vacc-animal-results').style.display = 'none';
+    document.getElementById('vacc-selected-animal').style.display = '';
+    document.getElementById('vacc-animal-label').textContent = `${getSpeciesIcon(type)} ${name}`;
+}
+
+function clearSelectedAnimal() {
+    selectedAnimalId = null;
+    selectedAnimalName = '';
+    selectedAnimalType = '';
+    document.getElementById('vacc-selected-animal').style.display = 'none';
+    document.getElementById('vacc_animal_search').value = '';
+}
+
+/* ─── Thai date display ──────────────────── */
+function updateVaccDateDisplay() {
+    const val = document.getElementById('vacc_date').value;
+    const disp = document.getElementById('vacc_date_display');
+    if (!val) { disp.textContent = ''; return; }
+    const d = new Date(val + 'T00:00:00');
+    disp.textContent = '📅 ' + d.toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'long', day: 'numeric', calendar: 'buddhist'
+    });
+}
+
+/* ─── Save vaccination record ────────────── */
+async function saveVaccinationRecord() {
+    if (!selectedAnimalId) { showToast('⚠️ กรุณาเลือกสัตว์เลี้ยง'); return; }
+    const vaccDate = document.getElementById('vacc_date').value;
+    if (!vaccDate) { showToast('⚠️ กรุณาเลือกวันที่ฉีดวัคซีน'); return; }
+    const vaccId = document.getElementById('vacc_vaccine_select').value;
+    if (!vaccId) { showToast('⚠️ กรุณาเลือกวัคซีน'); return; }
+    const vac = vaccineCatalog.find(v => v.id === vaccId);
+    if (!vac) { showToast('⚠️ ไม่พบวัคซีนที่เลือก'); return; }
+    try {
+        const { error } = await db.from('vaccination_records').insert({
+            animal_id: selectedAnimalId,
+            vaccine_id: vaccId,
+            vaccine_name: vac.name,
+            vaccinated_date: vaccDate
+        });
+        if (error) throw error;
+        showToast('✅ บันทึกประวัติวัคซีนสำเร็จ');
+        document.getElementById('vacc_vaccine_select').value = '';
+        clearSelectedAnimal();
+        await loadRecentVaccinationRecords();
+    } catch (err) {
+        showToast('❌ ' + (err.message || 'บันทึกไม่สำเร็จ'));
+    }
+}
+
+/* ─── Load recent vaccination records ───── */
+async function loadRecentVaccinationRecords() {
+    const cont = document.getElementById('recent-vacc-records');
+    try {
+        const { data, error } = await db.from('vaccination_records')
+            .select('id, vaccine_name, vaccinated_date, animals(pet_name, pet_type)')
+            .order('vaccinated_date', { ascending: false })
+            .limit(10);
+        if (error) throw error;
+        if (!data || !data.length) {
+            cont.innerHTML = '<div class="text-center py-4" style="color:#64748b; font-size:0.85rem;">ยังไม่มีประวัติวัคซีน</div>';
+            return;
+        }
+        cont.innerHTML = data.map(r => {
+            const d = new Date(r.vaccinated_date + 'T00:00:00');
+            const dateTH = d.toLocaleDateString('th-TH', {
+                year: 'numeric', month: 'long', day: 'numeric', calendar: 'buddhist'
+            });
+            const pet = r.animals;
+            return `
+            <div class="vacc-record-item">
+                <span style="font-size:1.3rem;">${getSpeciesIcon(pet?.pet_type)}</span>
+                <div class="vacc-record-info">
+                    <div class="vacc-record-animal">${escHtml(pet?.pet_name || '–')}</div>
+                    <div class="vacc-record-detail">💉 ${escHtml(r.vaccine_name)} · 📅 ${escHtml(dateTH)}</div>
+                </div>
+                <button class="btn-danger-sm" data-delete-record="${escHtml(r.id)}">🗑️</button>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        cont.innerHTML = '<div class="text-center py-4" style="color:#f87171; font-size:0.85rem;">❌ ไม่สามารถโหลดได้</div>';
+    }
+}
+
+/* ─── Delete vaccination record ─────────── */
+async function deleteVaccinationRecord(id) {
+    if (!confirm('ลบประวัติวัคซีนนี้?')) return;
+    try {
+        const { error } = await db.from('vaccination_records').delete().eq('id', id);
+        if (error) throw error;
+        showToast('🗑️ ลบประวัติวัคซีนแล้ว');
+        await loadRecentVaccinationRecords();
+    } catch (err) {
+        showToast('❌ ' + (err.message || 'ลบไม่สำเร็จ'));
+    }
+}
 </script>
 </body>
 </html>

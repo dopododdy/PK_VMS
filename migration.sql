@@ -453,6 +453,33 @@ CREATE INDEX IF NOT EXISTS idx_lab_results_animal_id ON public.lab_results(anima
 CREATE INDEX IF NOT EXISTS idx_lab_results_parameter_id ON public.lab_results(parameter_id);
 
 -- ==========================================================
+-- 16b) Vaccine Catalog & Vaccination Records
+-- ==========================================================
+
+CREATE TABLE IF NOT EXISTS public.vaccine_catalog (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    for_dog BOOLEAN NOT NULL DEFAULT true,
+    for_cat BOOLEAN NOT NULL DEFAULT false,
+    prevents_disease TEXT,
+    image_data TEXT,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.vaccination_records (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    animal_id uuid NOT NULL REFERENCES public.animals(id) ON DELETE CASCADE,
+    vaccine_id uuid REFERENCES public.vaccine_catalog(id) ON DELETE SET NULL,
+    vaccine_name TEXT NOT NULL,
+    vaccinated_date DATE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_vaccination_records_animal_id ON public.vaccination_records(animal_id);
+CREATE INDEX IF NOT EXISTS idx_vaccination_records_date ON public.vaccination_records(vaccinated_date DESC);
+
+-- ==========================================================
 -- 17) Permissions / RLS (Safe)
 -- ==========================================================
 
@@ -479,6 +506,8 @@ ALTER TABLE public.surgery_status_tracking DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.surgery_queue DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pos_pending_additions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clinic_table_db DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vaccine_catalog DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vaccination_records DISABLE ROW LEVEL SECURITY;
 
 -- Grants
 GRANT ALL ON TABLE public.owners TO anon, authenticated, service_role;
@@ -503,6 +532,8 @@ GRANT ALL ON TABLE public.surgery_status_tracking TO anon, authenticated, servic
 GRANT ALL ON TABLE public.surgery_queue TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.pos_pending_additions TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.clinic_table_db TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.vaccine_catalog TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.vaccination_records TO anon, authenticated, service_role;
 
 -- View permissions
 GRANT SELECT ON public.surgery_status TO anon, authenticated, service_role;
