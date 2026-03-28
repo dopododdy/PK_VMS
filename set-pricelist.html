@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="ui-settings.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -387,7 +389,7 @@
 
         <div class="mt-4 p-5 rounded-2xl border border-teal-500/20 bg-teal-500/5">
             <h4 class="text-teal-400 font-bold mb-1 text-xs tracking-widest uppercase">หมายเหตุ</h4>
-            <p class="text-sm text-gray-400">ข้อมูลจะถูกบันทึกในเบราว์เซอร์นี้ (localStorage) และจะแสดงในหน้า <a href="pricelist.html" class="underline" style="color:var(--teal);">pricelist.html</a> ทันที</p>
+            <p class="text-sm text-gray-400">ข้อมูลจะถูกบันทึกลง Supabase Cloud และจะแสดงในหน้า <a href="pricelist.html" class="underline" style="color:var(--teal);">pricelist.html</a> ทันที</p>
         </div>
     </main>
 
@@ -411,30 +413,79 @@
     // ══════════════════════════════════════════════════════
     //  CONSTANTS & STATE
     // ══════════════════════════════════════════════════════
-    const STORAGE_KEY = 'pk-pricelist';
 
     let items        = [];   // all pricelist items
-    let editingId    = null; // id of item being edited (null = new)
+    let editingId    = null; // id (uuid) of item being edited (null = new)
     let filterType   = 'all';
     let selectedType = 'service';
 
     // ══════════════════════════════════════════════════════
-    //  STORAGE
+    //  SUPABASE STORAGE
     // ══════════════════════════════════════════════════════
-    function loadItems() {
+    async function loadItems() {
         try {
-            items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const { data, error } = await db
+                .from('pricelist_items')
+                .select('*')
+                .order('category')
+                .order('item_name');
+            if (error) throw error;
+            items = (data || []).map(function(r) {
+                return {
+                    id:        r.id,
+                    type:      r.item_type,
+                    category:  r.category,
+                    name:      r.item_name,
+                    price_min: r.price_min,
+                    price_max: r.price_max,
+                    unit:      r.unit,
+                    note:      r.note,
+                    active:    r.active
+                };
+            });
         } catch (e) {
+            console.error('โหลดข้อมูลล้มเหลว:', e);
             items = [];
         }
     }
 
-    function saveItems() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    async function upsertItem(data) {
+        const row = {
+            item_type:  data.type,
+            category:   data.category || null,
+            item_name:  data.name,
+            price_min:  data.price_min,
+            price_max:  data.price_max,
+            unit:       data.unit || 'บาท',
+            note:       data.note || null,
+            active:     data.active !== false
+        };
+        if (data.id) {
+            row.id = data.id;
+        }
+        const { data: saved, error } = await db
+            .from('pricelist_items')
+            .upsert(row, { onConflict: 'id' })
+            .select()
+            .single();
+        if (error) throw error;
+        return saved;
     }
 
-    function nextId() {
-        return Math.max(0, ...items.map(function(i) { return i.id || 0; })) + 1;
+    async function deleteItemById(id) {
+        const { error } = await db
+            .from('pricelist_items')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    }
+
+    async function deleteAllItems() {
+        const { error } = await db
+            .from('pricelist_items')
+            .delete()
+            .not('id', 'is', null);
+        if (error) throw error;
     }
 
     // ══════════════════════════════════════════════════════
@@ -477,7 +528,7 @@
             var badgeTxt = item.active === false ? 'ซ่อน'
                          : item.type === 'service' ? 'บริการ' : 'สินค้า';
             return '<div class="item-row' + (editingId === item.id ? ' selected' : '') + '"'
-                 + ' onclick="selectItem(' + item.id + ')">'
+                 + ' onclick="selectItem(\'' + item.id + '\')">'
                  + '<span class="type-badge ' + badgeCls + '">' + badgeTxt + '</span>'
                  + '<div class="flex-1 min-w-0">'
                  + '<div class="font-semibold text-sm truncate">' + escHtml(item.name) + '</div>'
@@ -552,7 +603,7 @@
     // ══════════════════════════════════════════════════════
     //  SAVE ITEM
     // ══════════════════════════════════════════════════════
-    function saveItem() {
+    async function saveItem() {
         var name = document.getElementById('f-name').value.trim();
         if (!name) {
             alert('กรุณากรอกชื่อรายการ');
@@ -573,7 +624,7 @@
         }
 
         var data = {
-            id:        editingId || nextId(),
+            id:        editingId || null,
             type:      selectedType,
             category:  document.getElementById('f-category').value.trim(),
             name:      name,
@@ -584,33 +635,51 @@
             active:    document.getElementById('f-active').checked
         };
 
-        if (editingId) {
-            var idx = items.findIndex(function(i) { return i.id === editingId; });
-            if (idx !== -1) items[idx] = data;
-        } else {
-            items.push(data);
+        try {
+            var saved = await upsertItem(data);
+            var merged = {
+                id:        saved.id,
+                type:      saved.item_type,
+                category:  saved.category,
+                name:      saved.item_name,
+                price_min: saved.price_min,
+                price_max: saved.price_max,
+                unit:      saved.unit,
+                note:      saved.note,
+                active:    saved.active
+            };
+            if (editingId) {
+                var idx = items.findIndex(function(i) { return i.id === editingId; });
+                if (idx !== -1) items[idx] = merged;
+            } else {
+                items.push(merged);
+            }
+            resetForm();
+            renderItemList();
+            showToast('บันทึกสำเร็จ ✓');
+        } catch (e) {
+            alert('บันทึกล้มเหลว: ' + e.message);
         }
-
-        saveItems();
-        resetForm();
-        renderItemList();
-        showToast('บันทึกสำเร็จ ✓');
     }
 
     // ══════════════════════════════════════════════════════
     //  DELETE ITEM
     // ══════════════════════════════════════════════════════
-    function deleteItem() {
+    async function deleteItem() {
         if (!editingId) return;
         var item = items.find(function(i) { return i.id === editingId; });
         if (!item) return;
         if (!confirm('ลบรายการ "' + item.name + '" ออกจากรายการ?')) return;
 
-        items = items.filter(function(i) { return i.id !== editingId; });
-        saveItems();
-        resetForm();
-        renderItemList();
-        showToast('ลบรายการสำเร็จ');
+        try {
+            await deleteItemById(editingId);
+            items = items.filter(function(i) { return i.id !== editingId; });
+            resetForm();
+            renderItemList();
+            showToast('ลบรายการสำเร็จ');
+        } catch (e) {
+            alert('ลบล้มเหลว: ' + e.message);
+        }
     }
 
     // ══════════════════════════════════════════════════════
@@ -688,7 +757,7 @@
         var file = ev.target.files[0];
         if (!file) return;
         var reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
             try {
                 var imported = JSON.parse(e.target.result);
                 if (!Array.isArray(imported)) throw new Error('Invalid format');
@@ -696,19 +765,46 @@
                     ev.target.value = '';
                     return;
                 }
-                // Merge: update existing by name+type, else push
-                imported.forEach(function(newItem) {
-                    var existing = items.find(function(i) {
-                        return i.name === newItem.name && i.type === newItem.type;
+                // Merge: update existing by name+type, else insert new
+                for (var i = 0; i < imported.length; i++) {
+                    var newItem = imported[i];
+                    var existing = items.find(function(it) {
+                        return it.name === newItem.name && it.type === newItem.type;
                     });
-                    if (existing) {
-                        Object.assign(existing, newItem, { id: existing.id });
-                    } else {
-                        newItem.id = nextId();
-                        items.push(newItem);
+                    var data = {
+                        id:        existing ? existing.id : null,
+                        type:      newItem.type || 'service',
+                        category:  newItem.category || '',
+                        name:      newItem.name,
+                        price_min: newItem.price_min != null ? newItem.price_min : null,
+                        price_max: newItem.price_max != null ? newItem.price_max : null,
+                        unit:      newItem.unit || 'บาท',
+                        note:      newItem.note || '',
+                        active:    newItem.active !== false
+                    };
+                    try {
+                        var saved = await upsertItem(data);
+                        var merged = {
+                            id:        saved.id,
+                            type:      saved.item_type,
+                            category:  saved.category,
+                            name:      saved.item_name,
+                            price_min: saved.price_min,
+                            price_max: saved.price_max,
+                            unit:      saved.unit,
+                            note:      saved.note,
+                            active:    saved.active
+                        };
+                        if (existing) {
+                            var idx = items.findIndex(function(it) { return it.id === existing.id; });
+                            if (idx !== -1) items[idx] = merged;
+                        } else {
+                            items.push(merged);
+                        }
+                    } catch (err) {
+                        console.error('upsert error:', err);
                     }
-                });
-                saveItems();
+                }
                 renderItemList();
                 showToast('นำเข้าสำเร็จ ' + imported.length + ' รายการ');
             } catch (err) {
@@ -719,12 +815,16 @@
         reader.readAsText(file);
     }
 
-    function clearAll() {
+    async function clearAll() {
         if (!confirm('ยืนยันการลบรายการทั้งหมด (' + items.length + ' รายการ)?')) return;
-        items = [];
-        saveItems();
-        resetForm();
-        showToast('ล้างข้อมูลเรียบร้อย');
+        try {
+            await deleteAllItems();
+            items = [];
+            resetForm();
+            showToast('ล้างข้อมูลเรียบร้อย');
+        } catch (e) {
+            alert('ล้างข้อมูลล้มเหลว: ' + e.message);
+        }
     }
 
     // ══════════════════════════════════════════════════════
@@ -753,8 +853,8 @@
     // ══════════════════════════════════════════════════════
     //  INIT
     // ══════════════════════════════════════════════════════
-    document.addEventListener('DOMContentLoaded', function() {
-        loadItems();
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadItems();
         renderItemList();
 
         // Name field triggers preview
