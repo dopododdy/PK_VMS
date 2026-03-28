@@ -582,7 +582,54 @@ let slides = [];              // Section 2 slides
 let _uploadBase64 = null;     // temp for Section 2 upload modal
 let videoBottomSlides = [];   // Section 1B slides
 let _vbUploadBase64 = null;   // temp for Section 1B upload modal
-let _videoUploadBase64 = null; // temp for Section 1 video upload
+let _videoUploadBase64 = null; // temp for Section 1 video upload; "__indexeddb__" when stored in IDB
+let _videoPreviewObjectURL = null; // tracks current blob URL for video preview (for revocation)
+
+// ---- IndexedDB helpers for video storage (avoids ~5 MB localStorage limit) ----
+function openSignageDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open("signageDB", 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore("videoStore");
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+function saveVideoDB(blob) {
+    return openSignageDB().then(idb => new Promise((resolve, reject) => {
+        const tx = idb.transaction("videoStore", "readwrite");
+        tx.objectStore("videoStore").put(blob, "videoUpload");
+        tx.oncomplete = () => resolve();
+        tx.onerror    = e => reject(e.target.error);
+    }));
+}
+function loadVideoDB() {
+    return openSignageDB().then(idb => new Promise((resolve, reject) => {
+        const tx  = idb.transaction("videoStore", "readonly");
+        const req = tx.objectStore("videoStore").get("videoUpload");
+        req.onsuccess = e => resolve(e.target.result || null);
+        req.onerror   = e => reject(e.target.error);
+    }));
+}
+function clearVideoDB() {
+    return openSignageDB().then(idb => new Promise((resolve, reject) => {
+        const tx = idb.transaction("videoStore", "readwrite");
+        tx.objectStore("videoStore").delete("videoUpload");
+        tx.oncomplete = () => resolve();
+        tx.onerror    = e => reject(e.target.error);
+    }));
+}
+
+// Revoke any existing video preview blob URL and set the new one
+function setVideoPreviewURL(url) {
+    if (_videoPreviewObjectURL) {
+        URL.revokeObjectURL(_videoPreviewObjectURL);
+        _videoPreviewObjectURL = null;
+    }
+    if (url && url.startsWith("blob:")) {
+        _videoPreviewObjectURL = url;
+    }
+    return url;
+}
 
 // ---- Apply config to DOM ----
 function applyConfig(cfg) {
@@ -591,11 +638,19 @@ function applyConfig(cfg) {
     document.getElementById("cfg-video-url").value  = cfg.videoUrl || "";
     setVideoMode(videoMode);
     if (videoMode === "upload" && cfg.videoSrc) {
-        _videoUploadBase64 = cfg.videoSrc;
         const prevEl = document.getElementById("cfg-video-upload-preview-el");
         const prev   = document.getElementById("cfg-video-upload-preview");
-        prevEl.src = cfg.videoSrc;
-        prev.classList.remove("hidden");
+        if (cfg.videoSrc === "__indexeddb__") {
+            _videoUploadBase64 = "__indexeddb__";
+            loadVideoDB().then(blob => {
+                if (blob) { prevEl.src = setVideoPreviewURL(URL.createObjectURL(blob)); prev.classList.remove("hidden"); }
+            }).catch(() => {});
+        } else {
+            // Backward compat: old base64 data URI stored directly in config
+            _videoUploadBase64 = cfg.videoSrc;
+            prevEl.src = cfg.videoSrc;
+            prev.classList.remove("hidden");
+        }
     } else {
         _videoUploadBase64 = null;
     }
@@ -654,7 +709,16 @@ function saveSettings() {
         savedAt:              Date.now(),
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+    } catch(e) {
+        // QuotaExceededError — this should not normally occur since video blobs are
+        // stored in IndexedDB and not in localStorage. If it does occur, the config
+        // (without the video) may still be too large due to many embedded images.
+        console.warn('localStorage save error:', e);
+        showToast("⚠️ บันทึกไม่สำเร็จ: ข้อมูลมีขนาดใหญ่เกินไป กรุณาลดจำนวนรูปภาพแล้วลองใหม่");
+        return;
+    }
     db.from('app_settings').upsert(
         { key: STORAGE_KEY, value: cfg, updated_at: new Date().toISOString() },
         { onConflict: 'key' }
@@ -667,6 +731,7 @@ function resetToDefaults() {
     localStorage.removeItem(STORAGE_KEY);
     db.from('app_settings').delete().eq('key', STORAGE_KEY)
         .then(({ error }) => { if (error) console.warn('Supabase reset error:', error); });
+    clearVideoDB().catch(() => {});
     slides = [];
     videoBottomSlides = [];
     _videoUploadBase64 = null;
@@ -1051,19 +1116,22 @@ function saveSlide() {
 
 // modal file upload preview
 document.addEventListener("DOMContentLoaded", () => {
-    // Section 1: video file upload preview
+    // Section 1: video file upload — store blob in IndexedDB to avoid localStorage quota
     document.getElementById("cfg-video-upload").addEventListener("change", function() {
         const file = this.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-            _videoUploadBase64 = e.target.result;
-            const prevEl = document.getElementById("cfg-video-upload-preview-el");
-            const prev   = document.getElementById("cfg-video-upload-preview");
-            prevEl.src = _videoUploadBase64;
-            prev.classList.remove("hidden");
-        };
-        reader.readAsDataURL(file);
+        const prevEl = document.getElementById("cfg-video-upload-preview-el");
+        const prev   = document.getElementById("cfg-video-upload-preview");
+        // Show preview immediately via object URL (no base64 needed for display)
+        prevEl.src = setVideoPreviewURL(URL.createObjectURL(file));
+        prev.classList.remove("hidden");
+        // Persist to IndexedDB so signage.html can read it after page load
+        saveVideoDB(file).then(() => {
+            _videoUploadBase64 = "__indexeddb__";
+        }).catch(err => {
+            _videoUploadBase64 = null;
+            alert("ไม่สามารถบันทึกวิดีโอลงในอุปกรณ์: " + err.message);
+        });
     });
 
     // VB modal: file upload preview
