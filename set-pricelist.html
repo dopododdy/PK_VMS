@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>ตั้งค่า Pricelist | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --navy:     #020617;
+            --navy-mid: #0f172a;
+            --teal:     #14b8b1;
+            --border:   rgba(255, 255, 255, 0.1);
+        }
+        * { font-family: "Sarabun", sans-serif !important; }
+        html { font-size: var(--base-font-size, 14px); }
+        body {
+            font-family: "Sarabun", sans-serif;
+            background: var(--navy);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .mesh-bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% 50%, rgba(14,165,160,0.05) 0%, transparent 80%); }
+
+        /* ─── Settings section ─── */
+        .settings-section {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.75rem 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* ─── Input ─── */
+        .input-field {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            outline: none;
+            color: #e2e8f0;
+            font-size: 1rem;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { border-color: var(--teal); }
+        .input-field::placeholder { color: #475569; }
+        select.input-field option, select.input-field optgroup { background-color: var(--navy-mid); color: white; }
+
+        /* ─── Buttons ─── */
+        .btn-primary {
+            background: var(--teal);
+            color: #020617;
+            font-weight: 800;
+            border-radius: 12px;
+            padding: 11px 24px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+        }
+        .btn-primary:hover { background: #0d9488; }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #e2e8f0;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+
+        .btn-danger {
+            background: rgba(239,68,68,0.1);
+            color: #f87171;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+        .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+        /* ─── Item list ─── */
+        .item-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .item-row:hover {
+            background: rgba(20,184,177,0.07);
+            border-color: rgba(20,184,177,0.3);
+        }
+        .item-row.selected {
+            background: rgba(20,184,177,0.12);
+            border-color: var(--teal);
+        }
+        .item-row .type-badge {
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+        .badge-service { background: rgba(20,184,177,0.15); color: var(--teal); }
+        .badge-product { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .badge-hidden  { background: rgba(100,116,139,0.15); color: #64748b; }
+
+        /* ─── Toggle switch ─── */
+        .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+        .toggle {
+            position: relative; width: 44px; height: 24px;
+            display: inline-block;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; inset: 0; border-radius: 24px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border);
+            transition: 0.25s;
+            cursor: pointer;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 18px; height: 18px;
+            left: 3px; top: 2px;
+            background: #94a3b8;
+            border-radius: 50%;
+            transition: 0.25s;
+        }
+        .toggle input:checked + .toggle-slider { background: var(--teal); border-color: var(--teal); }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(20px); background: #020617; }
+
+        /* ─── Tab ─── */
+        .tab-filter { display: flex; gap: 6px; }
+        .tab-filter-btn {
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: #94a3b8;
+            transition: 0.2s;
+        }
+        .tab-filter-btn.active {
+            border-color: var(--teal);
+            background: rgba(20,184,177,0.12);
+            color: var(--teal);
+        }
+
+        /* ─── Scrollbar ─── */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+
+        /* ─── Modal ─── */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            display: none;
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: var(--navy-mid);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            width: 100%; max-width: 540px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        /* ─── Preview snippet ─── */
+        .price-preview {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        .price-preview .p-name { color: #e2e8f0; font-weight: 600; }
+        .price-preview .p-price { color: #fbbf24; font-weight: 800; }
+    </style>
+</head>
+<body>
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+    </script>
+
+    <div class="mesh-bg"></div>
+
+    <!-- ── Header ── -->
+    <header class="p-6 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <a href="settings.html" class="text-gray-400 hover:text-white transition text-sm">← กลับหน้าตั้งค่า</a>
+                <h1 class="text-xl font-bold border-l pl-4 border-white/20">💰 ตั้งค่า Pricelist</h1>
+            </div>
+            <a href="pricelist.html" target="_blank"
+               class="text-xs font-bold px-3 py-2 rounded-lg transition"
+               style="background:rgba(20,184,177,0.12); color:var(--teal); border:1px solid rgba(20,184,177,0.3);">
+                👁️ ดูหน้าแสดงผล →
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-6">
+        <p class="text-gray-400 mb-8">จัดการรายการค่ารักษาและสินค้า แบ่งเป็น "บริการ" และ "สินค้า" ราคาสามารถกำหนดเป็นช่วงได้ เช่น 500 – 800 บาท</p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- ══ LEFT: Item List ══ -->
+            <div>
+                <div class="settings-section !pb-4">
+                    <div class="section-title">📋 รายการทั้งหมด</div>
+
+                    <!-- Filter + Search -->
+                    <div class="flex items-center gap-3 mb-4 flex-wrap">
+                        <div class="tab-filter">
+                            <button class="tab-filter-btn active" id="filter-all"     onclick="setFilter('all')">ทั้งหมด</button>
+                            <button class="tab-filter-btn"        id="filter-service" onclick="setFilter('service')">🏥 บริการ</button>
+                            <button class="tab-filter-btn"        id="filter-product" onclick="setFilter('product')">🛍️ สินค้า</button>
+                        </div>
+                        <input type="search" id="search-input" class="input-field !py-1.5 !text-sm flex-1 min-w-[140px]"
+                               placeholder="🔍 ค้นหา..." oninput="renderItemList()" />
+                    </div>
+
+                    <!-- Items -->
+                    <div id="item-list" class="space-y-2 max-h-[520px] overflow-y-auto pr-1"></div>
+
+                    <!-- Add button -->
+                    <div class="mt-4 pt-4 border-t border-white/5">
+                        <button onclick="openModal()" class="btn-primary w-full">+ เพิ่มรายการใหม่</button>
+                    </div>
+                </div>
+
+                <!-- Import / Export -->
+                <div class="settings-section !py-4">
+                    <div class="section-title text-sm">🔄 นำเข้า / ส่งออกข้อมูล</div>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="exportJSON()" class="btn-secondary text-sm">📤 ส่งออก JSON</button>
+                        <label class="btn-secondary text-sm cursor-pointer">
+                            📥 นำเข้า JSON
+                            <input type="file" accept=".json" class="hidden" onchange="importJSON(event)" />
+                        </label>
+                        <button onclick="clearAll()" class="btn-danger text-sm">🗑️ ล้างข้อมูลทั้งหมด</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ RIGHT: Edit Form ══ -->
+            <div>
+                <div class="settings-section" id="form-panel">
+                    <div class="section-title" id="form-title">✏️ แก้ไข / เพิ่มรายการ</div>
+
+                    <div class="space-y-4">
+
+                        <!-- Type -->
+                        <div>
+                            <label class="text-sm font-bold text-gray-400 mb-1 block">ประเภท *</label>
+                            <div class="flex gap-3">
+                                <button type="button" id="type-service"
+                                        onclick="selectType('service')"
+                                        class="flex-1 py-2.5 rounded-xl font-bold border transition text-sm
+                                               border-teal-500 bg-teal-500/15 text-teal-400">
+                                    🏥 บริการ
+                                </button>
+                                <button type="button" id="type-product"
+                                        onclick="selectType('product')"
+                                        class="flex-1 py-2.5 rounded-xl font-bold border transition text-sm
+                                               border-white/10 bg-transparent text-gray-400 hover:border-blue-400 hover:text-blue-400">
+                                    🛍️ สินค้า
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Category -->
+                        <div>
+                            <label class="text-sm font-bold text-gray-400 mb-1 block">หมวดหมู่</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="f-category" list="cat-suggestions"
+                                       class="input-field" placeholder="เช่น การผ่าตัด, วัคซีน, ยา..." />
+                                <datalist id="cat-suggestions"></datalist>
+                            </div>
+                        </div>
+
+                        <!-- Name -->
+                        <div>
+                            <label class="text-sm font-bold text-gray-400 mb-1 block">ชื่อรายการ *</label>
+                            <input type="text" id="f-name" class="input-field" placeholder="เช่น ตรวจร่างกายทั่วไป" />
+                        </div>
+
+                        <!-- Price range -->
+                        <div>
+                            <label class="text-sm font-bold text-gray-400 mb-1 block">ราคา (บาท)</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <input type="number" id="f-price-min" min="0" step="1"
+                                           class="input-field" placeholder="ราคาต่ำสุด / คงที่"
+                                           oninput="updatePreview()" />
+                                    <p class="text-xs text-gray-500 mt-1">ราคาเริ่มต้น</p>
+                                </div>
+                                <div>
+                                    <input type="number" id="f-price-max" min="0" step="1"
+                                           class="input-field" placeholder="ราคาสูงสุด (ถ้ามี)"
+                                           oninput="updatePreview()" />
+                                    <p class="text-xs text-gray-500 mt-1">ราคาสูงสุด (เว้นว่างถ้าราคาคงที่)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Unit -->
+                        <div>
+                            <label class="text-sm font-bold text-gray-400 mb-1 block">หน่วย</label>
+                            <input type="text" id="f-unit" class="input-field" value="บาท"
+                                   placeholder="เช่น บาท, บาท/ครั้ง" oninput="updatePreview()" />
+                        </div>
+
+                        <!-- Note -->
+                        <div>
+                            <label class="text-sm font-bold text-gray-400 mb-1 block">หมายเหตุ (ไม่บังคับ)</label>
+                            <input type="text" id="f-note" class="input-field"
+                                   placeholder="เช่น ขึ้นอยู่กับน้ำหนักสัตว์" />
+                        </div>
+
+                        <!-- Active -->
+                        <div class="toggle-wrap">
+                            <label class="toggle">
+                                <input type="checkbox" id="f-active" checked />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="text-sm font-semibold text-gray-300">แสดงในรายการ</span>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="price-preview hidden" id="price-preview">
+                            <div class="flex justify-between items-center">
+                                <span class="p-name" id="prev-name">—</span>
+                                <span class="p-price" id="prev-price">—</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" id="prev-note"></p>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="flex gap-3 pt-2">
+                            <button onclick="saveItem()" class="btn-primary flex-1">💾 บันทึก</button>
+                            <button onclick="resetForm()" class="btn-secondary">ยกเลิก</button>
+                            <button onclick="deleteItem()" id="btn-delete" class="btn-danger hidden">🗑️</button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mt-4 p-5 rounded-2xl border border-teal-500/20 bg-teal-500/5">
+            <h4 class="text-teal-400 font-bold mb-1 text-xs tracking-widest uppercase">หมายเหตุ</h4>
+            <p class="text-sm text-gray-400">ข้อมูลจะถูกบันทึกในเบราว์เซอร์นี้ (localStorage) และจะแสดงในหน้า <a href="pricelist.html" class="underline" style="color:var(--teal);">pricelist.html</a> ทันที</p>
+        </div>
+    </main>
+
+    <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
+        PK-VMS © 2026 Pricelist Settings
+    </footer>
+
+    <!-- ══ Add Modal (mobile shortcut) ══ -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal-box">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-black">+ เพิ่มรายการใหม่</h2>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <p class="text-sm text-gray-400 mb-4">กรอกข้อมูลด้านขวา จากนั้นกด <strong class="text-white">บันทึก</strong></p>
+            <button onclick="closeModal(); scrollToForm();" class="btn-primary w-full">ไปที่แบบฟอร์ม →</button>
+        </div>
+    </div>
+
+    <script>
+    // ══════════════════════════════════════════════════════
+    //  CONSTANTS & STATE
+    // ══════════════════════════════════════════════════════
+    const STORAGE_KEY = 'pk-pricelist';
+
+    let items        = [];   // all pricelist items
+    let editingId    = null; // id of item being edited (null = new)
+    let filterType   = 'all';
+    let selectedType = 'service';
+
+    // ══════════════════════════════════════════════════════
+    //  STORAGE
+    // ══════════════════════════════════════════════════════
+    function loadItems() {
+        try {
+            items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        } catch (e) {
+            items = [];
+        }
+    }
+
+    function saveItems() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function nextId() {
+        return Math.max(0, ...items.map(function(i) { return i.id || 0; })) + 1;
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  FILTER
+    // ══════════════════════════════════════════════════════
+    function setFilter(type) {
+        filterType = type;
+        ['all','service','product'].forEach(function(t) {
+            document.getElementById('filter-' + t).classList.toggle('active', t === type);
+        });
+        renderItemList();
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  RENDER LIST
+    // ══════════════════════════════════════════════════════
+    function renderItemList() {
+        var q = (document.getElementById('search-input').value || '').trim().toLowerCase();
+        var list = document.getElementById('item-list');
+
+        var filtered = items.filter(function(i) {
+            if (filterType !== 'all' && i.type !== filterType) return false;
+            if (q && !(
+                (i.name     || '').toLowerCase().includes(q) ||
+                (i.category || '').toLowerCase().includes(q) ||
+                (i.note     || '').toLowerCase().includes(q)
+            )) return false;
+            return true;
+        });
+
+        if (!filtered.length) {
+            list.innerHTML = '<div class="text-center py-8 text-gray-500 text-sm">ไม่มีรายการ</div>';
+            return;
+        }
+
+        list.innerHTML = filtered.map(function(item) {
+            var priceStr = formatPriceSimple(item);
+            var badgeCls = item.active === false ? 'badge-hidden'
+                         : item.type === 'service' ? 'badge-service' : 'badge-product';
+            var badgeTxt = item.active === false ? 'ซ่อน'
+                         : item.type === 'service' ? 'บริการ' : 'สินค้า';
+            return '<div class="item-row' + (editingId === item.id ? ' selected' : '') + '"'
+                 + ' onclick="selectItem(' + item.id + ')">'
+                 + '<span class="type-badge ' + badgeCls + '">' + badgeTxt + '</span>'
+                 + '<div class="flex-1 min-w-0">'
+                 + '<div class="font-semibold text-sm truncate">' + escHtml(item.name) + '</div>'
+                 + (item.category ? '<div class="text-xs text-gray-500 truncate">' + escHtml(item.category) + '</div>' : '')
+                 + '</div>'
+                 + '<div class="text-yellow-400 font-bold text-sm whitespace-nowrap">' + priceStr + '</div>'
+                 + '</div>';
+        }).join('');
+
+        // update category suggestions
+        updateCatSuggestions();
+    }
+
+    function formatPriceSimple(item) {
+        var min = parseFloat(item.price_min);
+        var max = parseFloat(item.price_max);
+        var unit = item.unit || 'บาท';
+        if (isNaN(min)) return '—';
+        if (!max || isNaN(max) || max === min) return min.toLocaleString('th-TH') + ' ' + unit;
+        return min.toLocaleString('th-TH') + ' – ' + max.toLocaleString('th-TH') + ' ' + unit;
+    }
+
+    function escHtml(s) {
+        if (!s) return '';
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  SELECT ITEM (load into form)
+    // ══════════════════════════════════════════════════════
+    function selectItem(id) {
+        var item = items.find(function(i) { return i.id === id; });
+        if (!item) return;
+
+        editingId = id;
+        selectType(item.type || 'service');
+        document.getElementById('f-category').value  = item.category  || '';
+        document.getElementById('f-name').value       = item.name      || '';
+        document.getElementById('f-price-min').value  = item.price_min != null ? item.price_min : '';
+        document.getElementById('f-price-max').value  = item.price_max != null ? item.price_max : '';
+        document.getElementById('f-unit').value       = item.unit      || 'บาท';
+        document.getElementById('f-note').value       = item.note      || '';
+        document.getElementById('f-active').checked   = item.active    !== false;
+
+        document.getElementById('btn-delete').classList.remove('hidden');
+        document.getElementById('form-title').textContent = '✏️ แก้ไขรายการ';
+
+        updatePreview();
+        renderItemList();
+
+        // Scroll form into view on mobile
+        document.getElementById('form-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  TYPE SELECTOR
+    // ══════════════════════════════════════════════════════
+    function selectType(type) {
+        selectedType = type;
+        var isService = (type === 'service');
+        var btnS = document.getElementById('type-service');
+        var btnP = document.getElementById('type-product');
+
+        btnS.className = 'flex-1 py-2.5 rounded-xl font-bold border transition text-sm '
+            + (isService ? 'border-teal-500 bg-teal-500/15 text-teal-400'
+                        : 'border-white/10 bg-transparent text-gray-400 hover:border-teal-400 hover:text-teal-400');
+        btnP.className = 'flex-1 py-2.5 rounded-xl font-bold border transition text-sm '
+            + (!isService ? 'border-blue-500 bg-blue-500/15 text-blue-400'
+                          : 'border-white/10 bg-transparent text-gray-400 hover:border-blue-400 hover:text-blue-400');
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  SAVE ITEM
+    // ══════════════════════════════════════════════════════
+    function saveItem() {
+        var name = document.getElementById('f-name').value.trim();
+        if (!name) {
+            alert('กรุณากรอกชื่อรายการ');
+            document.getElementById('f-name').focus();
+            return;
+        }
+
+        var minRaw = document.getElementById('f-price-min').value;
+        var maxRaw = document.getElementById('f-price-max').value;
+        var minVal = minRaw !== '' ? parseFloat(minRaw) : null;
+        var maxVal = maxRaw !== '' ? parseFloat(maxRaw) : null;
+
+        if (minVal !== null && isNaN(minVal)) { alert('ราคาต่ำสุดไม่ถูกต้อง'); return; }
+        if (maxVal !== null && isNaN(maxVal)) { alert('ราคาสูงสุดไม่ถูกต้อง'); return; }
+        if (minVal !== null && maxVal !== null && maxVal < minVal) {
+            alert('ราคาสูงสุดต้องมากกว่าหรือเท่ากับราคาต่ำสุด');
+            return;
+        }
+
+        var data = {
+            id:        editingId || nextId(),
+            type:      selectedType,
+            category:  document.getElementById('f-category').value.trim(),
+            name:      name,
+            price_min: minVal,
+            price_max: maxVal,
+            unit:      document.getElementById('f-unit').value.trim() || 'บาท',
+            note:      document.getElementById('f-note').value.trim(),
+            active:    document.getElementById('f-active').checked
+        };
+
+        if (editingId) {
+            var idx = items.findIndex(function(i) { return i.id === editingId; });
+            if (idx !== -1) items[idx] = data;
+        } else {
+            items.push(data);
+        }
+
+        saveItems();
+        resetForm();
+        renderItemList();
+        showToast('บันทึกสำเร็จ ✓');
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  DELETE ITEM
+    // ══════════════════════════════════════════════════════
+    function deleteItem() {
+        if (!editingId) return;
+        var item = items.find(function(i) { return i.id === editingId; });
+        if (!item) return;
+        if (!confirm('ลบรายการ "' + item.name + '" ออกจากรายการ?')) return;
+
+        items = items.filter(function(i) { return i.id !== editingId; });
+        saveItems();
+        resetForm();
+        renderItemList();
+        showToast('ลบรายการสำเร็จ');
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  RESET FORM
+    // ══════════════════════════════════════════════════════
+    function resetForm() {
+        editingId = null;
+        selectType('service');
+        ['f-category','f-name','f-note'].forEach(function(id) { document.getElementById(id).value = ''; });
+        document.getElementById('f-price-min').value = '';
+        document.getElementById('f-price-max').value = '';
+        document.getElementById('f-unit').value = 'บาท';
+        document.getElementById('f-active').checked = true;
+        document.getElementById('btn-delete').classList.add('hidden');
+        document.getElementById('form-title').textContent = '✏️ เพิ่ม / แก้ไขรายการ';
+        document.getElementById('price-preview').classList.add('hidden');
+        renderItemList();
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  LIVE PREVIEW
+    // ══════════════════════════════════════════════════════
+    function updatePreview() {
+        var name    = document.getElementById('f-name').value.trim();
+        var minRaw  = document.getElementById('f-price-min').value;
+        var maxRaw  = document.getElementById('f-price-max').value;
+        var unit    = document.getElementById('f-unit').value.trim() || 'บาท';
+        var note    = document.getElementById('f-note').value.trim();
+
+        var preview = document.getElementById('price-preview');
+        if (!name && minRaw === '') { preview.classList.add('hidden'); return; }
+
+        var min = parseFloat(minRaw);
+        var max = parseFloat(maxRaw);
+        var priceStr = '';
+        if (!isNaN(min)) {
+            if (!isNaN(max) && max > min) {
+                priceStr = min.toLocaleString('th-TH') + ' – ' + max.toLocaleString('th-TH') + ' ' + unit;
+            } else {
+                priceStr = min.toLocaleString('th-TH') + ' ' + unit;
+            }
+        }
+
+        document.getElementById('prev-name').textContent  = name  || '(ชื่อรายการ)';
+        document.getElementById('prev-price').textContent = priceStr || '—';
+        document.getElementById('prev-note').textContent  = note || '';
+        preview.classList.remove('hidden');
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  CATEGORY SUGGESTIONS
+    // ══════════════════════════════════════════════════════
+    function updateCatSuggestions() {
+        var cats = {};
+        items.forEach(function(i) { if (i.category) cats[i.category] = true; });
+        var dl = document.getElementById('cat-suggestions');
+        dl.innerHTML = Object.keys(cats).map(function(c) {
+            return '<option value="' + escHtml(c) + '">';
+        }).join('');
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  EXPORT / IMPORT
+    // ══════════════════════════════════════════════════════
+    function exportJSON() {
+        var blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'pk-pricelist-' + new Date().toISOString().slice(0,10) + '.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    function importJSON(ev) {
+        var file = ev.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var imported = JSON.parse(e.target.result);
+                if (!Array.isArray(imported)) throw new Error('Invalid format');
+                if (!confirm('นำเข้าข้อมูล ' + imported.length + ' รายการ?\n(จะ MERGE กับข้อมูลเดิม ไม่ได้แทนที่ทั้งหมด)')) {
+                    ev.target.value = '';
+                    return;
+                }
+                // Merge: update existing by name+type, else push
+                imported.forEach(function(newItem) {
+                    var existing = items.find(function(i) {
+                        return i.name === newItem.name && i.type === newItem.type;
+                    });
+                    if (existing) {
+                        Object.assign(existing, newItem, { id: existing.id });
+                    } else {
+                        newItem.id = nextId();
+                        items.push(newItem);
+                    }
+                });
+                saveItems();
+                renderItemList();
+                showToast('นำเข้าสำเร็จ ' + imported.length + ' รายการ');
+            } catch (err) {
+                alert('ไฟล์ JSON ไม่ถูกต้อง: ' + err.message);
+            }
+            ev.target.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    function clearAll() {
+        if (!confirm('ยืนยันการลบรายการทั้งหมด (' + items.length + ' รายการ)?')) return;
+        items = [];
+        saveItems();
+        resetForm();
+        showToast('ล้างข้อมูลเรียบร้อย');
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  MODAL (mobile)
+    // ══════════════════════════════════════════════════════
+    function openModal()  { /* on lg screens, no need */ scrollToForm(); }
+    function closeModal() { document.getElementById('add-modal').classList.remove('open'); }
+    function scrollToForm() {
+        document.getElementById('form-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  TOAST
+    // ══════════════════════════════════════════════════════
+    function showToast(msg) {
+        var t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);'
+            + 'background:var(--teal);color:#020617;font-weight:800;font-size:0.9rem;'
+            + 'padding:10px 24px;border-radius:12px;z-index:9999;'
+            + 'box-shadow:0 4px 20px rgba(20,184,177,0.4);';
+        document.body.appendChild(t);
+        setTimeout(function() { t.remove(); }, 2200);
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  INIT
+    // ══════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', function() {
+        loadItems();
+        renderItemList();
+
+        // Name field triggers preview
+        document.getElementById('f-name').addEventListener('input', updatePreview);
+    });
+    </script>
+</body>
+</html>
