@@ -307,11 +307,14 @@
                         .gte('created_at', todayStart.toISOString());
                     document.getElementById('animal-count').innerText = `${newAnimalCount || 0} ราย`;
 
-                    // ดึงจำนวนรายการรอคิดเงิน (medical records ที่ยังไม่ได้ชำระเงิน)
-                    const { count: pendingCount, error: posError } = await db
-                        .from('medical_records') 
-                        .select('*', { count: 'exact', head: true })
+                    // ดึงจำนวนรายการรอคิดเงิน (medical records ที่ยังไม่ได้ชำระเงิน และมียอดมากกว่า 0)
+                    const { data: pendingData, error: posError } = await db
+                        .from('medical_records')
+                        .select('total_cost, net_amount')
                         .eq('payment_status', 'pending');
+
+                    const pendingCount = (pendingData || [])
+                        .filter(r => parseFloat(r.net_amount || r.total_cost || 0) > 0).length;
 
                     if (!posError && pendingCount > 0) {
                         const badge = document.getElementById('pos-pending-count');
