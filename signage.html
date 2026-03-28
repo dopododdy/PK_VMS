@@ -295,7 +295,6 @@ async function getConfigFromSupabase() {
     try {
         const { data } = await db.from('app_settings').select('value').eq('key', 'signageCfg').maybeSingle();
         if (data?.value) {
-            localStorage.setItem('signageCfg', JSON.stringify(data.value));
             return data.value;
         }
     } catch(e) { console.warn('Supabase load error:', e); }
@@ -573,8 +572,13 @@ async function boot() {
     // Load from Supabase and reload page if config differs from localStorage
     const cfgSupabase = await getConfigFromSupabase();
     if (cfgSupabase && JSON.stringify(cfgSupabase) !== JSON.stringify(cfgLocal)) {
-        sessionStorage.setItem('_supabase_boot', '1');
-        window.location.reload();
+        const localTime = cfgLocal.savedAt || 0;
+        const supabaseTime = cfgSupabase.savedAt || 0;
+        if (supabaseTime >= localTime) {
+            localStorage.setItem('signageCfg', JSON.stringify(cfgSupabase));
+            sessionStorage.setItem('_supabase_boot', '1');
+            window.location.reload();
+        }
     }
 }
 
