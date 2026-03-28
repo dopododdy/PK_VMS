@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <title>ตั้งค่า e-Passport | PK-VMS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <style>
+        :root {
+            --navy:     #020617;
+            --navy-mid: #0f172a;
+            --teal:     #14b8b1;
+            --border:   rgba(255, 255, 255, 0.1);
+            --gold:     #c9a84c;
+        }
+        body {
+            font-family: "Sarabun", sans-serif;
+            background: var(--navy);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        * { font-family: "Sarabun", sans-serif; }
+        html { font-size: var(--base-font-size, 14px); }
+        .mesh-bg {
+            position: fixed; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 50% 20%, rgba(201,168,76,0.04) 0%, transparent 60%),
+                        radial-gradient(circle at 80% 80%, rgba(14,165,160,0.05) 0%, transparent 60%);
+        }
+
+        /* ─── Form card ─────────────────── */
+        .form-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .form-card:hover {
+            background: rgba(255,255,255,0.04);
+        }
+        .card-title {
+            font-size: 1rem; font-weight: 800; color: var(--teal);
+            margin-bottom: 1.2rem; display: flex; align-items: center; gap: 8px;
+            padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+        }
+        label { display: block; font-size: 0.85rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+        input[type="text"], textarea {
+            width: 100%; padding: 12px 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(255,255,255,0.05);
+            color: #e2e8f0; font-size: 0.95rem; outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, textarea:focus { border-color: var(--teal); }
+        textarea { resize: vertical; min-height: 80px; }
+
+        /* ─── Upload area ─────────────── */
+        .upload-area {
+            border: 2px dashed rgba(255,255,255,0.15);
+            border-radius: 16px; padding: 20px;
+            text-align: center; cursor: pointer;
+            transition: all 0.25s; background: rgba(255,255,255,0.02);
+        }
+        .upload-area:hover {
+            border-color: var(--teal);
+            background: rgba(14,165,160,0.06);
+        }
+        .upload-area input { display: none; }
+        .upload-preview {
+            width: 80px; height: 80px; object-fit: cover;
+            border-radius: 12px; margin: 0 auto 10px; display: block;
+            border: 2px solid var(--border);
+        }
+        .upload-preview.round {
+            border-radius: 50%; border: 3px solid rgba(201,168,76,0.5);
+        }
+        .upload-icon { font-size: 2.2rem; margin-bottom: 6px; }
+        .upload-text { font-size: 0.82rem; color: #64748b; }
+        .upload-text span { color: var(--teal); font-weight: 700; }
+
+        /* ─── Buttons ─────────────────── */
+        .btn-save {
+            width: 100%; padding: 16px; border-radius: 16px;
+            background: linear-gradient(135deg, var(--teal), #0f766e);
+            color: white; font-size: 1.05rem; font-weight: 800;
+            border: none; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-save:active { transform: scale(0.98); }
+        .btn-clear {
+            padding: 8px 14px; border-radius: 10px; font-size: 0.8rem;
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+            color: #f87171; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-clear:hover { background: rgba(239,68,68,0.2); }
+
+        /* ─── Preview passport ────────── */
+        .passport-preview {
+            background: linear-gradient(160deg, #1a472a 0%, #071a0f 100%);
+            border-radius: 16px; padding: 20px;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            border: 1px solid rgba(201,168,76,0.3);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+        }
+        .passport-preview-crest {
+            width: 70px; height: 70px; border-radius: 50%;
+            border: 2px solid rgba(201,168,76,0.5);
+            background: rgba(201,168,76,0.1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.4rem; overflow: hidden;
+        }
+        .passport-preview-crest img { width: 100%; height: 100%; object-fit: cover; }
+        .passport-preview-name {
+            font-family: "Kanit", sans-serif; font-size: 1rem; font-weight: 700;
+            color: var(--gold); text-align: center;
+        }
+        .passport-preview-title {
+            font-size: 1.2rem; font-weight: 700; color: var(--gold); letter-spacing: 0.1em;
+        }
+        .passport-preview-sub { font-size: 0.72rem; color: rgba(255,255,255,0.5); }
+
+        .stamp-preview {
+            width: 72px; height: 72px; border-radius: 50%;
+            border: 3px dashed rgba(201,168,76,0.4);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        .stamp-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .stamp-placeholder { font-size: 2rem; opacity: 0.4; }
+
+        /* ─── Toast ───────────────────── */
+        #toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #1e293b; border: 1px solid var(--border); color: #e2e8f0;
+            padding: 12px 24px; border-radius: 50px; font-size: 0.9rem; font-weight: 600;
+            z-index: 999; opacity: 0; transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "index.html";
+        }
+    </script>
+    <div class="mesh-bg"></div>
+    <div id="toast"></div>
+
+    <!-- Header -->
+    <header class="p-6 border-b border-white/5 bg-navy/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto flex items-center gap-4">
+            <a href="settings.html" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-teal-500/20 hover:text-teal-400 transition-all text-gray-300 font-bold text-sm">
+                <span class="text-xl">⚙️</span><span>ตั้งค่า</span>
+            </a>
+            <div class="flex items-center gap-3 border-l pl-4 border-white/20">
+                <span class="text-4xl">🛂</span>
+                <div>
+                    <h1 class="text-xl font-bold text-white">ตั้งค่า e-Passport</h1>
+                    <p class="text-xs text-gray-500">สมุดวัคซีนอิเล็กทรอนิกส์</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto p-6">
+        <p class="text-gray-400 mb-6 text-sm">กำหนดชื่อคลินิก โลโก้ ชื่อสัตวแพทย์ และตราประทับ สำหรับแสดงใน e-Passport ของสัตว์เลี้ยง</p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Left: Settings Form -->
+            <div class="space-y-4">
+
+                <!-- Clinic Info -->
+                <div class="form-card">
+                    <div class="card-title">🏥 ข้อมูลคลินิก</div>
+
+                    <div class="mb-4">
+                        <label>ชื่อคลินิก</label>
+                        <input type="text" id="clinic_name" placeholder="เช่น คลินิกรักษาสัตว์หมอสมชาย">
+                    </div>
+                    <div>
+                        <label>คำบรรยายใต้ชื่อ (ภาษาอังกฤษ)</label>
+                        <input type="text" id="clinic_subtitle" placeholder="เช่น Animal Clinic & Pet Care">
+                    </div>
+                </div>
+
+                <!-- Logo Upload -->
+                <div class="form-card">
+                    <div class="card-title">🖼️ โลโก้คลินิก</div>
+                    <label class="upload-area" for="logo-input" id="logo-drop">
+                        <input type="file" id="logo-input" accept="image/*" onchange="handleLogoUpload(event)">
+                        <div id="logo-preview-wrap">
+                            <div class="upload-icon">🖼️</div>
+                            <div class="upload-text">แตะเพื่อเลือกรูป <span>อัปโหลด</span></div>
+                            <div class="upload-text" style="margin-top:4px;">PNG, JPG ≤ 2 MB</div>
+                        </div>
+                    </label>
+                    <div id="logo-actions" class="text-right mt-2" style="display:none;">
+                        <button class="btn-clear" onclick="clearLogo()">✕ ลบโลโก้</button>
+                    </div>
+                </div>
+
+                <!-- Vet Info -->
+                <div class="form-card">
+                    <div class="card-title">👨‍⚕️ ข้อมูลสัตวแพทย์</div>
+                    <div class="mb-4">
+                        <label>ชื่อสัตวแพทย์</label>
+                        <input type="text" id="vet_name" placeholder="เช่น น.สพ.สมชาย ใจดี">
+                    </div>
+                    <div>
+                        <label>ใบอนุญาตสัตวแพทย์ (ถ้ามี)</label>
+                        <input type="text" id="vet_license" placeholder="เช่น ก.สพ. 12345">
+                    </div>
+                </div>
+
+                <!-- Stamp Upload -->
+                <div class="form-card">
+                    <div class="card-title">🔖 ตราประทับสัตวแพทย์</div>
+                    <p class="text-xs text-gray-500 mb-3">รูปทรงกลม PNG พื้นหลังใส (transparent) จะดูสวยที่สุด</p>
+                    <label class="upload-area" for="stamp-input" id="stamp-drop">
+                        <input type="file" id="stamp-input" accept="image/*" onchange="handleStampUpload(event)">
+                        <div id="stamp-preview-wrap">
+                            <div class="upload-icon">🔖</div>
+                            <div class="upload-text">แตะเพื่อเลือกรูปตราประทับ <span>อัปโหลด</span></div>
+                            <div class="upload-text" style="margin-top:4px;">PNG พื้นหลังใส ≤ 2 MB</div>
+                        </div>
+                    </label>
+                    <div id="stamp-actions" class="text-right mt-2" style="display:none;">
+                        <button class="btn-clear" onclick="clearStamp()">✕ ลบตราประทับ</button>
+                    </div>
+                </div>
+
+                <!-- Save -->
+                <button class="btn-save" onclick="saveConfig()">
+                    💾 บันทึกการตั้งค่า
+                </button>
+
+            </div>
+
+            <!-- Right: Preview -->
+            <div class="space-y-4">
+                <div style="position:sticky; top:90px;">
+                    <div class="text-xs text-gray-500 uppercase tracking-widest mb-3">ตัวอย่าง Preview</div>
+
+                    <!-- Passport Cover Preview -->
+                    <div class="passport-preview mb-4">
+                        <div class="text-xs" style="color:rgba(201,168,76,0.5); letter-spacing:0.15em; text-transform:uppercase;">KINGDOM OF THAILAND</div>
+                        <div class="passport-preview-crest" id="prev-crest">🐾</div>
+                        <div class="passport-preview-name" id="prev-clinic-name">คลินิกรักษาสัตว์</div>
+                        <div class="passport-preview-sub" id="prev-clinic-sub">Animal Clinic</div>
+                        <div class="passport-preview-title">e-PASSPORT</div>
+                        <div class="passport-preview-sub">สมุดวัคซีนอิเล็กทรอนิกส์</div>
+                    </div>
+
+                    <!-- Stamp Preview -->
+                    <div class="form-card" style="display:flex; align-items:center; gap:16px;">
+                        <div class="stamp-preview" id="prev-stamp">
+                            <div class="stamp-placeholder">🔖</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">ตราประทับ</div>
+                            <div class="text-sm font-bold text-white" id="prev-vet-name">ชื่อสัตวแพทย์</div>
+                            <div class="text-xs text-gray-500" id="prev-vet-license">ใบอนุญาต –</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-4 rounded-xl border border-teal-500/20 bg-teal-500/5">
+                        <div class="text-xs text-teal-400 font-bold uppercase tracking-widest mb-2">💡 วิธีใช้งาน</div>
+                        <div class="text-xs text-gray-400 space-y-1 leading-relaxed">
+                            <p>• เปิด self-registration.html แล้วค้นหาลูกค้า</p>
+                            <p>• กดที่ข้อมูลสัตว์เลี้ยง (collapse)</p>
+                            <p>• กดปุ่ม <strong class="text-teal-400">🛂 e-Passport</strong></p>
+                            <p>• หน้า e-Passport จะเปิดในแท็บใหม่</p>
+                            <p>• เจ้าของสัตว์สามารถถ่ายรูปหน้าจอเก็บไว้</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /grid -->
+    </main>
+
+    <footer class="text-center p-10 text-gray-600 text-[11px] tracking-widest uppercase">
+        PK-VMS © 2026 · e-Passport Settings
+    </footer>
+
+<script>
+let currentConfig = {};
+let logoBase64 = '';
+let stampBase64 = '';
+
+/* ─── Toast ─────────────────────────────── */
+function showToast(msg, duration = 2500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+}
+
+/* ─── Image → base64 ────────────────────── */
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        if (file.size > 2 * 1024 * 1024) { reject(new Error('ไฟล์ใหญ่เกิน 2 MB')); return; }
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+/* ─── Logo handlers ─────────────────────── */
+async function handleLogoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+        logoBase64 = await fileToBase64(file);
+        document.getElementById('logo-preview-wrap').innerHTML =
+            `<img src="${logoBase64}" class="upload-preview" alt="logo">
+             <div class="upload-text" style="margin-top:6px;">แตะเพื่อเปลี่ยนรูป</div>`;
+        document.getElementById('logo-actions').style.display = '';
+        // Update preview
+        const crest = document.getElementById('prev-crest');
+        crest.innerHTML = `<img src="${logoBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } catch (err) { showToast('❌ ' + err.message); }
+}
+function clearLogo() {
+    logoBase64 = '';
+    document.getElementById('logo-input').value = '';
+    document.getElementById('logo-preview-wrap').innerHTML =
+        `<div class="upload-icon">🖼️</div>
+         <div class="upload-text">แตะเพื่อเลือกรูป <span>อัปโหลด</span></div>
+         <div class="upload-text" style="margin-top:4px;">PNG, JPG ≤ 2 MB</div>`;
+    document.getElementById('logo-actions').style.display = 'none';
+    document.getElementById('prev-crest').innerHTML = '🐾';
+}
+
+/* ─── Stamp handlers ────────────────────── */
+async function handleStampUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+        stampBase64 = await fileToBase64(file);
+        document.getElementById('stamp-preview-wrap').innerHTML =
+            `<img src="${stampBase64}" class="upload-preview round" alt="stamp">
+             <div class="upload-text" style="margin-top:6px;">แตะเพื่อเปลี่ยนรูป</div>`;
+        document.getElementById('stamp-actions').style.display = '';
+        const prev = document.getElementById('prev-stamp');
+        prev.innerHTML = `<img src="${stampBase64}" style="width:100%;height:100%;object-fit:cover;">`;
+    } catch (err) { showToast('❌ ' + err.message); }
+}
+function clearStamp() {
+    stampBase64 = '';
+    document.getElementById('stamp-input').value = '';
+    document.getElementById('stamp-preview-wrap').innerHTML =
+        `<div class="upload-icon">🔖</div>
+         <div class="upload-text">แตะเพื่อเลือกรูปตราประทับ <span>อัปโหลด</span></div>
+         <div class="upload-text" style="margin-top:4px;">PNG พื้นหลังใส ≤ 2 MB</div>`;
+    document.getElementById('stamp-actions').style.display = 'none';
+    document.getElementById('prev-stamp').innerHTML = '<div class="stamp-placeholder">🔖</div>';
+}
+
+/* ─── Live preview update ─────────────── */
+document.addEventListener('input', e => {
+    if (e.target.id === 'clinic_name') {
+        document.getElementById('prev-clinic-name').textContent = e.target.value || 'คลินิกรักษาสัตว์';
+    }
+    if (e.target.id === 'clinic_subtitle') {
+        document.getElementById('prev-clinic-sub').textContent = e.target.value || 'Animal Clinic';
+    }
+    if (e.target.id === 'vet_name') {
+        document.getElementById('prev-vet-name').textContent = e.target.value || 'ชื่อสัตวแพทย์';
+    }
+    if (e.target.id === 'vet_license') {
+        document.getElementById('prev-vet-license').textContent = e.target.value ? `ใบอนุญาต ${e.target.value}` : 'ใบอนุญาต –';
+    }
+});
+
+/* ─── Save ──────────────────────────────── */
+async function saveConfig() {
+    const config = {
+        clinic_name:     document.getElementById('clinic_name').value.trim() || 'คลินิกรักษาสัตว์',
+        clinic_subtitle: document.getElementById('clinic_subtitle').value.trim() || 'Animal Clinic',
+        vet_name:        document.getElementById('vet_name').value.trim() || 'สัตวแพทย์',
+        vet_license:     document.getElementById('vet_license').value.trim() || '',
+        clinic_logo:     logoBase64 || currentConfig.clinic_logo || '',
+        vet_stamp:       stampBase64 || currentConfig.vet_stamp || '',
+        updated_at:      new Date().toISOString()
+    };
+    try {
+        const { error } = await db.from('print_templates').upsert(
+            { template_type: 'epassport', config },
+            { onConflict: 'template_type' }
+        );
+        if (error) throw error;
+        currentConfig = config;
+        showToast('✅ บันทึกการตั้งค่าสำเร็จ');
+    } catch (err) {
+        showToast('❌ ' + (err.message || 'บันทึกไม่สำเร็จ'));
+    }
+}
+
+/* ─── Load existing config ──────────────── */
+async function loadConfig() {
+    try {
+        const { data } = await db.from('print_templates')
+            .select('config').eq('template_type', 'epassport').maybeSingle();
+        if (!data?.config) return;
+        currentConfig = data.config;
+        const cfg = currentConfig;
+
+        document.getElementById('clinic_name').value     = cfg.clinic_name || '';
+        document.getElementById('clinic_subtitle').value = cfg.clinic_subtitle || '';
+        document.getElementById('vet_name').value        = cfg.vet_name || '';
+        document.getElementById('vet_license').value     = cfg.vet_license || '';
+
+        document.getElementById('prev-clinic-name').textContent = cfg.clinic_name || 'คลินิกรักษาสัตว์';
+        document.getElementById('prev-clinic-sub').textContent  = cfg.clinic_subtitle || 'Animal Clinic';
+        document.getElementById('prev-vet-name').textContent    = cfg.vet_name || 'ชื่อสัตวแพทย์';
+        document.getElementById('prev-vet-license').textContent = cfg.vet_license ? `ใบอนุญาต ${cfg.vet_license}` : 'ใบอนุญาต –';
+
+        if (cfg.clinic_logo) {
+            logoBase64 = cfg.clinic_logo;
+            document.getElementById('logo-preview-wrap').innerHTML =
+                `<img src="${logoBase64}" class="upload-preview" alt="logo">
+                 <div class="upload-text" style="margin-top:6px;">แตะเพื่อเปลี่ยนรูป</div>`;
+            document.getElementById('logo-actions').style.display = '';
+            document.getElementById('prev-crest').innerHTML =
+                `<img src="${logoBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        }
+        if (cfg.vet_stamp) {
+            stampBase64 = cfg.vet_stamp;
+            document.getElementById('stamp-preview-wrap').innerHTML =
+                `<img src="${stampBase64}" class="upload-preview round" alt="stamp">
+                 <div class="upload-text" style="margin-top:6px;">แตะเพื่อเปลี่ยนรูป</div>`;
+            document.getElementById('stamp-actions').style.display = '';
+            document.getElementById('prev-stamp').innerHTML =
+                `<img src="${stampBase64}" style="width:100%;height:100%;object-fit:cover;">`;
+        }
+    } catch (err) {
+        console.error('loadConfig:', err);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', loadConfig);
+</script>
+</body>
+</html>
