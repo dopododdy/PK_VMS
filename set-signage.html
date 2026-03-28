@@ -584,6 +584,7 @@ let videoBottomSlides = [];   // Section 1B slides
 let _vbUploadBase64 = null;   // temp for Section 1B upload modal
 let _videoUploadBase64 = null; // temp for Section 1 video upload; "__indexeddb__" when stored in IDB
 let _videoPreviewObjectURL = null; // tracks current blob URL for video preview (for revocation)
+let _videoSavePromise = null;  // tracks pending IndexedDB save for video upload
 
 // ---- IndexedDB helpers for video storage (avoids ~5 MB localStorage limit) ----
 function openSignageDB() {
@@ -679,18 +680,31 @@ function loadConfig() {
     try { cfg = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch(e) {}
     applyConfig(cfg);
     // Load from Supabase and refresh if available
-    db.from('app_settings').select('value').eq('key', STORAGE_KEY).maybeSingle()
-        .then(({ data }) => {
-            if (data?.value) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(data.value));
-                applyConfig(data.value);
-            }
-        })
-        .catch(e => console.warn('Supabase load error:', e));
+    try {
+        db.from('app_settings').select('value').eq('key', STORAGE_KEY).maybeSingle()
+            .then(({ data }) => {
+                if (data?.value) {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.value));
+                    applyConfig(data.value);
+                }
+            })
+            .catch(e => console.warn('Supabase load error:', e));
+    } catch(e) { console.warn('Supabase load error:', e); }
 }
 
 // ---- Save ----
-function saveSettings() {
+async function saveSettings() {
+    // Wait for any pending video-to-IndexedDB save before proceeding
+    if (_videoSavePromise) {
+        showToast("⏳ กำลังบันทึกวิดีโอ กรุณารอสักครู่...");
+        await _videoSavePromise;
+        if (!_videoUploadBase64) {
+            // Video save failed; the upload handler already alerted the user
+            showToast("❌ บันทึกวิดีโอล้มเหลว กรุณาลองอัปโหลดอีกครั้ง");
+            return;
+        }
+    }
+
     const videoMode = document.getElementById("cfg-video-mode").value;
     const cfg = {
         videoMode,
@@ -719,22 +733,27 @@ function saveSettings() {
         showToast("⚠️ บันทึกไม่สำเร็จ: ข้อมูลมีขนาดใหญ่เกินไป กรุณาลดจำนวนรูปภาพแล้วลองใหม่");
         return;
     }
-    db.from('app_settings').upsert(
-        { key: STORAGE_KEY, value: cfg, updated_at: new Date().toISOString() },
-        { onConflict: 'key' }
-    ).then(({ error }) => { if (error) console.warn('Supabase save error:', error); });
     showToast("บันทึกสำเร็จ ✓");
+    try {
+        db.from('app_settings').upsert(
+            { key: STORAGE_KEY, value: cfg, updated_at: new Date().toISOString() },
+            { onConflict: 'key' }
+        ).then(({ error }) => { if (error) console.warn('Supabase save error:', error); });
+    } catch(e) { console.warn('Supabase save error:', e); }
 }
 
 function resetToDefaults() {
     if (!confirm("รีเซ็ตค่าทั้งหมดหน้าจอโฆษณา?")) return;
     localStorage.removeItem(STORAGE_KEY);
-    db.from('app_settings').delete().eq('key', STORAGE_KEY)
-        .then(({ error }) => { if (error) console.warn('Supabase reset error:', error); });
+    try {
+        db.from('app_settings').delete().eq('key', STORAGE_KEY)
+            .then(({ error }) => { if (error) console.warn('Supabase reset error:', error); });
+    } catch(e) { console.warn('Supabase reset error:', e); }
     clearVideoDB().catch(() => {});
     slides = [];
     videoBottomSlides = [];
     _videoUploadBase64 = null;
+    _videoSavePromise = null;
     applyConfig({});
     showToast("รีเซ็ตแล้ว");
 }
@@ -1126,10 +1145,13 @@ document.addEventListener("DOMContentLoaded", () => {
         prevEl.src = setVideoPreviewURL(URL.createObjectURL(file));
         prev.classList.remove("hidden");
         // Persist to IndexedDB so signage.html can read it after page load
-        saveVideoDB(file).then(() => {
+        _videoUploadBase64 = null;
+        _videoSavePromise = saveVideoDB(file).then(() => {
             _videoUploadBase64 = "__indexeddb__";
+            _videoSavePromise = null;
         }).catch(err => {
             _videoUploadBase64 = null;
+            _videoSavePromise = null;
             alert("ไม่สามารถบันทึกวิดีโอลงในอุปกรณ์: " + err.message);
         });
     });
