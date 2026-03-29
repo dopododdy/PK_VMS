@@ -674,8 +674,8 @@
             if (yearInput) yearInput.value = instance.currentYear + 543;
         }
 
-        function initAllPickers() {
-            flatpickr(".datepicker-thai", {
+        function _fpConfig() {
+            return {
                 locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y",
                 onReady: (selectedDates, dateStr, instance) => {
                     const altInp = instance.altInput;
@@ -702,7 +702,11 @@
                     const yearBE = new Date(dateStr).getFullYear() + 543;
                     instance.altInput.value = instance.altInput.value.replace(new Date(dateStr).getFullYear(), yearBE);
                 }
-            });
+            };
+        }
+
+        function initAllPickers() {
+            flatpickr(".datepicker-thai", _fpConfig());
         }
 
         function syncFromAge(el) {
@@ -741,7 +745,8 @@
             div.innerHTML = petRowHtml({}, true);
             const newPetEl = div.firstElementChild;
             document.getElementById('pets-container').insertBefore(newPetEl, document.querySelector('button[onclick="addNewPetRow()"]'));
-            initAllPickers();
+            const newDateInput = newPetEl.querySelector('.datepicker-thai');
+            if (newDateInput) flatpickr(newDateInput, _fpConfig());
             updateBreedOptions(newPetEl.querySelector('.p_type'));
             newPetEl.querySelector('.p_name').focus();
         }
@@ -810,12 +815,24 @@
 
         async function deleteOwner(hn, name) {
             if (!confirm(`⚠️ ยืนยันการลบเจ้าของ: ${name}?\nข้อมูลสัตว์ทั้งหมดจะหายไป`)) return;
-            await Promise.all([
-                db.from('owner_phones').delete().eq('owner_hn', hn),
-                db.from('animals').delete().eq('owner_hn', hn)
-            ]);
-            await db.from('owners').delete().eq('hn', hn); await loadData();
-            document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><h3>เลือกรายการเจ้าของ</h3></div>`;
+            try {
+                // Delete medical_records and surgery_procedures first — they reference owners(hn)
+                // without ON DELETE CASCADE, so they must be removed before the owner can be deleted.
+                await Promise.all([
+                    db.from('medical_records').delete().eq('owner_hn', hn),
+                    db.from('surgery_procedures').delete().eq('owner_hn', hn)
+                ]);
+                await Promise.all([
+                    db.from('owner_phones').delete().eq('owner_hn', hn),
+                    db.from('animals').delete().eq('owner_hn', hn)
+                ]);
+                const { error } = await db.from('owners').delete().eq('hn', hn);
+                if (error) throw error;
+                await loadData();
+                document.getElementById('form-view').innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-10"><h3>เลือกรายการเจ้าของ</h3></div>`;
+            } catch (err) {
+                alert("❌ ลบเจ้าของไม่สำเร็จ: " + err.message);
+            }
         }
 
         async function deletePetRecord(petId, petName) {
