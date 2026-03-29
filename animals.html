@@ -24,8 +24,15 @@
         .sidebar-container { position: relative; width: 480px; background: #0f172a; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .pet-card { 
             padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;
-            display: grid; grid-template-columns: 85px 1fr 100px; gap: 12px; align-items: stretch; transition: 0.2s;
+            display: grid; grid-template-columns: 85px 1fr 110px; gap: 12px; align-items: stretch; transition: 0.2s;
         }
+        .pet-card-actions { display: flex; gap: 4px; }
+        .pet-card-actions button { font-size: 0.7rem; padding: 4px 7px; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; color: white !important; transition: all 0.2s; }
+        .pet-card-actions button:active { transform: scale(0.93); }
+        .pet-card-actions .btn-edit { background-color: #0d9488; }
+        .pet-card-actions .btn-edit:hover { background-color: #0f766e; }
+        .pet-card-actions .btn-del { background-color: #dc2626; }
+        .pet-card-actions .btn-del:hover { background-color: #b91c1c; }
         .pet-card:hover { background: rgba(255,255,255,0.07); }
         .pet-card.active { background: rgba(20, 184, 177, 0.12); border-left: 4px solid var(--teal); }
         
@@ -484,8 +491,12 @@
                             <span class="owner-subtext truncate">👤 ${owner?.owner_name || '-'}</span>
                             <span class="phone-badge">📞 ${p1}</span>
                         </div>
-                        <div class="flex items-center justify-end gap-1 text-2xl pr-2">
-                            <span>${typeIcon}</span>
+                        <div class="flex flex-col items-end justify-between pr-1">
+                            <span class="text-2xl">${typeIcon}</span>
+                            <div class="pet-card-actions" onclick="event.stopPropagation()">
+                                <button class="btn-edit" onclick="editOwner('${item.owner_hn}', '${item.id}')">✏️ แก้ไข</button>
+                                <button class="btn-del" onclick="deletePetRecord('${item.id}', '${item.pet_name}', '${item.owner_hn}')">🗑️ ลบ</button>
+                            </div>
                         </div>
                     </div>`;
             }).join('');
@@ -625,7 +636,7 @@
                                     <button onclick="goToConsent('${pet.owner_hn}', '${pet.id}')" class="btn-base btn-orange whitespace-nowrap">📋 ใบยินยอม</button>
                                     <button onclick="gotoMedicalRecord('${pet.id}', '${pet.pet_name}', '${pet.owner_hn}')" class="btn-base btn-teal whitespace-nowrap">🏥 ประวัติ</button>
                                 ` : ''}
-                                <button onclick="${pet.id ? `deletePetRecord('${pet.id}', '${pet.pet_name}')` : `this.closest('.zone-pet').remove()`}" class="btn-base btn-red whitespace-nowrap">🗑️ ลบ</button>
+                                ${!pet.id ? `<button onclick="this.closest('.zone-pet').remove()" class="btn-base btn-red whitespace-nowrap">🗑️ ลบ</button>` : ''}
                             </div>
                             <span class="chevron-icon text-teal-400 text-xl transition-all duration-200" ${chevronStyle}>▼</span>
                         </div>
@@ -835,10 +846,11 @@
             }
         }
 
-        async function deletePetRecord(petId, petName) {
+        async function deletePetRecord(petId, petName, ownerHn) {
             if (!confirm(`ลบสัตว์ "${petName}"?`)) return;
             await db.from('animals').delete().eq('id', petId); await loadData();
-            editOwner(document.getElementById('f_hn').value);
+            const hn = ownerHn || document.getElementById('f_hn')?.value;
+            if (hn) editOwner(hn);
         }
 
         function goToConsent(hn, petId = '') { 
