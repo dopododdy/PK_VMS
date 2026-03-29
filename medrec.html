@@ -254,6 +254,12 @@
                 <button id="mtab-today" onclick="switchMedrecTab('today')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent relative">📅 นัดหมายวันนี้<span id="mtab-today-badge" class="hidden absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center"></span></button>
             </div>
             <div id="medrec-owner-list" class="flex-1 overflow-y-auto px-2 pb-2 custom-scroll"></div>
+            <div id="sidebar-animal-actions" class="px-4 pt-3 pb-2 flex-shrink-0 border-t border-white/5" style="display:none">
+                <div class="flex gap-2">
+                    <button onclick="openEditAnimalModal()" class="flex-1 btn-base bg-slate-600 hover:bg-slate-500 text-xs py-2">✏️ แก้ไข</button>
+                    <button onclick="deleteAnimal()" class="flex-1 btn-base btn-red text-xs py-2">🗑️ ลบสัตว์</button>
+                </div>
+            </div>
             <div class="p-4 flex-shrink-0 border-t border-white/5">
                 <button onclick="openNewOwnerModal()" class="w-full btn-base btn-teal py-3 text-sm font-bold">+ ลงทะเบียนเจ้าของใหม่</button>
             </div>
@@ -290,11 +296,7 @@
             <div class="section-card border-l-8 border-teal-500">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="text-2xl font-bold text-white flex items-center gap-2">🐾 ข้อมูลสัตว์</h3>
-                    <div class="flex gap-2">
-                        <button onclick="openEditAnimalModal()" class="btn-base bg-slate-600 hover:bg-slate-500 text-xs">✏️ แก้ไข</button>
-                        <button onclick="deleteAnimal()" class="btn-base btn-red text-xs">🗑️ ลบสัตว์</button>
-                        <button onclick="showFormView()" class="btn-base btn-teal text-xl py-3 px-6 shadow-xl">+ เพิ่มประวัติการรักษา</button>
-                    </div>
+                    <button onclick="showFormView()" class="btn-base btn-teal text-xl py-3 px-6 shadow-xl">+ เพิ่มประวัติการรักษา</button>
                 </div>
                 <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-6 md:col-span-2"><label class="label-text">ชื่อสัตว์</label><div id="v-pet-name" class="text-xl font-bold text-white">-</div></div>
@@ -1539,6 +1541,7 @@
             history.pushState(null, '', `?id=${encodeURIComponent(id)}&hn=${encodeURIComponent(hn)}`);
             document.getElementById('main-ui').style.display = '';
             document.getElementById('welcome-state').style.display = 'none';
+            document.getElementById('sidebar-animal-actions').style.display = '';
             document.getElementById('head-pet-name').innerText = 'กำลังโหลด...';
             document.getElementById('head-hn').innerText = 'HN: -';
             showHistoryView();
@@ -1558,6 +1561,7 @@
         function showWelcomeState() {
             document.getElementById('main-ui').style.display = 'none';
             document.getElementById('welcome-state').style.display = '';
+            document.getElementById('sidebar-animal-actions').style.display = 'none';
             document.querySelectorAll('#medrec-owner-list .pet-card').forEach(el => el.classList.remove('active'));
         }
         function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
