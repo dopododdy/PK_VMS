@@ -292,6 +292,7 @@
                     <h3 class="text-2xl font-bold text-white flex items-center gap-2">🐾 ข้อมูลสัตว์</h3>
                     <div class="flex gap-2">
                         <button onclick="openEditAnimalModal()" class="btn-base bg-slate-600 hover:bg-slate-500 text-xs">✏️ แก้ไข</button>
+                        <button onclick="deleteAnimal()" class="btn-base btn-red text-xs">🗑️ ลบสัตว์</button>
                         <button onclick="showFormView()" class="btn-base btn-teal text-xl py-3 px-6 shadow-xl">+ เพิ่มประวัติการรักษา</button>
                     </div>
                 </div>
@@ -393,6 +394,10 @@
                     
                     <div class="col-span-12 md:col-span-9"><label class="label-clinical">Plan (แผนการรักษาต่อ)</label><input type="text" id="f_plan" class="input-box"></div>
                     <div class="col-span-12 md:col-span-3"><label class="label-text text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-3xl font-black text-yellow-400" value="0" step="0.01"></div>
+                    <div class="col-span-12" id="multi-pet-section" style="display:none">
+                        <label class="label-clinical text-purple-400">🐾 บันทึกพร้อมกันสำหรับสัตว์อื่น (เจ้าของเดียวกัน)</label>
+                        <div id="multi-pet-list" class="p-3 bg-black/20 rounded-xl border border-white/10 flex flex-wrap gap-3 min-h-[44px] mt-1"></div>
+                    </div>
                 </div>
                 <div class="flex gap-4 mt-10">
                     <button onclick="openDldModal()" class="btn-base btn-teal flex-1 text-2xl py-5 shadow-2xl" id="btn-save-main">💾 บันทึกการรักษา</button>
@@ -1342,6 +1347,28 @@
                         await db.from('vaccination_records').insert(vaccInserts);
                     }
                 }
+                // Save same record for additional selected pets (batch, same owner)
+                if (!editingId) {
+                    const additionalPetIds = getSelectedAdditionalPetIds();
+                    if (additionalPetIds.length > 0) {
+                        const extraHeaders = additionalPetIds.map(petId => ({ ...headerData, animal_id: petId }));
+                        const { data: extraRecs } = await db.from('medical_records').insert(extraHeaders).select('id, animal_id');
+                        if (extraRecs) {
+                            const allExtraItems = [];
+                            const allExtraVacc = [];
+                            extraRecs.forEach(rec => {
+                                if (itemInserts.length > 0) {
+                                    itemInserts.forEach(i => allExtraItems.push({ ...i, record_id: rec.id }));
+                                }
+                                if (checkedVaccines.length > 0) {
+                                    checkedVaccines.forEach(v => allExtraVacc.push({ animal_id: rec.animal_id, vaccine_id: v.id, vaccine_name: v.name, vaccinated_date: visitDate }));
+                                }
+                            });
+                            if (allExtraItems.length > 0) await db.from('medical_record_items').insert(allExtraItems);
+                            if (allExtraVacc.length > 0) await db.from('vaccination_records').insert(allExtraVacc);
+                        }
+                    }
+                }
                 await fetchRecords();
                 showHistoryView();
             } catch (err) { console.error(err); }
@@ -1439,6 +1466,7 @@
             renderLeftHistoryPanel();
             initSplitDrag();
             renderVaccineCheckboxes();
+            loadOtherPetsForOwner();
             document.getElementById('rp-owner-name').innerText = document.getElementById('info-owner-name')?.innerText || '-';
             document.getElementById('rp-owner-phone').innerText = document.getElementById('info-owner-phone')?.innerText || '-';
             document.getElementById('rp-owner-address').innerText = document.getElementById('info-owner-address')?.innerText || '-';
@@ -2385,6 +2413,48 @@
             document.getElementById('f_weight').value = weight;
             document.getElementById('edit-animal-modal').style.display = 'none';
             alert('✅ บันทึกข้อมูลสัตว์เรียบร้อย');
+        }
+
+        async function deleteAnimal() {
+            const petName = document.getElementById('v-pet-name').innerText;
+            if (!confirm(`⚠️ ยืนยันการลบสัตว์: "${petName}"?\nประวัติการรักษาทั้งหมดของสัตว์นี้จะถูกลบออกจากฐานข้อมูล`)) return;
+            try {
+                const { data: medRecs } = await db.from('medical_records').select('id').eq('animal_id', animalId);
+                if (medRecs && medRecs.length > 0) {
+                    const recIds = medRecs.map(r => r.id);
+                    await db.from('medical_record_items').delete().in('record_id', recIds);
+                }
+                await db.from('medical_records').delete().eq('animal_id', animalId);
+                await db.from('vaccination_records').delete().eq('animal_id', animalId);
+                await db.from('animals').delete().eq('id', animalId);
+                animalId = null; ownerHN = null;
+                history.pushState(null, '', window.location.pathname);
+                await loadSidebarData();
+                showWelcomeState();
+                alert('✅ ลบข้อมูลสัตว์เรียบร้อย');
+            } catch (err) { alert('❌ ลบไม่สำเร็จ: ' + err.message); }
+        }
+
+        // ── Multi-pet selection for batch medical record ──────────────────────
+        async function loadOtherPetsForOwner() {
+            const section = document.getElementById('multi-pet-section');
+            const list = document.getElementById('multi-pet-list');
+            if (!ownerHN || !animalId) { section.style.display = 'none'; return; }
+            const { data: pets } = await db.from('animals').select('id, pet_name, pet_type').eq('owner_hn', ownerHN).order('pet_name');
+            const others = (pets || []).filter(p => String(p.id) !== String(animalId));
+            if (others.length === 0) { section.style.display = 'none'; return; }
+            section.style.display = '';
+            list.innerHTML = others.map(p => {
+                const icon = p.pet_type === 'สุนัข' ? '🐶' : p.pet_type === 'แมว' ? '🐱' : '🐾';
+                return `<label class="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg bg-white/5 hover:bg-purple-900/30 border border-white/10 hover:border-purple-500/40 transition-colors">
+                    <input type="checkbox" class="multi-pet-cb" value="${escapeHtml(String(p.id))}">
+                    <span class="text-sm font-semibold text-purple-300">${icon} ${escapeHtml(p.pet_name)}</span>
+                </label>`;
+            }).join('');
+        }
+
+        function getSelectedAdditionalPetIds() {
+            return Array.from(document.querySelectorAll('.multi-pet-cb:checked')).map(cb => cb.value);
         }
 
     </script>    <div id="opd-print-modal" class="modal-overlay" style="z-index: 170;">
