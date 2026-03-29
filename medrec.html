@@ -253,10 +253,18 @@
                 <button id="mtab-all" onclick="switchMedrecTab('all')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-teal-500/20 text-teal-400 border border-teal-500/30">📋 เวชระเบียน</button>
                 <button id="mtab-today" onclick="switchMedrecTab('today')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent relative">📅 นัดหมายวันนี้<span id="mtab-today-badge" class="hidden absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center"></span></button>
             </div>
-            <div id="medrec-owner-list" class="flex-1 overflow-y-auto px-2 pb-4 custom-scroll"></div>
+            <div id="medrec-owner-list" class="flex-1 overflow-y-auto px-2 pb-2 custom-scroll"></div>
+            <div class="p-4 flex-shrink-0 border-t border-white/5">
+                <button onclick="openNewOwnerModal()" class="w-full btn-base btn-teal py-3 text-sm font-bold">+ ลงทะเบียนเจ้าของใหม่</button>
+            </div>
         </aside>
 
         <main class="flex-1 overflow-y-auto p-4 md:p-10 bg-[#020617] custom-scroll" id="medrec-content">
+    <div id="welcome-state" class="h-full flex flex-col items-center justify-center opacity-30" style="display:none">
+        <div class="text-9xl mb-4">🐾</div>
+        <h3 class="text-3xl font-bold text-white">เลือกสัตว์จากรายการด้านซ้าย</h3>
+        <p class="text-lg text-slate-400 mt-2">หรือกดปุ่ม "+ ลงทะเบียนเจ้าของใหม่"</p>
+    </div>
     <div id="main-ui" class="max-w-6xl mx-auto">
         <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
             <div class="flex items-center gap-4 md:gap-6">
@@ -481,7 +489,7 @@
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
+        let animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
         let selectedItems = [], petType = 'สุนัข', petGender = '-', editingId = null;
         let selectedDldCategories = [], activeDldMain = null;
@@ -799,7 +807,7 @@
                 const owner = ownerMap.get(item.owner_hn);
                 const p1 = _sbPrimaryPhoneMap.get(item.owner_hn) || '-';
                 if (item._ownerOnly) {
-                    return `<div class="pet-card" onclick="location.href='animals.html?hn=${item.owner_hn}'" id="sb-owner-${item.owner_hn}">
+                    return `<div class="pet-card" onclick="openAddPetForOwner('${item.owner_hn}')" id="sb-owner-${item.owner_hn}">
                         <div class="hn-col text-sm">#${item.owner_hn}</div>
                         <div class="flex flex-col justify-center min-w-0 px-1 gap-0.5">
                             <span class="pet-main-name truncate text-slate-400">ยังไม่มีสัตว์เลี้ยง</span>
@@ -823,17 +831,21 @@
             }).join('');
         }
 
-        function gotoSidebarAnimal(id, hn) {
+        async function gotoSidebarAnimal(id, hn) {
             closeMedrecSidebar();
-            location.href = `medrec.html?id=${id}&hn=${hn}`;
+            await loadAnimalData(id, hn);
         }
 
         window.onload = async () => {
-            if (!animalId || !ownerHN) return location.href='animals.html';
             flatpickr(".datepicker", makeDatePickerConfig());
             flatpickr("#f_visit_date", makeDatePickerConfig({ defaultDate: "today" }));
             const { data: vcData } = await db.from('vaccine_catalog').select('*').order('name');
             vaccCatalog = vcData || [];
+            if (!animalId || !ownerHN) {
+                showWelcomeState();
+                loadSidebarData();
+                return;
+            }
             await fetchInfo(); await fetchRecords();
             renderVaccineCheckboxes();
             loadSidebarData(); // non-blocking
@@ -1330,7 +1342,8 @@
                         await db.from('vaccination_records').insert(vaccInserts);
                     }
                 }
-                location.reload();
+                await fetchRecords();
+                showHistoryView();
             } catch (err) { console.error(err); }
         }
 
@@ -1357,7 +1370,7 @@
             renderVaccineCheckboxes(preCheckedVaccIds);
         }
 
-        async function deleteRecord(id) { if(confirm("ลบประวัติ?")) { await db.from('medical_records').delete().eq('id', id); location.reload(); } }
+        async function deleteRecord(id) { if(confirm("ลบประวัติ?")) { await db.from('medical_records').delete().eq('id', id); await fetchRecords(); } }
         function drawBullets(arr, mode = null) { if (!arr || arr.length === 0) return "-"; return `<ul class="bullet-list">${arr.map((n, idx) => `<li onclick="${mode==='form_item'?'removeItem('+idx+')':''}"><span>${n}</span></li>`).join('')}</ul>`; }
         function renderLeftHistoryPanel() {
             const list = document.getElementById('left-history-list');
@@ -1469,9 +1482,55 @@
                 } catch(e) {}
             }, 300);
         }
-        function showHistoryView() { location.reload(); }
+        function resetMedrecForm() {
+            editingId = null;
+            selectedItems = [];
+            selectedDldCategories = [];
+            activeDldMain = null;
+            ['f_cc','f_hx','f_pe','f_dx','f_plan','f_app_note','f_app_note_2'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+            ['f_appointment','f_appointment_2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { if (el._flatpickr) el._flatpickr.clear(); else el.value = ''; }
+            });
+            const visitEl = document.getElementById('f_visit_date');
+            if (visitEl && visitEl._flatpickr) visitEl._flatpickr.setDate(new Date());
+            const costEl = document.getElementById('f_cost'); if (costEl) costEl.value = '0';
+            updateFormUI();
+        }
+        function showHistoryView() {
+            document.getElementById('history-view-container').classList.remove('view-hidden');
+            document.getElementById('form-view-container').classList.add('view-hidden');
+            resetMedrecForm();
+        }
         function closeCatalog() { document.getElementById('catalog-modal').style.display = 'none'; }
-        function goBack() { location.href = 'animals.html'; }
+        async function loadAnimalData(id, hn) {
+            animalId = id; ownerHN = hn;
+            history.pushState(null, '', `?id=${encodeURIComponent(id)}&hn=${encodeURIComponent(hn)}`);
+            document.getElementById('main-ui').style.display = '';
+            document.getElementById('welcome-state').style.display = 'none';
+            document.getElementById('head-pet-name').innerText = 'กำลังโหลด...';
+            document.getElementById('head-hn').innerText = 'HN: -';
+            showHistoryView();
+            await Promise.all([fetchInfo(), fetchRecords()]);
+            renderVaccineCheckboxes();
+            markActiveSidebarAnimal();
+        }
+        function goBack() {
+            if (animalId) {
+                animalId = null; ownerHN = null;
+                history.pushState(null, '', window.location.pathname);
+                showWelcomeState();
+            } else {
+                location.href = 'index.html';
+            }
+        }
+        function showWelcomeState() {
+            document.getElementById('main-ui').style.display = 'none';
+            document.getElementById('welcome-state').style.display = '';
+            document.querySelectorAll('#medrec-owner-list .pet-card').forEach(el => el.classList.remove('active'));
+        }
         function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
 
         function renderVaccineCheckboxes(checkedIds = []) {
@@ -2194,6 +2253,86 @@
             ctx.font = `${4.5*SCALE}px sans-serif`;
             ctx.fillText('ครึ่งล่าง (ไม่พิมพ์)', 8*SCALE, printEnd + 6*SCALE);
         }
+        // ── New Owner / Add Pet functions ─────────────────────────────────────
+        function openNewOwnerModal() {
+            ['no-hn','no-name','no-phone1','no-phone2','no-address','no-petname','no-petweight'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+            const typeEl = document.getElementById('no-pettype');
+            if (typeEl) typeEl.value = '';
+            const genderEl = document.getElementById('no-petgender');
+            if (genderEl) genderEl.value = 'ไม่ระบุเพศ';
+            document.getElementById('new-owner-modal').style.display = 'flex';
+        }
+
+        async function saveNewOwner() {
+            const name = document.getElementById('no-name').value.trim();
+            const phone1 = document.getElementById('no-phone1').value.trim();
+            if (!name || !phone1) return alert('❌ กรุณากรอกชื่อและเบอร์โทรหลัก');
+            let hn = document.getElementById('no-hn').value.trim();
+            if (!hn) {
+                const { data: existing } = await db.from('owners').select('hn').order('hn', { ascending: false }).limit(100);
+                const hns = (existing || []).map(o => parseInt(o.hn)).filter(n => !isNaN(n));
+                hn = (Math.max(...hns, 690000) + 1).toString().padStart(6, '0');
+            }
+            try {
+                const { error: ownerErr } = await db.from('owners').upsert({ hn, owner_name: name, address: document.getElementById('no-address').value.trim() || null }, { onConflict: 'hn' });
+                if (ownerErr) throw ownerErr;
+                // Delete then re-insert phones to avoid duplicate conflicts
+                await db.from('owner_phones').delete().eq('owner_hn', hn);
+                const phones = [{ owner_hn: hn, phone_number: phone1, label: 'เบอร์หลัก' }];
+                const p2 = document.getElementById('no-phone2').value.trim();
+                if (p2) phones.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
+                await db.from('owner_phones').insert(phones);
+                let newPetId = null;
+                const petName = document.getElementById('no-petname').value.trim();
+                if (petName) {
+                    const { data: petData, error: petErr } = await db.from('animals').insert({
+                        owner_hn: hn, pet_name: petName,
+                        pet_type: document.getElementById('no-pettype').value || 'อื่นๆ',
+                        gender: document.getElementById('no-petgender').value,
+                        weight: parseFloat(document.getElementById('no-petweight').value) || 0
+                    }).select().single();
+                    if (petErr) throw petErr;
+                    newPetId = petData?.id;
+                }
+                document.getElementById('new-owner-modal').style.display = 'none';
+                await loadSidebarData();
+                if (newPetId) await loadAnimalData(newPetId, hn);
+            } catch (err) { alert('❌ บันทึกไม่สำเร็จ: ' + err.message); }
+        }
+
+        function openAddPetForOwner(hn) {
+            closeMedrecSidebar();
+            document.getElementById('ap-hn').value = hn;
+            const owner = _sbOwners.find(o => o.hn === hn);
+            document.getElementById('ap-owner-label').textContent = owner ? owner.owner_name : hn;
+            ['ap-petname','ap-petweight'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            const typeEl = document.getElementById('ap-pettype');
+            if (typeEl) typeEl.value = '';
+            const genderEl = document.getElementById('ap-petgender');
+            if (genderEl) genderEl.value = 'ไม่ระบุเพศ';
+            document.getElementById('add-pet-modal').style.display = 'flex';
+        }
+
+        async function saveAddPet() {
+            const hn = document.getElementById('ap-hn').value;
+            const petName = document.getElementById('ap-petname').value.trim();
+            if (!petName) return alert('❌ กรุณากรอกชื่อสัตว์');
+            try {
+                const { data: petData, error: petErr } = await db.from('animals').insert({
+                    owner_hn: hn, pet_name: petName,
+                    pet_type: document.getElementById('ap-pettype').value || 'อื่นๆ',
+                    gender: document.getElementById('ap-petgender').value,
+                    weight: parseFloat(document.getElementById('ap-petweight').value) || 0
+                }).select().single();
+                if (petErr) throw petErr;
+                document.getElementById('add-pet-modal').style.display = 'none';
+                await loadSidebarData();
+                if (petData?.id) await loadAnimalData(petData.id, hn);
+            } catch (err) { alert('❌ บันทึกไม่สำเร็จ: ' + err.message); }
+        }
+
         // ── Edit Owner/Animal modals ──────────────────────────────────────────
         function openEditOwnerModal() {
             document.getElementById('edit-owner-name').value = document.getElementById('info-owner-name').innerText;
@@ -2361,6 +2500,92 @@
             <div class="p-6 border-t border-white/10 flex gap-3">
                 <button onclick="document.getElementById('edit-animal-modal').style.display='none'" class="btn-base btn-red px-6">ยกเลิก</button>
                 <button onclick="saveAnimalEdit()" class="btn-base btn-teal flex-1 text-lg">💾 บันทึก</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal: ลงทะเบียนเจ้าของใหม่ -->
+    <div id="new-owner-modal" class="modal-overlay" style="z-index: 210;">
+        <div class="modal-content !max-w-2xl">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30 flex justify-between items-center">
+                <h4 class="text-2xl font-bold text-teal-400">➕ ลงทะเบียนเจ้าของใหม่</h4>
+                <button onclick="document.getElementById('new-owner-modal').style.display='none'" class="text-3xl text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto" style="max-height:65vh;">
+                <h5 class="font-bold text-blue-400">👤 ข้อมูลเจ้าของ</h5>
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-3"><label class="label-text">HN <span class="text-xs text-gray-500">(เว้นว่างเพื่อ Auto)</span></label><input type="text" id="no-hn" class="input-box font-black text-blue-400" placeholder="Auto"></div>
+                    <div class="col-span-9"><label class="label-text">ชื่อ-นามสกุล <span class="text-red-400">*</span></label><input type="text" id="no-name" class="input-box" placeholder="ชื่อเจ้าของ..."></div>
+                    <div class="col-span-6"><label class="label-text">เบอร์โทรหลัก <span class="text-red-400">*</span></label><input type="tel" id="no-phone1" class="input-box text-teal-400 font-bold" placeholder="0xx-xxx-xxxx"></div>
+                    <div class="col-span-6"><label class="label-text">เบอร์สำรอง</label><input type="tel" id="no-phone2" class="input-box" placeholder="ไม่บังคับ"></div>
+                    <div class="col-span-12"><label class="label-text">ที่อยู่</label><input type="text" id="no-address" class="input-box" placeholder="ที่อยู่..."></div>
+                </div>
+                <h5 class="font-bold text-teal-400 pt-2">🐾 ข้อมูลสัตว์เลี้ยง <span class="text-sm font-normal text-gray-400">(ไม่บังคับ)</span></h5>
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-6"><label class="label-text">ชื่อสัตว์</label><input type="text" id="no-petname" class="input-box" placeholder="ชื่อสัตว์..."></div>
+                    <div class="col-span-6"><label class="label-text">ชนิด</label>
+                        <select id="no-pettype" class="input-box">
+                            <option value="">-- เลือกชนิด --</option>
+                            <option value="สุนัข">🐶 สุนัข</option>
+                            <option value="แมว">🐱 แมว</option>
+                            <option value="อื่นๆ">🐾 อื่นๆ</option>
+                        </select>
+                    </div>
+                    <div class="col-span-6"><label class="label-text">เพศ</label>
+                        <select id="no-petgender" class="input-box">
+                            <option value="เมีย">♀️ เมีย</option>
+                            <option value="ผู้">♂️ ผู้</option>
+                            <option value="ผู้ตอน">✂️♂️ ผู้ตอน</option>
+                            <option value="เมียหมัน">✂️♀️ เมียหมัน</option>
+                            <option value="ไม่ระบุเพศ" selected>❓ ไม่ระบุเพศ</option>
+                        </select>
+                    </div>
+                    <div class="col-span-6"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="no-petweight" class="input-box" placeholder="0.0"></div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="document.getElementById('new-owner-modal').style.display='none'" class="btn-base btn-red px-6">ยกเลิก</button>
+                <button onclick="saveNewOwner()" class="btn-base btn-teal flex-1 text-lg">💾 บันทึกและเปิดเวชระเบียน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: เพิ่มสัตว์ให้เจ้าของที่มีอยู่ -->
+    <div id="add-pet-modal" class="modal-overlay" style="z-index: 210;">
+        <div class="modal-content !max-w-lg">
+            <div class="p-6 border-b border-white/10 bg-teal-900/30 flex justify-between items-center">
+                <div>
+                    <h4 class="text-2xl font-bold text-teal-400">🐾 เพิ่มสัตว์ใหม่</h4>
+                    <p class="text-sm text-gray-400 mt-1">เจ้าของ: <span id="ap-owner-label" class="text-white font-bold"></span></p>
+                </div>
+                <button onclick="document.getElementById('add-pet-modal').style.display='none'" class="text-3xl text-gray-400 hover:text-white">✕</button>
+            </div>
+            <input type="hidden" id="ap-hn">
+            <div class="p-6 space-y-4">
+                <div><label class="label-text">ชื่อสัตว์ <span class="text-red-400">*</span></label><input type="text" id="ap-petname" class="input-box" placeholder="ชื่อสัตว์..."></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">ชนิด</label>
+                        <select id="ap-pettype" class="input-box">
+                            <option value="">-- เลือกชนิด --</option>
+                            <option value="สุนัข">🐶 สุนัข</option>
+                            <option value="แมว">🐱 แมว</option>
+                            <option value="อื่นๆ">🐾 อื่นๆ</option>
+                        </select>
+                    </div>
+                    <div><label class="label-text">เพศ</label>
+                        <select id="ap-petgender" class="input-box">
+                            <option value="เมีย">♀️ เมีย</option>
+                            <option value="ผู้">♂️ ผู้</option>
+                            <option value="ผู้ตอน">✂️♂️ ผู้ตอน</option>
+                            <option value="เมียหมัน">✂️♀️ เมียหมัน</option>
+                            <option value="ไม่ระบุเพศ" selected>❓ ไม่ระบุเพศ</option>
+                        </select>
+                    </div>
+                </div>
+                <div><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="ap-petweight" class="input-box" placeholder="0.0"></div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-3">
+                <button onclick="document.getElementById('add-pet-modal').style.display='none'" class="btn-base btn-red px-6">ยกเลิก</button>
+                <button onclick="saveAddPet()" class="btn-base btn-teal flex-1 text-lg">💾 บันทึกและเปิดเวชระเบียน</button>
             </div>
         </div>
     </div>
