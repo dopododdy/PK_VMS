@@ -313,6 +313,7 @@
                 </h3>
                 <div class="flex flex-wrap gap-2">
                     <button onclick="printBlankOPD()" class="btn-base bg-green-700 hover:bg-green-600 shadow-lg text-xs">📄 พิมพ์ OPD เปล่า</button>
+                    <button onclick="printTreatmentHistory()" class="btn-base bg-cyan-700 hover:bg-cyan-600 shadow-lg text-xs">📋 พิมพ์ประวัติการรักษา</button>
                     <button onclick="goToPOS()" class="btn-base bg-blue-600 hover:bg-blue-500 shadow-lg text-xs">💰 คิดเงิน</button>
                     <button onclick="printBothLabels(animalId)" class="btn-base bg-emerald-600 hover:bg-emerald-500 shadow-lg text-xs">🖨️ ข้อมูลสัตว์ + นัดหมาย</button>
                     <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-xs">🪪 บัตรประจำตัวสัตว์</button>
@@ -1881,6 +1882,98 @@
             pw.document.write(html); 
             pw.document.close();
         }
+        async function printTreatmentHistory() {
+            if (!records || records.length === 0) return alert("ไม่พบประวัติการรักษาสำหรับสัตว์นี้");
+            const ownerName  = document.getElementById('info-owner-name').innerText;
+            const ownerPhone = document.getElementById('info-owner-phone').innerText;
+            const ownerHnStr = document.getElementById('head-hn').innerText.replace('HN: ', '');
+            const petName    = document.getElementById('v-pet-name').innerText;
+            const petWeight  = document.getElementById('v-pet-weight').innerText;
+            const congenital = document.getElementById('v-pet-congenital').innerText;
+            const petInfo    = `${petName} (${petType}${petGender !== '-' ? ', ' + petGender : ''}${petWeight ? ', ' + petWeight + ' กก.' : ''})`;
+            const dateStr    = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const sortedRecs = [...records].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            const rows = sortedRecs.map(rec => {
+                const d        = new Date(rec.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                const txItems  = (rec.medical_record_items || []).filter(i => i.item_type === 'Tx');
+                const rxItems  = (rec.medical_record_items || []).filter(i => i.item_type === 'Rx');
+                const labItems = (rec.medical_record_items || []).filter(i => i.item_type === 'Lab');
+                const txText   = txItems.map(i => i.item_name).join(', ');
+                const rxText   = rxItems.map(i => {
+                    let s = '- ' + escapeHtml(i.item_name);
+                    if (i.dose_per_time) s += ` ${escapeHtml(String(i.dose_per_time))}${escapeHtml(i.unit || '')}`;
+                    if (i.frequency)     s += ` ${escapeHtml(i.frequency)}`;
+                    if (i.duration_days) s += ` ${escapeHtml(String(i.duration_days))} วัน`;
+                    return s;
+                }).join('<br>');
+                const labText = labItems.map(i => i.item_name).join(', ');
+                return `<tr style="border-bottom:1pt solid #e5e7eb; page-break-inside:avoid;">
+                    <td style="padding:5pt 6pt; vertical-align:top; font-weight:bold; white-space:nowrap; color:#0369a1; border:1pt solid #d1d5db;">${d}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${escapeHtml(rec.cc || '')}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${escapeHtml(rec.pe || '')}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${labText ? '<span style="color:#6d28d9;">Lab: </span>' + escapeHtml(labText) + '<br>' : ''}${txText ? '<span style="color:#db2777;">Tx: </span>' + escapeHtml(txText) : ''}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; color:#059669; border:1pt solid #d1d5db;">${rxText || ''}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${escapeHtml(rec.plan || '')}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; color:#78716c; border:1pt solid #d1d5db;">${rec.weight ? rec.weight + ' กก.' : ''}</td>
+                </tr>`;
+            }).join('');
+
+            const _histHtml = `<html><head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
+  * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
+  body { margin: 0; padding: 12mm 15mm; background: white; color: #111; font-size: 9.5pt; }
+  h1 { font-size: 16pt; font-weight: 800; margin: 0 0 3px; color: #0369a1; }
+  .header { border-bottom: 2pt solid #0369a1; padding-bottom: 8pt; margin-bottom: 10pt; }
+  .info-row { display: flex; gap: 20pt; flex-wrap: wrap; font-size: 9pt; margin-bottom: 4pt; }
+  .info-label { font-weight: 700; color: #555; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  th { background: #eff6ff; padding: 5pt 6pt; text-align: left; font-weight: 800; font-size: 8pt; border: 1pt solid #d1d5db; color: #1e40af; }
+  td { padding: 5pt 6pt; vertical-align: top; border: 1pt solid #d1d5db; }
+  .warning { background: #fef2f2; border: 1pt solid #fca5a5; border-radius: 4pt; padding: 4pt 8pt; font-size: 8.5pt; color: #dc2626; font-weight: 700; margin-bottom: 8pt; }
+  @media print { @page { size: A4 landscape; margin: 0; } body { padding: 12mm 15mm; } }
+</style>
+</head><body>
+  <div class="header">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        <h1>ประวัติการรักษา</h1>
+        <div style="font-size:8.5pt; color:#555; margin-top:2pt;">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+      </div>
+      <div style="text-align:right; font-size:8.5pt; color:#555;">วันที่พิมพ์: ${dateStr}</div>
+    </div>
+  </div>
+  <div class="info-row">
+    <span><span class="info-label">เจ้าของ:</span> ${escapeHtml(ownerName)}</span>
+    <span><span class="info-label">HN:</span> ${escapeHtml(ownerHnStr)}</span>
+    <span><span class="info-label">โทร:</span> ${escapeHtml(ownerPhone)}</span>
+  </div>
+  <div class="info-row" style="margin-bottom:6pt;">
+    <span><span class="info-label">สัตว์:</span> ${escapeHtml(petInfo)}</span>
+  </div>
+  ${congenital && congenital !== 'ไม่มี' ? `<div class="warning">⚠️ แพ้ยา/ข้อควรระวัง: ${escapeHtml(congenital)}</div>` : ''}
+  <table>
+    <thead><tr>
+      <th style="width:9%;">วันที่</th>
+      <th style="width:13%;">CC (อาการสำคัญ)</th>
+      <th style="width:13%;">PE (ตรวจร่างกาย)</th>
+      <th style="width:18%;">Lab/Tx (หัตถการ)</th>
+      <th style="width:29%;">Rx (จ่ายยา)</th>
+      <th style="width:12%;">Plan</th>
+      <th style="width:6%;">น้ำหนัก</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div style="margin-top:10pt; font-size:7.5pt; color:#9ca3af; text-align:right;">รวม ${records.length} ครั้ง | สร้างโดย PK-VMS Pro</div>
+</body></html>`;
+            const win = window.open('', '_blank');
+            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+            win.document.write(_histHtml.replace('</body>', `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body>`));
+            win.document.close();
+        }
+
         const OPD_LINE_H = 5;   // mm per line (shared by printBlankOPD and printHistoryToCard)
         const OPD_HDR_H  = 22;  // mm header height (shared)
         const OPD_PAGE_W = 210; // mm A4 portrait width
@@ -1988,8 +2081,11 @@
             if (rxItems.length > 0) {
                 lines.push('Rx:');
                 rxItems.forEach(i => {
-                    const detail = i.dose_per_time ? ` ${i.dose_per_time} ${i.unit || ''}` : '';
-                    lines.push(`- ${i.item_name}${detail}`);
+                    let s = `- ${i.item_name}`;
+                    if (i.dose_per_time) s += ` ${i.dose_per_time}${i.unit || ''}`;
+                    if (i.frequency) s += ` ${i.frequency}`;
+                    if (i.duration_days) s += ` ${i.duration_days} วัน`;
+                    lines.push(s);
                 });
             }
             if (rec.plan)            lines.push(`Plan: ${rec.plan}`);
