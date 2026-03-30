@@ -8,6 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
     <style>
         :root {
             --navy:     #020617;
@@ -61,13 +65,24 @@
             display: block; font-size: 0.82rem; font-weight: 600;
             color: #94a3b8; margin-bottom: 6px;
         }
-        input[type="date"], select.input-select {
+        input[type="text"].datepicker-vacc, select.input-select {
             width: 100%; padding: 11px 14px; border-radius: 12px;
             border: 1px solid var(--border); background: rgba(255,255,255,0.05);
             color: #e2e8f0; font-size: 0.95rem; outline: none;
-            transition: border-color 0.2s; color-scheme: dark; cursor: pointer;
+            transition: border-color 0.2s; cursor: pointer;
         }
-        input[type="date"]:focus, select.input-select:focus { border-color: var(--teal); }
+        input[type="text"].datepicker-vacc:focus, select.input-select:focus { border-color: var(--teal); }
+        .flatpickr-input[readonly] { cursor: pointer; }
+        /* Alt input (the visible Thai date display) */
+        input.flatpickr-alt-input {
+            width: 100%; padding: 11px 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(255,255,255,0.05);
+            color: #e2e8f0; font-size: 0.95rem; outline: none;
+            transition: border-color 0.2s; cursor: pointer; font-family: "Sarabun", sans-serif;
+        }
+        input.flatpickr-alt-input:focus { border-color: var(--teal); }
+        .flatpickr-day.nextMonthDay, .flatpickr-day.prevMonthDay { visibility: hidden; pointer-events: none; }
+        select.input-select option { background: #1e293b; color: #e2e8f0; }
 
         /* ─── Buttons ──────────────────── */
         .btn-save {
@@ -249,7 +264,7 @@
 
                     <div style="margin-bottom: 14px;">
                         <label class="field-label">วันที่ฉีดวัคซีน</label>
-                        <input type="date" id="vacc_date" onchange="updateDateHint()">
+                        <input type="text" id="vacc_date" class="datepicker-vacc" readonly>
                         <div class="date-hint" id="date_hint"></div>
                     </div>
 
@@ -325,6 +340,22 @@ function getAnimalIcon(t) {
     if (t.startsWith('นก')) return '🦜';
     if (t.startsWith('เต่า')) return '🐢';
     return '🐾';
+}
+
+/* ─── Flatpickr helpers (Thai Buddhist Era) ── */
+function updateCalendarYearToBE(instance) {
+    if (!instance.calendarContainer) return;
+    instance.calendarContainer.querySelectorAll('.cur-year').forEach((yearInput, i) => {
+        let y = instance.currentYear;
+        if (i > 0 && (instance.currentMonth + i) > 11) y += 1;
+        yearInput.value = y + 543;
+    });
+}
+function setAltInputBE(instance, selectedDates) {
+    if (!instance.altInput || !selectedDates.length) return;
+    const d = selectedDates[0];
+    const months = (instance.l10n || flatpickr.l10ns.th).months.longhand;
+    instance.altInput.value = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
 }
 
 /* ─── Format date (Thai) ────────────────── */
@@ -511,8 +542,8 @@ async function init() {
             String(today.getMonth() + 1).padStart(2, '0'),
             String(today.getDate()).padStart(2, '0')
         ].join('-');
-        document.getElementById('vacc_date').value = localDate;
-        updateDateHint();
+        const vaccEl = document.getElementById('vacc_date');
+        if (vaccEl._flatpickr) { vaccEl._flatpickr.setDate(localDate, true); } else { vaccEl.value = localDate; updateDateHint(); }
 
         // Populate vaccine select
         populateSelect();
@@ -532,6 +563,24 @@ async function init() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+    // Init Flatpickr with Thai locale + Buddhist Era year display
+    flatpickr('#vacc_date', {
+        locale: 'th',
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'j F Y',
+        onReady: (selDates, _, inst) => {
+            if (selDates.length) setAltInputBE(inst, selDates);
+            setTimeout(() => updateCalendarYearToBE(inst), 0);
+        },
+        onOpen: (_, __, inst) => setTimeout(() => updateCalendarYearToBE(inst), 0),
+        onMonthChange: (_, __, inst) => setTimeout(() => updateCalendarYearToBE(inst), 0),
+        onYearChange: (_, __, inst) => setTimeout(() => updateCalendarYearToBE(inst), 0),
+        onChange: (selDates, _, inst) => {
+            if (selDates.length) setAltInputBE(inst, selDates);
+            updateDateHint();
+        }
+    });
     // Event delegation for delete buttons in vaccine list
     document.getElementById('vacc-list').addEventListener('click', e => {
         const btn = e.target.closest('[data-delete-id]');
