@@ -16,21 +16,12 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
 
     <style>
-        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); --fp-month-w: 307.875px; --fp-arrow-pad: 34px; }
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; font-size: 1rem; margin: 0; padding: 0; }
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1.1rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         .flatpickr-input.input-box[readonly] { cursor: pointer; }
-        /* ─── Appointment date picker: 2-month vertical layout ─── */
-        .flatpickr-calendar.appt-cal-vertical { width: var(--fp-month-w) !important; }
-        .flatpickr-calendar.appt-cal-vertical .flatpickr-months { flex-direction: column; height: auto !important; }
-        .flatpickr-calendar.appt-cal-vertical .flatpickr-months .flatpickr-month { padding: 0 var(--fp-arrow-pad); }
-        .flatpickr-calendar.appt-cal-vertical .flatpickr-innerContainer { display: flex; flex-direction: column; }
-        .flatpickr-calendar.appt-cal-vertical .flatpickr-rContainer { display: block; width: 100%; }
-        .flatpickr-calendar.appt-cal-vertical .flatpickr-rContainer + .flatpickr-rContainer { border-top: 1px solid rgba(255,255,255,0.12); margin-top: 6px; padding-top: 4px; }
-        .flatpickr-calendar.appt-cal-vertical .flatpickr-days { width: var(--fp-month-w) !important; }
-        .flatpickr-calendar.appt-cal-vertical .dayContainer { width: var(--fp-month-w) !important; min-width: var(--fp-month-w) !important; max-width: var(--fp-month-w) !important; }
         /* ─── Appointment shortcut buttons ─── */
         .appt-shortcut-btn { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.35); border-radius: 6px; padding: 2px 7px; font-size: 0.72rem; font-weight: 800; cursor: pointer; transition: background 0.15s; }
         .appt-shortcut-btn:hover { background: rgba(249,115,22,0.35); }
@@ -457,7 +448,18 @@
                             <button type="button" onclick="setApptShortcut('f_appointment',0,0,1)" class="appt-shortcut-btn">1y</button>
                         </div>
                     </div>
-                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ</label><input type="text" id="f_app_note" class="input-box"></div>
+                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ</label>
+                        <select id="f_app_note" class="input-box" onchange="handleApptNoteChange('f_app_note')">
+                            <option value="">-- เลือก --</option>
+                            <option value="ตัดไหมฟรี">ตัดไหมฟรี</option>
+                            <option value="กระตุ้นวัคซีน">กระตุ้นวัคซีน</option>
+                            <option value="วัคซีนประจำปี">วัคซีนประจำปี</option>
+                            <option value="ตรวจเลือด">ตรวจเลือด</option>
+                            <option value="ติดตามอาการ">ติดตามอาการ</option>
+                            <option value="__custom__">อื่น ๆ ระบุ</option>
+                        </select>
+                        <input type="text" id="f_app_note_custom" class="input-box mt-1 hidden" placeholder="ระบุ...">
+                    </div>
                     <div class="col-span-12 md:col-span-3">
                         <label class="label-clinical text-orange-400">📅 วันนัด (2)</label>
                         <input type="text" id="f_appointment_2" class="input-box datepicker">
@@ -470,7 +472,18 @@
                             <button type="button" onclick="setApptShortcut('f_appointment_2',0,0,1)" class="appt-shortcut-btn">1y</button>
                         </div>
                     </div>
-                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ (2)</label><input type="text" id="f_app_note_2" class="input-box"></div>
+                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ (2)</label>
+                        <select id="f_app_note_2" class="input-box" onchange="handleApptNoteChange('f_app_note_2')">
+                            <option value="">-- เลือก --</option>
+                            <option value="ตัดไหมฟรี">ตัดไหมฟรี</option>
+                            <option value="กระตุ้นวัคซีน">กระตุ้นวัคซีน</option>
+                            <option value="วัคซีนประจำปี">วัคซีนประจำปี</option>
+                            <option value="ตรวจเลือด">ตรวจเลือด</option>
+                            <option value="ติดตามอาการ">ติดตามอาการ</option>
+                            <option value="__custom__">อื่น ๆ ระบุ</option>
+                        </select>
+                        <input type="text" id="f_app_note_2_custom" class="input-box mt-1 hidden" placeholder="ระบุ...">
+                    </div>
                     
                     <div class="col-span-12 md:col-span-9"><label class="label-clinical">Plan (แผนการรักษาต่อ)</label><input type="text" id="f_plan" class="input-box"></div>
                     <div class="col-span-12 md:col-span-3"><label class="label-text text-yellow-400">รวมค่ารักษา (฿)</label><input type="number" id="f_cost" class="input-box text-3xl font-black text-yellow-400" value="0" step="0.01"></div>
@@ -717,16 +730,10 @@
         }
 
         function makeApptPickerConfig() {
-            const base = makeDatePickerConfig({
+            return makeDatePickerConfig({
                 showMonths: 2,
                 locale: { ...flatpickr.l10ns.th, firstDayOfWeek: 0 }
             });
-            const origOnReady = base.onReady;
-            base.onReady = (selectedDates, dateStr, instance) => {
-                origOnReady(selectedDates, dateStr, instance);
-                if (instance.calendarContainer) instance.calendarContainer.classList.add('appt-cal-vertical');
-            };
-            return base;
         }
 
         function setApptShortcut(fieldId, addDays, addMonths, addYears) {
@@ -739,6 +746,41 @@
             const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
             const el = document.getElementById(fieldId);
             if (el && el._flatpickr) el._flatpickr.setDate(dateStr, true);
+        }
+
+        // ─── Appointment note dropdown helpers ───
+        const APPT_NOTE_PRESETS = ['ตัดไหมฟรี','กระตุ้นวัคซีน','วัคซีนประจำปี','ตรวจเลือด','ติดตามอาการ'];
+        function handleApptNoteChange(selId) {
+            const customEl = document.getElementById(selId + '_custom');
+            if (!customEl) return;
+            if (document.getElementById(selId).value === '__custom__') {
+                customEl.classList.remove('hidden');
+                customEl.focus();
+            } else {
+                customEl.classList.add('hidden');
+                customEl.value = '';
+            }
+        }
+        function getApptNoteVal(selId) {
+            const sel = document.getElementById(selId);
+            if (!sel) return '';
+            if (sel.value === '__custom__') return document.getElementById(selId + '_custom')?.value || '';
+            return sel.value;
+        }
+        function setApptNoteVal(selId, value) {
+            const sel = document.getElementById(selId);
+            if (!sel) return;
+            const customEl = document.getElementById(selId + '_custom');
+            if (!value) {
+                sel.value = '';
+                if (customEl) { customEl.classList.add('hidden'); customEl.value = ''; }
+            } else if (APPT_NOTE_PRESETS.includes(value)) {
+                sel.value = value;
+                if (customEl) { customEl.classList.add('hidden'); customEl.value = ''; }
+            } else {
+                sel.value = '__custom__';
+                if (customEl) { customEl.classList.remove('hidden'); customEl.value = value; }
+            }
         }
 
         // ─── Sidebar data & functions ───
@@ -1301,7 +1343,8 @@
             if (confirm(`คัดลอกยาเดิม (${rxItems.length} รายการ)?`)) {
                 editingId = null;
                 selectedItems = rxItems.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
-                ['cc','hx','pe','dx','plan','app_note','app_note_2'].forEach(f => { if(document.getElementById('f_'+f)) document.getElementById('f_'+f).value = ''; });
+                ['cc','hx','pe','dx','plan'].forEach(f => { if(document.getElementById('f_'+f)) document.getElementById('f_'+f).value = ''; });
+                setApptNoteVal('f_app_note', ''); setApptNoteVal('f_app_note_2', '');
                 ['appointment','appointment_2'].forEach(f => { const el = document.getElementById('f_'+f); if(el) { if(el._flatpickr) el._flatpickr.clear(); else el.value = ''; } });
                 const visitEl = document.getElementById('f_visit_date'); if (visitEl && visitEl._flatpickr) { visitEl._flatpickr.setDate(new Date()); } else if (visitEl) { visitEl.value = new Date().toISOString().split('T')[0]; }
                 document.getElementById('f_cost').value = selectedItems.reduce((sum, i) => sum + i.price, 0).toFixed(2);
@@ -1600,7 +1643,7 @@
             try {
                 document.getElementById('dld-modal').style.display = 'none';
                 const visitDate = document.getElementById('f_visit_date').value || new Date().toISOString().split('T')[0];
-                const headerData = { animal_id: animalId, owner_hn: ownerHN, created_at: visitDate, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: document.getElementById('f_app_note').value, appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: document.getElementById('f_app_note_2').value, total_cost: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: selectedItems.length > 0 ? 'pending' : 'no_charge', dld_categories: selectedDldCategories };
+                const headerData = { animal_id: animalId, owner_hn: ownerHN, created_at: visitDate, weight: parseFloat(document.getElementById('f_weight').value) || 0, cc: document.getElementById('f_cc').value, hx: document.getElementById('f_hx').value, pe: document.getElementById('f_pe').value, dx: document.getElementById('f_dx').value, plan: document.getElementById('f_plan').value, appointment: document.getElementById('f_appointment').value || null, appointment_note: getApptNoteVal('f_app_note'), appointment_2: document.getElementById('f_appointment_2').value || null, appointment_note_2: getApptNoteVal('f_app_note_2'), total_cost: parseFloat(document.getElementById('f_cost').value) || 0, payment_status: selectedItems.length > 0 ? 'pending' : 'no_charge', dld_categories: selectedDldCategories };
                 let currentRecordId = editingId;
                 if (editingId) { await db.from('medical_records').update(headerData).eq('id', editingId); await db.from('medical_record_items').delete().eq('record_id', editingId); }
                 else { const { data: record } = await db.from('medical_records').insert([headerData]).select().single(); currentRecordId = record.id; }
@@ -1650,7 +1693,9 @@
             const recIndex = records.findIndex(r => r.id === id); if (recIndex !== -1) records[recIndex] = rec;
             editingId = id; document.getElementById('f_weight').value = rec.weight || 0;
             const visitEl = document.getElementById('f_visit_date'); if (visitEl && visitEl._flatpickr) { visitEl._flatpickr.setDate(rec.created_at ? new Date(rec.created_at) : new Date()); } else if (visitEl) { visitEl.value = rec.created_at ? rec.created_at.split('T')[0] : ''; }
-            [['cc','cc'],['hx','hx'],['pe','pe'],['dx','dx'],['plan','plan'],['app_note','appointment_note'],['app_note_2','appointment_note_2']].forEach(([elSuffix,dbCol]) => { const el = document.getElementById('f_'+elSuffix); if(el) el.value = rec[dbCol] || ''; });
+            [['cc','cc'],['hx','hx'],['pe','pe'],['dx','dx'],['plan','plan']].forEach(([elSuffix,dbCol]) => { const el = document.getElementById('f_'+elSuffix); if(el) el.value = rec[dbCol] || ''; });
+            setApptNoteVal('f_app_note', rec.appointment_note || '');
+            setApptNoteVal('f_app_note_2', rec.appointment_note_2 || '');
             [['appointment','appointment'],['appointment_2','appointment_2']].forEach(([elSuffix,dbCol]) => { const el = document.getElementById('f_'+elSuffix); if(el) { if(el._flatpickr) { el._flatpickr.setDate(rec[dbCol] || null); } else { el.value = rec[dbCol] || ''; } } });
             document.getElementById('f_cost').value = rec.total_cost || 0;
             selectedItems = rec.medical_record_items.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
@@ -1785,9 +1830,10 @@
             selectedItems = [];
             selectedDldCategories = [];
             activeDldMain = null;
-            ['f_cc','f_hx','f_pe','f_dx','f_plan','f_app_note','f_app_note_2'].forEach(id => {
+            ['f_cc','f_hx','f_pe','f_dx','f_plan'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.value = '';
             });
+            setApptNoteVal('f_app_note', ''); setApptNoteVal('f_app_note_2', '');
             ['f_appointment','f_appointment_2'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { if (el._flatpickr) el._flatpickr.clear(); else el.value = ''; }
@@ -1987,9 +2033,9 @@
         async function printAllApptLabels() {
             if (!animalId) return;
             const apptDate1 = document.getElementById('f_appointment').value;
-            const apptNote1 = document.getElementById('f_app_note').value;
+            const apptNote1 = getApptNoteVal('f_app_note');
             const apptDate2 = document.getElementById('f_appointment_2').value;
-            const apptNote2 = document.getElementById('f_app_note_2').value;
+            const apptNote2 = getApptNoteVal('f_app_note_2');
             if (!apptDate1 && !apptDate2) return alert("ไม่พบข้อมูลนัดหมาย");
             const allPetIds = [String(animalId), ...getSelectedAdditionalPetIds()];
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
@@ -2018,9 +2064,9 @@
         async function printAllBothLabels() {
             if (!animalId) return;
             const apptDate1 = document.getElementById('f_appointment').value;
-            const apptNote1 = document.getElementById('f_app_note').value;
+            const apptNote1 = getApptNoteVal('f_app_note');
             const apptDate2 = document.getElementById('f_appointment_2').value;
-            const apptNote2 = document.getElementById('f_app_note_2').value;
+            const apptNote2 = getApptNoteVal('f_app_note_2');
             const allPetIds = [String(animalId), ...getSelectedAdditionalPetIds()];
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
             if (!owner) return alert("ไม่พบข้อมูลเจ้าของ");
