@@ -9,6 +9,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="supabase-config.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
     <style>
         :root {
             --teal:   #0d9488;
@@ -83,6 +86,7 @@
         .form-input::placeholder { color: #94a3b8; }
         .form-input.error { border-color: #ef4444; }
         select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 44px; }
+        .flatpickr-input.form-input[readonly] { background: white; cursor: pointer; }
 
         /* ─── Buttons ─────────────────────────────── */
         .btn {
@@ -573,7 +577,10 @@ function buildPetForm(pet = {}) {
                     <input type="number" id="${fid}_age_m" class="form-input" min="0" max="11" value="${getAgeMonths(pet.birth_date)}" placeholder="0" inputmode="numeric" oninput="syncBirthDate('${fid}')">
                 </div>
             </div>
-            <input type="hidden" id="${fid}_birth" value="${pet.birth_date || ''}">
+            <div class="form-group" style="margin-top:12px; margin-bottom:0;">
+                <label class="form-label">วันเดือนปีเกิด</label>
+                <input type="text" id="${fid}_birth" class="form-input" placeholder="เลือกวันที่เกิด..." data-birth="${pet.birth_date || ''}">
+            </div>
             <div class="form-group" style="margin-top:12px; margin-bottom:0;">
                 <label class="form-label">เลขไมโครชิพ</label>
                 <input type="text" id="${fid}_microchip" class="form-input" value="${pet.microchip_number || ''}" placeholder="หมายเลขไมโครชิพ (ถ้ามี)">
@@ -628,7 +635,67 @@ function syncBirthDate(fid) {
     d.setFullYear(d.getFullYear() - y);
     d.setMonth(d.getMonth() - m);
     const dateStr = d.toISOString().split('T')[0];
-    document.getElementById(`${fid}_birth`).value = dateStr;
+    const birthEl = document.getElementById(`${fid}_birth`);
+    if (birthEl?._flatpickr) {
+        const fp = birthEl._flatpickr;
+        fp.setDate(dateStr, false);
+        if (fp.altInput) {
+            const ce = d.getFullYear();
+            fp.altInput.value = fp.altInput.value.replace(String(ce), String(ce + 543));
+        }
+    } else if (birthEl) {
+        birthEl.value = dateStr;
+    }
+}
+
+function _updateCalYearBE_SR(instance) {
+    if (!instance.calendarContainer) return;
+    const yearInput = instance.calendarContainer.querySelector('.cur-year');
+    if (yearInput) yearInput.value = instance.currentYear + 543;
+}
+
+function _syncAgeFromBirth_SR(fid, dateStr) {
+    const ayEl = document.getElementById(`${fid}_age_y`);
+    const amEl = document.getElementById(`${fid}_age_m`);
+    if (!dateStr) {
+        if (ayEl) ayEl.value = '';
+        if (amEl) amEl.value = '';
+        return;
+    }
+    const birth = new Date(dateStr), now = new Date();
+    let y = now.getFullYear() - birth.getFullYear();
+    let m = now.getMonth() - birth.getMonth();
+    if (m < 0) { y--; m += 12; }
+    if (now.getDate() < birth.getDate()) { m--; if (m < 0) { y--; m += 12; } }
+    if (ayEl) ayEl.value = y >= 0 ? y : 0;
+    if (amEl) amEl.value = m >= 0 ? m : 0;
+}
+
+function initBirthPickerSR(fid) {
+    const el = document.getElementById(`${fid}_birth`);
+    if (!el || el._flatpickr) return;
+    const birthDate = el.getAttribute('data-birth') || undefined;
+    flatpickr(el, {
+        locale: 'th', dateFormat: 'Y-m-d', altInput: true, altFormat: 'j F Y',
+        maxDate: 'today', defaultDate: birthDate,
+        onReady: (_, dateStr, instance) => {
+            if (dateStr && instance.altInput) {
+                const ce = new Date(dateStr).getFullYear();
+                instance.altInput.value = instance.altInput.value.replace(String(ce), String(ce + 543));
+            }
+            _updateCalYearBE_SR(instance);
+        },
+        onOpen: (_, __, instance) => _updateCalYearBE_SR(instance),
+        onMonthChange: (_, __, instance) => _updateCalYearBE_SR(instance),
+        onYearChange: (_, __, instance) => _updateCalYearBE_SR(instance),
+        onChange: (selectedDates, dateStr, instance) => {
+            if (dateStr && instance.altInput) {
+                const ce = new Date(dateStr).getFullYear();
+                instance.altInput.value = instance.altInput.value.replace(String(ce), String(ce + 543));
+            }
+            _syncAgeFromBirth_SR(fid, dateStr);
+        }
+    });
 }
 
 function getAgeYears(dob) {
@@ -650,7 +717,7 @@ function getAgeMonths(dob) {
 function addNewPetForm() {
     const container = document.getElementById('new-pets-container');
     container.insertAdjacentHTML('beforeend', buildPetForm());
-    // อัปเดต breed ของฟอร์มล่าสุด
+    // อัปเดต breed และ date picker ของฟอร์มล่าสุด
     const wraps = container.querySelectorAll('.pet-card-item');
     if (wraps.length > 0) {
         const lastWrap = wraps[wraps.length - 1];
@@ -658,6 +725,7 @@ function addNewPetForm() {
         if (typeEl) {
             const fid = typeEl.id.replace('_type', '');
             updateBreeds(fid);
+            initBirthPickerSR(fid);
         }
     }
 }
@@ -818,10 +886,11 @@ async function loadExistingCustomer(hn) {
         const pContainer = document.getElementById('existing-pets-container');
         pContainer.innerHTML = '';
         pets.forEach(pet => pContainer.insertAdjacentHTML('beforeend', buildPetForm(pet)));
-        // อัปเดต breed options ทุกตัว
+        // อัปเดต breed options และ date picker ทุกตัว
         pContainer.querySelectorAll('.pet-card-item').forEach(wrap => {
             const fid = wrap.id.replace('wrap-', '');
             updateBreeds(fid);
+            initBirthPickerSR(fid);
         });
 
         hideLoading();
@@ -842,6 +911,7 @@ function addExistingPetForm() {
         if (typeEl) {
             const fid = typeEl.id.replace('_type', '');
             updateBreeds(fid);
+            initBirthPickerSR(fid);
         }
     }
 }

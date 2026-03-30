@@ -21,6 +21,7 @@
         body { background: var(--navy); color: #e2e8f0; font-size: 1rem; margin: 0; padding: 0; }
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1.1rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        .flatpickr-input.input-box[readonly] { cursor: pointer; }
         .label-text { color: #94a3b8; font-size: 1rem; margin-bottom: 4px; display: block; font-weight: 600; }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; display: block; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
@@ -945,6 +946,9 @@
         window.onload = async () => {
             flatpickr(".datepicker", makeDatePickerConfig());
             flatpickr("#f_visit_date", makeDatePickerConfig({ defaultDate: "today" }));
+            flatpickr("#edit-pet-birth", makeBirthPickerConfig("edit-pet-age-y", "edit-pet-age-m"));
+            flatpickr("#no-petbirth",    makeBirthPickerConfig("no-pet-age-y",   "no-pet-age-m"));
+            flatpickr("#ap-petbirth",    makeBirthPickerConfig("ap-pet-age-y",   "ap-pet-age-m"));
             const { data: vcData } = await db.from('vaccine_catalog').select('*').order('name');
             vaccCatalog = vcData || [];
             if (!animalId || !ownerHN) {
@@ -976,6 +980,66 @@
             if (totalMonths < 12) return totalMonths + ' เดือน';
             const y = Math.floor(totalMonths / 12), m = totalMonths % 12;
             return y + ' ปี' + (m ? ' ' + m + ' เดือน' : '');
+        }
+
+        function makeBirthPickerConfig(ageYId, ageMId) {
+            const base = makeDatePickerConfig({ maxDate: 'today' });
+            const origOnChange = base.onChange;
+            const origOnReady  = base.onReady;
+            base.onChange = (selectedDates, dateStr, instance) => {
+                origOnChange(selectedDates, dateStr, instance);
+                syncAgeFromBirthDate(dateStr, ageYId, ageMId);
+            };
+            base.onReady = (selectedDates, dateStr, instance) => {
+                origOnReady(selectedDates, dateStr, instance);
+                if (dateStr) syncAgeFromBirthDate(dateStr, ageYId, ageMId);
+            };
+            return base;
+        }
+
+        function setBirthPickerValue(pickerId, dateStr) {
+            const el = document.getElementById(pickerId);
+            if (!el) return;
+            const fp = el._flatpickr;
+            if (fp) {
+                if (dateStr) {
+                    fp.setDate(dateStr, false);
+                    if (fp.altInput) {
+                        const ce = new Date(dateStr).getFullYear();
+                        fp.altInput.value = fp.altInput.value.replace(String(ce), String(ce + 543));
+                    }
+                } else {
+                    fp.clear();
+                }
+            } else {
+                el.value = dateStr || '';
+            }
+        }
+
+        function syncAgeFromBirthDate(dateStr, ageYId, ageMId) {
+            const ayEl = document.getElementById(ageYId);
+            const amEl = document.getElementById(ageMId);
+            if (!dateStr) {
+                if (ayEl) ayEl.value = '';
+                if (amEl) amEl.value = '';
+                return;
+            }
+            const birth = new Date(dateStr), now = new Date();
+            let y = now.getFullYear() - birth.getFullYear();
+            let m = now.getMonth() - birth.getMonth();
+            if (m < 0) { y--; m += 12; }
+            if (now.getDate() < birth.getDate()) { m--; if (m < 0) { y--; m += 12; } }
+            if (ayEl) ayEl.value = y >= 0 ? y : 0;
+            if (amEl) amEl.value = m >= 0 ? m : 0;
+        }
+
+        function syncBirthDateFromAge(pickerId, ageYId, ageMId) {
+            const y = parseInt(document.getElementById(ageYId)?.value) || 0;
+            const m = parseInt(document.getElementById(ageMId)?.value) || 0;
+            const d = new Date();
+            d.setFullYear(d.getFullYear() - y);
+            d.setMonth(d.getMonth() - m);
+            setBirthPickerValue(pickerId, d.toISOString().split('T')[0]);
         }
 
         async function fetchInfo() {
@@ -2566,9 +2630,11 @@
         }
         // ── New Owner / Add Pet functions ─────────────────────────────────────
         function openNewOwnerModal() {
-            ['no-hn','no-name','no-phone1','no-phone2','no-address','no-petname','no-petweight','no-petbreed','no-petmicrochip','no-petbirth'].forEach(id => {
+            ['no-hn','no-name','no-phone1','no-phone2','no-address','no-petname','no-petweight','no-petbreed','no-petmicrochip'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.value = '';
             });
+            setBirthPickerValue('no-petbirth', '');
+            ['no-pet-age-y','no-pet-age-m'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             const typeEl = document.getElementById('no-pettype');
             if (typeEl) typeEl.value = '';
             const genderEl = document.getElementById('no-petgender');
@@ -2621,7 +2687,9 @@
             document.getElementById('ap-hn').value = hn;
             const owner = _sbOwners.find(o => o.hn === hn);
             document.getElementById('ap-owner-label').textContent = owner ? owner.owner_name : hn;
-            ['ap-petname','ap-petweight','ap-petbreed','ap-petmicrochip','ap-petbirth'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['ap-petname','ap-petweight','ap-petbreed','ap-petmicrochip'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            setBirthPickerValue('ap-petbirth', '');
+            ['ap-pet-age-y','ap-pet-age-m'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             const typeEl = document.getElementById('ap-pettype');
             if (typeEl) typeEl.value = '';
             const genderEl = document.getElementById('ap-petgender');
@@ -2697,7 +2765,8 @@
             const typeEl = document.getElementById('edit-pet-type'); if (typeEl) typeEl.value = pet.pet_type || '';
             const genderEl = document.getElementById('edit-pet-gender'); if (genderEl) genderEl.value = pet.gender || 'ไม่ระบุเพศ';
             const breedEl = document.getElementById('edit-pet-breed'); if (breedEl) breedEl.value = pet.breed || '';
-            const birthEl = document.getElementById('edit-pet-birth'); if (birthEl) birthEl.value = pet.birth_date || '';
+            setBirthPickerValue('edit-pet-birth', pet.birth_date || '');
+            syncAgeFromBirthDate(pet.birth_date || '', 'edit-pet-age-y', 'edit-pet-age-m');
             const microchipEl = document.getElementById('edit-pet-microchip'); if (microchipEl) microchipEl.value = pet.microchip_number || '';
             document.getElementById('edit-animal-modal').style.display = 'flex';
         }
@@ -2953,7 +3022,11 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="label-text">พันธุ์</label><input type="text" id="edit-pet-breed" class="input-box" placeholder="เช่น ชิวาวา, เปอร์เซีย..."></div>
-                    <div><label class="label-text">วันเดือนปีเกิด</label><input type="date" id="edit-pet-birth" class="input-box"></div>
+                    <div><label class="label-text">วันเดือนปีเกิด</label><input type="text" id="edit-pet-birth" class="input-box" placeholder="เลือกวันที่เกิด..."></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">อายุ (ปี)</label><input type="number" id="edit-pet-age-y" class="input-box" min="0" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('edit-pet-birth','edit-pet-age-y','edit-pet-age-m')"></div>
+                    <div><label class="label-text">อายุ (เดือน)</label><input type="number" id="edit-pet-age-m" class="input-box" min="0" max="11" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('edit-pet-birth','edit-pet-age-y','edit-pet-age-m')"></div>
                 </div>
                 <div><label class="label-text">หมายเลข Microchip</label><input type="text" id="edit-pet-microchip" class="input-box" placeholder="ไม่บังคับ"></div>
                 <div><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><textarea id="edit-pet-congenital" class="input-box h-28" placeholder="ระบุยาที่แพ้หรือข้อควรระวัง..."></textarea></div>
@@ -3002,7 +3075,9 @@
                     </div>
                     <div class="col-span-6"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="no-petweight" class="input-box" placeholder="0.0"></div>
                     <div class="col-span-6"><label class="label-text">พันธุ์</label><input type="text" id="no-petbreed" class="input-box" placeholder="เช่น ชิวาวา..."></div>
-                    <div class="col-span-6"><label class="label-text">วันเดือนปีเกิด</label><input type="date" id="no-petbirth" class="input-box"></div>
+                    <div class="col-span-6"><label class="label-text">วันเดือนปีเกิด</label><input type="text" id="no-petbirth" class="input-box" placeholder="เลือกวันที่เกิด..."></div>
+                    <div class="col-span-6"><label class="label-text">อายุ (ปี)</label><input type="number" id="no-pet-age-y" class="input-box" min="0" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('no-petbirth','no-pet-age-y','no-pet-age-m')"></div>
+                    <div class="col-span-6"><label class="label-text">อายุ (เดือน)</label><input type="number" id="no-pet-age-m" class="input-box" min="0" max="11" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('no-petbirth','no-pet-age-y','no-pet-age-m')"></div>
                     <div class="col-span-12"><label class="label-text">หมายเลข Microchip</label><input type="text" id="no-petmicrochip" class="input-box" placeholder="ไม่บังคับ"></div>
                 </div>
             </div>
@@ -3050,8 +3125,12 @@
                     <div><label class="label-text">พันธุ์</label><input type="text" id="ap-petbreed" class="input-box" placeholder="เช่น ชิวาวา..."></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="label-text">วันเดือนปีเกิด</label><input type="date" id="ap-petbirth" class="input-box"></div>
+                    <div><label class="label-text">วันเดือนปีเกิด</label><input type="text" id="ap-petbirth" class="input-box" placeholder="เลือกวันที่เกิด..."></div>
                     <div><label class="label-text">หมายเลข Microchip</label><input type="text" id="ap-petmicrochip" class="input-box" placeholder="ไม่บังคับ"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">อายุ (ปี)</label><input type="number" id="ap-pet-age-y" class="input-box" min="0" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('ap-petbirth','ap-pet-age-y','ap-pet-age-m')"></div>
+                    <div><label class="label-text">อายุ (เดือน)</label><input type="number" id="ap-pet-age-m" class="input-box" min="0" max="11" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('ap-petbirth','ap-pet-age-y','ap-pet-age-m')"></div>
                 </div>
             </div>
             <div class="p-6 border-t border-white/10 flex gap-3">
