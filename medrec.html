@@ -653,6 +653,8 @@
         let _sbAnimals = [], _sbOwners = [], _sbPhones = [], _sbMedRecs = [];
         let _sbPrimaryPhoneMap = new Map(), _sbAllPhonesMap = new Map(), _sbMedTextByAnimalId = new Map();
         let _sbCurrentTab = 'all';
+        let _sbReloadTimer = null;
+        let _sbRealtimeChannel = null;
 
         function toggleMedrecSidebar() {
             const sb = document.getElementById('main-sidebar-medrec');
@@ -908,11 +910,22 @@
             if (!animalId || !ownerHN) {
                 showWelcomeState();
                 loadSidebarData();
-                return;
+            } else {
+                await fetchInfo(); await fetchRecords();
+                renderVaccineCheckboxes();
+                loadSidebarData(); // non-blocking
             }
-            await fetchInfo(); await fetchRecords();
-            renderVaccineCheckboxes();
-            loadSidebarData(); // non-blocking
+            function _debouncedReloadSidebar() {
+                clearTimeout(_sbReloadTimer);
+                _sbReloadTimer = setTimeout(() => loadSidebarData(), 1000);
+            }
+            _sbRealtimeChannel = db.channel('sidebar-realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'owners' }, _debouncedReloadSidebar)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'animals' }, _debouncedReloadSidebar)
+                .subscribe();
+            window.addEventListener('beforeunload', () => {
+                if (_sbRealtimeChannel) db.removeChannel(_sbRealtimeChannel);
+            });
         };
 
         async function fetchInfo() {
