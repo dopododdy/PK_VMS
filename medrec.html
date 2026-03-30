@@ -360,8 +360,7 @@
                     ⏳ ประวัติการรักษา <span id="record-count" class="bg-white/10 text-base px-4 py-1 rounded-full">0</span>
                 </h3>
                 <div class="flex flex-wrap gap-2">
-                    <button onclick="printBlankOPD()" class="btn-base bg-green-700 hover:bg-green-600 shadow-lg text-xs">📄 พิมพ์ OPD เปล่า</button>
-                    <button onclick="printTreatmentHistory()" class="btn-base bg-cyan-700 hover:bg-cyan-600 shadow-lg text-xs">📋 พิมพ์ประวัติการรักษา</button>
+                    <button onclick="summaryTreatmentHistory()" class="btn-base bg-cyan-700 hover:bg-cyan-600 shadow-lg text-xs">📋 สรุปประวัติการรักษา</button>
                     <button onclick="goToPOS()" class="btn-base bg-blue-600 hover:bg-blue-500 shadow-lg text-xs">💰 คิดเงิน</button>
                     <button onclick="printBothLabels(animalId)" class="btn-base bg-emerald-600 hover:bg-emerald-500 shadow-lg text-xs">🖨️ ข้อมูลสัตว์ + นัดหมาย</button>
                     <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-600 hover:bg-indigo-500 shadow-lg text-xs">🪪 บัตรประจำตัวสัตว์</button>
@@ -1322,7 +1321,8 @@
                         <div class="mt-4">
                             <span class="data-label">📌 Plan</span><div class="data-value italic">${rec.plan || '-'}</div>
                         </div>
-                        <div class="mt-4 flex justify-end">
+                        <div class="mt-4 flex justify-end gap-2">
+                            <button onclick="event.stopPropagation(); printBlankOPD()" class="bg-green-700 hover:bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">📄 พิมพ์ OPD เปล่า</button>
                             <button onclick="event.stopPropagation(); showOpdPrintModal('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์ประวัติลงกระดาษ</button>
                         </div>
                     </div>
@@ -2255,7 +2255,7 @@
             pw.document.write(html); 
             pw.document.close();
         }
-        async function printTreatmentHistory() {
+        async function summaryTreatmentHistory() {
             if (!records || records.length === 0) return alert("ไม่พบประวัติการรักษาสำหรับสัตว์นี้");
             const ownerName  = document.getElementById('info-owner-name').innerText;
             const ownerPhone = document.getElementById('info-owner-phone').innerText;
@@ -2343,7 +2343,7 @@
 </body></html>`;
             const win = window.open('', '_blank');
             if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
-            win.document.write(_histHtml.replace('</body>', `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script></body>`));
+            win.document.write(_histHtml);
             win.document.close();
         }
 
