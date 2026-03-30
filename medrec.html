@@ -550,6 +550,7 @@
         let selectedDldCategories = [], activeDldMain = null;
         let _splitDragInitialized = false;
         let vaccCatalog = [];
+        let masterBreeds = [], masterSpecies = [];
 
         const DLD_CATEGORIES = {
             vaccine: {
@@ -951,6 +952,12 @@
             flatpickr("#ap-petbirth",    makeBirthPickerConfig("ap-pet-age-y",   "ap-pet-age-m"));
             const { data: vcData } = await db.from('vaccine_catalog').select('*').order('name');
             vaccCatalog = vcData || [];
+            const [breedsRes, speciesRes] = await Promise.all([
+                db.from('mas_breeds').select('id, name, species_id').order('name'),
+                db.from('mas_species').select('id, name')
+            ]);
+            masterBreeds = breedsRes.data || [];
+            masterSpecies = speciesRes.data || [];
             if (!animalId || !ownerHN) {
                 showWelcomeState();
                 loadSidebarData();
@@ -2629,6 +2636,19 @@
             ctx.fillText('ครึ่งล่าง (ไม่พิมพ์)', 8*SCALE, printEnd + 6*SCALE);
         }
         // ── New Owner / Add Pet functions ─────────────────────────────────────
+        function updateBreedSelect(typeSelectId, breedSelectId, savedBreed) {
+            const typeEl = document.getElementById(typeSelectId);
+            const breedEl = document.getElementById(breedSelectId);
+            if (!typeEl || !breedEl) return;
+            const speciesName = typeEl.value;
+            const species = masterSpecies.find(s => s.name === speciesName);
+            const filtered = species ? masterBreeds.filter(b => b.species_id === species.id) : [];
+            const prevVal = savedBreed !== undefined ? savedBreed : breedEl.value;
+            breedEl.innerHTML = '<option value="">-- เลือกสายพันธุ์ --</option>' +
+                filtered.map(b => `<option value="${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join('');
+            if (prevVal && filtered.some(b => b.name === prevVal)) breedEl.value = prevVal;
+        }
+
         function openNewOwnerModal() {
             ['no-hn','no-name','no-phone1','no-phone2','no-address','no-petname','no-petweight','no-petbreed','no-petmicrochip'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.value = '';
@@ -2639,6 +2659,7 @@
             if (typeEl) typeEl.value = '';
             const genderEl = document.getElementById('no-petgender');
             if (genderEl) genderEl.value = 'ไม่ระบุเพศ';
+            updateBreedSelect('no-pettype', 'no-petbreed');
             document.getElementById('new-owner-modal').style.display = 'flex';
         }
 
@@ -2694,6 +2715,7 @@
             if (typeEl) typeEl.value = '';
             const genderEl = document.getElementById('ap-petgender');
             if (genderEl) genderEl.value = 'ไม่ระบุเพศ';
+            updateBreedSelect('ap-pettype', 'ap-petbreed');
             document.getElementById('add-pet-modal').style.display = 'flex';
         }
 
@@ -2764,7 +2786,7 @@
             const pet = currentPetData || {};
             const typeEl = document.getElementById('edit-pet-type'); if (typeEl) typeEl.value = pet.pet_type || '';
             const genderEl = document.getElementById('edit-pet-gender'); if (genderEl) genderEl.value = pet.gender || 'ไม่ระบุเพศ';
-            const breedEl = document.getElementById('edit-pet-breed'); if (breedEl) breedEl.value = pet.breed || '';
+            updateBreedSelect('edit-pet-type', 'edit-pet-breed', pet.breed || '');
             setBirthPickerValue('edit-pet-birth', pet.birth_date || '');
             syncAgeFromBirthDate(pet.birth_date || '', 'edit-pet-age-y', 'edit-pet-age-m');
             const microchipEl = document.getElementById('edit-pet-microchip'); if (microchipEl) microchipEl.value = pet.microchip_number || '';
@@ -3003,7 +3025,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="label-text">ชนิด</label>
-                        <select id="edit-pet-type" class="input-box">
+                        <select id="edit-pet-type" class="input-box" onchange="updateBreedSelect('edit-pet-type','edit-pet-breed')">
                             <option value="">-- เลือกชนิด --</option>
                             <option value="สุนัข">🐶 สุนัข</option>
                             <option value="แมว">🐱 แมว</option>
@@ -3021,7 +3043,7 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="label-text">พันธุ์</label><input type="text" id="edit-pet-breed" class="input-box" placeholder="เช่น ชิวาวา, เปอร์เซีย..."></div>
+                    <div><label class="label-text">พันธุ์</label><select id="edit-pet-breed" class="input-box"><option value="">-- เลือกสายพันธุ์ --</option></select></div>
                     <div><label class="label-text">วันเดือนปีเกิด</label><input type="text" id="edit-pet-birth" class="input-box" placeholder="เลือกวันที่เกิด..."></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -3057,7 +3079,7 @@
                 <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-6"><label class="label-text">ชื่อสัตว์</label><input type="text" id="no-petname" class="input-box" placeholder="ชื่อสัตว์..."></div>
                     <div class="col-span-6"><label class="label-text">ชนิด</label>
-                        <select id="no-pettype" class="input-box">
+                        <select id="no-pettype" class="input-box" onchange="updateBreedSelect('no-pettype','no-petbreed')">
                             <option value="">-- เลือกชนิด --</option>
                             <option value="สุนัข">🐶 สุนัข</option>
                             <option value="แมว">🐱 แมว</option>
@@ -3074,7 +3096,7 @@
                         </select>
                     </div>
                     <div class="col-span-6"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="no-petweight" class="input-box" placeholder="0.0"></div>
-                    <div class="col-span-6"><label class="label-text">พันธุ์</label><input type="text" id="no-petbreed" class="input-box" placeholder="เช่น ชิวาวา..."></div>
+                    <div class="col-span-6"><label class="label-text">พันธุ์</label><select id="no-petbreed" class="input-box"><option value="">-- เลือกสายพันธุ์ --</option></select></div>
                     <div class="col-span-6"><label class="label-text">วันเดือนปีเกิด</label><input type="text" id="no-petbirth" class="input-box" placeholder="เลือกวันที่เกิด..."></div>
                     <div class="col-span-6"><label class="label-text">อายุ (ปี)</label><input type="number" id="no-pet-age-y" class="input-box" min="0" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('no-petbirth','no-pet-age-y','no-pet-age-m')"></div>
                     <div class="col-span-6"><label class="label-text">อายุ (เดือน)</label><input type="number" id="no-pet-age-m" class="input-box" min="0" max="11" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('no-petbirth','no-pet-age-y','no-pet-age-m')"></div>
@@ -3103,7 +3125,7 @@
                 <div><label class="label-text">ชื่อสัตว์ <span class="text-red-400">*</span></label><input type="text" id="ap-petname" class="input-box" placeholder="ชื่อสัตว์..."></div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="label-text">ชนิด</label>
-                        <select id="ap-pettype" class="input-box">
+                        <select id="ap-pettype" class="input-box" onchange="updateBreedSelect('ap-pettype','ap-petbreed')">
                             <option value="">-- เลือกชนิด --</option>
                             <option value="สุนัข">🐶 สุนัข</option>
                             <option value="แมว">🐱 แมว</option>
@@ -3122,7 +3144,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="ap-petweight" class="input-box" placeholder="0.0"></div>
-                    <div><label class="label-text">พันธุ์</label><input type="text" id="ap-petbreed" class="input-box" placeholder="เช่น ชิวาวา..."></div>
+                    <div><label class="label-text">พันธุ์</label><select id="ap-petbreed" class="input-box"><option value="">-- เลือกสายพันธุ์ --</option></select></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="label-text">วันเดือนปีเกิด</label><input type="text" id="ap-petbirth" class="input-box" placeholder="เลือกวันที่เกิด..."></div>
