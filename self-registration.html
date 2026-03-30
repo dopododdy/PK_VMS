@@ -574,6 +574,10 @@ function buildPetForm(pet = {}) {
                 </div>
             </div>
             <input type="hidden" id="${fid}_birth" value="${pet.birth_date || ''}">
+            <div class="form-group" style="margin-top:12px; margin-bottom:0;">
+                <label class="form-label">เลขไมโครชิพ</label>
+                <input type="text" id="${fid}_microchip" class="form-input" value="${pet.microchip_number || ''}" placeholder="หมายเลขไมโครชิพ (ถ้ามี)">
+            </div>
             ${!isNew ? `
             <div style="margin-top:14px; padding-top:14px; border-top:1px solid #e2e8f0;">
                 <button type="button" onclick="openEPassport('${pet.id}')"
@@ -607,7 +611,7 @@ function updateBreeds(fid) {
     const savedVal = breedEl.getAttribute('data-val') || '';
     const opt = typeEl.options[typeEl.selectedIndex];
     const speciesId = opt ? opt.getAttribute('data-id') : null;
-    const filtered = speciesId ? masterBreeds.filter(b => b.species_id === speciesId) : [];
+    const filtered = speciesId ? masterBreeds.filter(b => String(b.species_id) === String(speciesId)) : [];
     breedEl.innerHTML = '<option value="">-- เลือกสายพันธุ์ --</option>' +
         filtered.map(b => `<option value="${b.name}" ${b.name === savedVal ? 'selected' : ''}>${b.name}</option>`).join('');
     if (!breedEl.value && filtered.some(b => b.name === 'ไทย')) breedEl.value = 'ไทย';
@@ -674,6 +678,7 @@ function collectPetData(container) {
             gender:    document.getElementById(`${fid}_gender`)?.value || 'ไม่ระบุเพศ',
             weight:    parseFloat(document.getElementById(`${fid}_weight`)?.value) || 0,
             birth_date: document.getElementById(`${fid}_birth`)?.value || null,
+            microchip_number: document.getElementById(`${fid}_microchip`)?.value?.trim() || null,
         });
     });
     return pets;
@@ -710,7 +715,8 @@ async function saveNewCustomer() {
             const { error: petErr } = await db.from('animals').insert({
                 owner_hn: hn, pet_name: pet.pet_name, pet_type: pet.pet_type || 'อื่นๆ',
                 breed: pet.breed, gender: pet.gender, weight: pet.weight,
-                birth_date: pet.birth_date || null, updated_at: new Date().toISOString()
+                birth_date: pet.birth_date || null, microchip_number: pet.microchip_number || null,
+                updated_at: new Date().toISOString()
             });
             if (petErr) throw petErr;
         }
@@ -869,7 +875,8 @@ async function saveExistingCustomer() {
             const petData = {
                 owner_hn: hn, pet_name: pet.pet_name, pet_type: pet.pet_type || 'อื่นๆ',
                 breed: pet.breed, gender: pet.gender, weight: pet.weight,
-                birth_date: pet.birth_date || null, updated_at: new Date().toISOString()
+                birth_date: pet.birth_date || null, microchip_number: pet.microchip_number || null,
+                updated_at: new Date().toISOString()
             };
             if (pet.id) {
                 const { error: petErr } = await db.from('animals').update(petData).eq('id', pet.id);
