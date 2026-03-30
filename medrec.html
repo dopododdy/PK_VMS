@@ -266,6 +266,16 @@
                     </a>
                 </div>
                 <input type="text" id="sidebar-search-medrec" class="input-box text-sm" placeholder="ค้นหา HN, ชื่อสัตว์, ชื่อเจ้าของ, เบอร์โทร..." oninput="renderMedrecSidebar()">
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="text-xs text-slate-500 font-bold whitespace-nowrap flex-shrink-0">🔃 เรียงโดย</span>
+                    <select id="sidebar-sort-medrec" class="input-box text-xs py-1.5" onchange="renderMedrecSidebar()">
+                        <option value="hn_desc">HN ใหม่ → เก่า</option>
+                        <option value="hn_asc">HN เก่า → ใหม่</option>
+                        <option value="name_az">ชื่อเจ้าของ ก-ฮ</option>
+                        <option value="name_za">ชื่อเจ้าของ ฮ-ก</option>
+                        <option value="visit_desc">รักษาล่าสุด</option>
+                    </select>
+                </div>
             </div>
             <div class="flex gap-2 px-4 py-2 flex-shrink-0 border-b border-white/5">
                 <button id="mtab-all" onclick="switchMedrecTab('all')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-teal-500/20 text-teal-400 border border-teal-500/30">📋 เวชระเบียน</button>
@@ -827,11 +837,27 @@
                 animalsByOwner.get(a.owner_hn).push(a);
             });
 
-            // All unique owner HNs sorted descending
+            // All unique owner HNs sorted by selected mode
+            const sortMode = document.getElementById('sidebar-sort-medrec')?.value || 'hn_desc';
+            let lastVisitByOwner;
+            if (sortMode === 'visit_desc') {
+                lastVisitByOwner = new Map();
+                // created_at is ISO 8601, so lexicographic string comparison equals chronological order
+                _sbMedRecs.forEach(r => {
+                    const prev = lastVisitByOwner.get(r.owner_hn) || '';
+                    if ((r.created_at || '') > prev) lastVisitByOwner.set(r.owner_hn, r.created_at || '');
+                });
+            }
             const allHns = [...new Set([
                 ..._sbOwners.map(o => o.hn),
                 ..._sbAnimals.map(a => a.owner_hn)
-            ])].sort((a, b) => Number(b) - Number(a));
+            ])].sort((a, b) => {
+                if (sortMode === 'hn_asc') return Number(a) - Number(b);
+                if (sortMode === 'name_az') return (ownerMap.get(a)?.owner_name || '').localeCompare(ownerMap.get(b)?.owner_name || '', 'th');
+                if (sortMode === 'name_za') return (ownerMap.get(b)?.owner_name || '').localeCompare(ownerMap.get(a)?.owner_name || '', 'th');
+                if (sortMode === 'visit_desc') return (lastVisitByOwner.get(b) || '').localeCompare(lastVisitByOwner.get(a) || '');
+                return Number(b) - Number(a); // hn_desc (default)
+            });
 
             // Filter by search term (show group if any item matches)
             const visibleHns = !term ? allHns : allHns.filter(hn => {
