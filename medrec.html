@@ -435,6 +435,7 @@
                             <div class="flex gap-2">
                                 <button onclick="printAllApptLabels()" class="bg-orange-700 hover:bg-orange-600 text-white text-xs px-3 py-1 rounded-lg font-bold">🖨️ พิมพ์นัดหมายทั้งหมด</button>
                                 <button onclick="printAllPetLabels()" class="bg-indigo-700 hover:bg-indigo-600 text-white text-xs px-3 py-1 rounded-lg font-bold">🪪 พิมพ์บัตรประจำตัวสัตว์ทั้งหมด</button>
+                                <button onclick="printAllBothLabels()" class="bg-teal-700 hover:bg-teal-600 text-white text-xs px-3 py-1 rounded-lg font-bold">🖨️ พิมพ์บัตร + นัด ทั้งหมด</button>
                             </div>
                         </div>
                         <div id="multi-pet-list" class="p-3 bg-black/20 rounded-xl border border-white/10 flex flex-wrap gap-3 min-h-[44px] mt-1"></div>
@@ -1847,6 +1848,28 @@
                 return { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: ownerPhone, pet_name: pet?.pet_name || '-', hn: pet?.owner_hn || ownerHN, species: pet?.pet_type || '-', breed: pet?.breed || '-', sex: pet?.gender || '-', weight: ((pet?.weight) || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             }));
             await executeDynamicPrint(dataList, 'sticker_pet_id');
+        }
+
+        async function printAllBothLabels() {
+            if (!animalId) return;
+            const apptDate1 = document.getElementById('f_appointment').value;
+            const apptNote1 = document.getElementById('f_app_note').value;
+            const apptDate2 = document.getElementById('f_appointment_2').value;
+            const apptNote2 = document.getElementById('f_app_note_2').value;
+            const allPetIds = [String(animalId), ...getSelectedAdditionalPetIds()];
+            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+            if (!owner) return alert("ไม่พบข้อมูลเจ้าของ");
+            const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1);
+            const ownerPhone = phones?.[0]?.phone_number || '-';
+            const petDataList = await Promise.all(allPetIds.map(async (petId) => {
+                const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
+                return [
+                    { data: { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: ownerPhone, pet_name: pet?.pet_name || '-', hn: pet?.owner_hn || ownerHN, species: pet?.pet_type || '-', breed: pet?.breed || '-', sex: pet?.gender || '-', weight: ((pet?.weight) || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) }, templateType: 'sticker_pet_id' },
+                    { data: { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet?.pet_name || '-', hn: pet?.owner_hn || ownerHN, appointment_date_1: apptDate1 ? formatThaiDate(apptDate1) : "-", appointment_note_1: apptNote1 || "-", appointment_date_2: apptDate2 ? formatThaiDate(apptDate2) : "-", appointment_note_2: apptNote2 || "-", date: new Date().toLocaleDateString('th-TH') }, templateType: 'sticker_appt' }
+                ];
+            }));
+            const batch = petDataList.flat();
+            if (batch.length > 0) await executeCombinedBatchPrint(batch);
         }
 
         async function executeDynamicPrint(dataList, templateType) {
