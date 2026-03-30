@@ -22,6 +22,12 @@
         .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1.1rem; }
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         .flatpickr-input.input-box[readonly] { cursor: pointer; }
+        /* ─── Appointment date picker: 2-month vertical layout ─── */
+        .flatpickr-calendar.appt-cal-vertical .flatpickr-innerContainer { display: flex; flex-direction: column; }
+        .flatpickr-calendar.appt-cal-vertical .flatpickr-rContainer { display: block; }
+        /* ─── Appointment shortcut buttons ─── */
+        .appt-shortcut-btn { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.35); border-radius: 6px; padding: 2px 7px; font-size: 0.72rem; font-weight: 800; cursor: pointer; transition: background 0.15s; }
+        .appt-shortcut-btn:hover { background: rgba(249,115,22,0.35); }
         .label-text { color: #94a3b8; font-size: 1rem; margin-bottom: 4px; display: block; font-weight: 600; }
         .label-clinical { color: var(--teal); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; display: block; }
         .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 30px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
@@ -429,9 +435,31 @@
                         <div id="list_rx_display" class="list-box border-blue-500/50 overflow-y-auto max-h-40" onclick="openCatalog('rx')">คลิกเพื่อเลือก...</div>
                     </div>
 
-                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">📅 วันนัด</label><input type="text" id="f_appointment" class="input-box datepicker"></div>
+                    <div class="col-span-12 md:col-span-3">
+                        <label class="label-clinical text-orange-400">📅 วันนัด</label>
+                        <input type="text" id="f_appointment" class="input-box datepicker">
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <button type="button" onclick="setApptShortcut('f_appointment',5)" class="appt-shortcut-btn">5d</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment',7)" class="appt-shortcut-btn">7d</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment',10)" class="appt-shortcut-btn">10d</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment',0,1)" class="appt-shortcut-btn">1m</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment',0,6)" class="appt-shortcut-btn">6m</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment',0,0,1)" class="appt-shortcut-btn">1y</button>
+                        </div>
+                    </div>
                     <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ</label><input type="text" id="f_app_note" class="input-box"></div>
-                    <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">📅 วันนัด (2)</label><input type="text" id="f_appointment_2" class="input-box datepicker"></div>
+                    <div class="col-span-12 md:col-span-3">
+                        <label class="label-clinical text-orange-400">📅 วันนัด (2)</label>
+                        <input type="text" id="f_appointment_2" class="input-box datepicker">
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <button type="button" onclick="setApptShortcut('f_appointment_2',5)" class="appt-shortcut-btn">5d</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment_2',7)" class="appt-shortcut-btn">7d</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment_2',10)" class="appt-shortcut-btn">10d</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment_2',0,1)" class="appt-shortcut-btn">1m</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment_2',0,6)" class="appt-shortcut-btn">6m</button>
+                            <button type="button" onclick="setApptShortcut('f_appointment_2',0,0,1)" class="appt-shortcut-btn">1y</button>
+                        </div>
+                    </div>
                     <div class="col-span-12 md:col-span-3"><label class="label-clinical text-orange-400">นัดหมายเพื่อ (2)</label><input type="text" id="f_app_note_2" class="input-box"></div>
                     
                     <div class="col-span-12 md:col-span-9"><label class="label-clinical">Plan (แผนการรักษาต่อ)</label><input type="text" id="f_plan" class="input-box"></div>
@@ -648,8 +676,11 @@
 
         function updateCalendarYearToBE(instance) {
             if (!instance.calendarContainer) return;
-            const yearInput = instance.calendarContainer.querySelector('.cur-year');
-            if (yearInput) yearInput.value = instance.currentYear + 543;
+            instance.calendarContainer.querySelectorAll('.cur-year').forEach((yearInput, i) => {
+                let y = instance.currentYear;
+                if (i > 0 && (instance.currentMonth + i) > 11) y += 1;
+                yearInput.value = y + 543;
+            });
         }
 
         function makeDatePickerConfig(extra = {}) {
@@ -673,6 +704,31 @@
                 },
                 ...extra
             };
+        }
+
+        function makeApptPickerConfig() {
+            const base = makeDatePickerConfig({
+                showMonths: 2,
+                locale: { ...flatpickr.l10ns.th, firstDayOfWeek: 0 }
+            });
+            const origOnReady = base.onReady;
+            base.onReady = (selectedDates, dateStr, instance) => {
+                origOnReady(selectedDates, dateStr, instance);
+                if (instance.calendarContainer) instance.calendarContainer.classList.add('appt-cal-vertical');
+            };
+            return base;
+        }
+
+        function setApptShortcut(fieldId, addDays, addMonths, addYears) {
+            addDays = addDays || 0; addMonths = addMonths || 0; addYears = addYears || 0;
+            const d = new Date();
+            if (addYears)  d.setFullYear(d.getFullYear() + addYears);
+            if (addMonths) d.setMonth(d.getMonth() + addMonths);
+            if (addDays)   d.setDate(d.getDate() + addDays);
+            if (d.getDay() === 6) d.setDate(d.getDate() + 1); // skip Saturday → Sunday
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const el = document.getElementById(fieldId);
+            if (el && el._flatpickr) el._flatpickr.setDate(dateStr, true);
         }
 
         // ─── Sidebar data & functions ───
@@ -945,7 +1001,7 @@
         }
 
         window.onload = async () => {
-            flatpickr(".datepicker", makeDatePickerConfig());
+            flatpickr(".datepicker", makeApptPickerConfig());
             flatpickr("#f_visit_date", makeDatePickerConfig({ defaultDate: "today" }));
             flatpickr("#edit-pet-birth", makeBirthPickerConfig("edit-pet-age-y", "edit-pet-age-m"));
             flatpickr("#no-petbirth",    makeBirthPickerConfig("no-pet-age-y",   "no-pet-age-m"));
