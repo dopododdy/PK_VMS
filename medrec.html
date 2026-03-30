@@ -316,6 +316,7 @@
             <div class="grid grid-cols-12 gap-6">
                 <div class="col-span-12 md:col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><div id="info-owner-name" class="text-xl font-bold text-white">-</div></div>
                 <div class="col-span-12 md:col-span-3"><label class="label-text">เบอร์โทรศัพท์</label><div id="info-owner-phone" class="text-xl font-bold text-teal-400">-</div></div>
+                <div class="col-span-12 md:col-span-3"><label class="label-text">เบอร์สำรอง</label><div id="info-owner-phone2" class="text-xl font-bold text-teal-300">-</div></div>
                 <div class="col-span-12 md:col-span-5"><label class="label-text">ที่อยู่</label><div id="info-owner-address" class="text-base text-slate-400">-</div></div>
             </div>
         </div>
@@ -332,8 +333,13 @@
                 </div>
                 <div class="grid grid-cols-12 gap-4">
                     <div class="col-span-6 md:col-span-2"><label class="label-text">ชื่อสัตว์</label><div id="v-pet-name" class="text-xl font-bold text-white">-</div></div>
+                    <div class="col-span-6 md:col-span-2"><label class="label-text">ชนิด</label><div id="v-pet-type" class="text-xl font-bold text-teal-400">-</div></div>
+                    <div class="col-span-6 md:col-span-2"><label class="label-text">เพศ</label><div id="v-pet-gender" class="text-xl font-bold text-blue-300">-</div></div>
                     <div class="col-span-6 md:col-span-3"><label class="label-text">นน.(กก.)</label><div id="v-pet-weight" class="text-xl font-bold text-yellow-400">-</div></div>
-                    <div class="col-span-12 md:col-span-7"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="text-lg font-bold text-red-400">-</div></div>
+                    <div class="col-span-12 md:col-span-3"><label class="label-text">พันธุ์</label><div id="v-pet-breed" class="text-base text-slate-300">-</div></div>
+                    <div class="col-span-12 md:col-span-5"><label class="label-text">วันเกิด / อายุ</label><div id="v-pet-birth" class="text-base text-slate-300">-</div></div>
+                    <div class="col-span-12 md:col-span-4"><label class="label-text">หมายเลข Microchip</label><div id="v-pet-microchip" class="text-base text-slate-300">-</div></div>
+                    <div class="col-span-12"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="text-lg font-bold text-red-400">-</div></div>
                     <div class="col-span-12" id="v-medrec-row" style="display:none">
                         <label class="label-text">📋 Hx (ประวัติเดิมจากระบบเก่า)</label>
                         <div id="v-medrec" class="text-base text-slate-300 whitespace-pre-wrap mt-1 p-3 bg-black/20 rounded-xl border border-white/5 leading-relaxed"></div>
@@ -539,6 +545,7 @@
         let animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
         let selectedItems = [], petType = 'สุนัข', petGender = '-', editingId = null;
+        let currentPetData = null, currentPhonesData = [];
         let selectedDldCategories = [], activeDldMain = null;
         let _splitDragInitialized = false;
         let vaccCatalog = [];
@@ -961,17 +968,33 @@
             });
         };
 
+        function calcPetAge(birthDate) {
+            if (!birthDate) return '-';
+            const birth = new Date(birthDate), now = new Date();
+            const totalMonths = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+            if (totalMonths < 1) return 'น้อยกว่า 1 เดือน';
+            if (totalMonths < 12) return totalMonths + ' เดือน';
+            const y = Math.floor(totalMonths / 12), m = totalMonths % 12;
+            return y + ' ปี' + (m ? ' ' + m + ' เดือน' : '');
+        }
+
         async function fetchInfo() {
             const [{ data: owner }, { data: pet }, { data: phones }] = await Promise.all([
                 db.from('owners').select('*').eq('hn', ownerHN).single(),
                 db.from('animals').select('*').eq('id', animalId).single(),
-                db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN)
+                db.from('owner_phones').select('phone_number, label').eq('owner_hn', ownerHN)
             ]);
             if (owner && pet) {
+                currentPetData = pet;
+                currentPhonesData = phones || [];
                 petType = pet.pet_type;
                 petGender = pet.gender || '-';
+                const primaryPhone = currentPhonesData.find(p => p.label === 'เบอร์หลัก') || currentPhonesData[0];
+                const backupPhone  = currentPhonesData.find(p => p.label === 'เบอร์สำรอง');
                 document.getElementById('info-owner-name').innerText = owner.owner_name;
-                document.getElementById('info-owner-phone').innerText = phones?.[0]?.phone_number || '-';
+                document.getElementById('info-owner-phone').innerText = primaryPhone?.phone_number || '-';
+                const phone2El = document.getElementById('info-owner-phone2');
+                if (phone2El) phone2El.innerText = backupPhone?.phone_number || '-';
                 document.getElementById('info-owner-address').innerText = owner.address || '-';
                 document.getElementById('head-hn').innerText = `HN: ${owner.hn}`;
                 document.getElementById('head-pet-name').innerText = pet.pet_name;
@@ -979,6 +1002,11 @@
                 document.getElementById('v-pet-weight').innerText = pet.weight || '0';
                 document.getElementById('f_weight').value = pet.weight || 0;
                 document.getElementById('v-pet-congenital').innerText = pet.congenital_disease || 'ไม่มี';
+                const vPetType = document.getElementById('v-pet-type'); if (vPetType) vPetType.innerText = pet.pet_type || '-';
+                const vPetGender = document.getElementById('v-pet-gender'); if (vPetGender) vPetGender.innerText = pet.gender || '-';
+                const vPetBreed = document.getElementById('v-pet-breed'); if (vPetBreed) vPetBreed.innerText = pet.breed || '-';
+                const vPetBirth = document.getElementById('v-pet-birth'); if (vPetBirth) vPetBirth.innerText = pet.birth_date ? pet.birth_date + ' (อายุ ' + calcPetAge(pet.birth_date) + ')' : '-';
+                const vPetMicrochip = document.getElementById('v-pet-microchip'); if (vPetMicrochip) vPetMicrochip.innerText = pet.microchip_number || '-';
 
                 // Load historical medrec from clinic_table_db
                 const { data: clinicData } = await db.from('clinic_table_db')
@@ -2538,7 +2566,7 @@
         }
         // ── New Owner / Add Pet functions ─────────────────────────────────────
         function openNewOwnerModal() {
-            ['no-hn','no-name','no-phone1','no-phone2','no-address','no-petname','no-petweight'].forEach(id => {
+            ['no-hn','no-name','no-phone1','no-phone2','no-address','no-petname','no-petweight','no-petbreed','no-petmicrochip','no-petbirth'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.value = '';
             });
             const typeEl = document.getElementById('no-pettype');
@@ -2574,7 +2602,10 @@
                         owner_hn: hn, pet_name: petName,
                         pet_type: document.getElementById('no-pettype').value || 'อื่นๆ',
                         gender: document.getElementById('no-petgender').value,
-                        weight: parseFloat(document.getElementById('no-petweight').value) || 0
+                        weight: parseFloat(document.getElementById('no-petweight').value) || 0,
+                        breed: document.getElementById('no-petbreed').value.trim() || null,
+                        birth_date: document.getElementById('no-petbirth').value || null,
+                        microchip_number: document.getElementById('no-petmicrochip').value.trim() || null
                     }).select().single();
                     if (petErr) throw petErr;
                     newPetId = petData?.id;
@@ -2590,7 +2621,7 @@
             document.getElementById('ap-hn').value = hn;
             const owner = _sbOwners.find(o => o.hn === hn);
             document.getElementById('ap-owner-label').textContent = owner ? owner.owner_name : hn;
-            ['ap-petname','ap-petweight'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['ap-petname','ap-petweight','ap-petbreed','ap-petmicrochip','ap-petbirth'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             const typeEl = document.getElementById('ap-pettype');
             if (typeEl) typeEl.value = '';
             const genderEl = document.getElementById('ap-petgender');
@@ -2607,7 +2638,10 @@
                     owner_hn: hn, pet_name: petName,
                     pet_type: document.getElementById('ap-pettype').value || 'อื่นๆ',
                     gender: document.getElementById('ap-petgender').value,
-                    weight: parseFloat(document.getElementById('ap-petweight').value) || 0
+                    weight: parseFloat(document.getElementById('ap-petweight').value) || 0,
+                    breed: document.getElementById('ap-petbreed').value.trim() || null,
+                    birth_date: document.getElementById('ap-petbirth').value || null,
+                    microchip_number: document.getElementById('ap-petmicrochip').value.trim() || null
                 }).select().single();
                 if (petErr) throw petErr;
                 document.getElementById('add-pet-modal').style.display = 'none';
@@ -2619,29 +2653,37 @@
         // ── Edit Owner/Animal modals ──────────────────────────────────────────
         function openEditOwnerModal() {
             document.getElementById('edit-owner-name').value = document.getElementById('info-owner-name').innerText;
-            document.getElementById('edit-owner-phone').value = document.getElementById('info-owner-phone').innerText;
-            document.getElementById('edit-owner-address').value = document.getElementById('info-owner-address').innerText;
+            document.getElementById('edit-owner-phone').value = document.getElementById('info-owner-phone').innerText !== '-' ? document.getElementById('info-owner-phone').innerText : '';
+            const backupPhone = currentPhonesData.find(p => p.label === 'เบอร์สำรอง');
+            document.getElementById('edit-owner-phone2').value = backupPhone?.phone_number || '';
+            document.getElementById('edit-owner-address').value = document.getElementById('info-owner-address').innerText !== '-' ? document.getElementById('info-owner-address').innerText : '';
             document.getElementById('edit-owner-modal').style.display = 'flex';
         }
 
         async function saveOwnerEdit() {
             const name    = document.getElementById('edit-owner-name').value.trim();
             const phone   = document.getElementById('edit-owner-phone').value.trim();
+            const phone2  = document.getElementById('edit-owner-phone2').value.trim();
             const address = document.getElementById('edit-owner-address').value.trim();
             if (!name) return alert('กรุณากรอกชื่อเจ้าของสัตว์');
-            const { error: ownerErr } = await db.from('owners').update({ owner_name: name, address }).eq('hn', ownerHN);
+            const { error: ownerErr } = await db.from('owners').update({ owner_name: name, address: address || null }).eq('hn', ownerHN);
             if (ownerErr) return alert('บันทึกข้อมูลเจ้าของไม่สำเร็จ: ' + ownerErr.message);
-            // Update or insert phone
-            const { data: existing } = await db.from('owner_phones').select('id').eq('owner_hn', ownerHN).limit(1);
-            if (existing && existing.length > 0) {
-                const { error: phoneErr } = await db.from('owner_phones').update({ phone_number: phone }).eq('id', existing[0].id);
+            // Replace all phones
+            const { error: deleteErr } = await db.from('owner_phones').delete().eq('owner_hn', ownerHN);
+            if (deleteErr) return alert('บันทึกเบอร์โทรไม่สำเร็จ (ลบเดิม): ' + deleteErr.message);
+            const phones = [];
+            if (phone) phones.push({ owner_hn: ownerHN, phone_number: phone, label: 'เบอร์หลัก' });
+            if (phone2) phones.push({ owner_hn: ownerHN, phone_number: phone2, label: 'เบอร์สำรอง' });
+            if (phones.length > 0) {
+                const { error: phoneErr } = await db.from('owner_phones').insert(phones);
                 if (phoneErr) return alert('บันทึกเบอร์โทรไม่สำเร็จ: ' + phoneErr.message);
-            } else if (phone) {
-                const { error: phoneInsertErr } = await db.from('owner_phones').insert({ owner_hn: ownerHN, phone_number: phone, label: 'เบอร์หลัก' });
-                if (phoneInsertErr) return alert('เพิ่มเบอร์โทรไม่สำเร็จ: ' + phoneInsertErr.message);
             }
+            // Refresh local state and display
+            currentPhonesData = phones;
             document.getElementById('info-owner-name').innerText = name;
             document.getElementById('info-owner-phone').innerText = phone || '-';
+            const phone2El = document.getElementById('info-owner-phone2');
+            if (phone2El) phone2El.innerText = phone2 || '-';
             document.getElementById('info-owner-address').innerText = address || '-';
             document.getElementById('edit-owner-modal').style.display = 'none';
             alert('✅ บันทึกข้อมูลเจ้าของสัตว์เรียบร้อย');
@@ -2651,6 +2693,12 @@
             document.getElementById('edit-pet-name').value = document.getElementById('v-pet-name').innerText;
             document.getElementById('edit-pet-weight').value = document.getElementById('v-pet-weight').innerText;
             document.getElementById('edit-pet-congenital').value = document.getElementById('v-pet-congenital').innerText === 'ไม่มี' ? '' : document.getElementById('v-pet-congenital').innerText;
+            const pet = currentPetData || {};
+            const typeEl = document.getElementById('edit-pet-type'); if (typeEl) typeEl.value = pet.pet_type || '';
+            const genderEl = document.getElementById('edit-pet-gender'); if (genderEl) genderEl.value = pet.gender || 'ไม่ระบุเพศ';
+            const breedEl = document.getElementById('edit-pet-breed'); if (breedEl) breedEl.value = pet.breed || '';
+            const birthEl = document.getElementById('edit-pet-birth'); if (birthEl) birthEl.value = pet.birth_date || '';
+            const microchipEl = document.getElementById('edit-pet-microchip'); if (microchipEl) microchipEl.value = pet.microchip_number || '';
             document.getElementById('edit-animal-modal').style.display = 'flex';
         }
 
@@ -2658,14 +2706,42 @@
             const petName     = document.getElementById('edit-pet-name').value.trim();
             const weight      = parseFloat(document.getElementById('edit-pet-weight').value) || 0;
             const congenital  = document.getElementById('edit-pet-congenital').value.trim();
+            const petTypeVal  = document.getElementById('edit-pet-type')?.value || '';
+            const genderVal   = document.getElementById('edit-pet-gender')?.value || '';
+            const breedVal    = document.getElementById('edit-pet-breed')?.value.trim() || null;
+            const birthVal    = document.getElementById('edit-pet-birth')?.value || null;
+            const microchipVal = document.getElementById('edit-pet-microchip')?.value.trim() || null;
             if (!petName) return alert('กรุณากรอกชื่อสัตว์');
-            const { error } = await db.from('animals').update({ pet_name: petName, weight, congenital_disease: congenital }).eq('id', animalId);
+            const { error } = await db.from('animals').update({
+                pet_name: petName, weight, congenital_disease: congenital,
+                pet_type: petTypeVal || null, gender: genderVal || null,
+                breed: breedVal, birth_date: birthVal, microchip_number: microchipVal
+            }).eq('id', animalId);
             if (error) return alert('บันทึกข้อมูลสัตว์ไม่สำเร็จ: ' + error.message);
+            // Update local state
+            if (currentPetData) {
+                currentPetData.pet_name = petName;
+                currentPetData.weight = weight;
+                currentPetData.congenital_disease = congenital;
+                currentPetData.pet_type = petTypeVal;
+                currentPetData.gender = genderVal;
+                currentPetData.breed = breedVal;
+                currentPetData.birth_date = birthVal;
+                currentPetData.microchip_number = microchipVal;
+            }
+            // Update display
             document.getElementById('v-pet-name').innerText = petName;
             document.getElementById('v-pet-weight').innerText = weight || '0';
             document.getElementById('v-pet-congenital').innerText = congenital || 'ไม่มี';
+            const vPetType = document.getElementById('v-pet-type'); if (vPetType) vPetType.innerText = petTypeVal || '-';
+            const vPetGender = document.getElementById('v-pet-gender'); if (vPetGender) vPetGender.innerText = genderVal || '-';
+            const vPetBreed = document.getElementById('v-pet-breed'); if (vPetBreed) vPetBreed.innerText = breedVal || '-';
+            const vPetBirth = document.getElementById('v-pet-birth'); if (vPetBirth) vPetBirth.innerText = birthVal ? birthVal + ' (อายุ ' + calcPetAge(birthVal) + ')' : '-';
+            const vPetMicrochip = document.getElementById('v-pet-microchip'); if (vPetMicrochip) vPetMicrochip.innerText = microchipVal || '-';
             document.getElementById('head-pet-name').innerText = petName;
             document.getElementById('f_weight').value = weight;
+            petType = petTypeVal || petType;
+            petGender = genderVal || petGender;
             document.getElementById('edit-animal-modal').style.display = 'none';
             alert('✅ บันทึกข้อมูลสัตว์เรียบร้อย');
         }
@@ -2831,7 +2907,10 @@
             </div>
             <div class="p-6 space-y-4">
                 <div><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><input type="text" id="edit-owner-name" class="input-box"></div>
-                <div><label class="label-text">เบอร์โทรศัพท์</label><input type="tel" id="edit-owner-phone" class="input-box text-teal-400 font-bold"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">เบอร์โทรหลัก <span class="text-red-400">*</span></label><input type="tel" id="edit-owner-phone" class="input-box text-teal-400 font-bold"></div>
+                    <div><label class="label-text">เบอร์สำรอง</label><input type="tel" id="edit-owner-phone2" class="input-box" placeholder="ไม่บังคับ"></div>
+                </div>
                 <div><label class="label-text">ที่อยู่</label><input type="text" id="edit-owner-address" class="input-box"></div>
             </div>
             <div class="p-6 border-t border-white/10 flex gap-3">
@@ -2848,9 +2927,35 @@
                 <h4 class="text-2xl font-bold text-teal-400">✏️ แก้ไขข้อมูลสัตว์</h4>
                 <button onclick="document.getElementById('edit-animal-modal').style.display='none'" class="text-3xl text-gray-400 hover:text-white">✕</button>
             </div>
-            <div class="p-6 space-y-4">
-                <div><label class="label-text">ชื่อสัตว์</label><input type="text" id="edit-pet-name" class="input-box font-bold text-white"></div>
-                <div><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="edit-pet-weight" class="input-box text-yellow-400 font-bold"></div>
+            <div class="p-6 space-y-4 overflow-y-auto" style="max-height:65vh;">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">ชื่อสัตว์ <span class="text-red-400">*</span></label><input type="text" id="edit-pet-name" class="input-box font-bold text-white"></div>
+                    <div><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="edit-pet-weight" class="input-box text-yellow-400 font-bold"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">ชนิด</label>
+                        <select id="edit-pet-type" class="input-box">
+                            <option value="">-- เลือกชนิด --</option>
+                            <option value="สุนัข">🐶 สุนัข</option>
+                            <option value="แมว">🐱 แมว</option>
+                            <option value="อื่นๆ">🐾 อื่นๆ</option>
+                        </select>
+                    </div>
+                    <div><label class="label-text">เพศ</label>
+                        <select id="edit-pet-gender" class="input-box">
+                            <option value="เมีย">♀️ เมีย</option>
+                            <option value="ผู้">♂️ ผู้</option>
+                            <option value="ผู้ตอน">✂️♂️ ผู้ตอน</option>
+                            <option value="เมียหมัน">✂️♀️ เมียหมัน</option>
+                            <option value="ไม่ระบุเพศ">❓ ไม่ระบุเพศ</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">พันธุ์</label><input type="text" id="edit-pet-breed" class="input-box" placeholder="เช่น ชิวาวา, เปอร์เซีย..."></div>
+                    <div><label class="label-text">วันเดือนปีเกิด</label><input type="date" id="edit-pet-birth" class="input-box"></div>
+                </div>
+                <div><label class="label-text">หมายเลข Microchip</label><input type="text" id="edit-pet-microchip" class="input-box" placeholder="ไม่บังคับ"></div>
                 <div><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><textarea id="edit-pet-congenital" class="input-box h-28" placeholder="ระบุยาที่แพ้หรือข้อควรระวัง..."></textarea></div>
             </div>
             <div class="p-6 border-t border-white/10 flex gap-3">
@@ -2896,6 +3001,9 @@
                         </select>
                     </div>
                     <div class="col-span-6"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="no-petweight" class="input-box" placeholder="0.0"></div>
+                    <div class="col-span-6"><label class="label-text">พันธุ์</label><input type="text" id="no-petbreed" class="input-box" placeholder="เช่น ชิวาวา..."></div>
+                    <div class="col-span-6"><label class="label-text">วันเดือนปีเกิด</label><input type="date" id="no-petbirth" class="input-box"></div>
+                    <div class="col-span-12"><label class="label-text">หมายเลข Microchip</label><input type="text" id="no-petmicrochip" class="input-box" placeholder="ไม่บังคับ"></div>
                 </div>
             </div>
             <div class="p-6 border-t border-white/10 flex gap-3">
@@ -2937,7 +3045,14 @@
                         </select>
                     </div>
                 </div>
-                <div><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="ap-petweight" class="input-box" placeholder="0.0"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="ap-petweight" class="input-box" placeholder="0.0"></div>
+                    <div><label class="label-text">พันธุ์</label><input type="text" id="ap-petbreed" class="input-box" placeholder="เช่น ชิวาวา..."></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-text">วันเดือนปีเกิด</label><input type="date" id="ap-petbirth" class="input-box"></div>
+                    <div><label class="label-text">หมายเลข Microchip</label><input type="text" id="ap-petmicrochip" class="input-box" placeholder="ไม่บังคับ"></div>
+                </div>
             </div>
             <div class="p-6 border-t border-white/10 flex gap-3">
                 <button onclick="document.getElementById('add-pet-modal').style.display='none'" class="btn-base btn-red px-6">ยกเลิก</button>
