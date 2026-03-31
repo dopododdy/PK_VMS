@@ -511,6 +511,31 @@
     
     <div id="rx-calc-modal" class="modal-overlay" style="z-index: 120;"><div class="modal-content !max-w-2xl"><div class="p-6 border-b border-white/10 bg-blue-900/30"><h4 id="rx-calc-name" class="text-2xl font-black text-blue-400">💊 กำหนดการให้ยา</h4></div><div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto"><div class="space-y-4"><div><label class="label-clinical">โดสแนะนำ (mg/kg)</label><select id="rx-dose-select" class="input-box w-full" onchange="document.getElementById('rx-dose-val').value=this.value; calculateRxTablets();"></select></div><div class="grid grid-cols-2 gap-4"><div><label class="label-clinical">โดสจริง</label><input type="number" id="rx-dose-val" class="input-box" step="0.1" oninput="calculateRxTablets()"></div><div><label class="label-clinical">Conc.</label><input type="number" id="rx-conc-val" class="input-box bg-white/5" readonly></div></div><div class="p-4 bg-teal-500/10 rounded-2xl"><label class="label-clinical text-teal-400">ป้อนครั้งละ</label><div class="flex items-center gap-3 mt-1"><button onclick="adjustRxTablets(-getRxStep())" class="btn-base bg-slate-600 hover:bg-slate-500 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-xl shrink-0">−</button><div id="rx-tabs-display" class="text-3xl font-black text-white flex-1 text-center">0</div><button onclick="adjustRxTablets(getRxStep())" class="btn-base bg-slate-600 hover:bg-slate-500 text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-xl shrink-0">+</button></div><input type="hidden" id="rx-tabs-val"><div id="rx-bottle-info" class="mt-2 text-xs text-teal-300 font-bold" style="display:none;"></div></div></div><div class="space-y-4 border-l border-white/5 pl-6"><div class="grid grid-cols-2 gap-2"><div><label class="label-clinical">ความถี่/วัน</label><select id="rx-freq" class="input-box" onchange="calculateRxTotal(); updateTimeOfDay();"><option value="1">1 ครั้ง</option><option value="2" selected>2 ครั้ง</option><option value="3">3 ครั้ง</option><option value="4">4 ครั้ง</option><option value="0.5">วันเว้นวัน</option></select></div><div><label class="label-clinical">จำนวนวัน</label><input type="number" id="rx-days" class="input-box" value="7" oninput="calculateRxTotal()"></div></div><div class="grid grid-cols-2 gap-2"><div><label class="label-clinical">มื้ออาหาร</label><select id="rx-meal-timing" class="input-box"><option value="หลังอาหาร">หลังอาหาร</option><option value="หลังอาหารทันที">หลังอาหารทันที</option><option value="ก่อนอาหาร">ก่อนอาหาร</option><option value="ก่อนอาหาร 1 ชั่วโมง">ก่อนอาหาร 1 ชั่วโมง</option><option value="พร้อมอาหาร">พร้อมอาหาร</option><option value="มื้ออาหาร">มื้ออาหาร</option></select></div><div><label class="label-clinical">ช่วงเวลา</label><select id="rx-day-timing" class="input-box"><option value="เช้า">เช้า</option><option value="เย็น">เย็น</option><option value="เช้า-เย็น" selected>เช้า-เย็น</option><option value="เช้า-กลางวัน-เย็น">เช้า-กลางวัน-เย็น</option><option value="ก่อนนอน">ก่อนนอน</option></select></div></div><div class="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20"><div id="rx-info-text" class="text-slate-300 font-bold mb-1">฿0 /เม็ด | รวม 0 เม็ด</div><div class="flex items-center gap-2 text-2xl font-black text-white"><span>฿</span><input type="number" id="rx-total-price-display" aria-label="ราคารวม" class="input-box text-2xl font-black bg-transparent border-0 border-b-2 border-yellow-500/30 w-full p-0 focus:outline-none focus:border-yellow-400 text-white" step="0.01" min="0" value="0.00" oninput="document.getElementById('rx-final-price-val').value=this.value"></div><input type="hidden" id="rx-final-price-val"></div></div></div><div class="px-6 pb-4"><label class="label-clinical text-orange-400">⚠️ คำเตือน / Warning</label><textarea id="rx-warning-text" class="input-box w-full mt-1 text-sm text-orange-200 bg-orange-500/10 border border-orange-500/30 rounded-xl" rows="2" placeholder="ไม่มีคำเตือน"></textarea></div><div class="p-6 border-t border-white/10 flex gap-4"><button onclick="printCurrentRx()" class="btn-base bg-slate-700 px-6">🖨️ พิมพ์</button><button onclick="confirmRxCalc()" class="btn-base btn-teal flex-1">✅ เพิ่มรายการ</button></div></div></div>
 
+    <div id="rx-edit-modal" class="modal-overlay" style="z-index: 130;">
+        <div class="modal-content !max-w-lg">
+            <div class="p-6 border-b border-white/10 bg-blue-900/30"><h4 id="rx-edit-name" class="text-xl font-black text-blue-400">✏️ แก้ไขรายการยา</h4></div>
+            <div class="p-6 space-y-4 overflow-y-auto">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-clinical">ป้อนครั้งละ</label><div class="flex items-center gap-2"><input type="number" id="rx-edit-dose" class="input-box" step="0.125" min="0"><span id="rx-edit-unit-label" class="text-sm text-slate-300 shrink-0">เม็ด</span></div></div>
+                    <div><label class="label-clinical">ความถี่/วัน</label><select id="rx-edit-freq" class="input-box"><option value="1">วันละ 1 ครั้ง</option><option value="2">วันละ 2 ครั้ง</option><option value="3">วันละ 3 ครั้ง</option><option value="4">วันละ 4 ครั้ง</option><option value="0.5">วันเว้นวัน</option></select></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-clinical">มื้ออาหาร</label><select id="rx-edit-meal" class="input-box"><option value="หลังอาหาร">หลังอาหาร</option><option value="หลังอาหารทันที">หลังอาหารทันที</option><option value="ก่อนอาหาร">ก่อนอาหาร</option><option value="ก่อนอาหาร 1 ชั่วโมง">ก่อนอาหาร 1 ชั่วโมง</option><option value="พร้อมอาหาร">พร้อมอาหาร</option><option value="มื้ออาหาร">มื้ออาหาร</option></select></div>
+                    <div><label class="label-clinical">ช่วงเวลา</label><select id="rx-edit-day-timing" class="input-box"><option value="เช้า">เช้า</option><option value="เย็น">เย็น</option><option value="เช้า-เย็น">เช้า-เย็น</option><option value="เช้า-กลางวัน-เย็น">เช้า-กลางวัน-เย็น</option><option value="ก่อนนอน">ก่อนนอน</option></select></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label-clinical">จำนวนวัน</label><input type="number" id="rx-edit-days" class="input-box" min="1"></div>
+                    <div><label class="label-clinical">ราคารวม (฿)</label><input type="number" id="rx-edit-price" class="input-box" step="0.01" min="0"></div>
+                </div>
+                <div><label class="label-clinical text-orange-400">⚠️ คำเตือน / Warning</label><textarea id="rx-edit-warning" class="input-box w-full mt-1 text-sm text-orange-200 bg-orange-500/10 border border-orange-500/30 rounded-xl" rows="2" placeholder="ไม่มีคำเตือน"></textarea></div>
+            </div>
+            <div class="p-6 border-t border-white/10 flex gap-4">
+                <button onclick="document.getElementById('rx-edit-modal').style.display='none'" class="btn-base bg-slate-700 px-6">ยกเลิก</button>
+                <button onclick="confirmRxEdit()" class="btn-base btn-teal flex-1">✅ บันทึก</button>
+            </div>
+        </div>
+    </div>
+
     <div id="inj-modal" class="modal-overlay" style="z-index: 110;">
         <div class="modal-content !max-w-sm">
             <div class="p-6 border-b border-white/10 bg-teal-900/30"><h4 id="inj-name" class="font-bold text-teal-400">-</h4></div>
@@ -592,7 +617,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         let animalId = urlParams.get('id'), ownerHN = urlParams.get('hn');
         let records = [], fullCatalog = [], displayedItems = [], pendingItem = null, currentCatalogType = null;
-        let selectedItems = [], petType = 'สุนัข', petGender = '-', editingId = null;
+        let selectedItems = [], petType = 'สุนัข', petGender = '-', editingId = null, editingRxItem = null;
         let currentPetData = null, currentPhonesData = [];
         let selectedDldCategories = [], activeDldMain = null;
         let _splitDragInitialized = false;
@@ -1878,6 +1903,46 @@
         }
         function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
 
+        function openRxEditModal(idx) {
+            const rxList = selectedItems.filter(i => i.type === 'Rx');
+            editingRxItem = rxList[idx] || null;
+            if (!editingRxItem) return;
+            document.getElementById('rx-edit-name').innerText = '✏️ ' + editingRxItem.name;
+            document.getElementById('rx-edit-dose').value = parseFloat(editingRxItem.dose) || '';
+            document.getElementById('rx-edit-unit-label').innerText = editingRxItem.unit || 'เม็ด';
+            let freqVal = '2';
+            if (editingRxItem.freq === 'วันเว้นวัน') freqVal = '0.5';
+            else { const m = editingRxItem.freq && editingRxItem.freq.match(/วันละ\s*(\d+(?:\.\d+)?)\s*ครั้ง/); if (m) freqVal = m[1]; }
+            document.getElementById('rx-edit-freq').value = freqVal;
+            document.getElementById('rx-edit-meal').value = editingRxItem.meal || 'หลังอาหาร';
+            document.getElementById('rx-edit-day-timing').value = editingRxItem.day_timing || 'เช้า-เย็น';
+            document.getElementById('rx-edit-days').value = editingRxItem.days || 7;
+            document.getElementById('rx-edit-price').value = (editingRxItem.price || 0).toFixed(2);
+            document.getElementById('rx-edit-warning').value = editingRxItem.warning || '';
+            document.getElementById('rx-edit-modal').style.display = 'flex';
+        }
+
+        function confirmRxEdit() {
+            const item = editingRxItem;
+            if (!item) return;
+            const freqVal = parseFloat(document.getElementById('rx-edit-freq').value) || 1;
+            const doseVal = parseFloat(document.getElementById('rx-edit-dose').value) || 0;
+            const daysVal = parseInt(document.getElementById('rx-edit-days').value) || 1;
+            const newPrice = parseFloat(document.getElementById('rx-edit-price').value) || 0;
+            const oldPrice = item.price;
+            document.getElementById('f_cost').value = ((parseFloat(document.getElementById('f_cost').value) || 0) - oldPrice + newPrice).toFixed(2);
+            item.dose = doseVal.toString();
+            item.freq = freqVal === 0.5 ? 'วันเว้นวัน' : `วันละ ${freqVal} ครั้ง`;
+            item.meal = document.getElementById('rx-edit-meal').value;
+            item.day_timing = document.getElementById('rx-edit-day-timing').value;
+            item.days = daysVal;
+            if (!item.is_liquid_bottle) item.qty = doseVal * freqVal * daysVal;
+            item.price = newPrice;
+            item.warning = document.getElementById('rx-edit-warning').value;
+            document.getElementById('rx-edit-modal').style.display = 'none';
+            updateFormUI();
+        }
+
         function renderVaccineCheckboxes(checkedIds = []) {
             const container = document.getElementById('vaccine-checkbox-list');
             if (!container) return;
@@ -1917,7 +1982,8 @@
                         if (detail) parts.push(`(${detail})`);
                     }
                     const label = parts.join(' ');
-                    return `<li onclick="currentCatalogType='${typeKey}';removeItem(${idx})"><span>${label}</span><span class="item-price">฿${(+item.price).toLocaleString(undefined,{minimumFractionDigits:2})}</span></li>`;
+                    const editBtn = typeKey === 'rx' ? `<button onclick="event.stopPropagation();currentCatalogType='rx';openRxEditModal(${idx})" class="ml-1 shrink-0 text-blue-400 hover:text-blue-200 text-xs leading-none px-1 py-0.5 rounded" title="แก้ไข">✏️</button>` : '';
+                    return `<li onclick="currentCatalogType='${typeKey}';removeItem(${idx})"><span class="flex-1 min-w-0">${label}</span>${editBtn}<span class="item-price">฿${(+item.price).toLocaleString(undefined,{minimumFractionDigits:2})}</span></li>`;
                 }).join('')}</ul>`;
             }
             document.getElementById('list_lab_display').innerHTML = drawItemsWithPrice(selectedItems.filter(i=>i.type==='Lab'), 'lab');
