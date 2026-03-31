@@ -2249,22 +2249,28 @@
             } catch (err) {
                 return alert("โหลดเทมเพลตไม่สำเร็จ: " + err.message);
             }
-            const firstConfig = tplMap[batch[0].templateType];
             const px = 3.78;
             const pw = window.open('', '_blank');
             if (!pw) return alert("ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต Popup ในเบราว์เซอร์");
+            const namedPageCSS = uniqueTypes.map(type => {
+                const cfg = tplMap[type];
+                const safeName = type.replace(/[^a-z0-9]/gi, '_');
+                return `@page pg_${safeName} { size:${cfg.width}mm ${cfg.height}mm; margin:0; }\n.sticker-pg-${safeName} { page: pg_${safeName}; }`;
+            }).join('\n');
             let html = `<html><head>
                 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
                 <style>
                     body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
                     .sticker { position:relative; overflow:hidden; page-break-after:always; }
                     .elem { position:absolute; color:black; line-height:1.2; }
-                    @page { size:${firstConfig.width}mm ${firstConfig.height}mm; margin:0; }
+                    @page { margin:0; }
+                    ${namedPageCSS}
                 </style>
             </head><body>`;
             batch.forEach(({ data, templateType }) => {
                 const config = tplMap[templateType];
-                html += `<div class="sticker" style="width:${config.width}mm; height:${config.height}mm;">`;
+                const safeName = templateType.replace(/[^a-z0-9]/gi, '_');
+                html += `<div class="sticker sticker-pg-${safeName}" style="width:${config.width}mm; height:${config.height}mm;">`;
                 config.lines.forEach(l => {
                     let txt = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || "");
                     if (data.dose_label) txt = txt.replaceAll('ป้อนครั้งละ', data.dose_label);
