@@ -11,6 +11,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="print-utils.js"></script>
 
     <style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
@@ -1780,14 +1781,22 @@ if (activeDocType === 'doc_consent') {
                 await shareHtmlAsFile(_tmplHtml, `${_tmplName}_document.html`, `เอกสาร - ${dataMap.pet_name || ''}`);
                 return;
             }
-            const _tmplTitleStr = JSON.stringify((dataMap.pet_name || 'document').replace(/[<>]/g, ''));
-            const _tmplScript = mode === 'pdf'
-                ? `<script>window.onload=()=>{ document.title=${_tmplTitleStr}; window.print(); };<\/script>`
-                : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
-            const win = window.open('', '_blank');
-            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
-            win.document.write(_tmplHtml.replace('</body>', _tmplScript + '</body>'));
-            win.document.close();
+            if (mode === 'pdf') {
+                // Use a <meta> tag to pass the title so no user data is embedded in JS code.
+                // Open via Blob URL to avoid document.write.
+                const safeTitle = (dataMap.pet_name || 'document')
+                    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/[<>]/g, '');
+                const pdfMeta   = `<meta name="pk-doc-title" content="${safeTitle}">`;
+                const pdfScript = `<script>window.onload=()=>{ document.title=document.querySelector('meta[name=pk-doc-title]').content; window.print(); };<\/script>`;
+                const pdfHtml   = _tmplHtml.replace('</head>', pdfMeta + '</head>').replace('</body>', pdfScript + '</body>');
+                const blob      = new Blob([pdfHtml], { type: 'text/html; charset=utf-8' });
+                const blobUrl   = URL.createObjectURL(blob);
+                const win       = window.open(blobUrl, '_blank');
+                if (!win) { URL.revokeObjectURL(blobUrl); return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser'); }
+                win.addEventListener('unload', function () { URL.revokeObjectURL(blobUrl); });
+            } else {
+                await PrintUtils.executePrint(_tmplHtml, pw, ph, activeDocType);
+            }
         }
         async function printQueueCard() {
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
@@ -1813,7 +1822,7 @@ if (activeDocType === 'doc_consent') {
                 date: _now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
                 time: _now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
             };
-            executeThermalPrint(config, pw, ph, dataMap);
+            executeThermalPrint(config, pw, ph, dataMap, 'thermal_queue');
         }
 
         async function printCageLabel(petId) {
@@ -1843,7 +1852,7 @@ if (activeDocType === 'doc_consent') {
                 date: _now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
                 time: _now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
             };
-            executeThermalPrint(config, pw, ph, dataMap);
+            executeThermalPrint(config, pw, ph, dataMap, 'thermal_cage');
         }
 
         async function printAllCageLabels() {
@@ -1896,19 +1905,8 @@ if (activeDocType === 'doc_consent') {
                 }).join('');
                 pages.push(`<div style="position:relative; width:${pw}mm; height:${ph}mm; page-break-after:always;">${elements}</div>`);
             });
-            const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
-            document.body.appendChild(iframe);
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body>${pages.join('')}</body></html>`);
-            iframeDoc.close();
-            iframe.contentWindow.document.fonts.ready.then(function() {
-                iframe.contentWindow.addEventListener('afterprint', function() {
-                    try { document.body.removeChild(iframe); } catch(e) { console.warn(e); }
-                }, { once: true });
-                iframe.contentWindow.print();
-            });
+            const batchHtml = `<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body>${pages.join('')}</body></html>`;
+            await PrintUtils.executePrint(batchHtml, pw, ph, 'thermal_cage');
         }
 
         function escapeHtml(str) {
@@ -1978,35 +1976,13 @@ if (activeDocType === 'doc_consent') {
                 `<div style="position:absolute; top:${l.y}mm; left:${l.x}mm; font-family:'Sarabun',sans-serif; font-size:10pt; color:#000;">${l.text}</div>`
             ).join('');
 
-            const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
-            document.body.appendChild(iframe);
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;} .page{position:relative; width:${pw}mm; height:${ph}mm; page-break-after:always;} .page:last-child{page-break-after:auto;}</style></head><body><div class="page">${elements1}</div><div class="page">${elements2}</div></body></html>`);
-            iframeDoc.close();
-            iframe.contentWindow.document.fonts.ready.then(function() {
-                iframe.contentWindow.addEventListener('afterprint', function() {
-                    try { document.body.removeChild(iframe); } catch(e) { console.warn(e); }
-                }, { once: true });
-                iframe.contentWindow.print();
-            });
+            const shippingHtml = `<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;} .page{position:relative; width:${pw}mm; height:${ph}mm; page-break-after:always;} .page:last-child{page-break-after:auto;}</style></head><body><div class="page">${elements1}</div><div class="page">${elements2}</div></body></html>`;
+            await PrintUtils.executePrint(shippingHtml, pw, ph, 'sticker_shipping');
         }
-        function executeThermalPrint(config, pw, ph, dataMap) {
+        async function executeThermalPrint(config, pw, ph, dataMap, templateType) {
             const elements = buildThermalElements(config, pw, ph, dataMap);
-            const iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
-            document.body.appendChild(iframe);
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`);
-            iframeDoc.close();
-            iframe.contentWindow.document.fonts.ready.then(function() {
-                iframe.contentWindow.addEventListener('afterprint', function() {
-                    try { document.body.removeChild(iframe); } catch(e) { console.warn(e); }
-                }, { once: true });
-                iframe.contentWindow.print();
-            });
+            const htmlContent = `<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`;
+            await PrintUtils.executePrint(htmlContent, pw, ph, templateType);
         }
     </script>
 <button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()">☰ รายชื่อ</button>

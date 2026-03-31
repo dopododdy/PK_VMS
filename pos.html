@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="print-utils.js"></script>
 
     <style>
         :root { 
@@ -1035,20 +1036,9 @@
                     }
                 }).join('');
 
-                // Use a hidden iframe to print — avoids popup blocking and requires no user-gesture
-                const iframe = document.createElement('iframe');
-                iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
-                document.body.appendChild(iframe);
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                iframeDoc.open();
-                iframeDoc.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`);
-                iframeDoc.close();
-                iframe.contentWindow.document.fonts.ready.then(function() {
-                    iframe.contentWindow.addEventListener('afterprint', function() {
-                        try { document.body.removeChild(iframe); } catch(e) { console.warn('Failed to remove print iframe:', e); }
-                    }, { once: true });
-                    iframe.contentWindow.print();
-                });
+                // Use PrintUtils for silent printing if configured; falls back to hidden iframe
+                const receiptHtml = `<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`;
+                await PrintUtils.executePrint(receiptHtml, pw, ph, 'thermal_receipt');
             } catch (e) { alert("ข้อผิดพลาดในการพิมพ์: " + e.message); }
         }
 
@@ -1613,19 +1603,8 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
                         return `<div style="${base} ${widthStyle} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
                     }
                 }).join('');
-                const iframe = document.createElement('iframe');
-                iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden;';
-                document.body.appendChild(iframe);
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                iframeDoc.open();
-                iframeDoc.write(`<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`);
-                iframeDoc.close();
-                iframe.contentWindow.document.fonts.ready.then(function() {
-                    iframe.contentWindow.addEventListener('afterprint', function() {
-                        try { document.body.removeChild(iframe); } catch(e) { console.warn('Failed to remove print iframe:', e); }
-                    }, { once: true });
-                    iframe.contentWindow.print();
-                });
+                const combinedHtml = `<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`;
+                await PrintUtils.executePrint(combinedHtml, pw, ph, 'thermal_receipt');
             } catch (e) { alert("ข้อผิดพลาดในการพิมพ์: " + e.message); }
         }
     </script>

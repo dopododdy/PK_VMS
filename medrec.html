@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="print-utils.js"></script>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
@@ -2104,7 +2105,7 @@
             const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
             const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1)).data?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment, 'appt') : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2, 'appt') : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
-            executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }]);
+            executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }], 'sticker_pet_id');
         }
 
         async function printPetLabel(petId) {
@@ -2182,22 +2183,13 @@
             const { data: t } = await db.from('print_templates').select('config').eq('template_type', templateType).single();
             const config = t.config;
             const px = 3.78;
-            const pw = window.open('', '_blank');
             
             // 1. นำเข้า Font Sarabun และกำหนด Style พื้นฐาน
-            let html = `<html><head>
-                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-                <style>
-                    body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
-                    .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; }
-                    .elem { position:absolute; color:black; line-height:1.2; }
-                    @page { size:${config.width}mm ${config.height}mm; margin:0; }
-                </style>
-            </head><body>`;
+            let body = '';
             
             // 2. วนลูปสร้างหน้าสติ๊กเกอร์ตามจำนวนข้อมูล
             dataList.forEach(data => {
-                html += `<div class="sticker">`;
+                body += `<div class="sticker">`;
                 config.lines.forEach(l => {
                     // ป้องกัน Error กรณีที่ element นั้นเป็นกรอบสี่เหลี่ยมหรือรูปภาพ (ไม่มีข้อความ)
                     let txt = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => data[k.trim()] || "");
@@ -2217,23 +2209,22 @@
                     }
                     
                     // วาด Element ลงไป
-                    html += `<div class="elem" style="${style}">${txt}</div>`;
+                    body += `<div class="elem" style="${style}">${txt}</div>`;
                 });
-                html += `</div>`;
+                body += `</div>`;
             });
             
-            // 3. หน่วงเวลา 800ms รอให้โหลดฟอนต์เสร็จก่อนสั่งพิมพ์
-            html += `</body><script>
-                window.onload = () => {
-                    setTimeout(() => {
-                        window.print();
-                        window.close();
-                    }, 800);
-                };
-            <\/script></html>`;
+            const html = `<html><head>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+                <style>
+                    body { margin:0; padding:0; font-family:'Sarabun', sans-serif; }
+                    .sticker { position:relative; width:${config.width}mm; height:${config.height}mm; overflow:hidden; page-break-after:always; }
+                    .elem { position:absolute; color:black; line-height:1.2; }
+                    @page { size:${config.width}mm ${config.height}mm; margin:0; }
+                </style>
+            </head><body>${body}</body></html>`;
             
-            pw.document.write(html); 
-            pw.document.close();
+            await PrintUtils.executePrint(html, parseFloat(config.width) || 58, parseFloat(config.height) || 80, templateType);
         }
 
         async function executeCombinedBatchPrint(batch) {
@@ -2250,8 +2241,6 @@
                 return alert("โหลดเทมเพลตไม่สำเร็จ: " + err.message);
             }
             const px = 3.78;
-            const pw = window.open('', '_blank');
-            if (!pw) return alert("ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต Popup ในเบราว์เซอร์");
             const namedPageCSS = uniqueTypes.map(type => {
                 const cfg = tplMap[type];
                 const safeName = type.replace(/[^a-z0-9]/gi, '_');
@@ -2286,21 +2275,23 @@
                 });
                 html += `</div>`;
             });
-            html += `</body><script>
-                window.onload = () => {
-                    setTimeout(() => {
-                        window.print();
-                        window.close();
-                    }, 800);
-                };
-            <\/script></html>`;
-            pw.document.write(html);
-            pw.document.close();
+            html += `</body></html>`;
+            // Use printer of the first template type in the batch as the target printer
+            const firstType = batch.length > 0 ? batch[0].templateType : null;
+            const firstCfg  = firstType ? tplMap[firstType] : null;
+            const batchW = firstCfg ? (parseFloat(firstCfg.width) || 58) : 58;
+            const batchH = firstCfg ? (parseFloat(firstCfg.height) || 80) : 80;
+            await PrintUtils.executePrint(html, batchW, batchH, firstType);
         }
 
-        function executeMultiTemplatePrint(jobs) {
+        /**
+         * Print multiple sticker templates in a single job (e.g. pet ID + appointment).
+         * @param {Array<{config, data}>} jobs        Array of {config, data} pairs.
+         * @param {string}               [templateType] Template type key used to look up the
+         *   target printer from printer_settings.  Typically the first template in the batch.
+         */
+        async function executeMultiTemplatePrint(jobs, templateType) {
             const px = 3.78;
-            const pw = window.open('', '_blank', 'width=400');
             const pageWidth = jobs[0].config.width || 80;
             const pageHeight = jobs[0].config.height || 50;
             
@@ -2340,18 +2331,8 @@
                 html += `</div>`;
             });
             
-            // 3. หน่วงเวลา 800ms รอให้โหลดฟอนต์เสร็จก่อนสั่งพิมพ์
-            html += `</body><script>
-                window.onload = () => {
-                    setTimeout(() => {
-                        window.print();
-                        window.close();
-                    }, 800);
-                };
-            <\/script></html>`;
-            
-            pw.document.write(html); 
-            pw.document.close();
+            html += `</body></html>`;
+            await PrintUtils.executePrint(html, pageWidth, pageHeight, templateType || null);
         }
         async function summaryTreatmentHistory() {
             if (!records || records.length === 0) return alert("ไม่พบประวัติการรักษาสำหรับสัตว์นี้");
