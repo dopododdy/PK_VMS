@@ -1333,7 +1333,7 @@
                                     <button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์</button>
                                 </div>
                                 <div class="data-value text-xs space-y-1">
-                                    ${rxItems.map(i => `<div class="flex gap-2"><input type="checkbox" class="rx-select-${rec.id}" value="${i.id}" checked><span>${i.item_name} x ${Math.floor(i.quantity)}</span></div>`).join('') || '-'}
+                                    ${rxItems.map(i => { const doseInfo = [i.dose_per_time, i.unit, i.frequency].filter(Boolean).join(' '); const label = i.item_name + (doseInfo ? ' (' + doseInfo + ')' : '') + ' x ' + Math.floor(i.quantity); return `<div class="flex gap-2"><input type="checkbox" class="rx-select-${rec.id}" value="${i.id}" checked><span>${label}</span></div>`; }).join('') || '-'}
                                 </div>
                             </div>
                         </div>
@@ -1991,6 +1991,7 @@
                         const detail = [item.dose, item.unit, item.freq].filter(Boolean).join(' ');
                         if (detail) parts.push(`(${detail})`);
                     }
+                    if (typeKey === 'rx' && item.qty != null) parts.push(`x ${Math.floor(item.qty)}`);
                     const label = parts.join(' ');
                     const editBtn = typeKey === 'rx' ? `<button onclick="event.stopPropagation();currentCatalogType='rx';openRxEditModal(${idx})" class="ml-1 shrink-0 text-blue-400 hover:text-blue-200 text-xs leading-none px-1 py-0.5 rounded" title="แก้ไข">✏️</button>` : '';
                     return `<li onclick="currentCatalogType='${typeKey}';removeItem(${idx})"><span class="flex-1 min-w-0">${label}</span>${editBtn}<span class="item-price">฿${(+item.price).toLocaleString(undefined,{minimumFractionDigits:2})}</span></li>`;
