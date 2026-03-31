@@ -1297,7 +1297,7 @@
                 
                 const labText = labItems.map(i => i.item_name).join(', ');
                 const txText = txItems.map(i => i.item_name).join(', ');
-                const rxText = rxItems.map(i => i.item_name).join(', ');
+                const rxText = rxItems.map(i => formatRxItem(i)).join(', ');
 
                 const recDate = (rec.created_at || '').slice(0, 10);
                 const vaccNames = vaccRecordsByDate[recDate] || [];
@@ -1348,7 +1348,7 @@
                                     <button onclick="printHistoryRx('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์</button>
                                 </div>
                                 <div class="data-value text-xs space-y-1">
-                                    ${rxItems.map(i => `<div class="flex gap-2"><input type="checkbox" class="rx-select-${rec.id}" value="${i.id}" checked><span>${i.item_name} x ${Math.floor(i.quantity)}</span></div>`).join('') || '-'}
+                                    ${rxItems.map(i => `<div class="flex gap-2"><input type="checkbox" class="rx-select-${rec.id}" value="${i.id}" checked><span>${formatRxItem(i)}</span></div>`).join('') || '-'}
                                 </div>
                             </div>
                         </div>
@@ -1366,6 +1366,11 @@
         }
 
         function toggleCollapse(id) { document.getElementById(`collapse-${id}`).classList.toggle('hidden'); }
+
+        function formatRxItem(i) {
+            const detail = i.dose_per_time ? ` (${[i.dose_per_time, i.unit, i.frequency].filter(Boolean).join(' ')})` : '';
+            return `${i.item_name}${detail} x ${Math.floor(i.quantity)}`;
+        }
 
         // ✅ ฟังก์ชันปุ่มคิดเงิน (ส่งไปหน้า POS)
         function goToPOS() {
@@ -1763,7 +1768,7 @@
                 const txItems = rec.medical_record_items.filter(i => i.item_type === 'Tx');
                 const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
                 const txText = txItems.map(i => i.item_name).join(', ');
-                const rxText = rxItems.map(i => i.item_name).join(', ');
+                const rxText = rxItems.map(i => formatRxItem(i)).join(', ');
                 return `<div class="left-hist-item">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <span style="color:#2dd4bf;font-weight:700;font-size:0.9rem;">${formatThaiDate(rec.created_at, 'short')}</span>
