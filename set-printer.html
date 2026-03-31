@@ -240,6 +240,20 @@
         // ── Printer Settings ─────────────────────────────────────────────────
 
         async function loadPrinterSettings() {
+            // Try localStorage cache first (same key/format as print-utils.js)
+            try {
+                const raw = localStorage.getItem('pk_printer_settings_cache');
+                if (raw) {
+                    const obj = JSON.parse(raw);
+                    if (Date.now() - obj.ts < 5 * 60 * 1000) {
+                        printerSettings = obj.data || {};
+                        const type = document.getElementById('template_type').value;
+                        if (type) document.getElementById('printer_name').value = printerSettings[type] || '';
+                        return;
+                    }
+                }
+            } catch (e) {}
+            // Fall back to Supabase
             try {
                 const { data } = await db.from('app_settings').select('value').eq('key', 'printer_settings').maybeSingle();
                 printerSettings = (data && data.value) ? data.value : {};
@@ -261,16 +275,22 @@
         }
 
         function scheduleSavePrinterName() {
+            const type = document.getElementById('template_type').value;
+            if (!type) return;
+            const name = document.getElementById('printer_name').value.trim();
+            // Update in-memory immediately so navigation away won't lose the value
+            if (name) {
+                printerSettings[type] = name;
+            } else {
+                delete printerSettings[type];
+            }
+            // Write to localStorage immediately so it survives quick navigation
+            try {
+                localStorage.setItem('pk_printer_settings_cache', JSON.stringify({ ts: Date.now(), data: printerSettings }));
+            } catch (e) {}
+            // Debounce the Supabase write to avoid a round-trip on every keystroke
             clearTimeout(_savePrinterTimer);
             _savePrinterTimer = setTimeout(async () => {
-                const type = document.getElementById('template_type').value;
-                if (!type) return;
-                const name = document.getElementById('printer_name').value.trim();
-                if (name) {
-                    printerSettings[type] = name;
-                } else {
-                    delete printerSettings[type];
-                }
                 await persistPrinterSettings();
             }, 800);
         }
