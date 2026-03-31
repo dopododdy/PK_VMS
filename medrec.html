@@ -346,8 +346,13 @@
                     <div class="col-span-12 md:col-span-4"><label class="label-text">หมายเลข Microchip</label><div id="v-pet-microchip" class="text-base text-slate-300">-</div></div>
                     <div class="col-span-12"><label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label><div id="v-pet-congenital" class="text-lg font-bold text-red-400">-</div></div>
                     <div class="col-span-12" id="v-medrec-row" style="display:none">
-                        <label class="label-text">📋 Hx (ประวัติเดิมจากระบบเก่า)</label>
-                        <div id="v-medrec" class="text-base text-slate-300 whitespace-pre-wrap mt-1 p-3 bg-black/20 rounded-xl border border-white/5 leading-relaxed"></div>
+                        <button type="button" onclick="toggleMedrecCollapse()" class="flex items-center gap-2 w-full text-left label-text hover:text-white transition-colors">
+                            <span id="v-medrec-arrow" class="text-xs">▶</span>
+                            📋 Hx (ประวัติเดิมจากระบบเก่า)
+                        </button>
+                        <div id="v-medrec-collapse" style="display:none">
+                            <div id="v-medrec" class="text-base text-slate-300 whitespace-pre-wrap mt-1 p-3 bg-black/20 rounded-xl border border-white/5 leading-relaxed"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1236,6 +1241,8 @@
                 if (medrec) {
                     document.getElementById('v-medrec').innerText = medrec;
                     document.getElementById('v-medrec-row').style.display = '';
+                    document.getElementById('v-medrec-collapse').style.display = 'none';
+                    document.getElementById('v-medrec-arrow').textContent = '▶';
                 } else {
                     document.getElementById('v-medrec').innerText = '';
                     document.getElementById('v-medrec-row').style.display = 'none';
@@ -1367,6 +1374,14 @@
         }
 
         function toggleCollapse(id) { document.getElementById(`collapse-${id}`).classList.toggle('hidden'); }
+
+        function toggleMedrecCollapse() {
+            const col = document.getElementById('v-medrec-collapse');
+            const arrow = document.getElementById('v-medrec-arrow');
+            const open = col.style.display !== 'none';
+            col.style.display = open ? 'none' : 'block';
+            arrow.textContent = open ? '▶' : '▼';
+        }
 
         function formatRxItem(i) {
             const detail = i.dose_per_time ? ` (${[i.dose_per_time, i.unit, i.frequency].filter(Boolean).join(' ')})` : '';
