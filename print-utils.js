@@ -16,6 +16,7 @@
     var CACHE_TTL          = 5 * 60 * 1000; // 5 minutes
     var QZ_CDN             = 'https://cdn.qz.io/qz-tray/qz-tray.js';
     var QZ_RETRY_DELAY_SEC = 0.5; // seconds to wait between QZ Tray reconnect retries
+    var AGENT_URL          = 'http://127.0.0.1:8080'; // local VASD agent (no QZ Tray needed)
 
     var _settingsCache = null;
     var _qzConnected   = false;
@@ -130,12 +131,43 @@
         try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
     }
 
+    // ── Local Agent (VASD) Print – no QZ Tray required ───────────────────────
+
+    /**
+     * Try to print via the local VASD agent (app.py) running on 127.0.0.1:8080.
+     * Returns true on success, false if the agent is unreachable or returns an error.
+     */
+    async function _agentPrint(printerName, htmlContent, pageWidthMm, pageHeightMm) {
+        try {
+            var res = await fetch(AGENT_URL + '/print', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    html:    htmlContent,
+                    printer: printerName || '',
+                    width:   pageWidthMm,
+                    height:  pageHeightMm
+                }),
+                signal: (function () {
+                    var ctrl = new AbortController();
+                    setTimeout(function () { ctrl.abort(); }, 10000);
+                    return ctrl.signal;
+                }())
+            });
+            if (!res.ok) return false;
+            var json = await res.json();
+            return json && json.status === 'success';
+        } catch (e) {
+            console.warn('PK-VMS PrintUtils: local agent unavailable –', e.message || e);
+            return false;
+        }
+    }
+
     // ── Public Print Functions ───────────────────────────────────────────────
 
     /**
      * Print HTML content using a hidden iframe.
-     * If templateType has a configured printer and QZ Tray is running, prints
-     * silently without any dialog.  Otherwise falls back to iframe.print().
+     * Priority: (1) QZ Tray, (2) local VASD agent, (3) hidden-iframe browser print.
      *
      * @param {string}  htmlContent    Complete HTML document string.
      * @param {number}  pageWidthMm    Page width in mm (used for @page and QZ Tray).
@@ -147,11 +179,16 @@
         var printerName = (templateType && settings[templateType]) || null;
 
         if (printerName) {
+            // 1. Try QZ Tray
             var ok = await _qzPrint(printerName, htmlContent, pageWidthMm, pageHeightMm);
+            if (ok) return;
+
+            // 2. Try local VASD agent (no QZ Tray required)
+            ok = await _agentPrint(printerName, htmlContent, pageWidthMm, pageHeightMm);
             if (ok) return;
         }
 
-        // Fallback: hidden iframe using srcdoc (avoids document.write)
+        // 3. Fallback: hidden iframe using srcdoc (avoids document.write)
         // htmlContent is a fully-constructed HTML document built by the caller;
         // callers are responsible for sanitizing any user-supplied values they embed in it.
         var iframe = document.createElement('iframe');
@@ -177,8 +214,7 @@
 
     /**
      * Print HTML content by opening a new window.
-     * If templateType has a configured printer and QZ Tray is running, prints
-     * silently without any dialog.  Otherwise falls back to window.print().
+     * Priority: (1) QZ Tray, (2) local VASD agent, (3) window.print().
      *
      * @param {string}  htmlContent      Complete HTML document string.
      * @param {number}  pageWidthMm      Page width in mm.
@@ -191,11 +227,16 @@
         var printerName = (templateType && settings[templateType]) || null;
 
         if (printerName) {
+            // 1. Try QZ Tray
             var ok = await _qzPrint(printerName, htmlContent, pageWidthMm, pageHeightMm);
+            if (ok) return;
+
+            // 2. Try local VASD agent (no QZ Tray required)
+            ok = await _agentPrint(printerName, htmlContent, pageWidthMm, pageHeightMm);
             if (ok) return;
         }
 
-        // Fallback: window.open + print
+        // 3. Fallback: window.open + print
         var win = window.open('', '_blank');
         if (!win) { alert('❌ กรุณาอนุญาตการเปิด popup ใน browser'); return; }
         win.document.write(htmlContent);
