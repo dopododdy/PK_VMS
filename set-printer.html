@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="print-utils.js"></script>
 
     <style>
         :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255,255,255,0.1); }
@@ -66,6 +67,13 @@
                             <label class="label-title">สูง (มม.)</label>
                             <input type="number" id="paper_h" class="input-control text-center font-bold" onchange="renderCanvas()">
                         </div>
+                        <div class="col-span-9">
+                            <label class="label-title">🖨️ ชื่อเครื่องพิมพ์ (พิมพ์อัตโนมัติ)</label>
+                            <input type="text" id="printer_name" class="input-control" placeholder="เช่น EPSON TM-T82, HP LaserJet P1102" oninput="scheduleSavePrinterName()">
+                        </div>
+                        <div class="col-span-3">
+                            <button class="btn-tool w-full text-xs" onclick="openPrinterModal()">📋 ดูทั้งหมด</button>
+                        </div>
                     </div>
                 </div>
 
@@ -104,10 +112,31 @@
         </div>
     </div>
 
+    <!-- ── Printer Settings Modal ─────────────────────────────────────────── -->
+    <div id="printer-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 hidden">
+        <div class="bg-[#0f172a] rounded-3xl border border-white/10 p-8 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-black">🖨️ ตั้งค่าเครื่องพิมพ์ทั้งหมด</h2>
+                <button onclick="closePrinterModal()" class="text-gray-400 hover:text-white text-2xl leading-none">✕</button>
+            </div>
+            <div class="text-sm text-gray-400 mb-5 bg-blue-900/20 border border-blue-500/20 p-4 rounded-xl leading-relaxed">
+                💡 ระบุชื่อเครื่องพิมพ์สำหรับแต่ละ Template เมื่อกดพิมพ์จากส่วนไหนของโปรแกรม ระบบจะส่งตรงไปยังเครื่องพิมพ์ที่ระบุโดยอัตโนมัติ ไม่ต้องเลือกหรือกด OK<br>
+                <span class="text-yellow-400">⚠️ ต้องติดตั้ง <a href="https://qz.io/download" target="_blank" class="underline hover:text-white">QZ Tray</a> บนเครื่องก่อน</span>
+            </div>
+            <div id="printer-modal-list" class="overflow-y-auto flex-1 space-y-2 pr-1"></div>
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-white/10">
+                <button onclick="closePrinterModal()" class="btn-tool">ยกเลิก</button>
+                <button onclick="saveAllPrinterSettings()" class="bg-teal-600 hover:bg-teal-500 px-8 py-2 rounded-xl font-bold transition">💾 บันทึกทั้งหมด</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentConfig = { width: 210, height: 148, lines: [] };
         let activeLineIndex = -1;
         let draggedIndex = null;
+        let printerSettings = {};
+        let _savePrinterTimer = null;
         
         const mockItems = [
             { name: "ยาฆ่าเชื้อ อะม็อกซี่ซิลลิน 250mg", qty: 10, unit: "เม็ด", price: 150.00 },
@@ -196,6 +225,8 @@
                 document.getElementById('paper_h').value = currentConfig.height || 148;
                 activeLineIndex = -1; renderLinesList(); renderCanvas(); applyZoom();
             }
+            // Update printer name input for this template
+            document.getElementById('printer_name').value = printerSettings[type] || '';
         }
 
         async function saveTemplate() {
@@ -204,6 +235,87 @@
             currentConfig.height = parseFloat(document.getElementById('paper_h').value);
             const { error } = await db.from('print_templates').update({ config: currentConfig }).eq('template_type', type);
             if (!error) alert('✅ บันทึกรูปแบบเรียบร้อย');
+        }
+
+        // ── Printer Settings ─────────────────────────────────────────────────
+
+        async function loadPrinterSettings() {
+            try {
+                const { data } = await db.from('app_settings').select('value').eq('key', 'printer_settings').maybeSingle();
+                printerSettings = (data && data.value) ? data.value : {};
+            } catch (e) {
+                printerSettings = {};
+            }
+            // Reflect on current template input
+            const type = document.getElementById('template_type').value;
+            if (type) document.getElementById('printer_name').value = printerSettings[type] || '';
+        }
+
+        async function persistPrinterSettings() {
+            try {
+                await db.from('app_settings').upsert({ key: 'printer_settings', value: printerSettings }, { onConflict: 'key' });
+                if (typeof PrintUtils !== 'undefined') PrintUtils.invalidateCache();
+            } catch (e) {
+                console.error('บันทึกชื่อเครื่องพิมพ์ไม่สำเร็จ:', e);
+            }
+        }
+
+        function scheduleSavePrinterName() {
+            clearTimeout(_savePrinterTimer);
+            _savePrinterTimer = setTimeout(async () => {
+                const type = document.getElementById('template_type').value;
+                if (!type) return;
+                const name = document.getElementById('printer_name').value.trim();
+                if (name) {
+                    printerSettings[type] = name;
+                } else {
+                    delete printerSettings[type];
+                }
+                await persistPrinterSettings();
+            }, 800);
+        }
+
+        function openPrinterModal() {
+            renderPrinterModal();
+            document.getElementById('printer-modal').classList.remove('hidden');
+        }
+
+        function closePrinterModal() {
+            document.getElementById('printer-modal').classList.add('hidden');
+        }
+
+        function renderPrinterModal() {
+            const select = document.getElementById('template_type');
+            const types = Array.from(select.options).map(o => o.value).filter(Boolean);
+            const list = document.getElementById('printer-modal-list');
+            list.innerHTML = types.map(type => `
+                <div class="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                    <span class="text-teal-400 font-bold text-sm w-56 truncate flex-shrink-0">${type}</span>
+                    <input type="text" class="input-control flex-1 text-sm py-2" id="modal-printer-${type}"
+                           value="${(printerSettings[type] || '').replace(/"/g, '&quot;')}"
+                           placeholder="ชื่อเครื่องพิมพ์...">
+                </div>`).join('');
+        }
+
+        async function saveAllPrinterSettings() {
+            const select = document.getElementById('template_type');
+            const types = Array.from(select.options).map(o => o.value).filter(Boolean);
+            types.forEach(type => {
+                const input = document.getElementById(`modal-printer-${type}`);
+                if (!input) return;
+                const name = input.value.trim();
+                if (name) {
+                    printerSettings[type] = name;
+                } else {
+                    delete printerSettings[type];
+                }
+            });
+            await persistPrinterSettings();
+            // Sync back to the inline input
+            const currentType = document.getElementById('template_type').value;
+            document.getElementById('printer_name').value = printerSettings[currentType] || '';
+            closePrinterModal();
+            alert('✅ บันทึกชื่อเครื่องพิมพ์เรียบร้อย');
         }
 
         function addLine(type) {
@@ -383,6 +495,7 @@
 
         window.onload = async () => {
             await fetchAvailableTemplates();
+            await loadPrinterSettings();
             const sideContainer = document.getElementById('var_sidebar_container');
 if (sideContainer) {
     sideContainer.innerHTML = Object.entries(varGroups).map(([group, vars]) => `
