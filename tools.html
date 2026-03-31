@@ -89,11 +89,6 @@
         .score-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; font-size: 0.85rem; transition: 0.15s; }
         .score-btn:hover { border-color: var(--teal); color: #e2e8f0; }
         .score-btn.selected { background: var(--teal); border-color: var(--teal); color: var(--navy); font-weight: 700; }
-        /* Common Drugs: category tabs */
-        .cat-tab-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-        .cat-tab-btn { padding: 5px 13px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #94a3b8; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: 0.15s; white-space: nowrap; }
-        .cat-tab-btn:hover { border-color: var(--teal); color: #e2e8f0; }
-        .cat-tab-btn.active { background: var(--teal); border-color: var(--teal); color: var(--navy); font-weight: 700; }
         /* Dosage dropdown */
         .dose-select { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 4px 8px; color: #e2e8f0; font-size: 0.78rem; cursor: pointer; outline: none; max-width: 200px; width: 100%; }
         .dose-select:hover, .dose-select:focus { border-color: var(--teal); }
@@ -200,7 +195,6 @@
         let commonConcentrations = {};
         let commonConcMode = {};
         let commonConcUnit = {};
-        let commonActiveTab = '';
         let commonSearch = '';
         let commonDoseSelection = {};
         let commonDoseCustom = {};
@@ -1949,24 +1943,6 @@
                     return !d.calcDose && !d.speciesDose;
                 };
 
-                // Build ordered unique category list
-                const cdCategories = [];
-                commonDrugs.forEach(d => { if (!cdCategories.includes(d.category)) cdCategories.push(d.category); });
-                const cdSpecialTabs = ['All', 'oral tablet/capsul', 'oral mL'];
-                const allValidTabs = [...cdSpecialTabs, ...cdCategories];
-                if (!commonActiveTab || !allValidTabs.includes(commonActiveTab)) commonActiveTab = 'All';
-
-                // Category tab bar (use data-cat to avoid inline-JS quoting issues)
-                const specialTabCounts = {
-                    'All':               commonDrugs.length,
-                    'oral tablet/capsul': commonDrugs.filter(cdHasTabCap).length,
-                    'oral mL':            commonDrugs.filter(cdHasOralMl).length
-                };
-                const tabBarHtml = `<div class="cat-tab-bar">${[...cdSpecialTabs, ...cdCategories].map(cat => {
-                    const cnt = cat in specialTabCounts ? specialTabCounts[cat] : commonDrugs.filter(d => d.category === cat).length;
-                    return `<button onclick="setCommonTab(this.dataset.cat)" data-cat="${escHtml(cat)}" class="cat-tab-btn${cat === commonActiveTab ? ' active' : ''}">${escHtml(cat)} <span style="opacity:0.6">(${cnt})</span></button>`;
-                }).join('')}</div>`;
-
                 // Search box
                 const safeSearch = escHtml(commonSearch || '');
                 const searchHtml = `<div class="drug-search-wrap"><span class="drug-search-icon">🔍</span><input type="text" class="drug-search" placeholder="ค้นหาชื่อยา..." value="${safeSearch}" oninput="setCommonSearch(this.value, this.selectionStart)"></div>`;
@@ -1975,12 +1951,6 @@
                 const query = (commonSearch || '').toLowerCase();
                 const filteredDrugs = commonDrugs
                     .map((drug, idx) => ({drug, idx}))
-                    .filter(({drug}) => {
-                        if (commonActiveTab === 'All') return true;
-                        if (commonActiveTab === 'oral tablet/capsul') return cdHasTabCap(drug);
-                        if (commonActiveTab === 'oral mL') return cdHasOralMl(drug);
-                        return drug.category === commonActiveTab;
-                    })
                     .filter(({drug}) => !query || drug.name.toLowerCase().includes(query))
                     .sort((a, b) => (!!commonDrugChecked[b.idx]) - (!!commonDrugChecked[a.idx]));
 
@@ -2091,7 +2061,7 @@
                     ? `<tr><td colspan="6" class="text-center py-8 text-gray-600">ไม่พบยาที่ค้นหา "${escHtml(commonSearch)}"</td></tr>`
                     : '';
 
-                html += `<div style="position:sticky;top:0;z-index:5;background:var(--navy);padding-bottom:10px;"><h2 class="text-3xl font-black mb-4 uppercase tracking-tight">💊 Common Drugs</h2>` + tabBarHtml + searchHtml + `</div>` + `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
+                html += `<div style="position:sticky;top:0;z-index:5;background:var(--navy);padding-bottom:10px;"><h2 class="text-3xl font-black mb-4 uppercase tracking-tight">💊 Common Drugs</h2>` + searchHtml + `</div>` + `<div class="overflow-hidden rounded-2xl border border-white/5 bg-white/5">
                     <table>
                         <thead><tr><th style="width:32px">☑</th><th>Drug</th><th>Dosage / Indication</th><th>Formulation</th><th>Dose/admin</th><th>เม็ด/ครั้ง</th></tr></thead>
                         <tbody>${rows || emptyMsg}${selectedGroupRows}</tbody>
@@ -2253,12 +2223,6 @@
             if (btn) { btn.textContent = '✅'; setTimeout(() => { btn.textContent = '💾'; }, 1500); }
         }
 
-        function setCommonTab(cat) {
-            commonActiveTab = cat;
-            commonSearch = '';
-            renderCurrentTool();
-        }
-
         function setCommonSearch(query, cursorPos) {
             commonSearch = query;
             renderCurrentTool();
@@ -2411,7 +2375,6 @@
             if (savedChecked) {
                 try { commonDrugChecked = JSON.parse(savedChecked); } catch (e) { console.warn('Failed to parse common drug checked states:', e); }
             }
-            commonActiveTab = 'All';
             setSpecies('dog');
         };
     </script>
