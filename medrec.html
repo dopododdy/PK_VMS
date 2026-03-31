@@ -722,7 +722,13 @@
             const date = new Date(dateString);
             const monthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             const monthsLong = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const daysShort = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
             const d = date.getDate(), m = format === 'short' ? monthsShort[date.getMonth()] : monthsLong[date.getMonth()], y = date.getFullYear() + 543;
+            if (format === 'appt') {
+                const dow = daysShort[date.getDay()];
+                const yy = String(y % 100).padStart(2, '0');
+                return `${dow} ${d} ${monthsShort[date.getMonth()]} ${yy}`;
+            }
             return `${d} ${m} ${y}`;
         }
 
@@ -2092,7 +2098,7 @@
             const latestRec = records.find(r => r.appointment || r.appointment_2);
             const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
             const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1)).data?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
-            const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment) : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2) : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
+            const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment, 'appt') : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2, 'appt') : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
             executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }]);
         }
 
@@ -2110,7 +2116,7 @@
             if (!latestRec) return alert("ไม่พบข้อมูลนัดหมาย");
             const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
             const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
-            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec.appointment ? formatThaiDate(latestRec.appointment) : "-", appointment_note_1: latestRec.appointment_note || "-", appointment_date_2: latestRec.appointment_2 ? formatThaiDate(latestRec.appointment_2) : "-", appointment_note_2: latestRec.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
+            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec.appointment ? formatThaiDate(latestRec.appointment, 'appt') : "-", appointment_note_1: latestRec.appointment_note || "-", appointment_date_2: latestRec.appointment_2 ? formatThaiDate(latestRec.appointment_2, 'appt') : "-", appointment_note_2: latestRec.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
             await executeDynamicPrint([printData], 'sticker_appt');
         }
 
@@ -2126,7 +2132,7 @@
             if (!owner) return alert("ไม่พบข้อมูลเจ้าของ");
             const dataList = await Promise.all(allPetIds.map(async (petId) => {
                 const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
-                return { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet?.pet_name || '-', hn: pet?.owner_hn || ownerHN, appointment_date_1: apptDate1 ? formatThaiDate(apptDate1) : "-", appointment_note_1: apptNote1 || "-", appointment_date_2: apptDate2 ? formatThaiDate(apptDate2) : "-", appointment_note_2: apptNote2 || "-", date: new Date().toLocaleDateString('th-TH') };
+                return { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet?.pet_name || '-', hn: pet?.owner_hn || ownerHN, appointment_date_1: apptDate1 ? formatThaiDate(apptDate1, 'appt') : "-", appointment_note_1: apptNote1 || "-", appointment_date_2: apptDate2 ? formatThaiDate(apptDate2, 'appt') : "-", appointment_note_2: apptNote2 || "-", date: new Date().toLocaleDateString('th-TH') };
             }));
             await executeDynamicPrint(dataList, 'sticker_appt');
         }
@@ -2160,7 +2166,7 @@
                 const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
                 return [
                     { data: { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: ownerPhone, pet_name: pet?.pet_name || '-', hn: pet?.owner_hn || ownerHN, species: pet?.pet_type || '-', breed: pet?.breed || '-', sex: pet?.gender || '-', weight: ((pet?.weight) || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) }, templateType: 'sticker_pet_id' },
-                    { data: { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet?.pet_name || '-', hn: pet?.owner_hn || ownerHN, appointment_date_1: apptDate1 ? formatThaiDate(apptDate1) : "-", appointment_note_1: apptNote1 || "-", appointment_date_2: apptDate2 ? formatThaiDate(apptDate2) : "-", appointment_note_2: apptNote2 || "-", date: new Date().toLocaleDateString('th-TH') }, templateType: 'sticker_appt' }
+                    { data: { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet?.pet_name || '-', hn: pet?.owner_hn || ownerHN, appointment_date_1: apptDate1 ? formatThaiDate(apptDate1, 'appt') : "-", appointment_note_1: apptNote1 || "-", appointment_date_2: apptDate2 ? formatThaiDate(apptDate2, 'appt') : "-", appointment_note_2: apptNote2 || "-", date: new Date().toLocaleDateString('th-TH') }, templateType: 'sticker_appt' }
                 ];
             }));
             const batch = petDataList.flat();
@@ -2545,11 +2551,11 @@
             if (rec.plan)            lines.push(`Plan: ${rec.plan}`);
             if (rec.appointment) {
                 const apptNote = rec.appointment_note ? ` เพื่อ ${rec.appointment_note}` : '';
-                lines.push(`App: ${formatThaiDate(rec.appointment, 'short')}${apptNote}`);
+                lines.push(`App: ${formatThaiDate(rec.appointment, 'appt')}${apptNote}`);
             }
             if (rec.appointment_2) {
                 const apptNote2 = rec.appointment_note_2 ? ` เพื่อ ${rec.appointment_note_2}` : '';
-                lines.push(`App(2): ${formatThaiDate(rec.appointment_2, 'short')}${apptNote2}`);
+                lines.push(`App(2): ${formatThaiDate(rec.appointment_2, 'appt')}${apptNote2}`);
             }
             return lines.join('\n');
         }
