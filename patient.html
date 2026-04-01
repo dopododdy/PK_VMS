@@ -1,81 +1,116 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>PK_VMS – Patient Detail</title>
-  <style>
-    body { font-family: Arial; background:#f4f6f8; margin:0; }
-    .top-nav {
-      background:#fff; padding:10px 20px;
-      border-bottom:1px solid #ddd;
-      display:flex; gap:10px;
-    }
-    .top-nav button {
-      padding:6px 12px; border:none;
-      border-radius:6px; cursor:pointer;
-    }
-    .card {
-      background:#fff; max-width:900px;
-      margin:20px auto; padding:20px;
-      border-radius:10px;
-    }
-    .row {
-      display:grid;
-      grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
-      gap:10px;
-    }
-    .label { font-weight:bold; color:#555; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ค้นหาผู้ป่วย | PK-VMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <style>
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
+        * { font-family: "Sarabun", sans-serif !important; }
+        body { background: var(--navy); color: #e2e8f0; min-height: 100vh; }
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1rem; }
+        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        .pet-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 14px; }
+        .pet-card:hover { border-color: var(--teal); background: rgba(20,184,177,0.07); transform: translateX(4px); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    </style>
 </head>
-<body>
+<body class="p-4 md:p-6">
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; }
+    </script>
 
-<div class="top-nav">
-  <button onclick="history.back()">⬅ Back</button>
-  <button onclick="location.href='index.html'">🏠 Home</button>
-</div>
+    <div class="max-w-3xl mx-auto">
+        <header class="flex items-center gap-4 mb-8">
+            <button onclick="location.href='index.html'" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all text-2xl flex-shrink-0">⬅️</button>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-black text-white">ค้นหาผู้ป่วย</h1>
+                <p class="text-teal-400 text-sm font-bold">ค้นหาจากชื่อสัตว์, ชื่อเจ้าของ หรือรหัส HN</p>
+            </div>
+        </header>
 
-<div class="card">
-  <h2>🐶 ข้อมูลผู้ป่วย</h2>
-  <div class="row">
-    <div><div class="label">OPD</div><div id="opdNo"></div></div>
-    <div><div class="label">ชื่อสัตว์</div><div id="petName"></div></div>
-    <div><div class="label">เพศ</div><div id="sex"></div></div>
-    <div><div class="label">ทำหมัน</div><div id="neuter"></div></div>
-    <div><div class="label">เจ้าของ</div><div id="owner"></div></div>
-    <div><div class="label">โทร</div><div id="phone"></div></div>
-  </div>
+        <div class="mb-6">
+            <input type="text" id="search-input" class="input-box text-lg" placeholder="🔍 ชื่อสัตว์, ชื่อเจ้าของ, รหัส HN..." oninput="handleSearch()" />
+        </div>
 
-  <div class="label">หมายเหตุ</div>
-  <div id="note"></div>
-</div>
+        <div id="result-count" class="text-sm text-gray-500 mb-4"></div>
+        <div id="result-list" class="space-y-3"></div>
+    </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script>
+        let _animals = [], _owners = {};
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyByr7W7FgP6FyNmy7yZw6vccFP7OUweZvc",
-    authDomain: "pk-vms.firebaseapp.com",
-    projectId: "pk-vms"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+        function getAnimalIcon(petType) {
+            if (!petType) return '🐾';
+            const t = petType.replace(/^[^\u0E00-\u0E7F]+/, '').trim();
+            if (t.startsWith('สุนัข') || t.startsWith('หมา')) return '🐶';
+            if (t.startsWith('แมว')) return '🐱';
+            return '🐾';
+        }
 
-  const id = new URLSearchParams(location.search).get("id");
-  if (!id) alert("ไม่พบข้อมูล");
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
 
-  db.collection("patients").doc(id).get().then(doc => {
-    if (!doc.exists) return;
-    const p = doc.data();
-    opdNo.innerText = p.opdNo || "";
-    petName.innerText = p.petName || "";
-    sex.innerText = p.sex || "";
-    neuter.innerText = p.neuterStatus || "";
-    owner.innerText = p.ownerName || "";
-    phone.innerText = p.phone || "";
-    note.innerText = p.importantNote || "";
-  });
-</script>
+        async function loadData() {
+            try {
+                const [animalsRes, ownersRes] = await Promise.all([
+                    window.db.from('animals').select('id, owner_hn, pet_name, pet_type, gender, breed').order('owner_hn', { ascending: false }),
+                    window.db.from('owners').select('hn, owner_name, phone')
+                ]);
+                _animals = animalsRes.data || [];
+                (ownersRes.data || []).forEach(o => { _owners[o.hn] = o; });
+                renderList(_animals);
+            } catch (e) {
+                console.error('โหลดข้อมูลล้มเหลว:', e);
+            }
+        }
 
+        function handleSearch() {
+            const term = document.getElementById('search-input').value.trim().toLowerCase();
+            if (!term) { renderList(_animals); return; }
+            const filtered = _animals.filter(a => {
+                const owner = _owners[a.owner_hn] || {};
+                return (a.pet_name || '').toLowerCase().includes(term)
+                    || (owner.owner_name || '').toLowerCase().includes(term)
+                    || (a.owner_hn || '').toLowerCase().includes(term);
+            });
+            renderList(filtered);
+        }
+
+        function renderList(list) {
+            const el = document.getElementById('result-list');
+            const count = document.getElementById('result-count');
+            count.textContent = list.length ? `พบ ${list.length} รายการ` : '';
+            if (!list.length) {
+                el.innerHTML = '<div class="text-center text-gray-500 py-16">ไม่พบข้อมูล</div>';
+                return;
+            }
+            el.innerHTML = list.slice(0, 100).map(a => {
+                const owner = _owners[a.owner_hn] || {};
+                const icon = getAnimalIcon(a.pet_type);
+                return `<div class="pet-card" onclick="location.href='patient-detail.html?id=${escapeHtml(a.id)}'">
+                    <div class="text-4xl">${icon}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-black text-white text-lg truncate">${escapeHtml(a.pet_name)}</div>
+                        <div class="text-sm text-gray-400 truncate">👤 ${escapeHtml(owner.owner_name || '-')} &nbsp;·&nbsp; HN: ${escapeHtml(a.owner_hn || '-')}</div>
+                        <div class="text-xs text-teal-400 mt-1">${escapeHtml(a.pet_type || '')} ${a.gender ? '· ' + escapeHtml(a.gender) : ''} ${a.breed ? '· ' + escapeHtml(a.breed) : ''}</div>
+                    </div>
+                    <div class="text-gray-600 text-xl">›</div>
+                </div>`;
+            }).join('');
+        }
+
+        loadData();
+    </script>
 </body>
 </html>
