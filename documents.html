@@ -738,6 +738,12 @@
             body.innerHTML = '';
 
             try {
+                // Sync vaccine items from vaccine_catalog (same as medrec.html)
+                const { data: vaccCatalog, error: vaccErr } = await db.from('vaccine_catalog').select('name').order('name');
+                if (!vaccErr && vaccCatalog && vaccCatalog.length > 0) {
+                    DLD_DEF.vaccine.items = vaccCatalog.map(v => v.name);
+                }
+
                 // Fetch all records in the year with non-empty dld_categories
                 const startDate = `${year}-01-01`;
                 const endDate = `${year + 1}-01-01`;
