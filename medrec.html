@@ -657,6 +657,19 @@
         };
 
         function openDldModal() {
+            const hasLab = selectedItems.some(i => i.type === 'Lab');
+            const hasRx = selectedItems.some(i => i.type === 'Rx');
+            const hasTxNotFromVacc = selectedItems.some(i => i.type === 'Tx' && !i.vaccineId);
+            const checkedVaccines = getCheckedVaccines();
+            const isVaccineOnly = checkedVaccines.length > 0 && !hasLab && !hasRx && !hasTxNotFromVacc;
+
+            if (isVaccineOnly) {
+                selectedDldCategories = checkedVaccines.map(v => 'vaccine:' + v.name);
+                activeDldMain = null;
+                saveMedicalRecord();
+                return;
+            }
+
             selectedDldCategories = [];
             activeDldMain = null;
             renderDldButtons();
@@ -1102,6 +1115,7 @@
             flatpickr("#ap-petbirth",    makeBirthPickerConfig("ap-pet-age-y",   "ap-pet-age-m"));
             const { data: vcData } = await db.from('vaccine_catalog').select('*').order('name');
             vaccCatalog = vcData || [];
+            DLD_CATEGORIES.vaccine.items = vaccCatalog.map(v => v.name);
             const [breedsRes, speciesRes] = await Promise.all([
                 db.from('mas_breeds').select('id, name, species_id').order('name'),
                 db.from('mas_species').select('id, name')
