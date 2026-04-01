@@ -1317,7 +1317,7 @@
                     <div class="history-header" onclick="toggleCollapse('${rec.id}')">
                         <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs">🔽</div>
                         <div class="flex flex-col min-w-[120px]">
-                            <span class="text-teal-400 font-black text-sm">${formatThaiDate(rec.created_at, 'short')}</span>
+                            <span class="text-teal-400 font-black text-[1.1rem]">${formatThaiDate(rec.created_at, 'short')}</span>
                             <span class="text-slate-500 text-[10px]">${rec.weight} กก. | ฿${(rec.total_cost || 0).toLocaleString()}</span>
                         </div>
                         
@@ -1339,6 +1339,8 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-b border-white/10 pb-4">
                             <div><span class="data-label">CC</span><div class="data-value">${rec.cc || '-'}</div></div>
                             <div><span class="data-label">Dx</span><div class="data-value text-blue-300 font-bold">${rec.dx || '-'}</div></div>
+                            <div><span class="data-label">Hx</span><div class="data-value">${rec.hx || '-'}</div></div>
+                            <div><span class="data-label">PE</span><div class="data-value">${rec.pe || '-'}</div></div>
                         </div>
 
                         ${vaccNames.length > 0 ? `<div class="py-3 border-b border-white/10"><span class="data-label text-green-400">💉 วัคซีน</span><div class="data-value text-sm text-green-300 mt-1">${vaccNames.map(n => `<span class="inline-block bg-green-900/40 border border-green-500/30 px-2 py-0.5 rounded-lg text-xs font-semibold mr-1 mb-1">${escapeHtml(n)}</span>`).join('')}</div></div>` : ''}
@@ -1365,6 +1367,13 @@
                         <div class="mt-4">
                             <span class="data-label">📌 Plan</span><div class="data-value italic">${rec.plan || '-'}</div>
                         </div>
+                        ${(rec.appointment || rec.appointment_2) ? `<div class="mt-4">
+                            <span class="data-label text-orange-400">📅 App</span>
+                            <div class="data-value">
+                                ${rec.appointment ? `<div>${formatThaiDate(rec.appointment, 'appt')}${rec.appointment_note ? ` เพื่อ ${rec.appointment_note}` : ''}</div>` : ''}
+                                ${rec.appointment_2 ? `<div>${formatThaiDate(rec.appointment_2, 'appt')}${rec.appointment_note_2 ? ` เพื่อ ${rec.appointment_note_2}` : ''}</div>` : ''}
+                            </div>
+                        </div>` : ''}
                         <div class="mt-4 flex justify-end gap-2">
                             <button onclick="event.stopPropagation(); printBlankOPD()" class="bg-green-700 hover:bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">📄 พิมพ์ OPD เปล่า</button>
                             <button onclick="event.stopPropagation(); showOpdPrintModal('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์ประวัติลงกระดาษ</button>
