@@ -321,7 +321,11 @@
         <div class="section-card border-l-8 border-blue-500">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold text-blue-400 flex items-center gap-2">👤 ข้อมูลเจ้าของสัตว์</h3>
-                <button onclick="openEditOwnerModal()" class="btn-base bg-slate-600 hover:bg-slate-500 text-xs">✏️ แก้ไข</button>
+                <div class="flex gap-2">
+                    <button onclick="openAddPetForOwner(ownerHN)" class="btn-base btn-teal text-xs">➕ เพิ่มสัตว์</button>
+                    <button onclick="openEditOwnerModal()" class="btn-base bg-slate-600 hover:bg-slate-500 text-xs">✏️ แก้ไข</button>
+                    <button onclick="deleteOwner(ownerHN)" class="btn-base btn-red text-xs">🗑️ ลบเจ้าของ</button>
+                </div>
             </div>
             <div class="grid grid-cols-12 gap-6">
                 <div class="col-span-12 md:col-span-4"><label class="label-text">ชื่อ-นามสกุล เจ้าของ</label><div id="info-owner-name" class="text-xl font-bold text-white">-</div></div>
@@ -1009,14 +1013,6 @@
             const container = document.getElementById('medrec-owner-list');
             const ownerMap = new Map(_sbOwners.map(o => [o.hn, o]));
 
-            // Group animals by owner_hn
-            const animalsByOwner = new Map();
-            _sbAnimals.forEach(a => {
-                if (!animalsByOwner.has(a.owner_hn)) animalsByOwner.set(a.owner_hn, []);
-                animalsByOwner.get(a.owner_hn).push(a);
-            });
-
-            // All unique owner HNs sorted by selected mode
             const sortMode = document.getElementById('sidebar-sort-medrec')?.value || 'hn_desc';
             let lastVisitByOwner;
             if (sortMode === 'visit_desc') {
@@ -1027,78 +1023,45 @@
                     if ((r.created_at || '') > prev) lastVisitByOwner.set(r.owner_hn, r.created_at || '');
                 });
             }
-            const allHns = [...new Set([
-                ..._sbOwners.map(o => o.hn),
-                ..._sbAnimals.map(a => a.owner_hn)
-            ])].sort((a, b) => {
-                if (sortMode === 'hn_asc') return Number(a) - Number(b);
-                if (sortMode === 'hn_desc') return Number(b) - Number(a);
-                if (sortMode === 'name_az') return (ownerMap.get(a)?.owner_name || '').localeCompare(ownerMap.get(b)?.owner_name || '', 'th');
-                if (sortMode === 'name_za') return (ownerMap.get(b)?.owner_name || '').localeCompare(ownerMap.get(a)?.owner_name || '', 'th');
-                if (sortMode === 'visit_desc') return (lastVisitByOwner.get(b) || '').localeCompare(lastVisitByOwner.get(a) || '');
-                return Number(b) - Number(a); // hn_desc (default)
+
+            let sorted = [..._sbAnimals].sort((a, b) => {
+                if (sortMode === 'hn_asc') return Number(a.owner_hn) - Number(b.owner_hn);
+                if (sortMode === 'hn_desc') return Number(b.owner_hn) - Number(a.owner_hn);
+                if (sortMode === 'name_az') return (ownerMap.get(a.owner_hn)?.owner_name || '').localeCompare(ownerMap.get(b.owner_hn)?.owner_name || '', 'th');
+                if (sortMode === 'name_za') return (ownerMap.get(b.owner_hn)?.owner_name || '').localeCompare(ownerMap.get(a.owner_hn)?.owner_name || '', 'th');
+                if (sortMode === 'visit_desc') return (lastVisitByOwner?.get(b.owner_hn) || '').localeCompare(lastVisitByOwner?.get(a.owner_hn) || '');
+                return Number(b.owner_hn) - Number(a.owner_hn); // hn_desc (default)
             });
 
-            // Filter by search term (show group if any item matches)
-            const visibleHns = !term ? allHns : allHns.filter(hn => {
-                const owner = ownerMap.get(hn);
-                const phones = _sbAllPhonesMap.get(hn) || [];
-                const ownerName = (owner?.owner_name || '').toLowerCase();
-                if (hn.includes(term) || ownerName.includes(term) || phones.some(p => p.includes(term))) return true;
-                const pets = animalsByOwner.get(hn) || [];
-                return pets.some(pet => {
+            if (term) {
+                sorted = sorted.filter(pet => {
+                    const owner = ownerMap.get(pet.owner_hn);
+                    const phones = _sbAllPhonesMap.get(pet.owner_hn) || [];
+                    const ownerName = (owner?.owner_name || '').toLowerCase();
                     const medText = _sbMedTextByAnimalId.get(pet.id) || '';
-                    return pet.pet_name.toLowerCase().includes(term) || medText.includes(term);
+                    return pet.owner_hn.includes(term) || ownerName.includes(term) ||
+                           phones.some(p => p.includes(term)) ||
+                           pet.pet_name.toLowerCase().includes(term) || medText.includes(term);
                 });
-            });
+            }
 
-            container.innerHTML = visibleHns.map(hn => {
-                const owner = ownerMap.get(hn);
-                const p1 = _sbPrimaryPhoneMap.get(hn) || '-';
-                const pets = animalsByOwner.get(hn) || [];
-
-                const ownerHeader = `<div class="owner-group-header">
-                    <div class="hn-col owner-hn-col text-sm">#${escapeHtml(hn)}</div>
-                    <div class="flex flex-col justify-center min-w-0 flex-1 px-1 gap-0.5">
-                        <span class="pet-main-name text-sm truncate">${escapeHtml(owner?.owner_name || '-')}</span>
-                        <span class="phone-badge">📞 ${escapeHtml(p1)}</span>
+            container.innerHTML = sorted.map(pet => {
+                const owner = ownerMap.get(pet.owner_hn);
+                const typeIcon = getAnimalIconSb(pet.pet_type);
+                const isActive = String(pet.id) === String(animalId);
+                return `<div class="pet-card${isActive ? ' active' : ''}" id="sb-pet-${pet.id}" onclick="gotoSidebarAnimal('${pet.id}','${pet.owner_hn}')">
+                    <div class="hn-col text-sm">#${escapeHtml(pet.owner_hn)}</div>
+                    <div class="flex flex-col justify-center min-w-0 px-1 gap-0.5">
+                        <span class="pet-main-name truncate">${escapeHtml(pet.pet_name)}</span>
+                        <span class="owner-subtext truncate">👤 ${escapeHtml(owner?.owner_name || '-')}</span>
                     </div>
-                    <div class="flex gap-1 flex-shrink-0">
-                        <button onclick="event.stopPropagation();openAddPetForOwner('${hn}')" class="sidebar-action-btn teal" title="เพิ่มสัตว์เลี้ยง">➕ เพิ่ม</button>
-                        <button onclick="event.stopPropagation();deleteOwner('${hn}')" class="sidebar-action-btn red" title="ลบเจ้าของ">🗑️</button>
-                    </div>
+                    ${isActive
+                        ? `<div class="flex flex-col gap-1 items-end justify-center pr-1">
+                            <button onclick="event.stopPropagation();openEditAnimalModal()" class="sidebar-action-btn teal">✏️ แก้ไข</button>
+                            <button onclick="event.stopPropagation();deleteAnimal()" class="sidebar-action-btn red">🗑️ ลบ</button>
+                        </div>`
+                        : `<div class="flex items-center justify-end text-xl pr-1">${typeIcon}</div>`}
                 </div>`;
-
-                let petCards = '';
-                if (pets.length === 0) {
-                    petCards = `<div class="pet-card" onclick="openAddPetForOwner('${hn}')">
-                        <div class="hn-col text-xl">➕</div>
-                        <div class="flex flex-col justify-center min-w-0 px-1 gap-0.5">
-                            <span class="pet-main-name truncate text-slate-400 text-sm">ยังไม่มีสัตว์เลี้ยง</span>
-                            <span class="owner-subtext">คลิกเพื่อเพิ่มสัตว์</span>
-                        </div>
-                        <div></div>
-                    </div>`;
-                } else {
-                    petCards = pets.map(pet => {
-                        const typeIcon = getAnimalIconSb(pet.pet_type);
-                        const isActive = String(pet.id) === String(animalId);
-                        return `<div class="pet-card${isActive ? ' active' : ''}" id="sb-pet-${pet.id}" onclick="gotoSidebarAnimal('${pet.id}','${pet.owner_hn}')">
-                            <div class="hn-col text-xl">${typeIcon}</div>
-                            <div class="flex flex-col justify-center min-w-0 px-1 gap-0.5">
-                                <span class="pet-main-name truncate">${escapeHtml(pet.pet_name)}</span>
-                            </div>
-                            ${isActive
-                                ? `<div class="flex flex-col gap-1 items-end justify-center pr-1">
-                                    <button onclick="event.stopPropagation();openEditAnimalModal()" class="sidebar-action-btn teal">✏️ แก้ไข</button>
-                                    <button onclick="event.stopPropagation();deleteAnimal()" class="sidebar-action-btn red">🗑️ ลบ</button>
-                                </div>`
-                                : `<div class="flex items-center justify-end text-xl pr-1">${typeIcon}</div>`}
-                        </div>`;
-                    }).join('');
-                }
-
-                return ownerHeader + petCards;
             }).join('');
             container.scrollTop = 0;
         }
