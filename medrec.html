@@ -1108,6 +1108,28 @@
             ]);
             masterBreeds = breedsRes.data || [];
             masterSpecies = speciesRes.data || [];
+            // Auto-add/remove vaccine to Tx when checkbox is checked/unchecked
+            const vacCbContainer = document.getElementById('vaccine-checkbox-list');
+            if (vacCbContainer) {
+                vacCbContainer.addEventListener('change', function(e) {
+                    if (!e.target.classList.contains('vaccine-cb')) return;
+                    const cb = e.target;
+                    const vaccId = cb.value;
+                    const vaccName = cb.dataset.name;
+                    const vaccPrice = parseFloat(cb.dataset.price) || 0;
+                    if (cb.checked) {
+                        addItem('Tx', vaccName, vaccPrice, { vaccineId: vaccId });
+                    } else {
+                        const idx = selectedItems.findIndex(i => i.type === 'Tx' && i.vaccineId === vaccId);
+                        if (idx !== -1) {
+                            document.getElementById('f_cost').value = (parseFloat(document.getElementById('f_cost').value) - selectedItems[idx].price).toFixed(2);
+                            selectedItems.splice(idx, 1);
+                            updateFormUI();
+                            updateModalUI();
+                        }
+                    }
+                });
+            }
             if (!animalId || !ownerHN) {
                 showWelcomeState();
                 loadSidebarData();
@@ -2008,7 +2030,7 @@
                 const checked = checkedIds.includes(v.id) ? 'checked' : '';
                 const disease = v.prevents_disease ? ` <span class="text-gray-400 text-xs">(${escapeHtml(v.prevents_disease)})</span>` : '';
                 return `<label class="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg bg-white/5 hover:bg-green-900/30 border border-white/10 hover:border-green-500/40 transition-colors">
-                    <input type="checkbox" class="vaccine-cb" value="${escapeHtml(v.id)}" data-name="${escapeHtml(v.name)}" ${checked}>
+                    <input type="checkbox" class="vaccine-cb" value="${escapeHtml(v.id)}" data-name="${escapeHtml(v.name)}" data-price="${parseFloat(v.price) || 0}" ${checked}>
                     <span class="text-sm font-semibold text-green-300">${escapeHtml(v.name)}</span>${disease}
                 </label>`;
             }).join('');

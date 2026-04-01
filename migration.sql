@@ -462,6 +462,7 @@ CREATE TABLE IF NOT EXISTS public.vaccine_catalog (
     for_dog BOOLEAN NOT NULL DEFAULT true,
     for_cat BOOLEAN NOT NULL DEFAULT false,
     prevents_disease TEXT,
+    price NUMERIC(10,2) DEFAULT 0,
     image_data TEXT,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
