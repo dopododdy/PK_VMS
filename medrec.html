@@ -264,6 +264,25 @@
             #medrec-content { padding: 1rem; min-height: 100vh; overflow-y: auto; }
             #form-view-container:not(.view-hidden) { left: 0; }
         }
+        /* ─── Appointment Mini Calendar ─── */
+        #sb-appt-calendar { background: #0f172a; padding: 10px 12px 8px; }
+        .sb-cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .sb-cal-title { font-weight: 800; font-size: 0.85rem; color: #e2e8f0; }
+        .sb-cal-nav { background: rgba(255,255,255,0.07); border: none; color: #94a3b8; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
+        .sb-cal-nav:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .sb-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .sb-cal-dow { text-align: center; font-size: 0.65rem; font-weight: 700; color: #475569; padding: 2px 0 4px; }
+        .sb-cal-day { position: relative; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 6px; cursor: pointer; transition: 0.15s; font-size: 0.75rem; font-weight: 600; color: #94a3b8; }
+        .sb-cal-day:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .sb-cal-day.empty { cursor: default; }
+        .sb-cal-day.empty:hover { background: transparent; }
+        .sb-cal-day.today { color: #fb923c; font-weight: 900; }
+        .sb-cal-day.selected { background: rgba(251,146,60,0.25); color: #fb923c; font-weight: 900; border: 1px solid rgba(251,146,60,0.5); }
+        .sb-cal-day.has-appt { color: #fff; }
+        .sb-cal-count { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); background: #fb923c; color: #020617; font-size: 0.55rem; font-weight: 900; border-radius: 999px; min-width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0 3px; }
+        .sb-cal-day.selected .sb-cal-count { background: #fff; color: #ea580c; }
+        .sb-cal-today-btn { display: block; width: 100%; margin-top: 8px; padding: 4px 0; text-align: center; background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.25); border-radius: 6px; color: #fb923c; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
+        .sb-cal-today-btn:hover { background: rgba(251,146,60,0.25); }
     </style>
 </head>
 <body>
@@ -298,6 +317,7 @@
                 <button id="mtab-all" onclick="switchMedrecTab('all')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-teal-500/20 text-teal-400 border border-teal-500/30">📋 เวชระเบียน</button>
                 <button id="mtab-today" onclick="switchMedrecTab('today')" class="flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent relative">📅 นัดหมายวันนี้<span id="mtab-today-badge" class="hidden absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-xs font-black rounded-full w-5 h-5 flex items-center justify-center"></span></button>
             </div>
+            <div id="sb-appt-calendar" style="display:none"></div>
             <div id="medrec-owner-list" class="flex-1 overflow-y-auto px-2 pb-2 custom-scroll"></div>
             <div id="sidebar-animal-actions" class="px-4 pt-3 pb-2 flex-shrink-0 border-t border-white/5" style="display:none">
                 <div class="flex gap-2">
@@ -857,6 +877,9 @@
         let _sbCurrentTab = 'all';
         let _sbReloadTimer = null;
         let _sbRealtimeChannel = null;
+        let _sbSelectedApptDate = '';   // YYYY-MM-DD currently selected in calendar
+        let _sbCalendarYear = 0;        // year displayed in calendar
+        let _sbCalendarMonth = 0;       // 0-based month displayed in calendar
 
         function toggleMedrecSidebar() {
             const sb = document.getElementById('main-sidebar-medrec');
@@ -961,33 +984,102 @@
             else { badge.classList.add('hidden'); }
         }
 
+        function renderApptCalendar() {
+            const calEl = document.getElementById('sb-appt-calendar');
+            if (!calEl) return;
+            const year = _sbCalendarYear, month = _sbCalendarMonth;
+            const today = getTodayStrSb();
+            const thMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+            const thDays = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+            // Build appointment count per date for this month
+            const countMap = new Map();
+            _sbMedRecs.forEach(r => {
+                [r.appointment, r.appointment_2].forEach(d => {
+                    if (!d) return;
+                    if (!countMap.has(d)) countMap.set(d, new Set());
+                    countMap.get(d).add(r.animal_id);
+                });
+            });
+            const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const pad = n => String(n).padStart(2,'0');
+            const monthStr = `${year}-${pad(month+1)}`;
+            let daysHTML = '';
+            for (let i = 0; i < firstDay; i++) daysHTML += `<div class="sb-cal-day empty"></div>`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${monthStr}-${pad(d)}`;
+                const cnt = countMap.has(dateStr) ? countMap.get(dateStr).size : 0;
+                const isToday = dateStr === today;
+                const isSelected = dateStr === _sbSelectedApptDate;
+                let cls = 'sb-cal-day';
+                if (isToday) cls += ' today';
+                if (isSelected) cls += ' selected';
+                if (cnt > 0) cls += ' has-appt';
+                daysHTML += `<div class="${cls}" onclick="selectApptCalendarDate('${dateStr}')">${d}${cnt > 0 ? `<span class="sb-cal-count">${cnt}</span>` : ''}</div>`;
+            }
+            const dowHeader = thDays.map(d => `<div class="sb-cal-dow">${d}</div>`).join('');
+            const showTodayBtn = _sbSelectedApptDate !== today;
+            calEl.innerHTML = `
+                <div class="sb-cal-header">
+                    <button class="sb-cal-nav" onclick="moveApptCalendar(-1)">‹</button>
+                    <span class="sb-cal-title">${thMonths[month]} ${year + 543}</span>
+                    <button class="sb-cal-nav" onclick="moveApptCalendar(1)">›</button>
+                </div>
+                <div class="sb-cal-grid">${dowHeader}${daysHTML}</div>
+                ${showTodayBtn ? `<button class="sb-cal-today-btn" onclick="selectApptCalendarDate('${today}')">📅 ไปวันนี้</button>` : ''}
+            `;
+        }
+
+        function moveApptCalendar(dir) {
+            _sbCalendarMonth += dir;
+            if (_sbCalendarMonth < 0) { _sbCalendarMonth = 11; _sbCalendarYear--; }
+            else if (_sbCalendarMonth > 11) { _sbCalendarMonth = 0; _sbCalendarYear++; }
+            renderApptCalendar();
+        }
+
+        function selectApptCalendarDate(dateStr) {
+            _sbSelectedApptDate = dateStr;
+            _sbCalendarYear = parseInt(dateStr.slice(0,4));
+            _sbCalendarMonth = parseInt(dateStr.slice(5,7)) - 1;
+            renderApptCalendar();
+            renderMedrecSidebarToday();
+        }
+
         function switchMedrecTab(tab) {
             _sbCurrentTab = tab;
             const searchBox = document.getElementById('sidebar-search-medrec');
+            const calEl = document.getElementById('sb-appt-calendar');
             const tabAll = document.getElementById('mtab-all');
             const tabToday = document.getElementById('mtab-today');
             if (tab === 'all') {
                 tabAll.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-teal-500/20 text-teal-400 border border-teal-500/30';
                 tabToday.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent relative';
                 if (searchBox) searchBox.style.display = '';
+                if (calEl) calEl.style.display = 'none';
                 renderMedrecSidebar();
             } else {
                 tabAll.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent';
                 tabToday.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-orange-500/20 text-orange-400 border border-orange-500/30 relative';
                 if (searchBox) searchBox.style.display = 'none';
+                if (calEl) calEl.style.display = '';
+                const today = getTodayStrSb();
+                if (!_sbSelectedApptDate) _sbSelectedApptDate = today;
+                if (!_sbCalendarYear) { _sbCalendarYear = parseInt(today.slice(0,4)); _sbCalendarMonth = parseInt(today.slice(5,7)) - 1; }
+                renderApptCalendar();
                 renderMedrecSidebarToday();
             }
         }
 
         function renderMedrecSidebarToday() {
             const today = getTodayStrSb();
+            const selectedDate = _sbSelectedApptDate || today;
             const container = document.getElementById('medrec-owner-list');
             const ownerMap = new Map(_sbOwners.map(o => [o.hn, o]));
             const animalApptMap = new Map();
             _sbMedRecs.forEach(r => {
                 const notes = [];
-                if (r.appointment === today) notes.push(r.appointment_note || 'นัดหมาย');
-                if (r.appointment_2 === today) notes.push(r.appointment_note_2 || 'นัดหมาย');
+                if (r.appointment === selectedDate) notes.push(r.appointment_note || 'นัดหมาย');
+                if (r.appointment_2 === selectedDate) notes.push(r.appointment_note_2 || 'นัดหมาย');
                 if (!notes.length) return;
                 if (!animalApptMap.has(r.animal_id)) animalApptMap.set(r.animal_id, new Set());
                 notes.forEach(n => animalApptMap.get(r.animal_id).add(n));
@@ -995,7 +1087,8 @@
             const animalsWithAppt = _sbAnimals.filter(a => animalApptMap.has(a.id))
                 .sort((a, b) => Number(b.owner_hn) - Number(a.owner_hn));
             if (!animalsWithAppt.length) {
-                container.innerHTML = `<div class="text-center text-slate-500 py-12 px-4"><div class="text-4xl mb-3">📅</div><div class="font-bold">ไม่มีนัดหมายวันนี้</div></div>`;
+                const isToday = selectedDate === today;
+                container.innerHTML = `<div class="text-center text-slate-500 py-12 px-4"><div class="text-4xl mb-3">📅</div><div class="font-bold">ไม่มีนัดหมาย${isToday ? 'วันนี้' : 'วันที่เลือก'}</div></div>`;
                 return;
             }
             container.innerHTML = animalsWithAppt.map(animal => {
@@ -1017,7 +1110,7 @@
         }
 
         function renderMedrecSidebar() {
-            if (_sbCurrentTab === 'today') { renderMedrecSidebarToday(); return; }
+            if (_sbCurrentTab === 'today') { renderApptCalendar(); renderMedrecSidebarToday(); return; }
             const term = (document.getElementById('sidebar-search-medrec')?.value || '').toLowerCase();
             const container = document.getElementById('medrec-owner-list');
             const ownerMap = new Map(_sbOwners.map(o => [o.hn, o]));
