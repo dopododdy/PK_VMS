@@ -878,8 +878,8 @@
         let _sbReloadTimer = null;
         let _sbRealtimeChannel = null;
         let _sbSelectedApptDate = '';   // YYYY-MM-DD currently selected in calendar
-        let _sbCalendarYear = 0;        // year displayed in calendar
-        let _sbCalendarMonth = 0;       // 0-based month displayed in calendar
+        let _sbCalendarYear = null;     // year displayed in calendar
+        let _sbCalendarMonth = null;    // 0-based month displayed in calendar
 
         function toggleMedrecSidebar() {
             const sb = document.getElementById('main-sidebar-medrec');
@@ -1045,6 +1045,12 @@
             renderMedrecSidebarToday();
         }
 
+        function initCalendarToToday() {
+            const today = getTodayStrSb();
+            if (!_sbSelectedApptDate) _sbSelectedApptDate = today;
+            if (_sbCalendarYear === null) { _sbCalendarYear = parseInt(today.slice(0,4)); _sbCalendarMonth = parseInt(today.slice(5,7)) - 1; }
+        }
+
         function switchMedrecTab(tab) {
             _sbCurrentTab = tab;
             const searchBox = document.getElementById('sidebar-search-medrec');
@@ -1062,9 +1068,7 @@
                 tabToday.className = 'flex-1 py-2 rounded-xl font-bold text-sm transition-all bg-orange-500/20 text-orange-400 border border-orange-500/30 relative';
                 if (searchBox) searchBox.style.display = 'none';
                 if (calEl) calEl.style.display = '';
-                const today = getTodayStrSb();
-                if (!_sbSelectedApptDate) _sbSelectedApptDate = today;
-                if (!_sbCalendarYear) { _sbCalendarYear = parseInt(today.slice(0,4)); _sbCalendarMonth = parseInt(today.slice(5,7)) - 1; }
+                initCalendarToToday();
                 renderApptCalendar();
                 renderMedrecSidebarToday();
             }
