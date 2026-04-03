@@ -26,6 +26,8 @@
         .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
         .flatpickr-input.input-box[readonly] { cursor: pointer; }
         .flatpickr-day.nextMonthDay, .flatpickr-day.prevMonthDay { visibility: hidden; pointer-events: none; }
+        .flatpickr-current-month .numInputWrapper[data-be-year] .cur-year { color: transparent; caret-color: transparent; }
+        .flatpickr-current-month .numInputWrapper[data-be-year]::before { content: attr(data-be-year); position: absolute; top: 0; right: 14px; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; color: inherit; font-size: inherit; font-weight: 300; padding-left: 0.5ch; }
         /* ─── Appointment shortcut buttons ─── */
         .appt-shortcut-btn { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.35); border-radius: 6px; padding: 2px 7px; font-size: 0.72rem; font-weight: 800; cursor: pointer; transition: background 0.15s; }
         .appt-shortcut-btn:hover { background: rgba(249,115,22,0.35); }
@@ -763,10 +765,11 @@
 
         function updateCalendarYearToBE(instance) {
             if (!instance.calendarContainer) return;
-            instance.calendarContainer.querySelectorAll('.cur-year').forEach((yearInput, i) => {
+            instance.calendarContainer.querySelectorAll('.numInputWrapper').forEach((wrapper, i) => {
+                if (!wrapper.querySelector('.cur-year')) return;
                 let y = instance.currentYear;
                 if (i > 0 && (instance.currentMonth + i) > 11) y += 1;
-                yearInput.value = y + 543;
+                wrapper.setAttribute('data-be-year', y + 543);
             });
         }
 
