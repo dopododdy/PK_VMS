@@ -66,7 +66,54 @@
         .col-tx { color: #f472b6; }
         .col-rx { color: #34d399; }
 
-        @media print { #main-ui, .modal-overlay { display: none !important; } }
+        @media print { #main-ui, .modal-overlay, #fixed-bottom-bar { display: none !important; } }
+
+        /* ─── Fixed bottom info bar ─── */
+        #fixed-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 300px;
+            right: 0;
+            z-index: 50;
+            background: #0a1628;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 0;
+            padding: 0 16px;
+            height: 38px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+        }
+        .fb-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 0 14px;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            height: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .fb-item:first-child { padding-left: 0; }
+        .fb-item:last-child { border-right: none; flex: 1; min-width: 0; }
+        .fb-label {
+            color: #64748b;
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            flex-shrink: 0;
+        }
+        .fb-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        @media (max-width: 767px) {
+            #fixed-bottom-bar { left: 0; gap: 0; padding: 0 8px; }
+            .fb-item { padding: 0 8px; }
+        }
 
         /* ─── Responsive fixes ─── */
         @media (max-width: 767px) {
@@ -330,7 +377,7 @@
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto p-4 md:p-10 bg-[#020617] custom-scroll" id="medrec-content">
+        <main class="flex-1 overflow-y-auto p-4 md:p-10 bg-[#020617] custom-scroll" id="medrec-content" style="padding-bottom: calc(2.5rem + 38px);">
     <div id="welcome-state" class="h-full flex flex-col items-center justify-center opacity-30" style="display:none">
         <div class="text-9xl mb-4">🐾</div>
         <h3 class="text-3xl font-bold text-white">เลือกสัตว์จากรายการด้านซ้าย</h3>
@@ -1335,6 +1382,14 @@
                 const vPetBreed = document.getElementById('v-pet-breed'); if (vPetBreed) vPetBreed.innerText = pet.breed || '-';
                 const vPetBirth = document.getElementById('v-pet-birth'); if (vPetBirth) vPetBirth.innerText = pet.birth_date ? formatThaiDate(pet.birth_date) + ' (อายุ ' + calcPetAge(pet.birth_date) + ')' : '-';
                 const vPetMicrochip = document.getElementById('v-pet-microchip'); if (vPetMicrochip) vPetMicrochip.innerText = pet.microchip_number || '-';
+
+                // ─── Sync fixed bottom bar ───
+                const fbOwnerName = document.getElementById('fb-owner-name'); if (fbOwnerName) fbOwnerName.innerText = owner.owner_name;
+                const fbOwnerPhone = document.getElementById('fb-owner-phone'); if (fbOwnerPhone) fbOwnerPhone.innerText = primaryPhone?.phone_number || '-';
+                const fbPetName = document.getElementById('fb-pet-name'); if (fbPetName) fbPetName.innerText = pet.pet_name;
+                const fbPetWeight = document.getElementById('fb-pet-weight'); if (fbPetWeight) fbPetWeight.innerText = pet.weight || '0';
+                const fbPetType = document.getElementById('fb-pet-type'); if (fbPetType) fbPetType.innerText = pet.pet_type || '-';
+                const fbPetGender = document.getElementById('fb-pet-gender'); if (fbPetGender) fbPetGender.innerText = pet.gender || '-';
 
                 // Load historical medrec from clinic_table_db
                 const { data: clinicData } = await db.from('clinic_table_db')
@@ -3548,6 +3603,35 @@
             </div>
         </div>
     </div>
+
+<!-- ─── Fixed bottom info bar ─── -->
+<div id="fixed-bottom-bar">
+    <div class="fb-item">
+        <span class="fb-label">เจ้าของ</span>
+        <span id="fb-owner-name" class="fb-value" style="color:#e2e8f0;">-</span>
+    </div>
+    <div class="fb-item">
+        <span class="fb-label">โทร</span>
+        <span id="fb-owner-phone" class="fb-value" style="color:#14b8b1;">-</span>
+    </div>
+    <div class="fb-item">
+        <span class="fb-label">ชื่อสัตว์</span>
+        <span id="fb-pet-name" class="fb-value" style="color:#e2e8f0;">-</span>
+    </div>
+    <div class="fb-item">
+        <span class="fb-label">น้ำหนัก</span>
+        <span id="fb-pet-weight" class="fb-value" style="color:#facc15;">-</span>
+        <span style="color:#64748b; font-size:0.72rem; font-weight:700; flex-shrink:0;">กก.</span>
+    </div>
+    <div class="fb-item">
+        <span class="fb-label">ชนิด</span>
+        <span id="fb-pet-type" class="fb-value" style="color:#14b8b1;">-</span>
+    </div>
+    <div class="fb-item">
+        <span class="fb-label">เพศ</span>
+        <span id="fb-pet-gender" class="fb-value" style="color:#93c5fd;">-</span>
+    </div>
+</div>
 
 </body>
 </html>
