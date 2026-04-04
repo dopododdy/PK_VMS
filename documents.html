@@ -1777,7 +1777,10 @@ ${tableHtml}
                 echo_treatment: document.getElementById('echo-treatment')?.value || '-',
                 echo_note: document.getElementById('echo-note')?.value || '-',
                 // หัตถการของสัตว์ทุกตัวที่เลือก (แต่ละตัวขึ้นบรรทัดใหม่)
-                allpetprocedures: Array.from(document.querySelectorAll('.surgery-input')).map(i => `${i.dataset.petName}: ${i.value || '-'}`).join('\n'),
+                allpetprocedures: Array.from(document.querySelectorAll('.surgery-input')).map(i => {
+                    const procs = (i.value || '-').split(',').map(p => p.trim()).filter(p => p);
+                    return `${i.dataset.petName}:\n` + procs.map(p => `- ${p}`).join('\n');
+                }).join('\n'),
             };
 
             const printContent = config.lines.map(l => {
@@ -1890,7 +1893,10 @@ if (activeDocType === 'doc_consent') {
             const _now = new Date();
             const surgeryInputs = document.querySelectorAll('.surgery-input');
             const petSurgeries = Array.from(surgeryInputs).map(i => ({ name: i.dataset.petName, surgery: i.value || '-' }));
-            const petSurgeryList = petSurgeries.map(ps => `${ps.name}: ${ps.surgery}`).join('\n');
+            const petSurgeryList = petSurgeries.map(ps => {
+                const procs = (ps.surgery || '-').split(',').map(p => p.trim()).filter(p => p);
+                return `${ps.name}:\n` + procs.map(p => `- ${p}`).join('\n');
+            }).join('\n');
             const firstPetId = Array.from(selectedPetIds)[0];
             const firstPet = ownerPets.find(p => p.id.toString() === firstPetId.toString());
             const dataMap = {
