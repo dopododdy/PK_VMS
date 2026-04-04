@@ -167,13 +167,6 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .preset-btn {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
-            background: rgba(20,184,177,0.12); border: 1px solid rgba(20,184,177,0.3);
-            color: #5eead4; cursor: pointer; transition: 0.2s; white-space: nowrap;
-        }
-        .preset-btn:hover { background: rgba(20,184,177,0.25); border-color: rgba(20,184,177,0.6); }
         @media (max-width: 767px) {
             #fixed-bottom-bar { left: 0; padding: 0 8px; }
             .fb-item { padding: 0 8px; }
@@ -307,18 +300,21 @@
         const CLINIC_NAME = "PK-VMS Animal Clinic";
         const CLINIC_ADDRESS = "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000";
 
-        const COMMON_PROCEDURES = [
-            'วางยาสลบ', 'ทำหมันเมีย', 'ตอน (เพศผู้)', 
-            'ฉีดวัคซีนรวม - แมว', 'ฉีดวัคซีนรวม - สุนัข', 
-            'ฉีดยา Convenia', 'ขูดหินปูน', 'ผ่าตัดเนื้องอก', 'ผ่าตัดหน้าท้อง'
-        ];
-
-        const CONSENT_PRESETS = [
-            { label: '🐱♂️ แมวผู้',   species: 'แมว',    genders: ['ผู้','ผู้ตอน'], text: 'ตอน (เพศผู้), ฉีดวัคซีนรวมแมว + พิษสุนัขบ้า, ฉีดยา Convenia, ขูดหินปูน' },
-            { label: '🐱♀️ แมวเมีย',  species: 'แมว',    genders: ['เมีย','เมียหมัน'], text: 'ทำหมันเมีย, ฉีดวัคซีนรวมแมว + พิษสุนัขบ้า, ฉีดยา Convenia, ขูดหินปูน' },
-            { label: '🐶♂️ สุนัขผู้',  species: 'สุนัข',  genders: ['ผู้','ผู้ตอน'], text: 'ตอน (เพศผู้), ฉีดวัคซีนรวมสุนัข + พิษสุนัขบ้า, ฉีดยา Convenia, ขูดหินปูน' },
-            { label: '🐶♀️ สุนัขเมีย', species: 'สุนัข',  genders: ['เมีย','เมียหมัน'], text: 'ทำหมันเมีย, ฉีดวัคซีนรวมสุนัข + พิษสุนัขบ้า, ฉีดยา Convenia, ขูดหินปูน' },
-        ];
+        function getPresetProcedures(pet) {
+            const isMale = pet.gender === 'ผู้' || pet.gender === 'ผู้ตอน';
+            const isFemale = pet.gender.includes('เมีย');
+            if (pet.pet_type === 'สุนัข') {
+                const vaccine = 'ฉีดวัคซีนรวมสุนัข + พิษสุนัขบ้า';
+                if (isMale) return ['ตอน (เพศผู้)', vaccine, 'ฉีดยา Convenia', 'ขูดหินปูน'];
+                if (isFemale) return ['ทำหมันเมีย', vaccine, 'ฉีดยา Convenia', 'ขูดหินปูน'];
+            }
+            if (pet.pet_type === 'แมว') {
+                const vaccine = 'ฉีดวัคซีนรวมแมว + พิษสุนัขบ้า';
+                if (isMale) return ['ตอน (เพศผู้)', vaccine, 'ฉีดยา Convenia', 'ขูดหินปูน'];
+                if (isFemale) return ['ทำหมันเมีย', vaccine, 'ฉีดยา Convenia', 'ขูดหินปูน'];
+            }
+            return ['วางยาสลบ', 'ฉีดยา Convenia', 'ขูดหินปูน', 'ผ่าตัดเนื้องอก', 'ผ่าตัดหน้าท้อง'];
+        }
 
         window.onload = async () => { 
             lucide.createIcons(); 
@@ -1145,13 +1141,7 @@ ${tableHtml}
                 const pet = ownerPets.find(p => p.id.toString() === id.toString());
                 if (!pet) return;
 
-                const filteredOptions = COMMON_PROCEDURES.filter(opt => {
-                    if (pet.gender.includes('เมีย') && opt.includes('ตอน (เพศผู้)')) return false;
-                    if ((pet.gender === 'ผู้' || pet.gender === 'ผู้ตอน') && opt.includes('ทำหมันเมีย')) return false;
-                    if (pet.pet_type === 'แมว' && opt.includes('สุนัข')) return false;
-                    if (pet.pet_type === 'สุนัข' && opt.includes('แมว')) return false;
-                    return true;
-                });
+                const presetOptions = getPresetProcedures(pet);
 
                 html += `
                     <div class="bg-white/5 p-5 rounded-3xl border border-white/5 space-y-4">
@@ -1159,19 +1149,10 @@ ${tableHtml}
                             <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type} / ${pet.gender})</div>
                             <button onclick="printCageLabel('${pet.id}')" class="bg-sky-700 hover:bg-sky-600 px-4 py-2 rounded-xl font-black text-sm flex items-center gap-2 transition-all">🏷️ ใบติดกรง</button>
                         </div>
-                        <div>
-                            <div class="text-[10px] font-black text-gray-500 uppercase tracking-[0.15em] mb-2">⚡ Preset</div>
-                            <div class="flex flex-wrap gap-2 mb-3">
-                                ${CONSENT_PRESETS.map(p => `
-                                    <button class="preset-btn" data-pet-id="${pet.id}" data-preset-text="${escapeHtml(p.text)}" onclick="applyConsentPreset(this.dataset.petId, this.dataset.presetText)">
-                                        ${p.label}
-                                    </button>`).join('')}
-                            </div>
-                        </div>
                         <div class="flex flex-wrap gap-2">
-                            ${filteredOptions.map(opt => `
-                                <label class="check-pill" id="label-${pet.id}-${opt}">
-                                    <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${opt}" class="p-opt-${pet.id}"> ${opt}
+                            ${presetOptions.map((opt, i) => `
+                                <label class="check-pill" id="label-${pet.id}-${i}">
+                                    <input type="checkbox" onchange="syncSurgeryText('${pet.id}')" value="${escapeHtml(opt)}" class="p-opt-${pet.id}"> ${opt}
                                 </label>`).join('')}
                         </div>
                         <div class="relative">
@@ -1192,13 +1173,6 @@ ${tableHtml}
             document.querySelectorAll(`[id^="label-${petId}"]`).forEach(l => l.classList.remove('active'));
             checks.forEach(c => c.parentElement.classList.add('active'));
             textbox.value = selectedValues.join(', ');
-        }
-
-        function applyConsentPreset(petId, text) {
-            const textbox = document.getElementById(`text-${petId}`);
-            if (textbox) textbox.value = text;
-            // Uncheck all checkboxes for this pet
-            document.querySelectorAll(`.p-opt-${petId}`).forEach(c => { c.checked = false; c.parentElement.classList.remove('active'); });
         }
 
         async function refreshLabPicker() {
