@@ -116,7 +116,67 @@
             aside, nav { display: none !important; }
             #dld-report-container { display: block !important; }
             #editor-container, #no-selection { display: none !important; }
+            #fixed-bottom-bar { display: none !important; }
             body { overflow: auto; }
+        }
+
+        .label-text { color: #94a3b8; font-size: 1rem; margin-bottom: 4px; display: block; font-weight: 600; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; width: 100%; max-width: 600px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* ─── Fixed bottom info bar ─── */
+        #fixed-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 380px;
+            right: 0;
+            z-index: 50;
+            background: #0a1628;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: none;
+            align-items: center;
+            gap: 0;
+            padding: 0 16px;
+            height: 44px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+        }
+        #fixed-bottom-bar.visible { display: flex; }
+        .fb-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 0 14px;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            height: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .fb-item:first-child { padding-left: 0; }
+        .fb-item:last-child { border-right: none; }
+        .fb-label {
+            color: #64748b;
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            flex-shrink: 0;
+        }
+        .fb-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .preset-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+            background: rgba(20,184,177,0.12); border: 1px solid rgba(20,184,177,0.3);
+            color: #5eead4; cursor: pointer; transition: 0.2s; white-space: nowrap;
+        }
+        .preset-btn:hover { background: rgba(20,184,177,0.25); border-color: rgba(20,184,177,0.6); }
+        @media (max-width: 767px) {
+            #fixed-bottom-bar { left: 0; padding: 0 8px; }
+            .fb-item { padding: 0 8px; }
         }
     </style>
 </head>
@@ -253,6 +313,13 @@
             'ฉีดยา Convenia', 'ขูดหินปูน', 'ผ่าตัดเนื้องอก', 'ผ่าตัดหน้าท้อง'
         ];
 
+        const CONSENT_PRESETS = [
+            { label: '🐱♂️ แมวผู้',   species: 'แมว',    genders: ['ผู้','ผู้ตอน'], text: 'ตอน (เพศผู้), ฉีดวัคซีนรวมแมว + พิษสุนัขบ้า, ฉีดยา Convenia, ขูดหินปูน' },
+            { label: '🐱♀️ แมวเมีย',  species: 'แมว',    genders: ['เมีย','เมียหมัน'], text: 'ทำหมันเมีย, ฉีดวัคซีนรวมแมว + พิษสุนัขบ้า, ฉีดยา Convenia, ขูดหินปูน' },
+            { label: '🐶♂️ สุนัขผู้',  species: 'สุนัข',  genders: ['ผู้','ผู้ตอน'], text: 'ตอน (เพศผู้), ฉีดวัคซีนรวมสุนัข + พิษสุนัขบ้า, ฉีดยา Convenia, ขูดหินปูน' },
+            { label: '🐶♀️ สุนัขเมีย', species: 'สุนัข',  genders: ['เมีย','เมียหมัน'], text: 'ทำหมันเมีย, ฉีดวัคซีนรวมสุนัข + พิษสุนัขบ้า, ฉีดยา Convenia, ขูดหินปูน' },
+        ];
+
         window.onload = async () => { 
             lucide.createIcons(); 
             const urlParams = new URLSearchParams(window.location.search);
@@ -327,6 +394,15 @@
             document.getElementById('no-selection').classList.add('hidden');
             document.getElementById('editor-container').classList.remove('hidden');
             document.getElementById('owner-info').innerText = `เจ้าของ: ${owner.owner_name} | HN: ${owner.hn}`;
+
+            // Show fixed bottom bar
+            const bar = document.getElementById('fixed-bottom-bar');
+            if (bar) {
+                bar.classList.add('visible');
+                document.getElementById('fb-owner-name').textContent = owner.owner_name || '-';
+                document.getElementById('fb-owner-phone').textContent = currentOwner.phone || '-';
+            }
+
             renderPetList();
             switchDocType(activeDocType);
         }
@@ -1083,6 +1159,15 @@ ${tableHtml}
                             <div class="text-white font-black">🐾 ${pet.pet_name} (${pet.pet_type} / ${pet.gender})</div>
                             <button onclick="printCageLabel('${pet.id}')" class="bg-sky-700 hover:bg-sky-600 px-4 py-2 rounded-xl font-black text-sm flex items-center gap-2 transition-all">🏷️ ใบติดกรง</button>
                         </div>
+                        <div>
+                            <div class="text-[10px] font-black text-gray-500 uppercase tracking-[0.15em] mb-2">⚡ Preset</div>
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                ${CONSENT_PRESETS.map(p => `
+                                    <button class="preset-btn" data-pet-id="${pet.id}" data-preset-text="${escapeHtml(p.text)}" onclick="applyConsentPreset(this.dataset.petId, this.dataset.presetText)">
+                                        ${p.label}
+                                    </button>`).join('')}
+                            </div>
+                        </div>
                         <div class="flex flex-wrap gap-2">
                             ${filteredOptions.map(opt => `
                                 <label class="check-pill" id="label-${pet.id}-${opt}">
@@ -1107,6 +1192,13 @@ ${tableHtml}
             document.querySelectorAll(`[id^="label-${petId}"]`).forEach(l => l.classList.remove('active'));
             checks.forEach(c => c.parentElement.classList.add('active'));
             textbox.value = selectedValues.join(', ');
+        }
+
+        function applyConsentPreset(petId, text) {
+            const textbox = document.getElementById(`text-${petId}`);
+            if (textbox) textbox.value = text;
+            // Uncheck all checkboxes for this pet
+            document.querySelectorAll(`.p-opt-${petId}`).forEach(c => { c.checked = false; c.parentElement.classList.remove('active'); });
         }
 
         async function refreshLabPicker() {
@@ -1998,7 +2090,172 @@ if (activeDocType === 'doc_consent') {
             const htmlContent = `<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`;
             await PrintUtils.executePrint(htmlContent, pw, ph, templateType);
         }
+
+        // ─── Add Pet for Documents ────────────────────────────────────────────────
+        function openAddPetForDocs() {
+            if (!currentOwner) return;
+            document.getElementById('docs-ap-hn').value = currentOwner.hn;
+            document.getElementById('docs-ap-owner-label').textContent = currentOwner.owner_name || currentOwner.hn;
+            ['docs-ap-petname','docs-ap-petweight','docs-ap-petbreed','docs-ap-petmicrochip','docs-ap-petcongenital','docs-ap-petbirth'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+            ['docs-ap-pet-age-y','docs-ap-pet-age-m'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            const typeEl = document.getElementById('docs-ap-pettype');
+            if (typeEl) typeEl.value = '';
+            const genderEl = document.getElementById('docs-ap-petgender');
+            if (genderEl) genderEl.value = 'ไม่ระบุเพศ';
+            document.getElementById('docs-add-pet-modal').style.display = 'flex';
+        }
+
+        async function saveAddPetForDocs() {
+            const hn = document.getElementById('docs-ap-hn').value;
+            const petName = document.getElementById('docs-ap-petname').value.trim();
+            if (!petName) return alert('❌ กรุณากรอกชื่อสัตว์');
+            try {
+                const { error: petErr } = await db.from('animals').insert({
+                    owner_hn: hn,
+                    pet_name: petName,
+                    pet_type: document.getElementById('docs-ap-pettype').value || 'อื่นๆ',
+                    gender: document.getElementById('docs-ap-petgender').value,
+                    weight: parseFloat(document.getElementById('docs-ap-petweight').value) || 0,
+                    breed: document.getElementById('docs-ap-petbreed').value.trim() || null,
+                    birth_date: document.getElementById('docs-ap-petbirth').value || null,
+                    microchip_number: document.getElementById('docs-ap-petmicrochip').value.trim() || null,
+                    congenital_disease: document.getElementById('docs-ap-petcongenital').value.trim() || null
+                });
+                if (petErr) throw petErr;
+                document.getElementById('docs-add-pet-modal').style.display = 'none';
+                // Reload pets for the current owner
+                const { data: pets } = await db.from('animals').select('*').eq('owner_hn', hn);
+                ownerPets = pets || [];
+                renderPetList();
+                if (activeDocType === 'doc_consent') refreshSurgeryRows();
+            } catch (err) { alert('❌ บันทึกไม่สำเร็จ: ' + err.message); }
+        }
+
+        function syncDocsAgeFromBirth(birthId, ageYId, ageMId) {
+            const birthEl = document.getElementById(birthId);
+            const val = birthEl ? birthEl.value : '';
+            const ayEl = document.getElementById(ageYId);
+            const amEl = document.getElementById(ageMId);
+            if (!val) { if (ayEl) ayEl.value = ''; if (amEl) amEl.value = ''; return; }
+            const birth = new Date(val), now = new Date();
+            let y = now.getFullYear() - birth.getFullYear();
+            let m = now.getMonth() - birth.getMonth();
+            if (m < 0) { y--; m += 12; }
+            if (now.getDate() < birth.getDate()) { m--; if (m < 0) { y--; m += 12; } }
+            if (ayEl) ayEl.value = y >= 0 ? y : 0;
+            if (amEl) amEl.value = m >= 0 ? m : 0;
+        }
+
+        function syncDocsAgeFromFields(birthId, ageYId, ageMId) {
+            const y = parseInt(document.getElementById(ageYId)?.value) || 0;
+            const m = parseInt(document.getElementById(ageMId)?.value) || 0;
+            const d = new Date();
+            d.setFullYear(d.getFullYear() - y);
+            d.setMonth(d.getMonth() - m);
+            const birthEl = document.getElementById(birthId);
+            if (birthEl) birthEl.value = d.toISOString().split('T')[0];
+        }
     </script>
+
+<!-- ─── Modal: เพิ่มสัตว์ใหม่ ─── -->
+<div id="docs-add-pet-modal" class="modal-overlay" style="z-index: 210;">
+    <div class="modal-content" style="max-width: 540px;">
+        <div class="p-6 border-b border-white/10" style="background: rgba(20,184,166,0.1);">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h4 class="text-2xl font-bold text-teal-400">🐾 เพิ่มสัตว์ใหม่</h4>
+                    <p class="text-sm text-gray-400 mt-1">เจ้าของ: <span id="docs-ap-owner-label" class="text-white font-bold"></span></p>
+                </div>
+                <button onclick="document.getElementById('docs-add-pet-modal').style.display='none'" class="text-3xl text-gray-400 hover:text-white">✕</button>
+            </div>
+        </div>
+        <input type="hidden" id="docs-ap-hn">
+        <div class="p-6 space-y-4 overflow-y-auto">
+            <div>
+                <label class="label-text">ชื่อสัตว์ <span class="text-red-400">*</span></label>
+                <input type="text" id="docs-ap-petname" class="input-box" placeholder="ชื่อสัตว์...">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="label-text">ชนิด</label>
+                    <select id="docs-ap-pettype" class="input-box">
+                        <option value="">-- เลือกชนิด --</option>
+                        <option value="สุนัข">🐶 สุนัข</option>
+                        <option value="แมว">🐱 แมว</option>
+                        <option value="อื่นๆ">🐾 อื่นๆ</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-text">เพศ</label>
+                    <select id="docs-ap-petgender" class="input-box">
+                        <option value="เมีย">♀️ เมีย</option>
+                        <option value="ผู้">♂️ ผู้</option>
+                        <option value="ผู้ตอน">✂️♂️ ผู้ตอน</option>
+                        <option value="เมียหมัน">✂️♀️ เมียหมัน</option>
+                        <option value="ไม่ระบุเพศ" selected>❓ ไม่ระบุเพศ</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="label-text">น้ำหนัก (กก.)</label>
+                    <input type="number" step="0.1" id="docs-ap-petweight" class="input-box" placeholder="0.0">
+                </div>
+                <div>
+                    <label class="label-text">พันธุ์</label>
+                    <input type="text" id="docs-ap-petbreed" class="input-box" placeholder="ระบุสายพันธุ์...">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="label-text">วันเกิด</label>
+                    <input type="date" id="docs-ap-petbirth" class="input-box" oninput="syncDocsAgeFromBirth('docs-ap-petbirth','docs-ap-pet-age-y','docs-ap-pet-age-m')">
+                </div>
+                <div>
+                    <label class="label-text">หมายเลข Microchip</label>
+                    <input type="text" id="docs-ap-petmicrochip" class="input-box" placeholder="ไม่บังคับ">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="label-text">อายุ (ปี)</label>
+                    <input type="number" id="docs-ap-pet-age-y" class="input-box" min="0" placeholder="0" inputmode="numeric" oninput="syncDocsAgeFromFields('docs-ap-petbirth','docs-ap-pet-age-y','docs-ap-pet-age-m')">
+                </div>
+                <div>
+                    <label class="label-text">อายุ (เดือน)</label>
+                    <input type="number" id="docs-ap-pet-age-m" class="input-box" min="0" max="11" placeholder="0" inputmode="numeric" oninput="syncDocsAgeFromFields('docs-ap-petbirth','docs-ap-pet-age-y','docs-ap-pet-age-m')">
+                </div>
+            </div>
+            <div>
+                <label class="label-text">⚠️ แพ้ยา/ข้อควรระวัง</label>
+                <textarea id="docs-ap-petcongenital" class="input-box" style="height:80px;" placeholder="ระบุยาที่แพ้หรือข้อควรระวัง..."></textarea>
+            </div>
+        </div>
+        <div class="p-6 border-t border-white/10 flex gap-3">
+            <button onclick="document.getElementById('docs-add-pet-modal').style.display='none'" class="btn-base btn-gray px-6">ยกเลิก</button>
+            <button onclick="saveAddPetForDocs()" class="btn-base btn-teal flex-1 text-lg">💾 บันทึก</button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Fixed bottom info bar ─── -->
+<div id="fixed-bottom-bar">
+    <div class="fb-item">
+        <span class="fb-label">เจ้าของ</span>
+        <span id="fb-owner-name" class="fb-value" style="color:#e2e8f0;">-</span>
+    </div>
+    <div class="fb-item">
+        <span class="fb-label">โทร</span>
+        <span id="fb-owner-phone" class="fb-value" style="color:#14b8b1;">-</span>
+    </div>
+    <div class="fb-item" style="border-right:none;">
+        <button onclick="openAddPetForDocs()" class="btn-base btn-teal" style="height:30px; font-size:0.8rem; padding:0 14px; gap:4px;">
+            ➕ เพิ่มสัตว์
+        </button>
+    </div>
+</div>
 <button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()">☰ รายชื่อ</button>
 </body>
 </html>
