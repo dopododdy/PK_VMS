@@ -113,7 +113,7 @@
         <!-- Header -->
         <header class="mb-8">
             <div class="text-center">
-                <div class="text-5xl mb-3">🔪</div>
+                <div id="knife-icon" class="text-5xl mb-3" style="cursor:pointer;user-select:none" title="ดับเบิลคลิกเพื่อล้างรายการทั้งหมด">🔪</div>
                 <h1 class="text-2xl font-black text-white tracking-tight">สถานะผ่าตัด</h1>
                 <p class="text-teal-400 text-sm font-bold mt-1">คลินิกรักษาสัตว์หมอปิติพัฒน์</p>
                 <p class="text-teal-400 text-sm font-bold mt-1">จะโทรแจ้งด้วยเบอร์ 085-5251545 เมื่อสัตว์พร้อมรับกลับ</p>
@@ -162,6 +162,8 @@
                 const cardEl = btn.closest('.queue-card');
                 await attemptDelete(cardEl.dataset.id, cardEl.dataset.pet);
             });
+
+            document.getElementById('knife-icon').addEventListener('dblclick', attemptClearAll);
 
             await fetchQueue();
             // รีเฟรชกระดานอัตโนมัติทุกๆ 1 นาที
@@ -317,6 +319,22 @@
                 }, OVERLAY_FADEOUT_MS);
                 _animTimer = null;
             }, OVERLAY_DISPLAY_MS);
+        }
+
+        // ล้างรายการทั้งหมดออกจากกระดาน (เรียกจากการ double-click icon มีด)
+        async function attemptClearAll() {
+            if (queueData.length === 0) { alert("ไม่มีรายการในกระดาน"); return; }
+            const pwd = prompt("🔐 ล้างรายการสัตว์ทั้งหมดออกจากกระดาน\nกรุณาใส่รหัสผ่าน:");
+            if (pwd === null) return;
+            if (pwd !== SECRETPWD) { alert("❌ รหัสผ่านไม่ถูกต้อง"); return; }
+
+            const ids = queueData.map(q => q.id);
+            const { error } = await db.from('surgery_queue').delete().in('id', ids);
+            if (error) {
+                alert("❌ ลบข้อมูลไม่สำเร็จ: " + error.message);
+            } else {
+                await fetchQueue();
+            }
         }
 
         // ลบรายการเมื่อรับกลับบ้านเรียบร้อยแล้ว
