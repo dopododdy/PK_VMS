@@ -29,6 +29,7 @@ import tempfile
 import platform
 from pathlib import Path
 
+import requests
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -145,6 +146,72 @@ def read_card():
         return jsonify({"status": "error", "message": "เกิดข้อผิดพลาดในการอ่านบัตร"}), 500
 
 
+@app.route("/line/push", methods=["POST"])
+def line_push():
+    """
+    Proxy: push a LINE Messaging API message to a specific user.
+
+    Expected JSON body:
+      {
+        "channel_access_token": "<long-lived channel access token>",
+        "to":      "<LINE user ID>",
+        "messages": [ { "type": "text", "text": "..." }, ... ]
+      }
+    """
+    body = request.get_json(silent=True) or {}
+    token = body.pop("channel_access_token", "").strip()
+    if not token:
+        return jsonify({"status": "error", "message": "ไม่พบ Channel Access Token"}), 400
+    if not body.get("to"):
+        return jsonify({"status": "error", "message": "ไม่พบ User ID ปลายทาง"}), 400
+    if not body.get("messages"):
+        return jsonify({"status": "error", "message": "ไม่พบข้อความที่จะส่ง"}), 400
+
+    try:
+        resp = requests.post(
+            "https://api.line.me/v2/bot/message/push",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=body,
+            timeout=15,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as exc:
+        print(f"[!] /line/push error: {exc}")
+        return jsonify({"status": "error", "message": "เกิดข้อผิดพลาดในการเชื่อมต่อ LINE API"}), 500
+
+
+@app.route("/line/broadcast", methods=["POST"])
+def line_broadcast():
+    """
+    Proxy: broadcast a LINE Messaging API message to all followers.
+
+    Expected JSON body:
+      {
+        "channel_access_token": "<long-lived channel access token>",
+        "messages": [ { "type": "text", "text": "..." }, ... ]
+      }
+    """
+    body = request.get_json(silent=True) or {}
+    token = body.pop("channel_access_token", "").strip()
+    if not token:
+        return jsonify({"status": "error", "message": "ไม่พบ Channel Access Token"}), 400
+    if not body.get("messages"):
+        return jsonify({"status": "error", "message": "ไม่พบข้อความที่จะส่ง"}), 400
+
+    try:
+        resp = requests.post(
+            "https://api.line.me/v2/bot/message/broadcast",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=body,
+            timeout=15,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as exc:
+        print(f"[!] /line/broadcast error: {exc}")
+        return jsonify({"status": "error", "message": "เกิดข้อผิดพลาดในการเชื่อมต่อ LINE API"}), 500
+
+
+# ── Printer routes ────────────────────────────────────────────────────────────
 @app.route("/printers", methods=["GET"])
 def list_printers():
     """Return a list of printer names available on this machine."""
