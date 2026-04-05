@@ -611,7 +611,7 @@
                 </div>
                 <div class="flex flex-wrap gap-2 mt-6">
                     <button onclick="printPetLabel(animalId)" class="btn-base bg-indigo-700 hover:bg-indigo-600 text-sm">🪪 พิมพ์บัตร</button>
-                    <button onclick="printApptLabel(animalId)" class="btn-base bg-orange-700 hover:bg-orange-600 text-sm">🖨️ พิมพ์นัด</button>
+                    <button onclick="printAllApptLabels()" class="btn-base bg-orange-700 hover:bg-orange-600 text-sm">🖨️ พิมพ์นัด</button>
                     <button onclick="printBothLabels(animalId)" class="btn-base bg-teal-700 hover:bg-teal-600 text-sm">🖨️ พิมพ์บัตร + นัด</button>
                 </div>
                 <div class="flex gap-4 mt-4">
@@ -635,7 +635,7 @@
             <div class="p-6 border-b border-white/10 bg-blue-900/30"><h4 id="rx-edit-name" class="text-xl font-black text-blue-400">✏️ แก้ไขรายการยา</h4></div>
             <div class="p-6 space-y-4 overflow-y-auto">
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="label-clinical">ป้อนครั้งละ</label><div class="flex items-center gap-2"><input type="number" id="rx-edit-dose" class="input-box" step="0.125" min="0" oninput="recalcRxEditQty()"><span id="rx-edit-unit-label" class="text-sm text-slate-300 shrink-0">เม็ด</span></div></div>
+                    <div><label class="label-clinical">ป้อนครั้งละ</label><div class="flex items-center gap-2"><input type="text" id="rx-edit-dose" class="input-box" placeholder="เช่น 1, 0.5, 1/2" oninput="recalcRxEditQty()"><span id="rx-edit-unit-label" class="text-sm text-slate-300 shrink-0">เม็ด</span></div></div>
                     <div><label class="label-clinical">ความถี่/วัน</label><select id="rx-edit-freq" class="input-box" onchange="recalcRxEditQty()"><option value="1">วันละ 1 ครั้ง</option><option value="2">วันละ 2 ครั้ง</option><option value="3">วันละ 3 ครั้ง</option><option value="4">วันละ 4 ครั้ง</option><option value="0.5">วันเว้นวัน</option></select></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -2194,9 +2194,22 @@
         }
         function updateTimeOfDay() { const f = document.getElementById('rx-freq').value, dt = document.getElementById('rx-day-timing'); if(f == "1" || f == "0.5") dt.value = "เช้า"; else if(f == "2") dt.value = "เช้า-เย็น"; else dt.value = "เช้า-กลางวัน-เย็น"; }
 
+        function parseDoseFraction(val) {
+            if (!val) return 0;
+            val = String(val).trim();
+            if (val.includes('/')) {
+                const parts = val.split('/');
+                if (parts.length !== 2) return 0;
+                const num = parseFloat(parts[0]) || 0;
+                const den = parseFloat(parts[1]);
+                return (den && den !== 0) ? num / den : 0;
+            }
+            return parseFloat(val) || 0;
+        }
+
         function recalcRxEditQty() {
             if (editingRxItem && editingRxItem.is_liquid_bottle) return;
-            const dose = parseFloat(document.getElementById('rx-edit-dose').value) || 0;
+            const dose = parseDoseFraction(document.getElementById('rx-edit-dose').value);
             const freq = parseFloat(document.getElementById('rx-edit-freq').value) || 1;
             const days = parseInt(document.getElementById('rx-edit-days').value) || 1;
             const qty = dose * freq * days;
@@ -2208,7 +2221,7 @@
             editingRxItem = rxList[idx] || null;
             if (!editingRxItem) return;
             document.getElementById('rx-edit-name').innerText = '✏️ ' + editingRxItem.name;
-            document.getElementById('rx-edit-dose').value = parseFloat(editingRxItem.dose) || '';
+            document.getElementById('rx-edit-dose').value = editingRxItem.dose || '';
             document.getElementById('rx-edit-unit-label').innerText = editingRxItem.unit || 'เม็ด';
             let freqVal = '2';
             if (editingRxItem.freq === 'วันเว้นวัน') freqVal = '0.5';
@@ -2227,7 +2240,7 @@
             const item = editingRxItem;
             if (!item) return;
             const freqVal = parseFloat(document.getElementById('rx-edit-freq').value) || 1;
-            const doseVal = parseFloat(document.getElementById('rx-edit-dose').value) || 0;
+            const doseVal = parseDoseFraction(document.getElementById('rx-edit-dose').value);
             const daysVal = parseInt(document.getElementById('rx-edit-days').value) || 1;
             const newPrice = parseFloat(document.getElementById('rx-edit-price').value) || 0;
             const oldPrice = item.price;
