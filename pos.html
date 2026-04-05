@@ -263,7 +263,7 @@
                     <div id="merge-items-preview" class="space-y-1 text-sm text-gray-300 bg-white/5 rounded-xl p-3 max-h-40 overflow-y-auto custom-scroll"></div>
                 </div>
                 <div>
-                    <label class="txt-label text-xs mb-2 block">ชื่อรายการรวม (แสดงในใบเสร็จ)</label>
+                    <label for="merge-name-input" class="txt-label text-xs mb-2 block">ชื่อรายการรวม (แสดงในใบเสร็จ)</label>
                     <input type="text" id="merge-name-input" class="search-input" placeholder="ตั้งชื่อใหม่..." onkeydown="if(event.key==='Enter'){event.preventDefault();confirmMerge()}">
                 </div>
             </div>
@@ -933,7 +933,7 @@
                 <div class="grid grid-cols-12 p-5 items-center bg-amber-500/5 border-b border-amber-500/10">
                     <div class="col-span-1"></div>
                     <div class="col-span-1 text-center">
-                        <button class="text-red-400 hover:text-red-300 text-base transition" onclick="unmergeGroup('${recordId}', ${groupIdx})" title="แยกรายการ"><i data-lucide="unlink" class="w-4 h-4"></i></button>
+                        <button class="text-red-400 hover:text-red-300 text-base transition" onclick="unmergeGroup('${esc(recordId)}', ${groupIdx})" title="แยกรายการ"><i data-lucide="unlink" class="w-4 h-4"></i></button>
                     </div>
                     <div class="col-span-4">
                         <div class="txt-body font-bold text-amber-300 text-base">${esc(group.name)}</div>
@@ -951,27 +951,27 @@
                 html += `
                 <div class="grid grid-cols-12 p-5 items-center group">
                     <div class="col-span-1 text-center">
-                        ${!isPaid ? `<input type="checkbox" class="item-checkbox w-4 h-4 accent-teal-400 cursor-pointer" id="chk-${i.id}" ${selectedItemIds.has(i.id) ? 'checked' : ''} onchange="toggleItemSelection('${i.id}')">` : ''}
+                        ${!isPaid ? `<input type="checkbox" class="item-checkbox w-4 h-4 accent-teal-400 cursor-pointer" id="chk-${esc(i.id)}" ${selectedItemIds.has(i.id) ? 'checked' : ''} onchange="toggleItemSelection('${esc(i.id)}')">` : ''}
                     </div>
                     <div class="col-span-1 text-center">
-                        ${!isPaid ? `<i data-lucide="trash-2" class="btn-remove" onclick="removeItemFromDB('${i.id}')"></i>` : ''}
+                        ${!isPaid ? `<i data-lucide="trash-2" class="btn-remove" onclick="removeItemFromDB('${esc(i.id)}')"></i>` : ''}
                     </div>
                     <div class="col-span-4 flex items-center">
-                        <div id="name-display-${i.id}" class="flex items-center gap-1.5 flex-1 min-w-0" data-item-name="${esc(i.item_name)}">
+                        <div id="name-display-${esc(i.id)}" class="flex items-center gap-1.5 flex-1 min-w-0" data-item-name="${esc(i.item_name)}">
                             <span class="txt-body font-bold text-white text-base truncate">${displayName}</span>
-                            ${!isPaid ? `<button class="text-gray-500 hover:text-teal-400 flex-shrink-0 transition" onclick="startEditName('${i.id}')" title="แก้ไขชื่อ"><i data-lucide="pencil" class="w-3 h-3"></i></button>` : ''}
+                            ${!isPaid ? `<button class="text-gray-500 hover:text-teal-400 flex-shrink-0 transition" onclick="startEditName('${esc(i.id)}')" title="แก้ไขชื่อ"><i data-lucide="pencil" class="w-3 h-3"></i></button>` : ''}
                         </div>
-                        ${!isPaid ? `<div id="name-edit-${i.id}" class="hidden items-center gap-1 flex-1">
-                            <input id="name-input-${i.id}" type="text" class="search-input text-sm flex-1" style="padding:4px 8px; height:30px" onkeydown="if(event.key==='Enter'){event.preventDefault();saveEditName('${i.id}')}">
-                            <button onclick="saveEditName('${i.id}')" class="bg-teal-500 text-black px-2 py-0.5 rounded font-bold text-xs whitespace-nowrap">✓</button>
-                            <button onclick="cancelEditName('${i.id}')" class="bg-slate-600 text-white px-2 py-0.5 rounded text-xs">✕</button>
+                        ${!isPaid ? `<div id="name-edit-${esc(i.id)}" class="hidden items-center gap-1 flex-1">
+                            <input id="name-input-${esc(i.id)}" type="text" class="search-input text-sm flex-1" style="padding:4px 8px; height:30px" onkeydown="if(event.key==='Enter'){event.preventDefault();saveEditName('${esc(i.id)}')}">
+                            <button onclick="saveEditName('${esc(i.id)}')" class="bg-teal-500 text-black px-2 py-0.5 rounded font-bold text-xs whitespace-nowrap">✓</button>
+                            <button onclick="cancelEditName('${esc(i.id)}')" class="bg-slate-600 text-white px-2 py-0.5 rounded text-xs">✕</button>
                         </div>` : ''}
                     </div>
                     <div class="col-span-2 text-center txt-body text-base">
                         ${!isPaid ? `<div class="flex items-center justify-center gap-1">
-                            <button class="qty-btn" aria-label="ลดจำนวน" onclick="updateItemQuantity('${i.id}', -1)">−</button>
-                            <input type="number" id="qty-${i.id}" class="qty-input" value="${i.quantity}" min="1" onclick="this.select()" onchange="setItemQuantity('${i.id}', this.value)">
-                            <button class="qty-btn" aria-label="เพิ่มจำนวน" onclick="updateItemQuantity('${i.id}', 1)">+</button>
+                            <button class="qty-btn" aria-label="ลดจำนวน" onclick="updateItemQuantity('${esc(i.id)}', -1)">−</button>
+                            <input type="number" id="qty-${esc(i.id)}" class="qty-input" value="${i.quantity}" min="1" onclick="this.select()" onchange="setItemQuantity('${esc(i.id)}', this.value)">
+                            <button class="qty-btn" aria-label="เพิ่มจำนวน" onclick="updateItemQuantity('${esc(i.id)}', 1)">+</button>
                         </div>` : i.quantity}
                     </div>
                     <div class="col-span-2 text-right txt-body text-gray-400 text-base">${parseFloat(i.unit_price).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
