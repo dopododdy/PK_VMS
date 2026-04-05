@@ -1866,7 +1866,7 @@
             if (pendingItem) pendingItem.calculatedQty = totalCc;
         }
 
-        function confirmRxCalc() { const isLiquidBottle = pendingItem.data.unit === 'mL' && parseFloat(pendingItem.data.bottle_volume_ml) > 0; const isCc = pendingItem.data.unit === 'ซีซี'; const dose = isCc ? document.getElementById('rx-tabs-val').value : document.getElementById('rx-tabs-display').innerText.split(' ').slice(0,-1).join(' '); addItem('Rx', pendingItem.name, parseFloat(document.getElementById('rx-final-price-val').value), { dose, unit: pendingItem.data.unit || 'เม็ด', freq: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`, meal: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value, days: parseInt(document.getElementById('rx-days').value), qty: pendingItem.calculatedQty, is_liquid_bottle: isLiquidBottle, drug_name_th: pendingItem.data.name_th, warning: document.getElementById('rx-warning-text').value }); document.getElementById('rx-calc-modal').style.display = 'none'; }
+        function confirmRxCalc() { const isLiquidBottle = pendingItem.data.unit === 'mL' && parseFloat(pendingItem.data.bottle_volume_ml) > 0; const isCc = pendingItem.data.unit === 'ซีซี'; const dose = isCc ? document.getElementById('rx-tabs-val').value : document.getElementById('rx-tabs-display').innerText.split(' ').slice(0,-1).join(' '); const calcQty = pendingItem.calculatedQty || 0; const totalPrice = parseFloat(document.getElementById('rx-final-price-val').value); const unitPrice = calcQty > 0 ? totalPrice / calcQty : pendingItem.price || 0; addItem('Rx', pendingItem.name, totalPrice, { dose, unit: pendingItem.data.unit || 'เม็ด', freq: document.getElementById('rx-freq').value === "0.5" ? "วันเว้นวัน" : `วันละ ${document.getElementById('rx-freq').value} ครั้ง`, meal: document.getElementById('rx-meal-timing').value, day_timing: document.getElementById('rx-day-timing').value, days: parseInt(document.getElementById('rx-days').value), qty: calcQty, unit_price: unitPrice, is_liquid_bottle: isLiquidBottle, drug_name_th: pendingItem.data.name_th, warning: document.getElementById('rx-warning-text').value }); document.getElementById('rx-calc-modal').style.display = 'none'; }
 
         async function printCurrentRx() {
             if (!pendingItem) return alert("ไม่พบข้อมูลยา");
@@ -2214,6 +2214,15 @@
             const days = parseInt(document.getElementById('rx-edit-days').value) || 1;
             const qty = dose * freq * days;
             document.getElementById('rx-edit-qty').value = qty > 0 ? qty : '';
+            if (editingRxItem && qty > 0) {
+                const origQty = parseFloat(editingRxItem.qty) || 0;
+                const origPrice = parseFloat(editingRxItem.price) || 0;
+                // Derive unit price from original qty/price; fall back to stored unit_price for new items
+                const unitPrice = origQty > 0 ? origPrice / origQty : (parseFloat(editingRxItem.unit_price) || 0);
+                if (unitPrice > 0) {
+                    document.getElementById('rx-edit-price').value = (unitPrice * qty).toFixed(2);
+                }
+            }
         }
 
         function openRxEditModal(idx) {
