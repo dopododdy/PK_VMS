@@ -379,7 +379,8 @@
                     </div>
                     <div class="bg-slate-900/50 rounded-xl overflow-hidden border border-white/10">
                         <div class="grid grid-cols-12 p-3 border-b border-white/10 txt-label text-xs bg-black/20">
-                            <div class="col-span-3">เลขบิล</div>
+                            <div class="col-span-2">เลขบิล</div>
+                            <div class="col-span-1">HN</div>
                             <div class="col-span-2">เจ้าของ</div>
                             <div class="col-span-2">สัตว์เลี้ยง</div>
                             <div class="col-span-2 text-center">เวลา</div>
@@ -1493,7 +1494,8 @@
             }
             container.innerHTML = data.map((r, i) => `
                 <div class="grid grid-cols-12 p-3 border-b border-white/5 text-sm hover:bg-white/5 transition ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}">
-                    <div class="col-span-3 font-mono text-teal-400 text-xs truncate">${r.receipt_no || '-'}</div>
+                    <div class="col-span-2 font-mono text-teal-400 text-xs truncate">${r.receipt_no || '-'}</div>
+                    <div class="col-span-1 text-gray-400 text-xs truncate">${r.owner_hn || '-'}</div>
                     <div class="col-span-2 text-white truncate">${r.owners?.owner_name || (r.owner_hn ? '-' : 'Walk-in')}</div>
                     <div class="col-span-2 text-gray-300 truncate">${r.animals?.pet_name || (r.owner_hn ? '-' : '🧾 Walk-in')}</div>
                     <div class="col-span-2 text-center text-gray-400 text-xs">${r.paid_at ? new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : '-'}</div>
@@ -1559,7 +1561,7 @@
             function itemRowsHtml(items) {
                 if (!items || items.length === 0) return '';
                 return items.map(it => `<tr style="background:#f8fafc;">
-                    <td style="padding:2px 8px 2px 24px;border:1px solid #e2e8f0;color:#475569;font-size:8pt;" colspan="5">• ${it.item_name} x ${Math.floor(it.quantity)}</td>
+                    <td style="padding:2px 8px 2px 24px;border:1px solid #e2e8f0;color:#475569;font-size:8pt;" colspan="6">• ${it.item_name} x ${Math.floor(it.quantity)}</td>
                     <td style="padding:2px 8px;text-align:right;border:1px solid #e2e8f0;color:#475569;font-size:8pt;">${parseFloat(it.unit_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                     <td style="padding:2px 8px;border:1px solid #e2e8f0;" colspan="1"></td>
                     <td style="padding:2px 8px;text-align:right;border:1px solid #e2e8f0;color:#334155;font-size:8pt;">${parseFloat(it.total_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
@@ -1582,6 +1584,7 @@
                     return `<tr style="background:${bg}">
                     <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-weight:700;">${i + 1}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-family:monospace;font-size:8pt;">${r.receipt_no || '-'}</td>
+                    <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-size:8pt;">${r.owner_hn || (r.owners?.owner_name ? '-' : 'Walk-in')}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.owners?.owner_name || (r.owner_hn ? '-' : 'Walk-in')}</td>
                     <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.animals?.pet_name || (r.owner_hn ? '-' : 'Walk-in')}</td>
                     <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-size:8pt;">${timeCell}</td>
@@ -1611,17 +1614,18 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
 <table>
 <thead><tr>
     <th style="width:4%">#</th>
-    <th style="width:16%">เลขบิล</th>
-    <th style="width:20%">เจ้าของ</th>
-    <th style="width:13%">สัตว์เลี้ยง</th>
-    <th style="width:${showDate ? '14%' : '8%'}">${timeColHeader}</th>
-    <th style="width:${showDate ? '7%' : '13%'}">ยอดรวม</th>
+    <th style="width:14%">เลขบิล</th>
+    <th style="width:8%">HN</th>
+    <th style="width:18%">เจ้าของ</th>
+    <th style="width:11%">สัตว์เลี้ยง</th>
+    <th style="width:${showDate ? '11%' : '7%'}">${timeColHeader}</th>
+    <th style="width:${showDate ? '7%' : '11%'}">ยอดรวม</th>
     <th style="width:9%">ส่วนลด</th>
-    <th style="width:17%">ยอดสุทธิ</th>
+    <th style="width:18%">ยอดสุทธิ</th>
 </tr></thead>
 <tbody>${rowsHtml}</tbody>
 <tfoot><tr>
-    <td colspan="5" style="text-align:right;">รวมทั้งหมด (${bills.length} บิล)</td>
+    <td colspan="6" style="text-align:right;">รวมทั้งหมด (${bills.length} บิล)</td>
     <td style="text-align:right;">${grandRaw.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
     <td style="text-align:right;color:#dc2626;">${grandDiscount > 0 ? grandDiscount.toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td>
     <td style="text-align:right;color:#0f9e6e;">${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>

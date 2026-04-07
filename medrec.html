@@ -1554,16 +1554,25 @@
                         <div class="mt-4">
                             <span class="data-label">📌 Plan</span><div class="data-value italic">${rec.plan || '-'}</div>
                         </div>
-                        ${(rec.appointment || rec.appointment_2) ? `<div class="mt-4">
-                            <span class="data-label text-orange-400">📅 App</span>
-                            <div class="data-value">
-                                ${rec.appointment ? `<div>${formatThaiDate(rec.appointment, 'appt')}${rec.appointment_note ? ` เพื่อ ${rec.appointment_note}` : ''}</div>` : ''}
-                                ${rec.appointment_2 ? `<div>${formatThaiDate(rec.appointment_2, 'appt')}${rec.appointment_note_2 ? ` เพื่อ ${rec.appointment_note_2}` : ''}</div>` : ''}
+                        <div class="mt-4 flex justify-between items-end gap-2 flex-wrap">
+                            <div class="flex flex-col gap-2">
+                                ${(rec.appointment || rec.appointment_2) ? `<div>
+                                    <span class="data-label text-orange-400">📅 App</span>
+                                    <div class="data-value text-sm">
+                                        ${rec.appointment ? `<div>${formatThaiDate(rec.appointment, 'appt')}${rec.appointment_note ? ` เพื่อ ${rec.appointment_note}` : ''}</div>` : ''}
+                                        ${rec.appointment_2 ? `<div>${formatThaiDate(rec.appointment_2, 'appt')}${rec.appointment_note_2 ? ` เพื่อ ${rec.appointment_note_2}` : ''}</div>` : ''}
+                                    </div>
+                                </div>` : ''}
+                                <div class="flex gap-1 flex-wrap">
+                                    <button onclick="event.stopPropagation(); printPetLabel('${rec.animal_id}')" class="bg-indigo-700 hover:bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🪪 พิมพ์บัตร</button>
+                                    <button onclick="event.stopPropagation(); printApptLabelFromRecord('${rec.id}')" class="bg-orange-700 hover:bg-orange-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์นัด</button>
+                                    <button onclick="event.stopPropagation(); printBothLabelsFromRecord('${rec.id}')" class="bg-teal-700 hover:bg-teal-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์บัตร + นัด</button>
+                                </div>
                             </div>
-                        </div>` : ''}
-                        <div class="mt-4 flex justify-end gap-2">
-                            <button onclick="event.stopPropagation(); printBlankOPD()" class="bg-green-700 hover:bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">📄 พิมพ์ OPD เปล่า</button>
-                            <button onclick="event.stopPropagation(); showOpdPrintModal('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์ประวัติลงกระดาษ</button>
+                            <div class="flex gap-2 flex-shrink-0">
+                                <button onclick="event.stopPropagation(); printBlankOPD()" class="bg-green-700 hover:bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">📄 พิมพ์ OPD เปล่า</button>
+                                <button onclick="event.stopPropagation(); showOpdPrintModal('${rec.id}')" class="bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">🖨️ พิมพ์ประวัติลงกระดาษ</button>
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -2398,6 +2407,30 @@
             const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
             const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1)).data?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment, 'appt') : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2, 'appt') : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
+            executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }], 'sticker_pet_id');
+        }
+
+        async function printApptLabelFromRecord(recordId) {
+            const rec = records.find(r => r.id === recordId);
+            if (!rec || (!rec.appointment && !rec.appointment_2)) return alert("ไม่พบข้อมูลนัดหมายในประวัติการรักษานี้");
+            const { data: pet } = await db.from('animals').select('*').eq('id', rec.animal_id).single();
+            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+            if (!pet || !owner) return alert("ไม่พบข้อมูลสัตว์เลี้ยงหรือเจ้าของ");
+            const printData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: rec.appointment ? formatThaiDate(rec.appointment, 'appt') : "-", appointment_note_1: rec.appointment_note || "-", appointment_date_2: rec.appointment_2 ? formatThaiDate(rec.appointment_2, 'appt') : "-", appointment_note_2: rec.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
+            await executeDynamicPrint([printData], 'sticker_appt');
+        }
+
+        async function printBothLabelsFromRecord(recordId) {
+            const rec = records.find(r => r.id === recordId);
+            if (!rec) return;
+            const { data: pet } = await db.from('animals').select('*').eq('id', rec.animal_id).single();
+            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+            if (!pet || !owner) return alert("ไม่พบข้อมูลสัตว์เลี้ยงหรือเจ้าของ");
+            const { data: phones } = await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1);
+            const ownerPhone = phones?.[0]?.phone_number || '-';
+            const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
+            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: ownerPhone, pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: rec.appointment ? formatThaiDate(rec.appointment, 'appt') : "-", appointment_note_1: rec.appointment_note || "-", appointment_date_2: rec.appointment_2 ? formatThaiDate(rec.appointment_2, 'appt') : "-", appointment_note_2: rec.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
             executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }], 'sticker_pet_id');
         }
 
