@@ -46,7 +46,7 @@
     </div>
 
     <script>
-        let _animals = [], _owners = {};
+        let _animals = [], _owners = {}, _searchTimer = null;
 
         function getAnimalIcon(petType) {
             if (!petType) return '🐾';
@@ -76,15 +76,18 @@
         }
 
         function handleSearch() {
-            const term = document.getElementById('search-input').value.trim().toLowerCase();
-            if (!term) { renderList(_animals); return; }
-            const filtered = _animals.filter(a => {
-                const owner = _owners[a.owner_hn] || {};
-                return (a.pet_name || '').toLowerCase().includes(term)
-                    || (owner.owner_name || '').toLowerCase().includes(term)
-                    || (a.owner_hn || '').toLowerCase().includes(term);
-            });
-            renderList(filtered);
+            clearTimeout(_searchTimer);
+            _searchTimer = setTimeout(() => {
+                const term = document.getElementById('search-input').value.trim().toLowerCase();
+                if (!term) { renderList(_animals); return; }
+                const filtered = _animals.filter(a => {
+                    const owner = _owners[a.owner_hn] || {};
+                    return (a.pet_name || '').toLowerCase().includes(term)
+                        || (owner.owner_name || '').toLowerCase().includes(term)
+                        || (a.owner_hn || '').toLowerCase().includes(term);
+                });
+                renderList(filtered);
+            }, 200);
         }
 
         function renderList(list) {
