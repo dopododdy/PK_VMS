@@ -375,7 +375,7 @@
                         <span class="text-xl">🏠</span><span>หน้าหลัก</span>
                     </a>
                 </div>
-                <input type="text" id="sidebar-search-medrec" class="input-box text-sm" placeholder="ค้นหา HN, ชื่อสัตว์, ชื่อเจ้าของ, เบอร์โทร..." oninput="renderMedrecSidebar()" ondblclick="this.value='';renderMedrecSidebar();this.focus();">
+                <input type="text" id="sidebar-search-medrec" class="input-box text-sm" placeholder="ค้นหา HN, ชื่อสัตว์, ชื่อเจ้าของ, เบอร์โทร..." oninput="debouncedRenderSidebar()" ondblclick="this.value='';renderMedrecSidebar();this.focus();">
                 <div class="flex items-center gap-2 mt-2">
                     <span class="text-xs text-slate-500 font-bold whitespace-nowrap flex-shrink-0">🔃 เรียงโดย</span>
                     <select id="sidebar-sort-medrec" class="input-box text-xs py-1.5" onchange="renderMedrecSidebar()">
@@ -476,7 +476,7 @@
                 </div>
             </div>
             <div class="mb-4">
-                <input type="text" id="history-search" class="input-box" placeholder="ค้นหาประวัติ: วันที่รักษา, CC, PE, Dx..." oninput="filterHistoryList()">
+                <input type="text" id="history-search" class="input-box" placeholder="ค้นหาประวัติ: วันที่รักษา, CC, PE, Dx..." oninput="debouncedFilterHistory()">
             </div>
             <div id="history-list" class="space-y-3"></div>
         </div>
@@ -948,12 +948,24 @@
         // ─── Sidebar data & functions ───
         let _sbAnimals = [], _sbOwners = [], _sbPhones = [], _sbMedRecs = [];
         let _sbPrimaryPhoneMap = new Map(), _sbAllPhonesMap = new Map(), _sbMedTextByAnimalId = new Map();
+        let _sbOwnerMap = new Map();   // cached owner lookup, rebuilt in loadSidebarData
         let _sbCurrentTab = 'all';
         let _sbReloadTimer = null;
+        let _sbSidebarSearchTimer = null;  // debounce timer for sidebar search
+        let _sbHistorySearchTimer = null;  // debounce timer for history search
         let _sbRealtimeChannel = null;
         let _sbSelectedApptDate = '';   // YYYY-MM-DD currently selected in calendar
         let _sbCalendarYear = null;     // year displayed in calendar
         let _sbCalendarMonth = null;    // 0-based month displayed in calendar
+
+        function debouncedRenderSidebar() {
+            clearTimeout(_sbSidebarSearchTimer);
+            _sbSidebarSearchTimer = setTimeout(() => renderMedrecSidebar(), 200);
+        }
+        function debouncedFilterHistory() {
+            clearTimeout(_sbHistorySearchTimer);
+            _sbHistorySearchTimer = setTimeout(() => filterHistoryList(), 200);
+        }
 
         function toggleMedrecSidebar() {
             const sb = document.getElementById('main-sidebar-medrec');
@@ -1016,6 +1028,7 @@
                 ]);
                 _sbAnimals = animals;
                 _sbOwners = owners;
+                _sbOwnerMap = new Map(owners.map(o => [o.hn, o]));
                 _sbPhones = phones;
                 _sbMedRecs = medRecs;
                 _sbPrimaryPhoneMap = new Map();
@@ -1152,7 +1165,7 @@
             const today = getTodayStrSb();
             const selectedDate = _sbSelectedApptDate || today;
             const container = document.getElementById('medrec-owner-list');
-            const ownerMap = new Map(_sbOwners.map(o => [o.hn, o]));
+            const ownerMap = _sbOwnerMap;
             const animalApptMap = new Map();
             _sbMedRecs.forEach(r => {
                 const notes = [];
@@ -1191,7 +1204,7 @@
             if (_sbCurrentTab === 'today') { renderApptCalendar(); renderMedrecSidebarToday(); return; }
             const term = (document.getElementById('sidebar-search-medrec')?.value || '').toLowerCase();
             const container = document.getElementById('medrec-owner-list');
-            const ownerMap = new Map(_sbOwners.map(o => [o.hn, o]));
+            const ownerMap = _sbOwnerMap;
 
             const sortMode = document.getElementById('sidebar-sort-medrec')?.value || 'hn_desc';
             let lastVisitByOwner;
@@ -1487,9 +1500,11 @@
             }
             
             list.innerHTML = filtered.map(rec => {
-                const labItems = rec.medical_record_items.filter(i => i.item_type === 'Lab');
-                const txItems = rec.medical_record_items.filter(i => i.item_type === 'Tx');
-                const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
+                const itemGroups = { Lab: [], Tx: [], Rx: [] };
+                (rec.medical_record_items || []).forEach(i => { if (itemGroups[i.item_type]) itemGroups[i.item_type].push(i); });
+                const labItems = itemGroups.Lab;
+                const txItems  = itemGroups.Tx;
+                const rxItems  = itemGroups.Rx;
                 
                 const labText = labItems.map(i => i.item_name).join(', ');
                 const txText = txItems.map(i => i.item_name).join(', ');
@@ -2362,8 +2377,12 @@
             const ids = Array.from(document.querySelectorAll(`.rx-select-${recordId}:checked`)).map(cb => cb.value);
             const items = rec.medical_record_items.filter(i => ids.includes(i.id));
             if (items.length === 0) return alert("เลือกยา");
-            const resolved = await Promise.all(items.map(async (i) => {
-                const { data: drug } = await db.from('pharmacy').select('name_th, side_effects, category').eq('item_name', i.item_name).maybeSingle();
+            // Fetch all drug info in a single batch query instead of one query per item
+            const itemNames = [...new Set(items.map(i => i.item_name))];
+            const { data: drugs = [] } = await db.from('pharmacy').select('item_name, name_th, side_effects, category').in('item_name', itemNames);
+            const drugMap = new Map((drugs || []).map(d => [d.item_name, d]));
+            const resolved = items.map((i) => {
+                const drug = drugMap.get(i.item_name);
                 const isExternal = drug?.category === 'External';
                 const totalQty = `${i.quantity} ${i.unit || 'ขวด'}`.trim();
                 return {
@@ -2389,7 +2408,7 @@
                         date: new Date(rec.created_at).toLocaleDateString('th-TH')
                     }
                 };
-            }));
+            });
             const regularBatch = resolved.filter(r => !r.isExternal).map(r => r.data);
             const topicalBatch = resolved.filter(r => r.isExternal).map(r => r.data);
             const allBatch = [
@@ -2400,11 +2419,15 @@
         }
 
         async function printBothLabels(petId) {
-            const { data: pet } = await db.from('animals').select('*').eq('id', petId).single();
-            const { data: owner } = await db.from('owners').select('*').eq('hn', ownerHN).single();
+            const [{ data: pet }, { data: owner }, { data: phones }, tplPet, tplAppt] = await Promise.all([
+                db.from('animals').select('*').eq('id', petId).single(),
+                db.from('owners').select('*').eq('hn', ownerHN).single(),
+                db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1),
+                db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(),
+                db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()
+            ]);
             const latestRec = records.find(r => r.appointment || r.appointment_2);
-            const [tplPet, tplAppt] = await Promise.all([db.from('print_templates').select('config').eq('template_type', 'sticker_pet_id').single(), db.from('print_templates').select('config').eq('template_type', 'sticker_appt').single()]);
-            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: (await db.from('owner_phones').select('phone_number').eq('owner_hn', ownerHN).limit(1)).data?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
+            const pData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, owner_phone: phones?.[0]?.phone_number || '-', pet_name: pet.pet_name, hn: pet.owner_hn, species: pet.pet_type, breed: pet.breed, sex: pet.gender, weight: (pet.weight || 0).toFixed(2), date: formatThaiDate(new Date().toISOString()) };
             const aData = { clinic_name: "PK-VMS Animal Clinic", owner_name: owner.owner_name, pet_name: pet.pet_name, hn: pet.owner_hn, appointment_date_1: latestRec?.appointment ? formatThaiDate(latestRec.appointment, 'appt') : "-", appointment_note_1: latestRec?.appointment_note || "-", appointment_date_2: latestRec?.appointment_2 ? formatThaiDate(latestRec.appointment_2, 'appt') : "-", appointment_note_2: latestRec?.appointment_note_2 || "-", date: new Date().toLocaleDateString('th-TH') };
             executeMultiTemplatePrint([{ config: tplPet.data.config, data: pData }, { config: tplAppt.data.config, data: aData }], 'sticker_pet_id');
         }
