@@ -46,7 +46,7 @@
     </div>
 
     <script>
-        let _patients = [], _owners = {}, _searchTimer = null;
+        let _animals = [], _owners = {}, _searchTimer = null;
 
         function getAnimalIcon(petType) {
             if (!petType) return '🐾';
@@ -67,9 +67,9 @@
                     window.db.from('animals').select('id, owner_hn, pet_name, pet_type, gender, breed').order('owner_hn', { ascending: false }),
                     window.db.from('owners').select('hn, owner_name, phone')
                 ]);
-                _patients = animalsRes.data || [];
+                _animals = animalsRes.data || [];
                 (ownersRes.data || []).forEach(o => { _owners[o.hn] = o; });
-                renderList(_patients);
+                renderList(_animals);
             } catch (e) {
                 console.error('โหลดข้อมูลล้มเหลว:', e);
             }
@@ -79,8 +79,8 @@
             clearTimeout(_searchTimer);
             _searchTimer = setTimeout(() => {
                 const term = document.getElementById('search-input').value.trim().toLowerCase();
-                if (!term) { renderList(_patients); return; }
-                const filtered = _patients.filter(a => {
+                if (!term) { renderList(_animals); return; }
+                const filtered = _animals.filter(a => {
                     const owner = _owners[a.owner_hn] || {};
                     return (a.pet_name || '').toLowerCase().includes(term)
                         || (owner.owner_name || '').toLowerCase().includes(term)

@@ -1500,8 +1500,11 @@
             }
             
             list.innerHTML = filtered.map(rec => {
+                // Group items by type in a single pass (avoids 3 separate .filter() calls)
                 const itemGroups = { Lab: [], Tx: [], Rx: [] };
-                (rec.medical_record_items || []).forEach(i => { if (itemGroups[i.item_type]) itemGroups[i.item_type].push(i); });
+                (rec.medical_record_items || []).forEach(i => {
+                    if (itemGroups[i.item_type]) itemGroups[i.item_type].push(i);
+                });
                 const labItems = itemGroups.Lab;
                 const txItems  = itemGroups.Tx;
                 const rxItems  = itemGroups.Rx;
