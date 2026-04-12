@@ -482,7 +482,9 @@
         let customerWindow = null;
         const customerChannel = new BroadcastChannel('pos_customer');
         let combinedOwnerHn = null, combinedRecords = [], combinedItemMap = {};
+        let combinedOwnerName = '';
         let selectedItemIds = new Set();
+        let selectedCombinedKeys = new Set();
         let mergedGroupsCache = {};
 
         const SCHEMA_MIGRATION_MSG = '⚠️ ฐานข้อมูลยังไม่ได้รัน Migration SQL\n\nกรุณาไปที่ Settings (set-db.html) → อัปเดต Schema ฐานข้อมูล แล้ว Copy SQL ไปรันใน Supabase → SQL Editor';
@@ -567,6 +569,7 @@
             });
             if (preview) preview.innerHTML = rows.join('');
             document.getElementById('merge-name-input').value = '';
+            document.getElementById('merge-modal').dataset.context = 'cart';
             document.getElementById('merge-modal').style.display = 'flex';
             lucide.createIcons();
             setTimeout(() => document.getElementById('merge-name-input').focus(), 100);
@@ -577,6 +580,27 @@
         function confirmMerge() {
             const name = document.getElementById('merge-name-input').value.trim();
             if (!name) return alert('กรุณาตั้งชื่อรายการรวม');
+            const context = document.getElementById('merge-modal').dataset.context;
+            if (context === 'combined') {
+                const keys = Array.from(selectedCombinedKeys);
+                let totalQty = 0, totalPrice = 0;
+                keys.forEach(key => {
+                    if (combinedItemMap[key]) {
+                        totalQty += combinedItemMap[key].quantity;
+                        totalPrice += combinedItemMap[key].totalPrice;
+                        delete combinedItemMap[key];
+                    }
+                });
+                combinedItemMap[name] = { quantity: totalQty, totalPrice, displayName: name };
+                selectedCombinedKeys.clear();
+                closeMergeModal();
+                renderCombinedItemsHtml();
+                const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+                document.getElementById('combined-sum-total').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+                calcCombinedNet();
+                return;
+            }
+            // Regular cart merge
             const ids = Array.from(selectedItemIds);
             // Remove these ids from any existing groups, then add new group
             let groups = getMergedGroups(activeRecordId);
@@ -1721,9 +1745,7 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
         }
 
         function renderCombinedItems(ownerName, nameTh = {}) {
-            const container = document.getElementById('combined-items-container');
-            const numAnimals = combinedRecords.length;
-            let html = `<div class="mb-3 txt-label">เจ้าของ: <span class="text-white font-black text-base">${ownerName}</span></div>`;
+            combinedOwnerName = ownerName;
             combinedItemMap = {};
             for (const cr of combinedRecords) {
                 for (const item of cr.items) {
@@ -1734,16 +1756,36 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
                     combinedItemMap[item.item_name].totalPrice += parseFloat(item.total_price);
                 }
             }
+            selectedCombinedKeys.clear();
+            renderCombinedItemsHtml();
+        }
+
+        function renderCombinedItemsHtml() {
+            const container = document.getElementById('combined-items-container');
+            const numAnimals = combinedRecords.length;
             const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+            let html = `<div class="mb-3 txt-label">เจ้าของ: <span class="text-white font-black text-base">${combinedOwnerName}</span></div>`;
             html += `<div class="bg-white/5 rounded-xl p-4">
-                <div class="font-black text-teal-400 mb-2 text-base">🐾 จำนวน ${numAnimals} ตัว</div>
+                <div class="flex justify-between items-center mb-2">
+                    <div class="font-black text-teal-400 text-base">🐾 จำนวน ${numAnimals} ตัว</div>
+                </div>
+                <div id="combined-merge-bar" class="hidden mb-2 flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <span id="combined-merge-count" class="text-amber-400 font-bold text-sm flex-1"></span>
+                    <button onclick="openCombinedMergePrompt()" class="bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1">
+                        <i data-lucide="link" class="w-3 h-3"></i> รวมรายการ
+                    </button>
+                    <button onclick="clearCombinedSelection()" class="text-gray-400 hover:text-white text-xs px-2 transition">ยกเลิก</button>
+                </div>
                 <div class="space-y-2" id="combined-item-rows">`;
             const itemKeys = Object.keys(combinedItemMap);
             for (let idx = 0; idx < itemKeys.length; idx++) {
                 const itemName = itemKeys[idx];
                 const data = combinedItemMap[itemName];
                 const safeDisplay = data.displayName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                const safeKey = esc(itemName);
+                const isChecked = selectedCombinedKeys.has(itemName) ? 'checked' : '';
                 html += `<div class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" ${isChecked} class="combined-item-cb w-4 h-4 accent-amber-500 cursor-pointer flex-shrink-0" data-item-key="${safeKey}" onchange="toggleCombinedItemSel(this)">
                     <span class="text-white flex-1">${safeDisplay} x
                         <input type="number" min="0" step="any" value="${Math.floor(data.quantity)}"
                             class="search-input w-14 text-center p-1 text-xs inline-block"
@@ -1759,6 +1801,53 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
                 <span class="text-white" id="combined-item-grand">฿${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div></div></div>`;
             container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function toggleCombinedItemSel(cb) {
+            const key = cb.dataset.itemKey;
+            if (cb.checked) selectedCombinedKeys.add(key);
+            else selectedCombinedKeys.delete(key);
+            updateCombinedMergeBar();
+        }
+
+        function updateCombinedMergeBar() {
+            const bar = document.getElementById('combined-merge-bar');
+            const label = document.getElementById('combined-merge-count');
+            if (!bar) return;
+            if (selectedCombinedKeys.size >= 2) {
+                bar.classList.remove('hidden');
+                if (label) label.textContent = `เลือก ${selectedCombinedKeys.size} รายการ`;
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        function clearCombinedSelection() {
+            selectedCombinedKeys.clear();
+            document.querySelectorAll('.combined-item-cb').forEach(cb => { cb.checked = false; });
+            updateCombinedMergeBar();
+        }
+
+        function openCombinedMergePrompt() {
+            if (selectedCombinedKeys.size < 2) return;
+            const preview = document.getElementById('merge-items-preview');
+            if (preview) {
+                const rows = [];
+                selectedCombinedKeys.forEach(key => {
+                    const data = combinedItemMap[key];
+                    if (data) {
+                        const safe = data.displayName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                        rows.push(`<div class="flex items-center gap-1.5"><i data-lucide="minus" class="w-3 h-3 text-amber-400"></i><span>${safe}</span></div>`);
+                    }
+                });
+                preview.innerHTML = rows.join('');
+            }
+            document.getElementById('merge-name-input').value = '';
+            document.getElementById('merge-modal').dataset.context = 'combined';
+            document.getElementById('merge-modal').style.display = 'flex';
+            lucide.createIcons();
+            setTimeout(() => document.getElementById('merge-name-input').focus(), 100);
         }
 
         function updateCombinedItemByIdx(input) {
