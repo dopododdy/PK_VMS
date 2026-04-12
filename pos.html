@@ -1738,17 +1738,20 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
             html += `<div class="bg-white/5 rounded-xl p-4">
                 <div class="font-black text-teal-400 mb-2 text-base">🐾 จำนวน ${numAnimals} ตัว</div>
                 <div class="space-y-2" id="combined-item-rows">`;
-            for (const [itemName, data] of Object.entries(combinedItemMap)) {
-                const esc = itemName.replace(/'/g, "\\'");
+            const itemKeys = Object.keys(combinedItemMap);
+            for (let idx = 0; idx < itemKeys.length; idx++) {
+                const itemName = itemKeys[idx];
+                const data = combinedItemMap[itemName];
+                const safeDisplay = data.displayName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 html += `<div class="flex items-center gap-2 text-sm">
-                    <span class="text-white flex-1">${data.displayName} x
+                    <span class="text-white flex-1">${safeDisplay} x
                         <input type="number" min="0" step="any" value="${Math.floor(data.quantity)}"
                             class="search-input w-14 text-center p-1 text-xs inline-block"
-                            oninput="updateCombinedItem('${esc}', 'qty', this.value)">
+                            data-item-idx="${idx}" data-field="qty" oninput="updateCombinedItemByIdx(this)">
                     </span>
                     <input type="number" min="0" step="any" value="${data.totalPrice.toFixed(2)}"
                         class="search-input w-24 text-right p-1 text-xs"
-                        oninput="updateCombinedItem('${esc}', 'price', this.value)">
+                        data-item-idx="${idx}" data-field="price" oninput="updateCombinedItemByIdx(this)">
                 </div>`;
             }
             html += `<div class="flex justify-between font-bold mt-2 pt-2 border-t border-white/10 text-sm">
@@ -1758,10 +1761,14 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
             container.innerHTML = html;
         }
 
-        function updateCombinedItem(itemName, field, value) {
-            if (!combinedItemMap[itemName]) return;
-            if (field === 'qty') combinedItemMap[itemName].quantity = parseFloat(value) || 0;
-            if (field === 'price') combinedItemMap[itemName].totalPrice = parseFloat(value) || 0;
+        function updateCombinedItemByIdx(input) {
+            const keys = Object.keys(combinedItemMap);
+            const idx = parseInt(input.dataset.itemIdx, 10);
+            const field = input.dataset.field;
+            const itemName = keys[idx];
+            if (!itemName || !combinedItemMap[itemName]) return;
+            if (field === 'qty') combinedItemMap[itemName].quantity = parseFloat(input.value) || 0;
+            else if (field === 'price') combinedItemMap[itemName].totalPrice = parseFloat(input.value) || 0;
             const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
             const grandEl = document.getElementById('combined-item-grand');
             if (grandEl) grandEl.innerText = '฿' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
