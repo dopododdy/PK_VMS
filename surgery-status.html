@@ -56,54 +56,6 @@
 
         /* Visually hidden (screen-reader only) */
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-
-        /* Full-screen status-change animation overlay */
-        #status-overlay {
-            display: none;
-            position: fixed; inset: 0; z-index: 9999;
-            align-items: center; justify-content: center; text-align: center;
-            flex-direction: column;
-            background: rgba(2, 6, 23, 0.96);
-            animation: overlay-fadein 0.4s ease forwards;
-        }
-        #status-overlay.visible { display: flex; }
-        #status-overlay.fading  { animation: overlay-fadeout 0.5s ease forwards; }
-
-        @keyframes overlay-fadein  { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes overlay-fadeout { from { opacity: 1; } to { opacity: 0; } }
-
-        #anim-inner {
-            animation: anim-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
-        }
-        @keyframes anim-pop {
-            0%   { transform: scale(0.3) translateY(60px); opacity: 0; }
-            100% { transform: scale(1)   translateY(0);    opacity: 1; }
-        }
-
-        #anim-emoji  { font-size: 9rem; line-height: 1; margin-bottom: 0.5rem; animation: anim-bounce 0.7s ease 0.4s both; }
-        @keyframes anim-bounce {
-            0%  { transform: scale(1); }
-            40% { transform: scale(1.18); }
-            70% { transform: scale(0.93); }
-            100%{ transform: scale(1); }
-        }
-
-        #anim-petname { font-size: 3.5rem; font-weight: 900; color: #fff; line-height: 1.15; margin: 0.4rem 0; }
-        #anim-status  { font-size: 1.8rem; font-weight: 700; margin-top: 0.6rem; padding: 0.4rem 1.4rem; border-radius: 999px; display: inline-block; }
-
-        .anim-status-emergency { color: #fca5a5; background: rgba(239,68,68,0.2); border: 2px solid #ef4444; }
-        .anim-status-waiting   { color: #fdba74; background: rgba(249,115,22,0.2); border: 2px solid #f97316; }
-        .anim-status-recovering{ color: #93c5fd; background: rgba(59,130,246,0.2); border: 2px solid #3b82f6; }
-        .anim-status-done      { color: #86efac; background: rgba(16,185,129,0.2); border: 2px solid #10b981; }
-
-        #anim-progress-bar {
-            position: absolute; bottom: 0; left: 0; height: 5px;
-            background: linear-gradient(90deg, #38bdf8, #818cf8);
-            border-radius: 0 4px 4px 0;
-            animation: progress-shrink 5s linear forwards;
-            width: 100%;
-        }
-        @keyframes progress-shrink { from { width: 100%; } to { width: 0%; } }
     </style>
 </head>
 <body class="px-4 py-6">
@@ -131,21 +83,8 @@
 
     </div>
 
-    <!-- Full-screen animation overlay (shown on status change) -->
-    <div id="status-overlay" role="alert" aria-live="assertive" aria-atomic="true">
-        <span id="anim-sr-announce" class="sr-only"></span>
-        <div id="anim-inner">
-            <div id="anim-emoji">🐾</div>
-            <div id="anim-petname">—</div>
-            <div id="anim-status" class="anim-status-waiting">—</div>
-        </div>
-        <div id="anim-progress-bar"></div>
-    </div>
-
     <script>
         const SECRETPWD = "044641460"; // รหัสผ่านสำหรับเปลี่ยนสถานะและลบ
-        const OVERLAY_DISPLAY_MS = 5000;  // ระยะเวลาแสดง overlay (มิลลิวินาที)
-        const OVERLAY_FADEOUT_MS = 500;   // ระยะเวลา fade-out
         let queueData = [];
 
         window.onload = async () => {
@@ -244,81 +183,30 @@
         }
 
         async function attemptStatusUpdate(selectElement, id, oldStatus, cardEl) {
-            const pwd = prompt("🔐 สงวนสิทธิ์เฉพาะสัตวแพทย์\nกรุณาใส่รหัสผ่านเพื่อแก้ไขสถานะ:");
-
-            if (pwd === SECRETPWD) {
-                const newStatus = selectElement.value;
-                const { error } = await db.from('surgery_queue').update({ status: newStatus }).eq('id', id);
-
-                if (error) {
-                    alert("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
+            const alreadyLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+            if (!alreadyLoggedIn) {
+                const pwd = prompt("🔐 สงวนสิทธิ์เฉพาะสัตวแพทย์\nกรุณาใส่รหัสผ่านเพื่อแก้ไขสถานะ:");
+                if (pwd !== SECRETPWD) {
+                    if (pwd !== null) alert("❌ รหัสผ่านไม่ถูกต้อง");
                     selectElement.value = oldStatus;
-                } else {
-                    const { sel, card } = statusCls(newStatus);
-                    selectElement.className = `status-select ${sel}`;
-                    cardEl.className = cardEl.className.replace(/card-\S+/, card);
-                    cardEl.dataset.status = newStatus;
-                    const idx = queueData.findIndex(q => q.id === id);
-                    if (idx > -1) queueData[idx].status = newStatus;
-                    showStatusAnimation(cardEl.dataset.pet, newStatus);
+                    return;
                 }
-            } else {
-                if (pwd !== null) alert("❌ รหัสผ่านไม่ถูกต้อง");
-                selectElement.value = oldStatus;
             }
-        }
 
-        // แสดง animation เต็มหน้าจอเมื่อสถานะเปลี่ยน
-        let _animTimer = null;
-        function showStatusAnimation(petName, newStatus) {
-            const overlay    = document.getElementById('status-overlay');
-            const emojiEl    = document.getElementById('anim-emoji');
-            const nameEl     = document.getElementById('anim-petname');
-            const statusEl   = document.getElementById('anim-status');
-            const innerEl    = document.getElementById('anim-inner');
-            const barEl      = document.getElementById('anim-progress-bar');
-            const announceEl = document.getElementById('anim-sr-announce');
+            const newStatus = selectElement.value;
+            const { error } = await db.from('surgery_queue').update({ status: newStatus }).eq('id', id);
 
-            // กำหนด emoji และ CSS class ตามสถานะ
-            const statusMap = {
-                'ฉุกเฉิน/ลัดคิวผ่าตัด': { emoji: '🚨', cls: 'anim-status-emergency' },
-                'รอผ่าตัด':              { emoji: '🕐', cls: 'anim-status-waiting'   },
-                'กำลังพักฟื้น':          { emoji: '💉', cls: 'anim-status-recovering' },
-                'ฟื้นแล้ว/รอรับกลับ':   { emoji: '🎉', cls: 'anim-status-done'      },
-            };
-            const info = statusMap[newStatus] || { emoji: '🐾', cls: 'anim-status-waiting' };
-
-            // ล้าง timer เดิมถ้ายังค้างอยู่
-            if (_animTimer) { clearTimeout(_animTimer); _animTimer = null; }
-
-            // รีเซ็ตและตั้งค่าเนื้อหา
-            emojiEl.textContent    = info.emoji;
-            nameEl.textContent     = petName;
-            statusEl.textContent   = newStatus;
-            statusEl.className     = `anim-status ${info.cls}`;
-            announceEl.textContent = `${petName} เปลี่ยนสถานะเป็น ${newStatus}`;
-
-            // รีเซ็ต animations ของ inner และ progress bar
-            innerEl.style.animation = 'none';
-            barEl.style.animation   = 'none';
-            // force reflow เพื่อให้ animation เริ่มใหม่
-            void innerEl.offsetWidth;
-            void barEl.offsetWidth;
-            innerEl.style.animation = '';
-            barEl.style.animation   = '';
-
-            // แสดง overlay
-            overlay.classList.remove('fading');
-            overlay.classList.add('visible');
-
-            // ซ่อนหลัง OVERLAY_DISPLAY_MS (fade out OVERLAY_FADEOUT_MS)
-            _animTimer = setTimeout(() => {
-                overlay.classList.add('fading');
-                setTimeout(() => {
-                    overlay.classList.remove('visible', 'fading');
-                }, OVERLAY_FADEOUT_MS);
-                _animTimer = null;
-            }, OVERLAY_DISPLAY_MS);
+            if (error) {
+                alert("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + error.message);
+                selectElement.value = oldStatus;
+            } else {
+                const { sel, card } = statusCls(newStatus);
+                selectElement.className = `status-select ${sel}`;
+                cardEl.className = cardEl.className.replace(/card-\S+/, card);
+                cardEl.dataset.status = newStatus;
+                const idx = queueData.findIndex(q => q.id === id);
+                if (idx > -1) queueData[idx].status = newStatus;
+            }
         }
 
         // ล้างรายการทั้งหมดออกจากกระดาน (เรียกจากการ double-click icon มีด)
@@ -339,17 +227,20 @@
 
         // ลบรายการเมื่อรับกลับบ้านเรียบร้อยแล้ว
         async function attemptDelete(id, petName) {
-            const pwd = prompt(`🔐 ยืนยันการนำ "${petName}" ออกจากกระดาน\nกรุณาใส่รหัสผ่าน:`);
-
-            if (pwd === SECRETPWD) {
-                const { error } = await db.from('surgery_queue').delete().eq('id', id);
-                if (error) {
-                    alert("❌ ลบข้อมูลไม่สำเร็จ: " + error.message);
-                } else {
-                    await fetchQueue();
+            const alreadyLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+            if (!alreadyLoggedIn) {
+                const pwd = prompt(`🔐 ยืนยันการนำ "${petName}" ออกจากกระดาน\nกรุณาใส่รหัสผ่าน:`);
+                if (pwd !== SECRETPWD) {
+                    if (pwd !== null) alert("❌ รหัสผ่านไม่ถูกต้อง");
+                    return;
                 }
-            } else if (pwd !== null) {
-                alert("❌ รหัสผ่านไม่ถูกต้อง");
+            }
+
+            const { error } = await db.from('surgery_queue').delete().eq('id', id);
+            if (error) {
+                alert("❌ ลบข้อมูลไม่สำเร็จ: " + error.message);
+            } else {
+                await fetchQueue();
             }
         }
     </script>
