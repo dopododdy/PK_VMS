@@ -481,7 +481,7 @@
         let pendingRecordsMap = {};
         let customerWindow = null;
         const customerChannel = new BroadcastChannel('pos_customer');
-        let combinedOwnerHn = null, combinedRecords = [];
+        let combinedOwnerHn = null, combinedRecords = [], combinedItemMap = {};
         let selectedItemIds = new Set();
         let mergedGroupsCache = {};
 
@@ -769,7 +769,7 @@
             });
             container.innerHTML = Object.entries(groups).map(([hn, g]) => {
                 const cards = g.records.map(r => `
-                    <div class="glass-card border-l-4 border-l-amber-500" onclick="loadPendingRecord('${r.id}')">
+                    <div class="glass-card border-l-4 border-l-amber-500" onclick="loadPendingRecord('${r.id}')" ondblclick="openMedrecForRecord('${r.id}')">
                         <div class="flex justify-between items-center mb-1">
                             <span class="text-amber-400 font-bold text-sm">${getAnimalIcon(r.pet_type)} ${r.pet_name}</span>
                             <span class="text-amber-400 font-bold text-sm">฿${parseFloat(r.net_amount || r.total_cost || 0).toLocaleString()}</span>
@@ -802,6 +802,14 @@
             }
             await loadPatientHistory(r.owner_hn, r.pet_name, r.owner_name);
             await viewRecordDetail(recordId, 'pending');
+        }
+
+        function openMedrecForRecord(recordId) {
+            const r = pendingRecordsMap[recordId];
+            if (!r || !r.owner_hn) return;
+            const params = new URLSearchParams({ hn: r.owner_hn });
+            if (r.animal_id) params.set('id', r.animal_id);
+            window.open('medrec.html?' + params.toString(), '_blank');
         }
 
         async function newWalkInSale() {
@@ -1703,7 +1711,7 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
             const allItems = combinedRecords.flatMap(cr => cr.items);
             const { nameTh: combinedNameTh } = await enrichItemsWithThaiNames(allItems);
             renderCombinedItems(ownerName, combinedNameTh);
-            const grandTotal = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
+            const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
             document.getElementById('combined-sum-total').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('combined-discount').value = 0;
             document.getElementById('combined-received-cash').value = '';
@@ -1716,36 +1724,53 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
             const container = document.getElementById('combined-items-container');
             const numAnimals = combinedRecords.length;
             let html = `<div class="mb-3 txt-label">เจ้าของ: <span class="text-white font-black text-base">${ownerName}</span></div>`;
-            const itemMap = {};
+            combinedItemMap = {};
             for (const cr of combinedRecords) {
                 for (const item of cr.items) {
-                    if (!itemMap[item.item_name]) {
-                        itemMap[item.item_name] = { quantity: 0, totalPrice: 0 };
+                    if (!combinedItemMap[item.item_name]) {
+                        combinedItemMap[item.item_name] = { quantity: 0, totalPrice: 0, displayName: nameTh[item.item_name] || item.item_name };
                     }
-                    itemMap[item.item_name].quantity += parseFloat(item.quantity || 1);
-                    itemMap[item.item_name].totalPrice += parseFloat(item.total_price);
+                    combinedItemMap[item.item_name].quantity += parseFloat(item.quantity || 1);
+                    combinedItemMap[item.item_name].totalPrice += parseFloat(item.total_price);
                 }
             }
-            const grandTotal = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
+            const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
             html += `<div class="bg-white/5 rounded-xl p-4">
                 <div class="font-black text-teal-400 mb-2 text-base">🐾 จำนวน ${numAnimals} ตัว</div>
-                <div class="space-y-1">`;
-            for (const [itemName, data] of Object.entries(itemMap)) {
-                const displayName = nameTh[itemName] || itemName;
-                html += `<div class="flex justify-between text-sm">
-                    <span class="text-white">${displayName} x ${Math.floor(data.quantity)} ตัว</span>
-                    <span class="text-gray-300">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                <div class="space-y-2" id="combined-item-rows">`;
+            for (const [itemName, data] of Object.entries(combinedItemMap)) {
+                const esc = itemName.replace(/'/g, "\\'");
+                html += `<div class="flex items-center gap-2 text-sm">
+                    <span class="text-white flex-1">${data.displayName} x
+                        <input type="number" min="0" step="any" value="${Math.floor(data.quantity)}"
+                            class="search-input w-14 text-center p-1 text-xs inline-block"
+                            oninput="updateCombinedItem('${esc}', 'qty', this.value)">
+                    </span>
+                    <input type="number" min="0" step="any" value="${data.totalPrice.toFixed(2)}"
+                        class="search-input w-24 text-right p-1 text-xs"
+                        oninput="updateCombinedItem('${esc}', 'price', this.value)">
                 </div>`;
             }
             html += `<div class="flex justify-between font-bold mt-2 pt-2 border-t border-white/10 text-sm">
                 <span class="text-gray-400">รวม</span>
-                <span class="text-white">฿${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                <span class="text-white" id="combined-item-grand">฿${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div></div></div>`;
             container.innerHTML = html;
         }
 
+        function updateCombinedItem(itemName, field, value) {
+            if (!combinedItemMap[itemName]) return;
+            if (field === 'qty') combinedItemMap[itemName].quantity = parseFloat(value) || 0;
+            if (field === 'price') combinedItemMap[itemName].totalPrice = parseFloat(value) || 0;
+            const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+            const grandEl = document.getElementById('combined-item-grand');
+            if (grandEl) grandEl.innerText = '฿' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('combined-sum-total').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            calcCombinedNet();
+        }
+
         function calcCombinedNet() {
-            const sum = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
+            const sum = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
             const disc = parseFloat(document.getElementById('combined-discount').value) || 0;
             document.getElementById('combined-net-total').innerText = (sum - disc).toLocaleString(undefined, {minimumFractionDigits: 2});
             calcCombinedChange();
@@ -1766,7 +1791,7 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
             const recvd = parseFloat(document.getElementById('combined-received-cash').value) || 0;
             if (recvd < net) { alert('เงินรับมาไม่พอ'); return; }
             const totalDiscount = parseFloat(document.getElementById('combined-discount').value) || 0;
-            const grandTotal = combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0);
+            const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
             const now = new Date();
             const yyyy = now.getFullYear() + 543, mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -1798,25 +1823,13 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
                 const config = template.config, pw = config.width || 80;
                 const ownerRec = combinedRecords[0]?.record;
                 const ownerName = ownerRec?.owners?.owner_name || '-';
-                const allPrintItems = combinedRecords.flatMap(cr => cr.items);
-                const { nameTh: printNameTh } = await enrichItemsWithThaiNames(allPrintItems);
                 const numAnimals = combinedRecords.length;
-                const itemMap = {};
-                for (const cr of combinedRecords) {
-                    for (const item of cr.items) {
-                        if (!itemMap[item.item_name]) {
-                            itemMap[item.item_name] = { quantity: 0, totalPrice: 0 };
-                        }
-                        itemMap[item.item_name].quantity += parseFloat(item.quantity || 1);
-                        itemMap[item.item_name].totalPrice += parseFloat(item.total_price);
-                    }
-                }
                 let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">`;
-                for (const [itemName, data] of Object.entries(itemMap)) {
-                    const displayName = printNameTh[itemName] || itemName;
-                    itemsHtml += `<tr><td style="text-align:left;">${displayName} x ${Math.floor(data.quantity)} ตัว</td><td style="text-align:right;">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
+                for (const [itemName, data] of Object.entries(combinedItemMap)) {
+                    itemsHtml += `<tr><td style="text-align:left;">${data.displayName || itemName} x ${Math.floor(data.quantity)}</td><td style="text-align:right;">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
                 }
                 itemsHtml += `</table>`;
+                const itemsTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
                 const printData = {
                     clinic_name: "PK-VMS Animal Clinic",
                     clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
@@ -1829,7 +1842,7 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
                     hn: combinedOwnerHn || "-",
                     receipt_no: receiptNo || "-",
                     time: (paidAt || new Date()).toLocaleTimeString('th-TH'),
-                    total_price: combinedRecords.reduce((s, cr) => s + parseFloat(cr.record.total_cost || 0), 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    total_price: itemsTotal.toLocaleString(undefined, {minimumFractionDigits: 2}),
                     discount_val: parseFloat(discountAmt || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     net_total: parseFloat(netAmt || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     received_amount: parseFloat(receivedAmt || 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
@@ -1847,7 +1860,7 @@ tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2
                         return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
                     } else {
                         let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
-                        if (l.text?.includes("{{items_list}}")) pushOffset += Object.keys(itemMap).length * 5;
+                        if (l.text?.includes("{{items_list}}")) pushOffset += Object.keys(combinedItemMap).length * 5;
                         const fw = l.bold ? 'font-weight:bold;' : '';
                         const fs = l.italic ? 'font-style:italic;' : '';
                         const td = l.underline ? 'text-decoration:underline;' : '';
