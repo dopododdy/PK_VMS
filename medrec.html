@@ -1618,14 +1618,17 @@
             window.location.href = `pos.html?hn=${ownerHN}`;
         }
 
-        function refillMeds(recordId) {
+        async function refillMeds(recordId) {
             const rec = records.find(r => r.id === recordId);
             if (!rec) return;
             const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
             if (rxItems.length === 0) return alert("ไม่พบรายการยา");
             if (confirm(`คัดลอกยาเดิม (${rxItems.length} รายการ)?`)) {
                 editingId = null;
-                selectedItems = rxItems.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price }));
+                const itemNames = [...new Set(rxItems.map(i => i.item_name))];
+                const { data: drugs } = await db.from('pharmacy').select('item_name, name_th').in('item_name', itemNames);
+                const drugMap = new Map((drugs || []).map(d => [d.item_name, d]));
+                selectedItems = rxItems.map(i => ({ type: i.item_type, name: i.item_name, price: parseFloat(i.total_price), dose: i.dose_per_time, unit: i.unit, freq: i.frequency, meal: i.meal_timing, day_timing: i.day_timing, days: i.duration_days, qty: i.quantity, unit_price: i.unit_price, drug_name_th: drugMap.get(i.item_name)?.name_th || "" }));
                 ['cc','hx','pe','dx','plan'].forEach(f => { if(document.getElementById('f_'+f)) document.getElementById('f_'+f).value = ''; });
                 setApptNoteVal('f_app_note', ''); setApptNoteVal('f_app_note_2', '');
                 ['appointment','appointment_2'].forEach(f => { const el = document.getElementById('f_'+f); if(el) { if(el._flatpickr) el._flatpickr.clear(); else el.value = ''; } });
@@ -2280,7 +2283,7 @@
             const newPrice = parseFloat(document.getElementById('rx-edit-price').value) || 0;
             const oldPrice = item.price;
             document.getElementById('f_cost').value = ((parseFloat(document.getElementById('f_cost').value) || 0) - oldPrice + newPrice).toFixed(2);
-            item.dose = doseVal.toString();
+            item.dose = fmtRxTabsValue(doseVal, item.unit || 'เม็ด');
             item.freq = freqVal === 0.5 ? 'วันเว้นวัน' : `วันละ ${freqVal} ครั้ง`;
             item.meal = document.getElementById('rx-edit-meal').value;
             item.day_timing = document.getElementById('rx-edit-day-timing').value;
