@@ -1,76 +1,541 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8" />
-<title>PK-VMS | คลินิกรักษาสัตว์หมอปิติพัฒน์</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <title>PK-VMS | คลินิกรักษาสัตว์หมอปิติพัฒน์</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <style>
+        :root {
+            --base-font-size: 14px; 
+            --navy: #020617; 
+            --navy-mid: #0f172a; 
+            --teal: #14b8b1;
+            --surface: rgba(255, 255, 255, 0.03); 
+            --border: rgba(255, 255, 255, 0.1);
+            --text-dim: #94a3b8;
+        }
 
-<!-- ⚡ Prefetch หน้าหลักล่วงหน้า เพื่อให้หลัง login เปิดเร็วทันที -->
-<link rel="prefetch" href="medrec.html" as="document">
-<link rel="prefetch" href="bottom-nav.js" as="script">
-<link rel="prefetch" href="supabase-config.js" as="script">
+        * { font-family: "Sarabun", sans-serif !important; }
+        html { font-size: var(--base-font-size); scroll-behavior: smooth; }
 
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  :root { --navy:#020617; --teal:#14b8b1; }
-  * { font-family:"Sarabun",sans-serif !important; }
-  body {
-    background: var(--navy);
-    color:#e2e8f0; margin:0; min-height:100vh;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .mesh-bg {
-    position:fixed; inset:0; z-index:-1;
-    background:
-      radial-gradient(circle at 10% 10%, rgba(20,184,177,0.08), transparent 40%),
-      radial-gradient(circle at 90% 90%, rgba(59,130,246,0.08), transparent 40%);
-  }
-</style>
+        body { 
+            background: var(--navy); 
+            color: #e2e8f0; 
+            margin: 0; 
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .mesh-bg { 
+            position: fixed; inset: 0; z-index: -1; 
+            background: 
+                radial-gradient(circle at 10% 10%, rgba(20, 184, 177, 0.08), transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(59, 130, 246, 0.08), transparent 40%);
+        }
+
+        .menu-card { 
+            background: var(--surface); 
+            border: 1px solid var(--border); 
+            border-radius: 30px; 
+            padding: 2.5rem 1.5rem; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; 
+            text-align: center; 
+            backdrop-filter: blur(15px);
+            display: flex; flex-direction: column; align-items: center;
+            text-decoration: none;
+            overflow: hidden;
+        }
+
+        .menu-card:hover { 
+            transform: translateY(-10px); 
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-icon { font-size: 3.2rem; margin-bottom: 1.2rem; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.2)); transition: 0.3s; }
+        .menu-card:hover .card-icon { transform: scale(1.1); }
+
+        .card-title { font-size: 1.5rem; font-weight: 800; color: white; margin-bottom: 0.5rem; }
+        .card-desc { font-size: 0.95rem; color: var(--text-dim); line-height: 1.5; max-width: 240px; }
+
+        .theme-teal:hover { border-color: var(--teal); box-shadow: 0 0 20px rgba(20, 184, 177, 0.15); }
+        .theme-teal .card-title-acc { color: var(--teal); }
+
+        .theme-blue:hover { border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
+        .theme-blue .card-title-acc { color: #60a5fa; }
+
+        .theme-yellow:hover { border-color: #eab308; box-shadow: 0 0 20px rgba(234, 179, 8, 0.15); }
+        .theme-yellow .card-title-acc { color: #fde047; }
+
+        .theme-amber:hover { border-color: #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.15); }
+        .theme-amber .card-title-acc { color: #fbbf24; }
+
+        .theme-emerald:hover { border-color: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.15); }
+        .theme-emerald .card-title-acc { color: #34d399; }
+
+        .theme-cyan:hover { border-color: #06b6d4; box-shadow: 0 0 20px rgba(6, 182, 212, 0.15); }
+        .theme-cyan .card-title-acc { color: #22d3ee; }
+
+        .theme-slate:hover { border-color: #64748b; box-shadow: 0 0 20px rgba(148, 163, 184, 0.2); }
+        .theme-slate .card-title-acc { color: #cbd5e1; }
+
+        .theme-violet:hover { border-color: #8b5cf6; box-shadow: 0 0 20px rgba(139, 92, 246, 0.2); }
+        .theme-violet .card-title-acc { color: #a78bfa; }
+
+        .theme-purple:hover { border-color: #8b5cf6; box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
+        .theme-purple .card-title-acc { color: #a78bfa; }
+
+        .stat-badge {
+            position: absolute; top: 1.2rem; right: 1.2rem;
+            background: var(--teal); color: var(--navy); 
+            padding: 3px 10px; border-radius: 8px; 
+            font-weight: 900; font-size: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        
+        /* สไตล์พิเศษสำหรับ Badge แจ้งเตือนรายการค้าง */
+        .alert-badge {
+            background: #ef4444; /* สีแดง */
+            color: white;
+        }
+
+        .btn-size {
+            width: 32px; height: 32px; flex: center; display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 8px; transition: 0.2s; cursor: pointer; font-weight: 800; border: 1px solid var(--border);
+        }
+        .btn-size.active { background: var(--teal); color: var(--navy); border-color: var(--teal); }
+
+        #login-overlay { position: fixed; inset: 0; z-index: 1000; background: var(--navy); display: flex; align-items: center; justify-content: center; }
+
+        /* ===== Screen Saver ===== */
+        #screensaver-overlay {
+            position: fixed; inset: 0; z-index: 900;
+            background: #000;
+            display: none;
+            align-items: center; justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        #screensaver-overlay.active { display: flex; }
+
+        /* Paws */
+        @keyframes ssPawFloat {
+            0%   { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+            10%  { opacity: 0.7; }
+            90%  { opacity: 0.7; }
+            100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+        }
+        .ss-paw {
+            position: absolute;
+            animation: ssPawFloat linear infinite;
+            pointer-events: none; user-select: none;
+        }
+
+        /* Bounce */
+        @keyframes ssBounceX { 0%,100% { left: 3%;  } 50% { left: 88%;  } }
+        @keyframes ssBounceY { 0%,100% { top:  3%;  } 50% { top:  82%;  } }
+        .ss-ball {
+            position: absolute;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #2dd4bf, #0d9488);
+            box-shadow: 0 0 40px rgba(20,184,177,0.7);
+            animation: ssBounceX 3.1s ease-in-out infinite, ssBounceY 2.3s ease-in-out infinite;
+        }
+
+        /* Clock */
+        .ss-clock-wrap {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center;
+        }
+        .ss-clock-time {
+            font-size: clamp(4rem, 15vw, 10rem);
+            font-weight: 900;
+            color: var(--teal);
+            letter-spacing: 0.05em;
+            text-shadow: 0 0 60px rgba(20,184,177,0.5);
+            line-height: 1;
+        }
+        .ss-clock-date {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            color: #94a3b8;
+            margin-top: 1rem;
+        }
+        .ss-clock-clinic {
+            font-size: clamp(0.8rem, 2vw, 1.1rem);
+            color: rgba(255,255,255,0.2);
+            margin-top: 2rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+        #ss-matrix-canvas { position: absolute; inset: 0; }
+
+        .ss-hint {
+            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.2); font-size: 0.85rem;
+            letter-spacing: 0.15em; pointer-events: none;
+        }
+    </style>
 </head>
-<body data-pk-nav="hide">
-<div class="mesh-bg"></div>
+<body>
+    <div class="mesh-bg"></div>
 
-<div class="bg-slate-900/50 p-12 rounded-[50px] border border-white/10 w-full max-w-md text-center backdrop-blur-3xl mx-4">
-  <div class="w-20 h-20 bg-teal-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-8 shadow-2xl shadow-teal-500/20">🔐</div>
-  <h2 class="text-4xl font-black text-white mb-2">PK-VMS Pro</h2>
-  <p class="text-slate-400 mb-10">ระบบบริหารจัดการคลินิกสัตว์</p>
-  <input type="password" id="pw"
-         class="w-full bg-black/40 border-2 border-white/10 rounded-2xl p-5 text-center text-3xl tracking-[0.5em] text-white outline-none focus:border-teal-500 transition-all"
-         placeholder="••••" autofocus inputmode="numeric">
-  <button id="go"
-          class="w-full mt-8 bg-teal-600 hover:bg-teal-500 text-white font-black py-5 rounded-2xl text-xl transition-all active:scale-95 shadow-xl">
-    เข้าสู่ระบบ
-  </button>
-</div>
+    <div id="login-overlay">
+        <div class="bg-slate-900/50 p-12 rounded-[50px] border border-white/10 w-full max-w-md text-center backdrop-blur-3xl">
+            <div class="w-20 h-20 bg-teal-500 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-8 shadow-2xl shadow-teal-500/20">🔐</div>
+            <h2 class="text-4xl font-black text-white mb-2">PK-VMS Pro</h2>
+            <p class="text-slate-400 mb-10">ระบบบริหารจัดการคลินิกสัตว์</p>
+            <input type="password" id="pw-input" class="w-full bg-black/40 border-2 border-white/10 rounded-2xl p-5 text-center text-3xl tracking-[0.5em] text-white outline-none focus:border-teal-500 transition-all" placeholder="••••">
+            <button onclick="checkPassword()" class="w-full mt-8 bg-teal-600 hover:bg-teal-500 text-white font-black py-5 rounded-2xl text-xl transition-all active:scale-95 shadow-xl">เข้าสู่ระบบ</button>
+        </div>
+    </div>
 
-<script>
-  // ⚠️ ขอแนะนำให้ย้ายไป Supabase Auth — รหัสในหน้านี้ใครก็เห็น
-  const PW = "044641460";
-  const HOME = "medrec.html";   // หลัง login ไปหน้านี้แทน dashboard
+    <div id="main-content" style="display: none;">
+        <header class="p-6 sticky top-0 z-50 bg-slate-950/60 backdrop-blur-xl border-b border-white/5">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="bg-teal-500 w-12 h-12 rounded-2xl flex items-center justify-center text-navy font-black text-xl shadow-lg shadow-teal-500/20">PK</div>
+                    <div>
+                        <h1 class="font-black text-2xl text-white leading-none">VMS Professional</h1>
+                        <p class="text-teal-400 text-[10px] font-black mt-1 uppercase tracking-[0.2em]">คลินิกรักษาสัตว์หมอปิติพัฒน์</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-6">
+                    <div class="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/5">
+                        <div id="size-14" class="btn-size text-xs" onclick="changeFontSize(14)">A</div>
+                        <div id="size-16" class="btn-size text-sm" onclick="changeFontSize(16)">A</div>
+                        <div id="size-20" class="btn-size text-lg" onclick="changeFontSize(20)">A</div>
+                    </div>
+                    <button onclick="logout()" class="text-[10px] font-black text-slate-500 hover:text-red-400 uppercase tracking-widest transition-all">Logout</button>
+                </div>
+            </div>
+        </header>
 
-  // ถ้า login แล้ว ข้ามหน้านี้ไปหน้า home เลย
-  if (sessionStorage.getItem("isLoggedIn") === "true") {
-    location.replace(HOME);
-  }
+        <main class="max-w-7xl mx-auto p-8 pt-16">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
 
-  const pw = document.getElementById("pw");
-  const go = document.getElementById("go");
+                <a href="medrec.html" class="menu-card theme-teal">
+                    <div id="animal-count" class="stat-badge">Loading...</div>
+                    <span class="card-icon">🐾</span>
+                    <h3 class="card-title">เวชระเบียน</h3>
+                    <p class="card-desc">บันทึกและค้นหาประวัติสัตว์ป่วย การวินิจฉัย และสั่งยาจากหน้าเดียว</p>
+                </a>
 
-  function login() {
-    if (pw.value === PW) {
-      sessionStorage.setItem("isLoggedIn", "true");
-      location.replace(HOME);
-    } else {
-      alert("รหัสผ่านไม่ถูกต้อง!");
-      pw.value = "";
-      pw.focus();
-    }
-  }
-  go.addEventListener("click", login);
-  pw.addEventListener("keypress", e => { if (e.key === "Enter") login(); });
-</script>
+                <a href="mascat.html" class="menu-card theme-blue">
+                    <span class="card-icon">🗂️</span>
+                    <h3 class="card-title card-title-acc">รายการกลาง</h3>
+                    <p class="card-desc">จัดการฐานข้อมูลกลาง ยาฉีด ยาจ่ายกลับ หัตถการ และรายการแล็บ</p>
+                </a>
+
+                <a href="lab.html" class="menu-card theme-yellow">
+                    <span class="card-icon">🔬</span>
+                    <h3 class="card-title card-title-acc">Lab Results</h3>
+                    <p class="card-desc">บันทึกผลเลือด ผลทางห้องปฏิบัติการ และแนบไฟล์ภาพประกอบ</p>
+                </a>
+
+                <a href="master_data.html" class="menu-card theme-amber">
+                    <span class="card-icon">🏷️</span>
+                    <h3 class="card-title card-title-acc">ข้อมูลหลัก</h3>
+                    <p class="card-desc">จัดการข้อมูลหลักของระบบ — สายพันธุ์ ชนิดสัตว์ และข้อมูลอ้างอิง</p>
+                </a>
+
+                <a href="rx.html" class="menu-card theme-emerald">
+                    <span class="card-icon">💊</span>
+                    <h3 class="card-title card-title-acc">ใบสั่งยา</h3>
+                    <p class="card-desc">ออกใบสั่งยา พิมพ์สลากยา และจัดการประวัติการจ่ายยา</p>
+                </a>
+
+                <a href="documents.html" class="menu-card theme-purple">
+                    <span class="card-icon">📄</span>
+                    <h3 class="card-title card-title-acc">เอกสาร</h3>
+                    <p class="card-desc">ออกใบรับรองแพทย์ ใบส่งตัว หนังสือรับรอง และเอกสารทางการแพทย์</p>
+                </a>
+
+                <a href="tools.html" class="menu-card theme-cyan">
+                    <span class="card-icon">🧮</span>
+                    <h3 class="card-title card-title-acc">เครื่องมือ</h3>
+                    <p class="card-desc">ยาฉุกเฉิน ยาสลบ ถ่ายเลือด คำนวณโดสต่างๆ</p>
+                </a>
+
+                <a href="settings.html" class="menu-card theme-slate">
+                    <span class="card-icon">⚙️</span>
+                    <h3 class="card-title card-title-acc">ตั้งค่าระบบ</h3>
+                    <p class="card-desc">ตั้งค่าข้อมูลคลินิก บัญชีผู้ใช้ ปริ้นเตอร์ และสำรองฐานข้อมูล</p>
+                </a>
+
+                <a href="surgery-status.html" class="menu-card theme-violet">
+                    <div id="surgery-count" class="stat-badge alert-badge hidden">0</div>
+                    <span class="card-icon">🔪</span>
+                    <h3 class="card-title card-title-acc">สถานะผ่าตัด</h3>
+                    <p class="card-desc">ติดตามสถานะการผ่าตัดแบบเรียลไทม์ เจ้าของสัตว์ตรวจสอบออนไลน์</p>
+                </a>
+
+            </div>
+        </main>
+
+        <footer class="text-center p-20 text-slate-600 text-[10px] tracking-[0.4em] font-black uppercase opacity-50">
+            PK-VMS Professional Vet Suite © 2026 | Developed by Pitipat Kitpipatkun
+        </footer>
+    </div>
+
+    <!-- ===== Screen Saver Overlay ===== -->
+    <div id="screensaver-overlay" onclick="dismissScreensaver()" title="คลิกหรือกดปุ่มใดๆ เพื่อปิด">
+        <canvas id="ss-matrix-canvas" style="position:absolute;inset:0;display:none;"></canvas>
+        <div id="ss-inner"></div>
+        <div class="ss-hint">คลิกหรือเลื่อนเมาส์เพื่อปิด Screen Saver</div>
+    </div>
+
+    <script>
+        const MASTER_PW = "044641460";
+
+        function changeFontSize(size) {
+            if (window.UISettings) {
+                UISettings.setFontSize(size);
+            }
+            document.querySelectorAll('.btn-size').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('size-' + size);
+            if(activeBtn) activeBtn.classList.add('active');
+        }
+
+        window.onload = () => {
+            const savedSize = localStorage.getItem('preferred-font-size') || '14';
+            changeFontSize(parseInt(savedSize));
+            if (sessionStorage.getItem("isLoggedIn") === "true") showDashboard();
+        };
+
+        async function fetchStats() {
+            try {
+                if (typeof db !== 'undefined') {
+                    // ดึงจำนวนสัตว์ที่ลงทะเบียนใหม่ในวันที่ปัจจุบัน
+                    const todayStart = new Date();
+                    todayStart.setHours(0, 0, 0, 0); // เที่ยงคืนตามเวลาท้องถิ่น
+                    const { count: newAnimalCount } = await db
+                        .from('animals')
+                        .select('*', { count: 'exact', head: true })
+                        .gte('created_at', todayStart.toISOString());
+                    document.getElementById('animal-count').innerText = `${newAnimalCount || 0} ราย`;
+
+                    // ดึงจำนวนคิวผ่าตัดที่ยังค้างอยู่ (ไม่ใช่สถานะฟื้นแล้ว)
+                    const oneDayAgo = new Date();
+                    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+                    const { data: surgeryData } = await db
+                        .from('surgery_queue')
+                        .select('id')
+                        .gte('created_at', oneDayAgo.toISOString())
+                        .neq('status', 'ฟื้นแล้ว/รอรับกลับ');
+                    const surgeryCount = (surgeryData || []).length;
+                    if (surgeryCount > 0) {
+                        const badge = document.getElementById('surgery-count');
+                        badge.innerText = surgeryCount;
+                        badge.classList.remove('hidden');
+                    }
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function checkPassword() {
+            if (document.getElementById("pw-input").value === MASTER_PW) {
+                sessionStorage.setItem("isLoggedIn", "true");
+                showDashboard();
+            } else {
+                alert("รหัสผ่านไม่ถูกต้อง!");
+                document.getElementById("pw-input").value = "";
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById("login-overlay").style.opacity = "0";
+            setTimeout(() => {
+                document.getElementById("login-overlay").style.display = "none";
+                document.getElementById("main-content").style.display = "block";
+                fetchStats();
+                initScreensaver();
+            }, 300);
+        }
+
+        function logout() { sessionStorage.clear(); location.reload(); }
+
+        document.getElementById("pw-input").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") checkPassword();
+        });
+
+        // ─── Screen Saver ───────────────────────────────────────────
+        const DAYS_TH_SS   = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+        const MONTHS_TH_SS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+        let ssTimer = null;
+        let ssActive = false;
+        let ssClockInterval = null;
+        let ssMatrixFrame = null;
+        let ssPawInterval = null;
+        let ssBallInterval = null;
+
+        function getSsSettings() {
+            return Object.assign({ enabled: true, timeout: 5, anim: 'paws' },
+                JSON.parse(localStorage.getItem('screensaver-settings') || '{}'));
+        }
+
+        function resetSsTimer() {
+            if (ssActive) return;
+            const cfg = getSsSettings();
+            if (!cfg.enabled) return;
+            clearTimeout(ssTimer);
+            ssTimer = setTimeout(activateScreensaver, cfg.timeout * 60 * 1000);
+        }
+
+        function activateScreensaver() {
+            if (sessionStorage.getItem("isLoggedIn") !== "true") return;
+            ssActive = true;
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.classList.add('active');
+            buildSsContent(getSsSettings().anim);
+        }
+
+        function dismissScreensaver() {
+            ssActive = false;
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.classList.remove('active');
+            clearSsContent();
+            resetSsTimer();
+        }
+
+        function clearSsContent() {
+            if (ssClockInterval)  { clearInterval(ssClockInterval);  ssClockInterval = null; }
+            if (ssMatrixFrame)    { cancelAnimationFrame(ssMatrixFrame); ssMatrixFrame = null; }
+            if (ssPawInterval)    { clearInterval(ssPawInterval);    ssPawInterval = null; }
+            if (ssBallInterval)   { clearInterval(ssBallInterval);   ssBallInterval = null; }
+            document.getElementById('ss-inner').innerHTML = '';
+            const mc = document.getElementById('ss-matrix-canvas');
+            mc.style.display = 'none';
+        }
+
+        function buildSsContent(anim) {
+            clearSsContent();
+            const inner = document.getElementById('ss-inner');
+            if (anim === 'paws') buildSsPaws(inner);
+            else if (anim === 'bounce') buildSsBounce(inner);
+            else if (anim === 'matrix') buildSsMatrix();
+            else if (anim === 'clock')  buildSsClock(inner);
+        }
+
+        function buildSsPaws(container) {
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.style.background = '#000';
+            const EMOJIS = ['🐾','🐾','🐾','🐱','🐶','🐰','🐹','🐻','🦊'];
+            function spawnPaw() {
+                if (!ssActive) return;
+                const el = document.createElement('div');
+                el.className = 'ss-paw';
+                el.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+                el.style.left = (Math.random() * 95) + '%';
+                const dur = 5 + Math.random() * 6;
+                el.style.fontSize = (1.5 + Math.random() * 3) + 'rem';
+                el.style.animationDuration = dur + 's';
+                overlay.appendChild(el);
+                setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur * 1000 + 500);
+            }
+            for (let i = 0; i < 8; i++) setTimeout(spawnPaw, i * 300);
+            ssPawInterval = setInterval(spawnPaw, 500);
+        }
+
+        function buildSsBounce(container) {
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.style.background = 'linear-gradient(135deg, #000 0%, #0f172a 100%)';
+            const ball = document.createElement('div');
+            ball.className = 'ss-ball';
+            overlay.appendChild(ball);
+
+            ssBallInterval = setInterval(() => {
+                if (!ssActive) return;
+                const s = document.createElement('div');
+                const br = ball.getBoundingClientRect();
+                s.style.cssText = `position:fixed;width:12px;height:12px;border-radius:50%;background:rgba(20,184,177,0.4);pointer-events:none;z-index:901;transition:all 0.8s ease;left:${br.left+34}px;top:${br.top+34}px;`;
+                document.body.appendChild(s);
+                requestAnimationFrame(() => { s.style.transform='scale(0)'; s.style.opacity='0'; });
+                setTimeout(() => { if(s.parentNode) s.parentNode.removeChild(s); }, 800);
+            }, 100);
+        }
+
+        function buildSsMatrix() {
+            const canvas = document.getElementById('ss-matrix-canvas');
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.style.background = '#000';
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.display = 'block';
+
+            const ctx   = canvas.getContext('2d');
+            const cols  = Math.floor(canvas.width / 16);
+            const drops = Array(cols).fill(0);
+            const chars = 'アイウエオカキクケコサシスセソABCDEF0123456789@#$%&';
+
+            function draw() {
+                if (!ssActive) return;
+                ctx.fillStyle = 'rgba(0,0,0,0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#14b8b1';
+                ctx.font = '14px monospace';
+                drops.forEach((y, i) => {
+                    const ch = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(ch, i * 16, y * 16);
+                    if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                });
+                ssMatrixFrame = requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function buildSsClock(container) {
+            const overlay = document.getElementById('screensaver-overlay');
+            overlay.style.background = '#000';
+            container.innerHTML = `
+                <div class="ss-clock-wrap">
+                    <div class="ss-clock-time" id="ss-clock-time">00:00:00</div>
+                    <div class="ss-clock-date" id="ss-clock-date"></div>
+                    <div class="ss-clock-clinic">คลินิกรักษาสัตว์หมอปิติพัฒน์</div>
+                </div>`;
+            function tick() {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2,'0');
+                const mm = String(now.getMinutes()).padStart(2,'0');
+                const ss = String(now.getSeconds()).padStart(2,'0');
+                const tEl = document.getElementById('ss-clock-time');
+                const dEl = document.getElementById('ss-clock-date');
+                if (tEl) tEl.textContent = `${hh}:${mm}:${ss}`;
+                if (dEl) dEl.textContent =
+                    `วัน${DAYS_TH_SS[now.getDay()]}ที่ ${now.getDate()} ${MONTHS_TH_SS[now.getMonth()]} ${now.getFullYear() + 543}`; // +543 = พุทธศักราช
+            }
+            tick();
+            ssClockInterval = setInterval(tick, 1000);
+        }
+
+        function initScreensaver() {
+            ['mousemove','touchstart','scroll'].forEach(evt => {
+                document.addEventListener(evt, () => {
+                    if (ssActive) { dismissScreensaver(); return; }
+                    resetSsTimer();
+                }, { passive: true });
+            });
+            ['mousedown','keydown','click'].forEach(evt => {
+                document.addEventListener(evt, () => {
+                    if (ssActive) { dismissScreensaver(); return; }
+                    resetSsTimer();
+                });
+            });
+            resetSsTimer();
+        }
+    </script>
 </body>
 </html>
