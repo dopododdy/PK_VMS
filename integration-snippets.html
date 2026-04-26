@@ -1,0 +1,125 @@
+<!--
+  ตัวอย่างการ integrate PKContext เข้ากับหน้าที่มีอยู่
+  ============================================================
+  Snippet เหล่านี้ใส่ไว้ใน <script> ของแต่ละหน้า เพื่อให้หน้านั้น
+  auto-load ข้อมูลของสัตว์/เจ้าของที่เลือกอยู่ทันทีที่เปิดหน้า
+  หรือเมื่อมีการเลือกใหม่จาก search box ด้านบน
+-->
+
+
+<!-- ─────────────────────────────────────────────────────────
+  ตัวอย่างที่ 1: medrec.html
+  เมื่อ context เป็น animal → auto-load เวชระเบียนของสัตว์ตัวนั้น
+─────────────────────────────────────────────────────────── -->
+<script>
+  // สมมติหน้า medrec.html มีฟังก์ชัน loadMedicalRecordForAnimal(id) อยู่แล้ว
+  // ถ้าไม่มี ให้สร้างฟังก์ชันรับ animal_id แล้วโหลดข้อมูลมาแสดง
+
+  PKContext.on(ctx => {
+    if (!ctx) {
+      // ถ้าผู้ใช้กดยกเลิก context → เคลียร์หน้าจอ (ตามต้องการ)
+      // clearMedicalRecordView();
+      return;
+    }
+    if (ctx.animal_id && typeof loadMedicalRecordForAnimal === 'function') {
+      loadMedicalRecordForAnimal(ctx.animal_id);
+    } else if (ctx.owner_id && typeof loadOwnerAnimals === 'function') {
+      // ถ้าเลือกแค่เจ้าของ → แสดงรายชื่อสัตว์ของเจ้าของให้เลือก
+      loadOwnerAnimals(ctx.owner_id);
+    }
+  });
+</script>
+
+
+<!-- ─────────────────────────────────────────────────────────
+  ตัวอย่างที่ 2: lab.html
+  Auto-fill ฟอร์มแล็บด้วยสัตว์ที่เลือก
+─────────────────────────────────────────────────────────── -->
+<script>
+  PKContext.on(ctx => {
+    if (!ctx || ctx.type !== 'animal') return;
+    // pre-fill input เช่น
+    const nameInput = document.querySelector('#animal-name-input');
+    const idInput   = document.querySelector('#animal-id-input');
+    if (nameInput) nameInput.value = ctx.animal_name || '';
+    if (idInput)   idInput.value   = ctx.animal_id || '';
+
+    // ถ้ามีฟังก์ชันโหลด lab history ของสัตว์
+    if (typeof loadLabHistory === 'function') {
+      loadLabHistory(ctx.animal_id);
+    }
+  });
+</script>
+
+
+<!-- ─────────────────────────────────────────────────────────
+  ตัวอย่างที่ 3: pos.html
+  เปิดบิลของสัตว์/เจ้าของที่เลือกอัตโนมัติ
+─────────────────────────────────────────────────────────── -->
+<script>
+  PKContext.on(ctx => {
+    if (!ctx) return;
+    if (ctx.animal_id && typeof openBillForAnimal === 'function') {
+      openBillForAnimal(ctx.animal_id);
+    } else if (ctx.owner_id && typeof openBillForOwner === 'function') {
+      openBillForOwner(ctx.owner_id);
+    }
+  });
+</script>
+
+
+<!-- ─────────────────────────────────────────────────────────
+  ตัวอย่างที่ 4: documents.html / epassport-vet.html
+  Pre-fill ข้อมูลในฟอร์มออกเอกสาร
+─────────────────────────────────────────────────────────── -->
+<script>
+  PKContext.on(ctx => {
+    if (!ctx) return;
+    // ดึง element ในฟอร์มมา fill (ปรับชื่อ id ให้ตรงกับหน้าจริง)
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    setVal('owner-name',   ctx.owner_name);
+    setVal('owner-phone',  ctx.owner_phone);
+    setVal('owner-cid',    ctx.owner_cid);
+    setVal('animal-name',  ctx.animal_name);
+    setVal('animal-species', ctx.species);
+    setVal('animal-breed', ctx.breed);
+    setVal('animal-sex',   ctx.sex);
+  });
+</script>
+
+
+<!-- ─────────────────────────────────────────────────────────
+  ตัวอย่างที่ 5: ส่ง context จากหน้าใดๆ (เช่น คลิก row ใน list)
+  ใช้ตอนผู้ใช้คลิกชื่อสัตว์ในตาราง — set context เพื่อให้ pill
+  ขึ้นและพร้อมใช้ในหน้าต่อไป
+─────────────────────────────────────────────────────────── -->
+<script>
+  // เมื่อ user คลิก row ของสัตว์ในตาราง:
+  function onAnimalRowClick(animalRow) {
+    PKContext.set({
+      type: 'animal',
+      animal_id:   animalRow.id,
+      animal_name: animalRow.name,
+      species:     animalRow.species,
+      breed:       animalRow.breed,
+      sex:         animalRow.sex,
+      owner_id:    animalRow.owner_id,
+      owner_name:  animalRow.owner_name,
+      owner_phone: animalRow.owner_phone,
+      owner_cid:   animalRow.owner_cid,
+    });
+    // pill จะขึ้นอัตโนมัติ ผู้ใช้ปุ่ม "เวชระเบียน/แล็บ/POS" ได้เลย
+  }
+</script>
+
+
+<!-- ─────────────────────────────────────────────────────────
+  ตัวอย่างที่ 6: เคลียร์ context อัตโนมัติเมื่อบันทึก/จ่ายเงินเสร็จ
+─────────────────────────────────────────────────────────── -->
+<script>
+  // หลังจาก save medrec / ปิดบิล POS:
+  function afterSaveSuccess() {
+    PKContext.clear();
+    // หรือไม่ clear ก็ได้ ขึ้นกับ workflow
+  }
+</script>
