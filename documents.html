@@ -1135,7 +1135,19 @@ ${tableHtml}
                 container.innerHTML = '<p class="text-gray-500 italic">เลือกสัตว์เลี้ยงด้านบนเพื่อระบุรายการหัตถการ...</p>'; 
                 return; 
             }
-            
+
+            // 🔒 เก็บค่าที่ผู้ใช้กรอก/ติ๊กไว้ก่อน re-render เพื่อไม่ให้ข้อความหาย
+            const preservedState = {};
+            container.querySelectorAll('.surgery-input').forEach(inp => {
+                const pid = inp.dataset.petId;
+                if (!pid) return;
+                preservedState[pid] = {
+                    text: inp.value || '',
+                    presetValues: inp.dataset.presetValues || '',
+                    checked: Array.from(document.querySelectorAll(`.p-opt-${pid}:checked`)).map(c => c.value)
+                };
+            });
+
             let html = '';
             selectedPetIds.forEach(id => {
                 const pet = ownerPets.find(p => p.id.toString() === id.toString());
@@ -1163,16 +1175,48 @@ ${tableHtml}
                     </div>`;
             });
             container.innerHTML = html;
+
+            // ♻️ คืนค่าข้อความและสถานะ checkbox ที่ผู้ใช้กรอกไว้ก่อนหน้า
+            Object.keys(preservedState).forEach(pid => {
+                const state = preservedState[pid];
+                const inp = document.getElementById(`text-${pid}`);
+                if (!inp) return;
+                inp.value = state.text;
+                inp.dataset.presetValues = state.presetValues;
+                document.querySelectorAll(`.p-opt-${pid}`).forEach(cb => {
+                    if (state.checked.includes(cb.value)) {
+                        cb.checked = true;
+                        if (cb.parentElement) cb.parentElement.classList.add('active');
+                    }
+                });
+            });
+
             lucide.createIcons();
         }
 
         function syncSurgeryText(petId) {
             const checks = document.querySelectorAll(`.p-opt-${petId}:checked`);
             const textbox = document.getElementById(`text-${petId}`);
-            const selectedValues = Array.from(checks).map(c => c.value);
+            const newPresetValues = Array.from(checks).map(c => c.value);
+
+            // ค่า preset เดิม (ที่เคยใส่จาก checkbox ครั้งก่อน) ถูกเก็บไว้ใน dataset
+            const oldPresetValues = (textbox.dataset.presetValues || '')
+                .split('||').filter(v => v);
+
+            // แยกข้อความปัจจุบันออกเป็นชิ้น แล้วเอาเฉพาะส่วนที่ "ผู้ใช้พิมพ์เอง" (ไม่ใช่ preset เดิม) เก็บไว้
+            const currentParts = (textbox.value || '')
+                .split(',').map(s => s.trim()).filter(s => s);
+            const userTypedParts = currentParts.filter(p => !oldPresetValues.includes(p));
+
+            // รวม: preset ใหม่ก่อน แล้วต่อด้วยข้อความที่ผู้ใช้พิมพ์เอง
+            const combined = [...newPresetValues, ...userTypedParts];
+            textbox.value = combined.join(', ');
+
+            // จำ preset ชุดใหม่ไว้สำหรับการ sync ครั้งถัดไป
+            textbox.dataset.presetValues = newPresetValues.join('||');
+
             document.querySelectorAll(`[id^="label-${petId}"]`).forEach(l => l.classList.remove('active'));
             checks.forEach(c => c.parentElement.classList.add('active'));
-            textbox.value = selectedValues.join(', ');
         }
 
         async function refreshLabPicker() {
