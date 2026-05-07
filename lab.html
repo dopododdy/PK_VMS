@@ -38,6 +38,9 @@
         .lab-row-unit { font-size: 0.9rem; color: #94a3b8; font-weight: 500; } 
         .lab-row-ref { font-size: 0.9rem; color: #5eead4; font-family: monospace; font-weight: 600; }
 
+        /* --- Lab Input: invalid format (e.g. "abc" or ">>16") --- */
+        .lab-input.invalid-format { border-color: #ef4444 !important; color: #fca5a5 !important; background: rgba(239, 68, 68, 0.08) !important; }
+
         /* --- [New] Trend Table & Sticky Columns --- */
         .trend-container { overflow-x: auto; border-radius: 20px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); }
         .trend-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px; }
@@ -190,6 +193,7 @@
                         <div>
                             <h3 class="text-2xl font-black text-white" id="form-title-text">บันทึกผลเลือดใหม่</h3>
                             <p class="text-teal-500 font-bold text-sm mt-1" id="disp-ref-mode">-</p>
+                            <p class="text-gray-500 text-xs mt-1">💡 เคล็ดลับ: ค่าที่เกินช่วงเครื่องวัด พิมพ์ <code class="text-teal-400">&gt;16.0</code> หรือ <code class="text-teal-400">&lt;0.1</code> ได้เลย</p>
                         </div>
                         <div class="flex gap-3 items-center flex-wrap">
                             <label for="lab-date-input" class="text-sm font-bold text-gray-400 whitespace-nowrap">📅 วันที่ตรวจ:</label>
@@ -372,6 +376,34 @@
 
         let allAnimalsCache = [];
 
+        // ─── [NEW] Lab Value Parser ─────────────────────────────────────────
+        // รองรับค่าที่เกินช่วงเครื่องวัด เช่น ">16.0", "<0.1"
+        // คืนค่า { op: '=' | '>' | '<', num: Number }
+        // ค่าว่าง / format ผิด → { op: '=', num: NaN }
+        const LAB_VALUE_RE = /^([<>])?\s*(-?\d+(?:\.\d+)?)$/;
+        function parseLabValue(raw) {
+            if (raw === null || raw === undefined || raw === '') return { op: '=', num: NaN };
+            const m = String(raw).trim().match(LAB_VALUE_RE);
+            if (!m) return { op: '=', num: NaN };
+            return { op: m[1] || '=', num: parseFloat(m[2]) };
+        }
+        function isValidLabInput(raw) {
+            if (raw === null || raw === undefined) return false;
+            const s = String(raw).trim();
+            if (s === '') return false;
+            return LAB_VALUE_RE.test(s);
+        }
+        // Validate ขณะพิมพ์ — ใส่กรอบแดงถ้ารูปแบบผิด
+        function validateLabInput(el) {
+            const v = (el.value || '').trim();
+            if (v === '' || isValidLabInput(v)) {
+                el.classList.remove('invalid-format');
+            } else {
+                el.classList.add('invalid-format');
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         window.onload = async () => { lucide.createIcons(); await Promise.all([fetchMasterParams(), loadAnimals()]); };
 
         function getAnimalIcon(petType) {
@@ -539,7 +571,12 @@
                 <div class="lab-row-unit">${p.unit || '-'}</div>
                 <div class="lab-row-ref">${displayRef}</div>
                 <div>
-                    <input type="number" step="0.01" class="input-box text-center lab-input font-bold text-teal-400 h-10" 
+                    <input type="text"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        pattern="^[<>]?\s*-?\d+(\.\d+)?$"
+                        oninput="validateLabInput(this)"
+                        class="input-box text-center lab-input font-bold text-teal-400 h-10" 
                         data-id="${p.id}" 
                         data-name="${p.parameter_name}" 
                         data-min="${min}" 
@@ -557,10 +594,18 @@
 }
 
         // --- TRENDS LOGIC (คำนวณอายุย้อนหลังตามวันที่เจาะเลือด) ---
-        function getScaleClass(val, min, max) {
-            if (min === null || max === null) return 'v-normal';
-            if (val > max) return ((val - max) / max) > 0.5 ? 'v-high-severe' : (((val - max) / max) > 0.2 ? 'v-high-mod' : 'v-high-mild');
-            if (val < min) return ((min - val) / min) > 0.5 ? 'v-low-severe' : (((min - val) / min) > 0.2 ? 'v-low-mod' : 'v-low-mild');
+        // ✏️ [แก้แล้ว] รองรับ test_value ที่เป็น string ">16.0" / "<0.1"
+        function getScaleClass(rawVal, min, max) {
+            if (min === null || max === null || min === undefined || max === undefined) return 'v-normal';
+            const { op, num } = parseLabValue(rawVal);
+            if (isNaN(num)) return '';
+            // ">X" = เกินช่วงเครื่องวัด → "สูงผิดปกติรุนแรง" เสมอ
+            if (op === '>') return 'v-high-severe';
+            // "<X" = ต่ำกว่าช่วงเครื่องวัด → "ต่ำผิดปกติรุนแรง" เสมอ
+            if (op === '<') return 'v-low-severe';
+            // op === '=' ใช้ logic เดิม
+            if (num > max) return ((num - max) / max) > 0.5 ? 'v-high-severe' : (((num - max) / max) > 0.2 ? 'v-high-mod' : 'v-high-mild');
+            if (num < min) return ((min - num) / min) > 0.5 ? 'v-low-severe' : (((min - num) / min) > 0.2 ? 'v-low-mod' : 'v-low-mild');
             return 'v-normal';
         }
 
@@ -1032,8 +1077,8 @@
             editingLabSession = ts;
             const sessionData = labHistory.filter(r => r.created_at === ts);
             
-            // ล้างค่าช่องกรอกทั้งหมดก่อน
-            document.querySelectorAll('.lab-input').forEach(i => i.value = '');
+            // ล้างค่าช่องกรอกทั้งหมดก่อน + ลบ class invalid-format
+            document.querySelectorAll('.lab-input').forEach(i => { i.value = ''; i.classList.remove('invalid-format'); });
             
             // ดึงค่าเก่ามาใส่ในช่องกรอก
             sessionData.forEach(res => {
@@ -1060,7 +1105,7 @@
         // ฟังก์ชันยกเลิกการแก้ไข
         function cancelEditLab() {
             editingLabSession = null;
-            document.querySelectorAll('.lab-input').forEach(i => i.value = '');
+            document.querySelectorAll('.lab-input').forEach(i => { i.value = ''; i.classList.remove('invalid-format'); });
             
             document.getElementById('form-title-text').innerText = 'บันทึกผลเลือดใหม่';
             const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
@@ -1077,24 +1122,39 @@
         }
 
         // ฟังก์ชัน Save (รองรับทั้งเพิ่มใหม่ และ อัปเดต)
+        // ✏️ [แก้แล้ว] บันทึกค่าเป็น string เพื่อรองรับ ">16.0", "<0.1"
         async function saveLabResults() {
             const results = []; 
+            const invalidInputs = [];
             // ใช้วันที่จาก input field (ให้แก้ไขได้) ถ้าไม่มีค่าจึงใช้ timestamp ปัจจุบัน
             const dateInputVal = document.getElementById('lab-date-input').value;
             const ts = dateInputVal ? new Date(dateInputVal).toISOString() : (editingLabSession || new Date().toISOString());
             
             document.querySelectorAll('.lab-input').forEach(i => { 
-                if (i.value) {
-                    results.push({ 
-                        animal_id: currentAnimal.id, 
-                        parameter_id: i.dataset.id, 
-                        parameter_name: i.dataset.name, 
-                        test_value: parseFloat(i.value), 
-                        unit: i.dataset.unit, 
-                        created_at: ts 
-                    }); 
+                const raw = (i.value || '').trim();
+                if (!raw) return;  // ช่องว่าง = ข้าม
+
+                // ตรวจ format: ตัวเลข, >ตัวเลข, หรือ <ตัวเลข เท่านั้น
+                if (!isValidLabInput(raw)) {
+                    invalidInputs.push(i.dataset.name);
+                    i.classList.add('invalid-format');
+                    return;
                 }
+                i.classList.remove('invalid-format');
+
+                results.push({ 
+                    animal_id: currentAnimal.id, 
+                    parameter_id: i.dataset.id, 
+                    parameter_name: i.dataset.name, 
+                    test_value: raw,    // ✅ string: รองรับ "12.5", ">16.0", "<0.1"
+                    unit: i.dataset.unit, 
+                    created_at: ts 
+                }); 
             });
+
+            if (invalidInputs.length > 0) {
+                return alert("⚠️ ค่าผลเลือดต่อไปนี้รูปแบบไม่ถูกต้อง:\n\n" + invalidInputs.join(", ") + "\n\nรองรับเฉพาะ: ตัวเลข เช่น 12.5  หรือ  >16.0  หรือ  <0.1");
+            }
             
             if (results.length === 0) return alert("กรุณากรอกข้อมูล");
             
@@ -1111,7 +1171,8 @@
                 await fetchLabHistory(currentAnimal.id); 
                 switchTab('trends', document.getElementById('tab-trends')); 
             } else {
-                alert("เกิดข้อผิดพลาด: " + error.message);
+                // ⚠️ ถ้า column test_value ใน DB ยังเป็น numeric อยู่ จะ error ตรงนี้
+                alert("เกิดข้อผิดพลาด: " + error.message + "\n\n💡 หาก error เกี่ยวกับ 'invalid input syntax for type numeric' กรุณาเปลี่ยน column test_value ใน table lab_results ให้เป็น type 'text' ก่อน");
             }
         }
         
@@ -1252,14 +1313,42 @@
             const dataMap = {};
             sessionData.forEach(r => dataMap[r.parameter_name] = r.test_value);
 
-            const calcColor = (val, min, max) => { if (min===null||max===null) return '#333'; if (val>max) return '#cc0000'; if (val<min) return '#0055cc'; return '#007700'; };
-            const calcBg = (val, min, max) => { if (min===null||max===null) return 'transparent'; if (val>max) return '#fff0f0'; if (val<min) return '#f0f4ff'; return '#f0fff4'; };
-            const statusLabel = (val, min, max) => { if (min===null||max===null) return ''; if (val>max) return '<span style="color:#cc0000;font-size:9pt;font-weight:700;">▲ สูง</span>'; if (val<min) return '<span style="color:#0055cc;font-size:9pt;font-weight:700;">▼ ต่ำ</span>'; return '<span style="color:#007700;font-size:9pt;font-weight:700;">✓ ปกติ</span>'; };
+            // ✏️ [แก้แล้ว] รองรับค่า ">X" → แดง (สูง), "<X" → น้ำเงิน (ต่ำ)
+            const calcColor = (raw, min, max) => {
+                if (min===null||max===null) return '#333';
+                const { op, num } = parseLabValue(raw);
+                if (isNaN(num)) return '#333';
+                if (op === '>') return '#cc0000';
+                if (op === '<') return '#0055cc';
+                if (num>max) return '#cc0000';
+                if (num<min) return '#0055cc';
+                return '#007700';
+            };
+            const calcBg = (raw, min, max) => {
+                if (min===null||max===null) return 'transparent';
+                const { op, num } = parseLabValue(raw);
+                if (isNaN(num)) return 'transparent';
+                if (op === '>') return '#fff0f0';
+                if (op === '<') return '#f0f4ff';
+                if (num>max) return '#fff0f0';
+                if (num<min) return '#f0f4ff';
+                return '#f0fff4';
+            };
+            const statusLabel = (raw, min, max) => {
+                if (min===null||max===null) return '';
+                const { op, num } = parseLabValue(raw);
+                if (isNaN(num)) return '';
+                if (op === '>') return '<span style="color:#cc0000;font-size:9pt;font-weight:700;">▲ สูง</span>';
+                if (op === '<') return '<span style="color:#0055cc;font-size:9pt;font-weight:700;">▼ ต่ำ</span>';
+                if (num>max) return '<span style="color:#cc0000;font-size:9pt;font-weight:700;">▲ สูง</span>';
+                if (num<min) return '<span style="color:#0055cc;font-size:9pt;font-weight:700;">▼ ต่ำ</span>';
+                return '<span style="color:#007700;font-size:9pt;font-weight:700;">✓ ปกติ</span>';
+            };
 
             const makeRows = (params) => params.map(p => {
                 const { min, max } = getRefRange(p, refInfo.mode, refInfo.isDog);
                 const val = dataMap[p.parameter_name];
-                if (val === undefined) return '';
+                if (val === undefined || val === null || val === '') return '';
                 const refStr = (min !== null && max !== null) ? `${min} – ${max}` : '-';
                 return `<tr><td class="param-name">${escapeHtml(p.parameter_name)}</td><td style="text-align:center;color:#555;">${escapeHtml(p.unit||'-')}</td><td class="ref-cell" style="text-align:center;">${escapeHtml(refStr)}</td><td style="color:${calcColor(val,min,max)};background:${calcBg(val,min,max)};font-weight:800;text-align:center;font-size:11pt;">${escapeHtml(String(val))}</td><td style="text-align:center;">${statusLabel(val,min,max)}</td></tr>`;
             }).filter(r => r !== '').join('');
