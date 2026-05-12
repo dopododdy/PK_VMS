@@ -1176,7 +1176,10 @@
                 notes.forEach(n => animalApptMap.get(r.animal_id).add(n));
             });
             const animalsWithAppt = _sbAnimals.filter(a => animalApptMap.has(a.id))
-                .sort((a, b) => Number(b.owner_hn) - Number(a.owner_hn));
+                .sort((a, b) => {
+                    const diff = Number(b.owner_hn) - Number(a.owner_hn);
+                    return diff !== 0 ? diff : petNameThCompare(a, b);
+                });
             if (!animalsWithAppt.length) {
                 const isToday = selectedDate === today;
                 container.innerHTML = `<div class="text-center text-slate-500 py-12 px-4"><div class="text-4xl mb-3">📅</div><div class="font-bold">ไม่มีนัดหมาย${isToday ? 'วันนี้' : 'วันที่เลือก'}</div></div>`;
@@ -1217,13 +1220,15 @@
                 });
             }
 
-            let sorted = [..._sbAnimals].sort((a, b) => {
-                if (sortMode === 'hn_asc') return Number(a.owner_hn) - Number(b.owner_hn);
-                if (sortMode === 'hn_desc') return Number(b.owner_hn) - Number(a.owner_hn);
-                if (sortMode === 'name_az') return (ownerMap.get(a.owner_hn)?.owner_name || '').localeCompare(ownerMap.get(b.owner_hn)?.owner_name || '', 'th');
-                if (sortMode === 'name_za') return (ownerMap.get(b.owner_hn)?.owner_name || '').localeCompare(ownerMap.get(a.owner_hn)?.owner_name || '', 'th');
-                if (sortMode === 'visit_desc') return (lastVisitByOwner?.get(b.owner_hn) || '').localeCompare(lastVisitByOwner?.get(a.owner_hn) || '');
-                return Number(b.owner_hn) - Number(a.owner_hn); // hn_desc (default)
+let sorted = [..._sbAnimals].sort((a, b) => {
+                let primary;
+                if (sortMode === 'hn_asc') primary = Number(a.owner_hn) - Number(b.owner_hn);
+                else if (sortMode === 'hn_desc') primary = Number(b.owner_hn) - Number(a.owner_hn);
+                else if (sortMode === 'name_az') primary = (ownerMap.get(a.owner_hn)?.owner_name || '').localeCompare(ownerMap.get(b.owner_hn)?.owner_name || '', 'th');
+                else if (sortMode === 'name_za') primary = (ownerMap.get(b.owner_hn)?.owner_name || '').localeCompare(ownerMap.get(a.owner_hn)?.owner_name || '', 'th');
+                else if (sortMode === 'visit_desc') primary = (lastVisitByOwner?.get(b.owner_hn) || '').localeCompare(lastVisitByOwner?.get(a.owner_hn) || '');
+                else primary = Number(b.owner_hn) - Number(a.owner_hn);
+                return primary !== 0 ? primary : petNameThCompare(a, b);
             });
 
             if (term) {
