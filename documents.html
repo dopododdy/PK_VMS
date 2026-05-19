@@ -1313,10 +1313,20 @@ ${tableHtml}
             if (selectedPetIds.size === 0) return alert("❌ กรุณาเลือกสัตว์");
             const petId = Array.from(selectedPetIds)[0];
             const pet = ownerPets.find(p => p.id.toString() === petId.toString());
-            const { data: records, error: printHistErr } = await db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', petId).order('created_at', { ascending: false });
+
+            const [{ data: records, error: printHistErr }, { data: vRecs }] = await Promise.all([
+                db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', petId).order('created_at', { ascending: false }),
+                db.from('vaccination_records').select('vaccine_name, vaccinated_date').eq('animal_id', petId)
+            ]);
             if (printHistErr) return alert('โหลดประวัติการรักษาไม่สำเร็จ: ' + printHistErr.message);
             if (!records || records.length === 0) return alert("ไม่พบประวัติการรักษาสำหรับสัตว์นี้");
-
+            const vaccByDate = {};
+            (vRecs || []).forEach(r => {
+                const d = r.vaccinated_date;
+                if (!vaccByDate[d]) vaccByDate[d] = [];
+                vaccByDate[d].push(r.vaccine_name);
+            });
+            
             const petInfo = pet ? `${pet.pet_name} (${pet.pet_type||''}${pet.breed ? '/' + pet.breed : ''}, ${pet.gender||''}, ${pet.weight ? pet.weight + ' กก.' : ''})` : '-';
             const congenital = pet?.congenital_disease || 'ไม่มี';
             const ownerName = currentOwner?.owner_name || '-';
@@ -1339,11 +1349,14 @@ ${tableHtml}
                 });
                 const rxText = rxLines.join('<br>');
                 const labText = labItems.map(i=>i.item_name).join(', ');
+                const recDate = (rec.created_at||'').slice(0,10);
+                const vaccNames = vaccByDate[recDate] || [];
+                const vaccText = vaccNames.length > 0 ? `<span style="color:#16a34a; font-weight:bold;">💉 วัคซีน: </span><span style="color:#16a34a;">${vaccNames.join(', ')}</span><br>` : '';
                 const ccWithDate = `<span style="color:#0369a1; font-weight:bold;">${d}</span><br>${rec.cc||''}`;
                 return `<tr style="border-bottom:1pt solid #e5e7eb; page-break-inside:avoid;">
                     <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${ccWithDate}</td>
                     <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${rec.pe||''}</td>
-                    <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${labText ? '<span style="color:#6d28d9;">Lab: </span>'+labText+'<br>' : ''}${txText ? '<span style="color:#db2777;">Tx: </span>'+txText : ''}</td>
+                    <td style="padding:5pt 6pt; vertical-align:top; border:1pt solid #d1d5db;">${vaccText}${labText ? '<span style="color:#6d28d9;">Lab: </span>'+labText+'<br>' : ''}${txText ? '<span style="color:#db2777;">Tx: </span>'+txText : ''}</td>
                     <td style="padding:5pt 6pt; vertical-align:top; color:#059669; border:1pt solid #d1d5db;">${rxText||''}</td>
                 </tr>`;
             }).join('');
