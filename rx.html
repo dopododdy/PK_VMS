@@ -65,7 +65,10 @@
                     <p class="text-teal-400 text-sm md:text-base font-bold">บันทึกข้อมูลยาและ Dose ไกด์ไลน์สำหรับสัตว์</p>
                 </div>
             </div>
-            <button onclick="addNewMed()" class="btn-base btn-teal shadow-lg">➕ เพิ่มยาใหม่</button>
+            <div class="flex gap-2">
+                <button onclick="openOrderRx()" class="btn-base bg-blue-600 hover:bg-blue-500 shadow-lg">📄 ใบสั่งยา</button>
+                <button onclick="addNewMed()" class="btn-base btn-teal shadow-lg">➕ เพิ่มยาใหม่</button>
+            </div>
         </header>
 
         <div class="grid grid-cols-12 gap-6">
@@ -320,6 +323,32 @@
         }
 
         function goBack() { window.location.href = 'index.html'; }
+
+        // ฟังก์ชันเปิดหน้าใบสั่งยา
+        function openOrderRx() {
+            // โค้ดส่วนนี้เขียนเตรียมไว้รองรับการดึงข้อมูลจากหน้าจอ
+            // *หมายเหตุ: ในหน้าจัดการคลังยานี้จะไม่มีข้อมูล owner, pet และ selectedItems 
+            // หากต้องการให้ดึงข้อมูลจริงได้ แนะนำให้ย้ายปุ่มนี้และฟังก์ชันนี้ไปไว้ใน medrec.html
+            const owner = document.getElementById('info-owner-name')?.innerText || '-';
+            const pet = document.getElementById('v-pet-name')?.innerText || '-';
+            const hn = document.getElementById('head-hn')?.innerText.replace('HN: ', '') || '-';
+            
+            let rxQuery = "";
+            if (typeof selectedItems !== 'undefined') {
+                const rxItems = selectedItems.filter(i => i.type === 'Rx').map(i => {
+                    let desc = i.name;
+                    if (i.dose) desc += ` ${i.dose}${i.unit || ''}`;
+                    if (i.freq) desc += ` ${i.freq}`;
+                    if (i.days) desc += ` ${i.days} วัน`;
+                    if (i.qty)  desc += ` (รวม ${i.qty})`;
+                    return desc;
+                }).join('|');
+                rxQuery = `&rx=${encodeURIComponent(rxItems)}`;
+            }
+
+            const url = `orderrx.html?hn=${encodeURIComponent(hn)}&owner=${encodeURIComponent(owner)}&pet=${encodeURIComponent(pet)}${rxQuery}`;
+            window.open(url, '_blank');
+        }
     </script>
 </body>
 </html>
