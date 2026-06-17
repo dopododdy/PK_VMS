@@ -6,7 +6,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
-        body { margin: 0; padding: 0; background: #525659; display: flex; justify-content: center; }
+        body { margin: 0; padding: 20px; background: #525659; display: flex; justify-content: center; }
         
         /* จำลองกระดาษ A4 แนวตั้ง บนหน้าจอ */
         .a4-page {
@@ -14,35 +14,64 @@
             height: 297mm;
             background: white;
             position: relative;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
         
         /* พื้นที่พิมพ์เฉพาะครึ่งบน */
         .top-half {
             width: 100%;
-            height: 148.5mm;
+            height: 148.5mm; /* ครึ่งหนึ่งของ 297mm */
             padding: 15mm 20mm;
             position: relative;
             border-bottom: 1px dashed #ccc; /* รอยตัดกระดาษแสดงบนจอ */
+            overflow: hidden;
         }
         
         /* ส่วนหัวกระดาษ */
-        .header-text { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 12px; }
+        .header-text { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 15px; }
         .header-text h1 { font-size: 22pt; font-weight: 800; margin: 0; }
         .header-text h2 { font-size: 16pt; font-weight: 700; margin: 4px 0; }
         .header-text p { font-size: 11pt; margin: 0; color: #333; }
         
-        /* ส่วนข้อมูลผู้ป่วย */
-        .info-row { display: flex; justify-content: space-between; font-size: 12pt; margin-bottom: 8px; }
+        /* ตารางจัดวางข้อมูล */
+        .info-table { width: 100%; font-size: 12pt; border-collapse: collapse; margin-bottom: 15px; }
+        .info-table td { padding: 4px 0; vertical-align: middle; }
+        
+        /* การตกแต่ง Input ให้พิมพ์ง่ายบนหน้าจอ */
+        .form-input {
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12pt;
+            background: #f8fafc;
+            outline: none;
+            transition: 0.2s;
+        }
+        .form-input:focus { border-color: #0d9488; background: #fff; }
+        
+        /* Textarea สำหรับรายการยา */
+        .form-textarea {
+            width: 100%;
+            height: 120px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 12pt;
+            background: #f8fafc;
+            resize: none;
+            outline: none;
+            line-height: 1.6;
+        }
+        .form-textarea:focus { border-color: #0d9488; background: #fff; }
+
+        .checkbox-group { display: inline-flex; align-items: center; gap: 10px; margin-left: 8px; }
+        .checkbox-group label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
         
         /* ส่วนรายการยา */
-        .rx-section { margin-top: 15px; }
+        .rx-section { margin-top: 5px; }
         .rx-title { font-size: 14pt; font-weight: bold; margin-bottom: 8px; font-style: italic; }
-        .rx-list { font-size: 12pt; line-height: 1.6; padding-left: 25px; margin: 0; }
-        .rx-list li { margin-bottom: 4px; }
         
-        /* ส่วนลายเซ็นท้ายกระดาษ (ล็อคตำแหน่งไว้มุมขวาล่างของครึ่งบน) */
+        /* ลายเซ็นมุมขวาล่างของครึ่งบน */
         .signature-box {
             position: absolute;
             bottom: 12mm;
@@ -52,17 +81,32 @@
         }
         .signature-line { margin-bottom: 5px; }
 
-        /* สำหรับปุ่ม Print บนหน้าจอ */
-        .print-btn-container { position: fixed; top: 20px; right: 20px; }
-        .btn-print { padding: 10px 20px; font-size: 16px; background: #0d9488; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Sarabun'; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .btn-print:hover { background: #0f766e; }
+        /* ปุ่ม Print */
+        .print-btn-container { position: fixed; top: 20px; right: 20px; z-index: 100; }
+        .btn-print { 
+            padding: 12px 24px; font-size: 16px; background: #0d9488; color: white; 
+            border: none; border-radius: 8px; cursor: pointer; font-weight: bold; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.2s;
+        }
+        .btn-print:hover { background: #0f766e; transform: translateY(-2px); }
 
-        /* การตั้งค่าสำหรับการ Print จริง */
+        /* ─── การตั้งค่าสำหรับการ Print จริง ─── */
         @media print {
-            body { background: white; margin: 0; padding: 0; display: block; }
-            .a4-page { margin: 0; box-shadow: none; border: none; }
+            body { background: white; margin: 0; padding: 0; }
+            .a4-page { box-shadow: none; border: none; margin: 0; }
             .top-half { border-bottom: none; }
             .print-btn-container { display: none !important; }
+            
+            /* ซ่อนกรอบ Input ทั้งหมดเมื่อปรินต์ ให้เป็นเหมือนข้อความที่ถูกพิมพ์ลงไป */
+            .form-input, .form-textarea {
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+            }
+            .form-textarea { height: auto !important; overflow: hidden; }
+            
             @page { size: A4 portrait; margin: 0; }
         }
     </style>
@@ -73,6 +117,7 @@
     </div>
 
     <div class="a4-page">
+        <!-- พื้นที่ครึ่งบน -->
         <div class="top-half">
             <div class="header-text">
                 <h1>ใบสั่งยา</h1>
@@ -80,22 +125,37 @@
                 <p>194/90 หมู่ 11 หนองขาม ศรีราชา ชลบุรี 20110 โทร 085-5251545</p>
             </div>
 
-            <div class="info-row">
-                <div><b>ชื่อเจ้าของสัตว์:</b> <span id="p-owner">.........................................................</span></div>
-                <div><b>วันที่:</b> <span id="p-date">...................................</span></div>
-            </div>
-            <div class="info-row">
-                <div><b>ชื่อสัตว์:</b> <span id="p-pet">.........................................................</span></div>
-                <div><b>HN:</b> <span id="p-hn">...................................</span></div>
-            </div>
+            <table class="info-table">
+                <tr>
+                    <td style="width: 60%;">
+                        <b>ชื่อเจ้าของ:</b> <input type="text" id="ownerName" class="form-input" style="width: 250px;" placeholder="ชื่อเจ้าของสัตว์">
+                    </td>
+                    <td style="width: 40%;">
+                        <b>วันที่:</b> <input type="text" id="rxDate" class="form-input" style="width: 150px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-top: 5px;">
+                            <div>
+                                <b>ชื่อสัตว์:</b> <input type="text" id="petName" class="form-input" style="width: 180px;" placeholder="ชื่อสัตว์">
+                            </div>
+                            <div class="checkbox-group">
+                                <b>ชนิด:</b>
+                                <label><input type="checkbox" id="chkDog" onchange="toggleSpecies('dog')"> สุนัข</label>
+                                <label><input type="checkbox" id="chkCat" onchange="toggleSpecies('cat')"> แมว</label>
+                            </div>
+                            <div>
+                                <b>น้ำหนัก:</b> <input type="number" id="petWeight" class="form-input" style="width: 80px;" step="0.1"> กก.
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
 
             <div class="rx-section">
                 <div class="rx-title">Rx.</div>
-                <ul class="rx-list" id="p-rx-items">
-                    <li>....................................................................................................................</li>
-                    <li>....................................................................................................................</li>
-                    <li>....................................................................................................................</li>
-                </ul>
+                <textarea id="rxDetails" class="form-textarea" placeholder="พิมพ์รายการยาที่นี่ (ขึ้นบรรทัดใหม่ได้ตามปกติ)..."></textarea>
             </div>
 
             <div class="signature-box">
@@ -104,41 +164,38 @@
                 <div>ใบอนุญาตเลขที่ 01-6186/2550</div>
             </div>
         </div>
-        </div>
+        <!-- ครึ่งล่างปล่อยว่างไว้ เพื่อให้เครื่องปรินต์วิ่งกระดาษเปล่าลงมา -->
+    </div>
 
     <script>
-        // ดึงข้อมูลจาก URL Parameter
-        const params = new URLSearchParams(window.location.search);
-        const hn = params.get('hn');
-        const owner = params.get('owner');
-        const pet = params.get('pet');
-        const rxText = params.get('rx');
-
-        // จัดการข้อมูลแสดงผล
-        if (hn) document.getElementById('p-hn').innerText = hn;
-        if (owner) document.getElementById('p-owner').innerText = owner;
-        if (pet) document.getElementById('p-pet').innerText = pet;
-        
-        // ใช้วันที่ปัจจุบัน
-        const today = new Date();
-        document.getElementById('p-date').innerText = today.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-
-        // แตกรายการยามาแสดงเป็น List
-        if (rxText) {
-            const items = rxText.split('|').filter(Boolean);
-            if (items.length > 0) {
-                const ul = document.getElementById('p-rx-items');
-                ul.innerHTML = '';
-                items.forEach(item => {
-                    const li = document.createElement('li');
-                    li.innerText = item;
-                    ul.appendChild(li);
-                });
+        // ทำให้ Checkbox เลือกได้อย่างใดอย่างหนึ่งคล้าย Radio
+        function toggleSpecies(selected) {
+            if (selected === 'dog') {
+                if (document.getElementById('chkDog').checked) document.getElementById('chkCat').checked = false;
+            } else {
+                if (document.getElementById('chkCat').checked) document.getElementById('chkDog').checked = false;
             }
         }
+
+        // เซ็ตวันที่ปัจจุบันเป็นค่าเริ่มต้น
+        const today = new Date();
+        document.getElementById('rxDate').value = today.toLocaleDateString('th-TH', { 
+            year: 'numeric', month: 'long', day: 'numeric' 
+        });
+
+        // ดึงข้อมูลที่ส่งมาจาก URL (กรณีส่งค่ามาจากหน้า Medrec หรือหน้าอื่นๆ)
+        const params = new URLSearchParams(window.location.search);
         
-        // ให้เด้งหน้าต่างปรินต์อัตโนมัติ (เอาคอมเมนต์ออกถ้าต้องการ)
-        window.onload = () => { setTimeout(() => window.print(), 500); };
+        if (params.get('owner')) document.getElementById('ownerName').value = params.get('owner');
+        if (params.get('pet')) document.getElementById('petName').value = params.get('pet');
+        
+        // รับและจัดเรียงรายการยาให้ขึ้นบรรทัดใหม่
+        const rxText = params.get('rx');
+        if (rxText) {
+            // แยกด้วย | แล้วนำมาต่อกันด้วย \n เพื่อให้ขึ้นบรรทัดใหม่ใน Textarea
+            const items = rxText.split('|').filter(Boolean);
+            document.getElementById('rxDetails').value = items.join('\n');
+        }
     </script>
 </body>
 </html>
