@@ -573,7 +573,10 @@
                 </div>
                 <div id="split-divider" class="split-divider" title="ลากเพื่อปรับขนาด"></div>
                 <div class="left-bottom-pane" id="left-bottom-pane">
-                    <div class="left-bottom-pane-header">⏳ ประวัติการรักษาครั้งก่อน</div>
+                    <div class="left-bottom-pane-header flex justify-between items-center gap-2">
+    <span>⏳ ประวัติการรักษาครั้งก่อน</span>
+    <input type="text" id="left-history-search" class="input-box" style="padding: 4px 8px; font-size: 0.75rem; height: 28px; border-radius: 6px; width: 55%; font-weight: normal;" placeholder="🔍 ค้นหา (CC, Dx, ยา...)" oninput="debouncedFilterLeftHistory()">
+</div>
                     <div id="left-history-list"></div>
                 </div>
             </div>
@@ -2260,14 +2263,36 @@ let sorted = [..._sbAnimals].sort((a, b) => {
 
         async function deleteRecord(id) { if(confirm("ลบประวัติ?")) { await db.from('medical_records').delete().eq('id', id); await fetchRecords(); } }
         function drawBullets(arr, mode = null) { if (!arr || arr.length === 0) return "-"; return `<ul class="bullet-list">${arr.map((n, idx) => `<li onclick="${mode==='form_item'?'removeItem('+idx+')':''}"><span>${n}</span></li>`).join('')}</ul>`; }
+
+        let _leftHistorySearchTimer = null;
+        function debouncedFilterLeftHistory() {
+            clearTimeout(_leftHistorySearchTimer);
+            _leftHistorySearchTimer = setTimeout(() => renderLeftHistoryPanel(), 200);
+        }
+
         function renderLeftHistoryPanel() {
             const list = document.getElementById('left-history-list');
+            const term = (document.getElementById('left-history-search')?.value || '').toLowerCase().trim();
             if (!list) return;
             if (!records || records.length === 0) {
                 list.innerHTML = '<p style="color:#64748b;font-size:0.85rem;text-align:center;padding:1rem;">ยังไม่มีประวัติการรักษา</p>';
                 return;
             }
-            list.innerHTML = records.map(rec => {
+
+            // ระบบกรองประวัติ (ค้นหาจาก วันที่, CC, Hx, PE, Dx, ชื่อยา/รายการ)
+            const filtered = !term ? records : records.filter(rec => {
+                const dateStr = (rec.created_at || '').slice(0, 10);
+                const itemNames = (rec.medical_record_items || []).map(i => i.item_name || '').join(' ');
+                return [dateStr, rec.cc, rec.hx, rec.pe, rec.dx, itemNames]
+                    .filter(Boolean).some(f => f.toLowerCase().includes(term));
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<p style="color:#64748b;font-size:0.85rem;text-align:center;padding:1rem;">ไม่พบประวัติที่ค้นหา</p>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(rec => {
                 const txItems = rec.medical_record_items.filter(i => i.item_type === 'Tx');
                 const rxItems = rec.medical_record_items.filter(i => i.item_type === 'Rx');
                 const txText = txItems.map(i => i.item_name).join(', ');
@@ -2284,6 +2309,7 @@ let sorted = [..._sbAnimals].sort((a, b) => {
                 </div>`;
             }).join('');
         }
+        
         function initSplitDrag() {
             if (_splitDragInitialized) return;
             _splitDragInitialized = true;
@@ -2324,6 +2350,8 @@ let sorted = [..._sbAnimals].sort((a, b) => {
         function showFormView() {
             document.getElementById('history-view-container').classList.add('view-hidden');
             document.getElementById('form-view-container').classList.remove('view-hidden');
+            const leftSearch = document.getElementById('left-history-search');
+            if (leftSearch) leftSearch.value = '';
             renderLeftHistoryPanel();
             initSplitDrag();
             renderVaccineCheckboxes();
