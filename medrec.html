@@ -460,7 +460,7 @@
                         <span class="text-xl">🏠</span><span>หน้าหลัก</span>
                     </a>
                 </div>
-                <input type="text" id="sidebar-search-medrec" class="input-box text-sm" placeholder="ค้นหา HN, ชื่อสัตว์, ชื่อเจ้าของ, เบอร์โทร..." oninput="debouncedRenderSidebar()" ondblclick="this.value='';renderMedrecSidebar();this.focus();">
+                <input type="text" id="sidebar-search-medrec" class="input-box text-sm" placeholder="ค้นหา HN, ชื่อสัตว์, ชื่อ, โทร, อาการ (CC, Hx, PE, Dx)..." oninput="debouncedRenderSidebar()" ondblclick="this.value='';renderMedrecSidebar();this.focus();">
                 <div class="flex items-center gap-2 mt-2">
                     <span class="text-xs text-slate-500 font-bold whitespace-nowrap flex-shrink-0">🔃 เรียงโดย</span>
                     <select id="sidebar-sort-medrec" class="input-box text-xs py-1.5" onchange="renderMedrecSidebar()">
@@ -1221,8 +1221,8 @@
                     fetchAllRowsSb(db.from('animals').select('id, owner_hn, pet_name, pet_type').order('owner_hn', { ascending: false })),
                     fetchAllRowsSb(db.from('owners').select('hn, owner_name')),
                     fetchAllRowsSb(db.from('owner_phones').select('owner_hn, phone_number, label')),
-                    fetchAllRowsSb(db.from('medical_records').select('id, animal_id, owner_hn, created_at, appointment, appointment_2, appointment_note, appointment_note_2'))
-                ]);
+                    fetchAllRowsSb(db.from('medical_records').select('id, animal_id, owner_hn, created_at, appointment, appointment_2, appointment_note, appointment_note_2, cc, hx, pe, dx'))
+                                    ]);
                 _sbAnimals = animals;
                 _sbOwners = owners;
                 _sbOwnerMap = new Map(owners.map(o => [o.hn, o]));
@@ -1235,13 +1235,20 @@
                     if (!_sbAllPhonesMap.has(p.owner_hn)) _sbAllPhonesMap.set(p.owner_hn, []);
                     _sbAllPhonesMap.get(p.owner_hn).push(p.phone_number);
                 });
+
                 _sbMedTextByAnimalId = new Map();
                 medRecs.forEach(rec => {
                     const dateStr = (rec.created_at || '').slice(0, 10);
-                    const text = dateStr.toLowerCase();
+                    const cc = (rec.cc || '').toLowerCase();
+                    const hx = (rec.hx || '').toLowerCase();
+                    const pe = (rec.pe || '').toLowerCase();
+                    const dx = (rec.dx || '').toLowerCase();
+                    const text = `${dateStr} ${cc} ${hx} ${pe} ${dx}`;
                     const prev = _sbMedTextByAnimalId.get(rec.animal_id) || '';
                     _sbMedTextByAnimalId.set(rec.animal_id, prev + ' ' + text);
                 });
+
+                
                 updateSbTodayBadge();
                 renderMedrecSidebar();
                 markActiveSidebarAnimal();
