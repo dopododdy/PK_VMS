@@ -211,7 +211,6 @@
                 <h2 class="text-3xl font-bold uppercase tracking-widest">กรุณาเลือกเจ้าของสัตว์</h2>
             </div>
 
-            <!-- DLD Report Container (shown when doc_dld tab is active, independent of owner) -->
             <div id="dld-report-container" class="hidden w-full pb-32">
                 <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
                     <div>
@@ -381,7 +380,7 @@
             if (!owner) return;
             currentOwner = owner;
             currentOwner.phone = phones?.[0]?.phone_number || "-";
-            ownerPets = pets || [];
+            ownerPets = (pets || []).sort((a, b) => (a.pet_name || '').localeCompare(b.pet_name || '', 'th'));
             selectedPetIds.clear();
             if (targetPetId) selectedPetIds.add(targetPetId.toString());
 
@@ -1296,7 +1295,7 @@ ${tableHtml}
             }
             // Fallback: open in new window for user to print/save
             const win = window.open('', '_blank');
-            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popupใน browser');
             win.document.write(html);
             win.document.close();
         }
@@ -1416,7 +1415,7 @@ ${tableHtml}
                 ? `<script>window.onload=()=>{ document.title=${JSON.stringify('ประวัติการรักษา_' + _petNameSafe)}; window.print(); };<\/script>`
                 : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
             const win = window.open('', '_blank');
-            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+            if (!win) return alert('❌ กรุณาอนุญาตการเปิด popupใน browser');
             win.document.write(_histHtml.replace('</body>', _autoScript + '</body>'));
             win.document.close();
         }
@@ -1540,7 +1539,7 @@ ${tableHtml}
                     ? `<script>window.onload=()=>{ document.title=${_refTitleStr}; window.print(); };<\/script>`
                     : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
                 const win = window.open('', '_blank');
-                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popupใน browser');
                 win.document.write(_refHtml.replace('</body>', _refScript + '</body>'));
                 win.document.close();
                 return;
@@ -1671,7 +1670,7 @@ ${tableHtml}
                     ? `<script>window.onload=()=>{ document.title=${_consentTitleStr}; window.print(); };<\/script>`
                     : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
                 const win = window.open('', '_blank');
-                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popupใน browser');
                 win.document.write(_consentHtml.replace('</body>', _consentScript + '</body>'));
                 win.document.close();
                 return;
@@ -1774,7 +1773,7 @@ ${tableHtml}
                     ? `<script>window.onload=()=>{ document.title=${_echoTitleStr}; window.print(); };<\/script>`
                     : `<script>window.onload=()=>{ setTimeout(()=>{ window.print(); window.close(); }, 800); };<\/script>`;
                 const win = window.open('', '_blank');
-                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser');
+                if (!win) return alert('❌ กรุณาอนุญาตการเปิด popupใน browser');
                 win.document.write(_echoHtml.replace('</body>', _echoScript + '</body>'));
                 win.document.close();
                 return;
@@ -1934,7 +1933,7 @@ if (activeDocType === 'doc_consent') {
                 const blob      = new Blob([pdfHtml], { type: 'text/html; charset=utf-8' });
                 const blobUrl   = URL.createObjectURL(blob);
                 const win       = window.open(blobUrl, '_blank');
-                if (!win) { URL.revokeObjectURL(blobUrl); return alert('❌ กรุณาอนุญาตการเปิด popup ใน browser'); }
+                if (!win) { URL.revokeObjectURL(blobUrl); return alert('❌ กรุณาอนุญาตการเปิด popupใน browser'); }
                 win.addEventListener('unload', function () { URL.revokeObjectURL(blobUrl); });
             } else {
                 await PrintUtils.executePrint(_tmplHtml, pw, ph, activeDocType);
@@ -2166,7 +2165,7 @@ if (activeDocType === 'doc_consent') {
                 document.getElementById('docs-add-pet-modal').style.display = 'none';
                 // Reload pets for the current owner
                 const { data: pets } = await db.from('animals').select('*').eq('owner_hn', hn);
-                ownerPets = pets || [];
+                ownerPets = (pets || []).sort((a, b) => (a.pet_name || '').localeCompare(b.pet_name || '', 'th'));
                 renderPetList();
                 if (activeDocType === 'doc_consent') refreshSurgeryRows();
             } catch (err) { alert('❌ บันทึกไม่สำเร็จ: ' + err.message); }
@@ -2198,7 +2197,6 @@ if (activeDocType === 'doc_consent') {
         }
     </script>
 
-<!-- ─── Modal: เพิ่มสัตว์ใหม่ ─── -->
 <div id="docs-add-pet-modal" class="modal-overlay" style="z-index: 210;">
     <div class="modal-content" style="max-width: 540px;">
         <div class="p-6 border-b border-white/10" style="background: rgba(20,184,166,0.1);">
@@ -2279,7 +2277,6 @@ if (activeDocType === 'doc_consent') {
     </div>
 </div>
 
-<!-- ─── Fixed bottom info bar ─── -->
 <div id="fixed-bottom-bar">
     <div class="fb-item">
         <span class="fb-label">เจ้าของ</span>
