@@ -3461,24 +3461,123 @@ let sorted = [..._sbAnimals].sort((a, b) => {
             if (prevVal && filtered.some(b => b.name === prevVal)) breedEl.value = prevVal;
         }
 
+let newOwnerPetCounter = 0;
+
+        function addPetFormToNewOwner() {
+            newOwnerPetCounter++;
+            const idx = newOwnerPetCounter;
+            const container = document.getElementById('new-owner-pets-container');
+            const petHtml = `
+                <div class="p-5 border border-white/10 rounded-2xl bg-white/5 relative new-owner-pet-form" data-idx="${idx}">
+                    ${idx > 1 ? `<button type="button" onclick="this.closest('.new-owner-pet-form').remove()" class="absolute top-3 right-3 w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center font-bold" title="ลบตัวนี้">✕</button>` : ''}
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="col-span-12 md:col-span-6 pr-6"><label class="label-text">ชื่อสัตว์</label><input type="text" class="input-box nop-name font-bold text-white" placeholder="ชื่อสัตว์..."></div>
+                        <div class="col-span-6 md:col-span-3"><label class="label-text">ชนิด</label>
+                            <select class="input-box nop-type" onchange="updateDynamicBreedSelect(this)">
+                                <option value="">-- เลือกชนิด --</option>
+                                <option value="สุนัข">🐶 สุนัข</option>
+                                <option value="แมว">🐱 แมว</option>
+                                <option value="อื่นๆ">🐾 อื่นๆ</option>
+                            </select>
+                        </div>
+                        <div class="col-span-6 md:col-span-3"><label class="label-text">เพศ</label>
+                            <select class="input-box nop-gender">
+                                <option value="เมีย">♀️ เมีย</option>
+                                <option value="ผู้">♂️ ผู้</option>
+                                <option value="ผู้ตอน">✂️♂️ ผู้ตอน</option>
+                                <option value="เมียหมัน">✂️♀️ เมียหมัน</option>
+                                <option value="ไม่ระบุเพศ" selected>❓ ไม่ระบุเพศ</option>
+                            </select>
+                        </div>
+                        <div class="col-span-6 md:col-span-3"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" class="input-box nop-weight" placeholder="0.0"></div>
+                        <div class="col-span-6 md:col-span-3"><label class="label-text">พันธุ์</label><select class="input-box nop-breed"><option value="">-- เลือกสายพันธุ์ --</option></select></div>
+                        <div class="col-span-12 md:col-span-6"><label class="label-text">วันเดือนปีเกิด</label><input type="text" class="input-box nop-birth datepicker-dynamic" placeholder="เลือกวันที่เกิด..."></div>
+                        <div class="col-span-6 md:col-span-3"><label class="label-text">อายุ (ปี)</label><input type="number" class="input-box nop-age-y" min="0" placeholder="0" inputmode="numeric" oninput="syncDynamicAge(this, 'y')"></div>
+                        <div class="col-span-6 md:col-span-3"><label class="label-text">อายุ (เดือน)</label><input type="number" class="input-box nop-age-m" min="0" max="11" placeholder="0" inputmode="numeric" oninput="syncDynamicAge(this, 'm')"></div>
+                        <div class="col-span-12"><label class="label-text">หมายเลข Microchip</label><input type="text" class="input-box nop-microchip" placeholder="ไม่บังคับ"></div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', petHtml);
+            
+            // ผูกปฏิทิน Flatpickr ให้กับฟอร์มสัตว์ตัวใหม่
+            const newForm = container.lastElementChild;
+            const birthInput = newForm.querySelector('.nop-birth');
+            const ageYInput = newForm.querySelector('.nop-age-y');
+            const ageMInput = newForm.querySelector('.nop-age-m');
+            
+            const fp = flatpickr(birthInput, makeDatePickerConfig({ 
+                maxDate: 'today',
+                onChange: (selectedDates, dateStr) => { syncAgeFromBirthDateDirect(dateStr, ageYInput, ageMInput); },
+                onReady: (selectedDates, dateStr) => { if (dateStr) syncAgeFromBirthDateDirect(dateStr, ageYInput, ageMInput); }
+            }));
+            birthInput._flatpickr = fp;
+        }
+
+        function updateDynamicBreedSelect(typeSelect) {
+            const form = typeSelect.closest('.new-owner-pet-form');
+            const breedSelect = form.querySelector('.nop-breed');
+            const speciesName = typeSelect.value;
+            const species = masterSpecies.find(s => s.name === speciesName);
+            const filtered = species ? masterBreeds.filter(b => b.species_id === species.id) : [];
+            breedSelect.innerHTML = '<option value="">-- เลือกสายพันธุ์ --</option>' +
+                filtered.map(b => `<option value="${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join('');
+        }
+
+        function syncDynamicAge(inputEl, type) {
+            const form = inputEl.closest('.new-owner-pet-form');
+            const yEl = form.querySelector('.nop-age-y');
+            const mEl = form.querySelector('.nop-age-m');
+            const birthEl = form.querySelector('.nop-birth');
+            
+            const y = parseInt(yEl.value) || 0, m = parseInt(mEl.value) || 0;
+            const d = new Date(); d.setFullYear(d.getFullYear() - y); d.setMonth(d.getMonth() - m);
+            const dateStr = d.toISOString().split('T')[0];
+            
+            if (birthEl._flatpickr) {
+                birthEl._flatpickr.setDate(dateStr, false);
+                const fp = birthEl._flatpickr;
+                if (fp.altInput) {
+                    const [yr, mo, dy] = dateStr.split('-').map(Number);
+                    const months = (fp.l10n || flatpickr.l10ns.th).months.longhand;
+                    fp.altInput.value = `${dy} ${months[mo - 1]} ${yr + 543}`;
+                }
+            } else { birthEl.value = dateStr; }
+        }
+
+        function syncAgeFromBirthDateDirect(dateStr, ayEl, amEl) {
+            if (!dateStr) { if (ayEl) ayEl.value = ''; if (amEl) amEl.value = ''; return; }
+            const birth = new Date(dateStr), now = new Date();
+            let y = now.getFullYear() - birth.getFullYear(), m = now.getMonth() - birth.getMonth();
+            if (m < 0) { y--; m += 12; }
+            if (now.getDate() < birth.getDate()) { m--; if (m < 0) { y--; m += 12; } }
+            if (ayEl) ayEl.value = y >= 0 ? y : 0;
+            if (amEl) amEl.value = m >= 0 ? m : 0;
+        }
+
+
+
+        
         function openNewOwnerModal() {
-            ['no-hn','no-name','no-phone1','no-phone2','no-address','no-petname','no-petweight','no-petbreed','no-petmicrochip'].forEach(id => {
+            // เคลียร์ข้อมูลเจ้าของ
+            ['no-hn','no-name','no-phone1','no-phone2','no-address'].forEach(id => {
                 const el = document.getElementById(id); if (el) el.value = '';
             });
-            setBirthPickerValue('no-petbirth', '');
-            ['no-pet-age-y','no-pet-age-m'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-            const typeEl = document.getElementById('no-pettype');
-            if (typeEl) typeEl.value = '';
-            const genderEl = document.getElementById('no-petgender');
-            if (genderEl) genderEl.value = 'ไม่ระบุเพศ';
-            updateBreedSelect('no-pettype', 'no-petbreed');
+            
+            // ล้างฟอร์มสัตว์เลี้ยงเก่าทิ้ง และสร้างกล่องว่างๆ ไว้ 1 กล่องเริ่มต้น
+            const container = document.getElementById('new-owner-pets-container');
+            container.innerHTML = '';
+            newOwnerPetCounter = 0;
+            addPetFormToNewOwner(); 
+
             document.getElementById('new-owner-modal').style.display = 'flex';
         }
 
         async function saveNewOwner() {
             const name = document.getElementById('no-name').value.trim();
             const phone1 = document.getElementById('no-phone1').value.trim();
-            if (!name || !phone1) return alert('❌ กรุณากรอกชื่อและเบอร์โทรหลัก');
+            if (!name || !phone1) return alert('❌ กรุณากรอกชื่อและเบอร์โทรหลักของเจ้าของ');
+            
             let hn = document.getElementById('no-hn').value.trim();
             if (!hn) {
                 const { data: existing } = await db.from('owners').select('hn').order('hn', { ascending: false }).limit(100);
@@ -3486,35 +3585,61 @@ let sorted = [..._sbAnimals].sort((a, b) => {
                 hn = (Math.max(...hns, 690000) + 1).toString().padStart(6, '0');
             }
             try {
+                // 1. บันทึกข้อมูลเจ้าของ
                 const { error: ownerErr } = await db.from('owners').upsert({ hn, owner_name: name, address: document.getElementById('no-address').value.trim() || null }, { onConflict: 'hn' });
                 if (ownerErr) throw ownerErr;
-                // Delete then re-insert phones to avoid duplicate conflicts
+                
+                // 2. ลบเบอร์โทรเดิม (ถ้ามี) แล้วบันทึกเบอร์โทรใหม่
                 await db.from('owner_phones').delete().eq('owner_hn', hn);
                 const phones = [{ owner_hn: hn, phone_number: phone1, label: 'เบอร์หลัก' }];
                 const p2 = document.getElementById('no-phone2').value.trim();
                 if (p2) phones.push({ owner_hn: hn, phone_number: p2, label: 'เบอร์สำรอง' });
                 await db.from('owner_phones').insert(phones);
-                let newPetId = null;
-                const petName = document.getElementById('no-petname').value.trim();
-                if (petName) {
-                    const { data: petData, error: petErr } = await db.from('animals').insert({
-                        owner_hn: hn, pet_name: petName,
-                        pet_type: document.getElementById('no-pettype').value || 'อื่นๆ',
-                        gender: document.getElementById('no-petgender').value,
-                        weight: parseFloat(document.getElementById('no-petweight').value) || 0,
-                        breed: document.getElementById('no-petbreed').value.trim() || null,
-                        birth_date: document.getElementById('no-petbirth').value || null,
-                        microchip_number: document.getElementById('no-petmicrochip').value.trim() || null
-                    }).select().single();
+                
+                // 3. วนลูปดึงข้อมูลสัตว์เลี้ยงทุกกล่องที่กรอกมา
+                const petForms = document.querySelectorAll('.new-owner-pet-form');
+                const petsToInsert = [];
+                petForms.forEach(form => {
+                    const petName = form.querySelector('.nop-name').value.trim();
+                    if (petName) { // บันทึกเฉพาะตัวที่กรอกชื่อ
+                        petsToInsert.push({
+                            owner_hn: hn,
+                            pet_name: petName,
+                            pet_type: form.querySelector('.nop-type').value || 'อื่นๆ',
+                            gender: form.querySelector('.nop-gender').value,
+                            weight: parseFloat(form.querySelector('.nop-weight').value) || 0,
+                            breed: form.querySelector('.nop-breed').value.trim() || null,
+                            birth_date: form.querySelector('.nop-birth').value || null,
+                            microchip_number: form.querySelector('.nop-microchip').value.trim() || null
+                        });
+                    }
+                });
+
+                let firstPetId = null;
+                if (petsToInsert.length > 0) {
+                    const { data: insertedPets, error: petErr } = await db.from('animals').insert(petsToInsert).select();
                     if (petErr) throw petErr;
-                    newPetId = petData?.id;
+                    if (insertedPets && insertedPets.length > 0) {
+                        firstPetId = insertedPets[0].id; // ล็อก ID สัตว์ตัวแรกไว้เปิดเวชระเบียน
+                    }
                 }
+
+                // 4. จัดการ UI หลังบันทึกเสร็จ
                 document.getElementById('new-owner-modal').style.display = 'none';
                 const sortEl = document.getElementById('sidebar-sort-medrec');
-                if (sortEl) sortEl.value = 'hn_desc';
+                if (sortEl) sortEl.value = 'hn_desc'; // บังคับเรียง HN ใหม่สุดขึ้นก่อน
+                
                 await loadSidebarData();
-                if (newPetId) await loadAnimalData(newPetId, hn);
+                
+                if (firstPetId) {
+                    await loadAnimalData(firstPetId, hn); // เปิดเคสตัวแรก
+                } else {
+                    document.getElementById('sidebar-search-medrec').value = hn;
+                    renderMedrecSidebar();
+                    alert('✅ บันทึกเจ้าของเรียบร้อย (ไม่ได้เพิ่มสัตว์)');
+                }
             } catch (err) { alert('❌ บันทึกไม่สำเร็จ: ' + err.message); }
+            
         }
 
         function openAddPetForOwner(hn) {
@@ -3890,33 +4015,15 @@ let sorted = [..._sbAnimals].sort((a, b) => {
                     <div class="col-span-6"><label class="label-text">เบอร์สำรอง</label><input type="tel" id="no-phone2" class="input-box" placeholder="ไม่บังคับ"></div>
                     <div class="col-span-12"><label class="label-text">ที่อยู่</label><input type="text" id="no-address" class="input-box" placeholder="ที่อยู่..."></div>
                 </div>
-                <h5 class="font-bold text-teal-400 pt-2">🐾 ข้อมูลสัตว์เลี้ยง <span class="text-sm font-normal text-gray-400">(ไม่บังคับ)</span></h5>
-                <div class="grid grid-cols-12 gap-4">
-                    <div class="col-span-6"><label class="label-text">ชื่อสัตว์</label><input type="text" id="no-petname" class="input-box" placeholder="ชื่อสัตว์..."></div>
-                    <div class="col-span-6"><label class="label-text">ชนิด</label>
-                        <select id="no-pettype" class="input-box" onchange="updateBreedSelect('no-pettype','no-petbreed')">
-                            <option value="">-- เลือกชนิด --</option>
-                            <option value="สุนัข">🐶 สุนัข</option>
-                            <option value="แมว">🐱 แมว</option>
-                            <option value="อื่นๆ">🐾 อื่นๆ</option>
-                        </select>
-                    </div>
-                    <div class="col-span-6"><label class="label-text">เพศ</label>
-                        <select id="no-petgender" class="input-box">
-                            <option value="เมีย">♀️ เมีย</option>
-                            <option value="ผู้">♂️ ผู้</option>
-                            <option value="ผู้ตอน">✂️♂️ ผู้ตอน</option>
-                            <option value="เมียหมัน">✂️♀️ เมียหมัน</option>
-                            <option value="ไม่ระบุเพศ" selected>❓ ไม่ระบุเพศ</option>
-                        </select>
-                    </div>
-                    <div class="col-span-6"><label class="label-text">น้ำหนัก (กก.)</label><input type="number" step="0.1" id="no-petweight" class="input-box" placeholder="0.0"></div>
-                    <div class="col-span-6"><label class="label-text">พันธุ์</label><select id="no-petbreed" class="input-box"><option value="">-- เลือกสายพันธุ์ --</option></select></div>
-                    <div class="col-span-6"><label class="label-text">วันเดือนปีเกิด</label><input type="text" id="no-petbirth" class="input-box" placeholder="เลือกวันที่เกิด..."></div>
-                    <div class="col-span-6"><label class="label-text">อายุ (ปี)</label><input type="number" id="no-pet-age-y" class="input-box" min="0" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('no-petbirth','no-pet-age-y','no-pet-age-m')"></div>
-                    <div class="col-span-6"><label class="label-text">อายุ (เดือน)</label><input type="number" id="no-pet-age-m" class="input-box" min="0" max="11" placeholder="0" inputmode="numeric" oninput="syncBirthDateFromAge('no-petbirth','no-pet-age-y','no-pet-age-m')"></div>
-                    <div class="col-span-12"><label class="label-text">หมายเลข Microchip</label><input type="text" id="no-petmicrochip" class="input-box" placeholder="ไม่บังคับ"></div>
+
+                <div class="flex justify-between items-center pt-4 border-t border-white/10 mt-6">
+                    <h5 class="font-bold text-teal-400">🐾 ข้อมูลสัตว์เลี้ยง <span class="text-sm font-normal text-gray-400">(ไม่บังคับ)</span></h5>
+                    <button type="button" onclick="addPetFormToNewOwner()" class="btn-base bg-teal-500/20 text-teal-400 text-xs hover:bg-teal-500/40 !py-1.5 px-3">➕ เพิ่มสัตว์อีกตัว</button>
                 </div>
+                <div id="new-owner-pets-container" class="space-y-4 mt-2">
+                    <!-- Javascript จะสร้างฟอร์มสัตว์มาใส่ตรงนี้ -->
+                </div>
+                
             </div>
             <div class="p-6 border-t border-white/10 flex gap-3">
                 <button onclick="document.getElementById('new-owner-modal').style.display='none'" class="btn-base btn-gray px-6">ยกเลิก</button>
