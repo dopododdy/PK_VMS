@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>วันหยุดคลินิก | PK-VMS Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="ui-settings.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+
+    <style>
+        :root { --navy: #020617; --navy-light: #0f172a; --teal: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
+        * { font-family: "Sarabun", sans-serif !important; }
+        body { background: var(--navy); color: #e2e8f0; margin: 0; padding: 0; }
+        .input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: white; width: 100%; outline: none; transition: 0.2s; font-size: 1rem; }
+        .input-box:focus { border-color: var(--teal); background: rgba(0,0,0,0.5); }
+        .btn-base { padding: 10px 16px; border-radius: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; border: none; cursor: pointer; color: white !important; font-size: 1rem; }
+        .btn-teal  { background-color: #0d9488 !important; } .btn-teal:hover  { background-color: #0f766e !important; }
+        .btn-red   { background-color: #dc2626 !important; } .btn-red:hover   { background-color: #b91c1c !important; }
+        .section-card { background: rgba(30, 41, 59, 0.4); border-radius: 30px; padding: 24px; border: 1px solid var(--border); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
+
+        /* Calendar Grid */
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
+        .cal-dow { text-align: center; font-weight: 800; color: #94a3b8; padding: 10px 0; font-size: 0.9rem; }
+        .cal-cell { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); min-height: 90px; border-radius: 12px; padding: 8px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; }
+        .cal-cell:hover { background: rgba(255,255,255,0.1); border-color: var(--teal); }
+        .cal-cell.empty { background: transparent; border: none; cursor: default; }
+        .cal-cell.today { border-color: #3b82f6; box-shadow: inset 0 0 0 1px #3b82f6; }
+        .cal-cell.holiday { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; }
+        .cal-date { font-weight: 900; font-size: 1.2rem; color: #cbd5e1; }
+        .cal-cell.holiday .cal-date { color: #f87171; }
+        .cal-reason { font-size: 0.75rem; color: #fca5a5; margin-top: auto; line-height: 1.2; font-weight: 600; word-break: break-word; }
+
+        .list-item { background: rgba(255,255,255,0.05); padding: 12px 16px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #ef4444; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div class="flex items-center gap-4 md:gap-6">
+                <a href="index.html" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-2xl shadow-lg flex-shrink-0 transition">⬅️</a>
+                <div>
+                    <h1 class="text-2xl md:text-4xl font-black text-white">ปฏิทินวันหยุดร้าน</h1>
+                    <p class="text-teal-400 font-bold text-base mt-1">ระบบจะไม่นัดหมายในวันที่กำหนดเป็นวันหยุด</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- ซ้าย: ฟอร์มเพิ่มวันหยุด & รายการที่ใกล้ถึง -->
+            <div class="space-y-6 lg:col-span-1">
+                <div class="section-card border-t-4 border-teal-500">
+                    <h3 class="text-xl font-bold text-white mb-4">➕ เพิ่มวันหยุด</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-400 mb-1">วันที่ปิดร้าน</label>
+                            <input type="text" id="f_holiday_date" class="input-box text-orange-400 font-bold" placeholder="เลือกวันที่...">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-400 mb-1">เหตุผล / หมายเหตุ (ไม่บังคับ)</label>
+                            <input type="text" id="f_reason" class="input-box" placeholder="เช่น วันหยุดสงกรานต์, อบรมสัมมนา">
+                        </div>
+                        <button onclick="addHoliday()" class="btn-base btn-teal w-full py-3 shadow-lg">💾 บันทึกวันหยุด</button>
+                    </div>
+                </div>
+
+                <div class="section-card border-t-4 border-red-500">
+                    <h3 class="text-xl font-bold text-white mb-4">🗓️ วันหยุดที่กำลังจะมาถึง</h3>
+                    <div id="holiday-list" class="space-y-2 max-h-80 overflow-y-auto pr-2">
+                        <p class="text-slate-500 text-center py-4">กำลังโหลดข้อมูล...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ขวา: ปฏิทินรายเดือน -->
+            <div class="section-card lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <button onclick="changeMonth(-1)" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xl transition">‹</button>
+                    <h2 id="cal-month-year" class="text-2xl font-black text-white">เดือน ปี</h2>
+                    <button onclick="changeMonth(1)" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xl transition">›</button>
+                </div>
+                
+                <div class="cal-grid">
+                    <div class="cal-dow text-red-400">อา</div>
+                    <div class="cal-dow text-yellow-100">จ</div>
+                    <div class="cal-dow text-pink-300">อ</div>
+                    <div class="cal-dow text-green-300">พ</div>
+                    <div class="cal-dow text-orange-300">พฤ</div>
+                    <div class="cal-dow text-blue-300">ศ</div>
+                    <div class="cal-dow text-purple-300">ส</div>
+                </div>
+                <div id="cal-body" class="cal-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (sessionStorage.getItem("isLoggedIn") !== "true") { window.location.href = "index.html"; }
+
+        let currentDate = new Date();
+        let holidayData = [];
+
+        const thMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+        window.onload = async () => {
+            flatpickr("#f_holiday_date", {
+                locale: "th",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "j F Y"
+            });
+            await fetchHolidays();
+        };
+
+        async function fetchHolidays() {
+            try {
+                const { data, error } = await db.from('clinic_holidays').select('*').order('holiday_date', { ascending: true });
+                if (error) throw error;
+                holidayData = data || [];
+                renderCalendar();
+                renderHolidayList();
+            } catch (err) {
+                console.error("Error fetching holidays:", err);
+            }
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('cal-month-year').innerText = `${thMonths[month]} ${year + 543}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            let html = '';
+            // Empty cells for previous month
+            for (let i = 0; i < firstDay; i++) {
+                html += `<div class="cal-cell empty"></div>`;
+            }
+
+            // Days of the month
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const holiday = holidayData.find(h => h.holiday_date === dateStr);
+                
+                let classes = 'cal-cell';
+                if (dateStr === todayStr) classes += ' today';
+                if (holiday) classes += ' holiday';
+
+                const reasonHtml = holiday && holiday.reason ? `<div class="cal-reason">${holiday.reason}</div>` : '';
+
+                html += `
+                    <div class="${classes}" onclick="handleDayClick('${dateStr}')" title="คลิกเพื่อจัดการวันหยุด">
+                        <div class="cal-date">${d}</div>
+                        ${reasonHtml}
+                    </div>
+                `;
+            }
+
+            document.getElementById('cal-body').innerHTML = html;
+        }
+
+        function renderHolidayList() {
+            const listEl = document.getElementById('holiday-list');
+            const todayStr = new Date().toISOString().split('T')[0];
+            
+            // กรองเอาเฉพาะวันที่ยังไม่ผ่านไป
+            const upcoming = holidayData.filter(h => h.holiday_date >= todayStr);
+
+            if (upcoming.length === 0) {
+                listEl.innerHTML = '<p class="text-slate-500 text-center py-4">ไม่มีวันหยุดที่กำลังจะมาถึง</p>';
+                return;
+            }
+
+            listEl.innerHTML = upcoming.map(h => {
+                const d = new Date(h.holiday_date);
+                const dateText = `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear() + 543}`;
+                return `
+                    <div class="list-item">
+                        <div>
+                            <div class="text-white font-bold">${dateText}</div>
+                            <div class="text-xs text-slate-400 mt-1">${h.reason || 'ปิดร้าน'}</div>
+                        </div>
+                        <button onclick="deleteHoliday('${h.id}', '${dateText}')" class="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition flex items-center justify-center font-bold">✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function changeMonth(dir) {
+            currentDate.setMonth(currentDate.getMonth() + dir);
+            renderCalendar();
+        }
+
+        async function handleDayClick(dateStr) {
+            const existing = holidayData.find(h => h.holiday_date === dateStr);
+            if (existing) {
+                // ถ้าเป็นวันหยุดอยู่แล้ว ถามว่าต้องการลบหรือไม่
+                const d = new Date(dateStr);
+                const dateText = `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear() + 543}`;
+                if (confirm(`ยกเลิกวันหยุด: ${dateText} หรือไม่?`)) {
+                    await deleteHoliday(existing.id, dateText, true);
+                }
+            } else {
+                // ถ้ายังไม่เป็นวันหยุด ให้กรอกข้อมูลลงช่อง input เตรียมกดบันทึก
+                document.getElementById('f_holiday_date')._flatpickr.setDate(dateStr, true);
+                document.getElementById('f_reason').focus();
+            }
+        }
+
+        async function addHoliday() {
+            const dateVal = document.getElementById('f_holiday_date').value;
+            const reasonVal = document.getElementById('f_reason').value.trim();
+
+            if (!dateVal) return alert('กรุณาเลือกวันที่ต้องการตั้งเป็นวันหยุด');
+
+            // เช็คซ้ำ
+            if (holidayData.find(h => h.holiday_date === dateVal)) {
+                return alert('วันนี้ถูกตั้งเป็นวันหยุดไว้แล้ว');
+            }
+
+            try {
+                const { error } = await db.from('clinic_holidays').insert([{
+                    holiday_date: dateVal,
+                    reason: reasonVal || null
+                }]);
+
+                if (error) throw error;
+                
+                document.getElementById('f_reason').value = '';
+                document.getElementById('f_holiday_date')._flatpickr.clear();
+                
+                await fetchHolidays();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาด: ' + err.message);
+            }
+        }
+
+        async function deleteHoliday(id, dateText, skipConfirm = false) {
+            if (!skipConfirm && !confirm(`ยืนยันการลบวันหยุด: ${dateText} หรือไม่?`)) return;
+
+            try {
+                const { error } = await db.from('clinic_holidays').delete().eq('id', id);
+                if (error) throw error;
+                await fetchHolidays();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการลบ: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
