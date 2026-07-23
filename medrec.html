@@ -850,6 +850,7 @@
         let _splitDragInitialized = false;
         let vaccCatalog = [];
         let masterBreeds = [], masterSpecies = [];
+        let globalClosedDates = [];
 
         const DLD_CATEGORIES = {
             vaccine: {
@@ -1001,21 +1002,36 @@
         function makeApptPickerConfig() {
             return makeDatePickerConfig({
                 showMonths: 1,
+                disable: globalClosedDates,
                 locale: { ...flatpickr.l10ns.th, firstDayOfWeek: 0 }
             });
         }
 
-        function setApptShortcut(fieldId, addDays, addMonths, addYears) {
-            addDays = addDays || 0; addMonths = addMonths || 0; addYears = addYears || 0;
-            const d = new Date();
-            if (addYears)  d.setFullYear(d.getFullYear() + addYears);
-            if (addMonths) d.setMonth(d.getMonth() + addMonths);
-            if (addDays)   d.setDate(d.getDate() + addDays);
-            if (d.getDay() === 6) d.setDate(d.getDate() + 1); // skip Saturday → Sunday
-            const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const el = document.getElementById(fieldId);
-            if (el && el._flatpickr) el._flatpickr.setDate(dateStr, true);
-        }
+function setApptShortcut(fieldId, addDays, addMonths, addYears) {
+    addDays = addDays || 0; addMonths = addMonths || 0; addYears = addYears || 0;
+    const d = new Date();
+    if (addYears)  d.setFullYear(d.getFullYear() + addYears);
+    if (addMonths) d.setMonth(d.getMonth() + addMonths);
+    if (addDays)   d.setDate(d.getDate() + addDays);
+
+    let dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    
+    // วนลูปเลื่อนวันไปเรื่อยๆ จนกว่าจะไม่ใช่วันเสาร์และไม่ใช่วันหยุดร้าน
+    let loopCount = 0;
+    while (loopCount < 30) { // ดัก loop ไว้ไม่ให้เกิน 30 วันกันเหนียว
+        let isSaturday = d.getDay() === 6;
+        let isHoliday = globalClosedDates.includes(dateStr);
+        
+        if (!isSaturday && !isHoliday) break; // ถ้าไม่ตรงทั้ง 2 อย่าง ให้ออกจากลูป
+        
+        d.setDate(d.getDate() + 1); // เลื่อนไปอีก 1 วัน
+        dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        loopCount++;
+    }
+
+    const el = document.getElementById(fieldId);
+    if (el && el._flatpickr) el._flatpickr.setDate(dateStr, true);
+}
 
         // ─── Appointment note dropdown helpers ───
         const APPT_NOTE_PRESETS = ['ตัดไหมฟรี','กระตุ้นวัคซีน','วัคซีนประจำปี','ตรวจเลือด','ติดตามอาการ'];
@@ -1303,10 +1319,15 @@
                 const cnt = countMap.has(dateStr) ? countMap.get(dateStr).size : 0;
                 const isToday = dateStr === today;
                 const isSelected = dateStr === _sbSelectedApptDate;
+                const isHoliday = globalClosedDates.includes(dateStr);
                 let cls = 'sb-cal-day';
                 if (isToday) cls += ' today';
                 if (isSelected) cls += ' selected';
                 if (cnt > 0) cls += ' has-appt';
+
+                if (isHoliday) {
+                    cls += ' opacity-50 !text-red-400 bg-red-900/10 cursor-not-allowed';
+                }
                 daysHTML += `<div class="${cls}" onclick="selectApptCalendarDate('${dateStr}')">${d}${cnt > 0 ? `<span class="sb-cal-count">${cnt}</span>` : ''}</div>`;
             }
             const dowHeader = thDays.map(d => `<div class="sb-cal-dow">${d}</div>`).join('');
@@ -1475,6 +1496,11 @@ let sorted = [..._sbAnimals].sort((a, b) => {
         }
 
         window.onload = async () => {
+            try {
+                const { data: holidays } = await db.from('clinic_holidays').select('holiday_date');
+                globalClosedDates = (holidays || []).map(h => h.holiday_date);
+            } catch(e) { console.warn("Failed to load holidays", e); }
+            
             flatpickr(".datepicker", makeApptPickerConfig());
             flatpickr("#f_visit_date", makeDatePickerConfig({ defaultDate: "today" }));
             flatpickr("#edit-pet-birth", makeBirthPickerConfig("edit-pet-age-y", "edit-pet-age-m"));
