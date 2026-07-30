@@ -862,13 +862,16 @@
                 container.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">ไม่มีรายการรอชำระ</p>';
                 return;
             }
-            // Group by owner_hn to detect owners with multiple pending pets
+            
+            // ปรับปรุงการจัดกลุ่ม: ป้องกัน Walk-in มัดรวมกัน
             const groups = {};
             list.forEach(r => {
-                if (!groups[r.owner_hn]) groups[r.owner_hn] = { owner_name: r.owner_name, records: [] };
-                groups[r.owner_hn].records.push(r);
+                const key = r.owner_hn || ('walkin_' + r.id); // แยก Walk-in ออกจากกันด้วย ID
+                if (!groups[key]) groups[key] = { owner_name: r.owner_name, owner_hn: r.owner_hn, records: [] };
+                groups[key].records.push(r);
             });
-            container.innerHTML = Object.entries(groups).map(([hn, g]) => {
+
+            container.innerHTML = Object.values(groups).map(g => {
                 const cards = g.records.map(r => `
                     <div class="glass-card border-l-4 border-l-amber-500" onclick="loadPendingRecord('${r.id}')" ondblclick="openMedrecForRecord('${r.id}')">
                         <div class="flex justify-between items-center mb-1">
@@ -877,12 +880,14 @@
                         </div>
                         <div class="text-gray-400 text-[11px]">${r.owner_hn || 'Walk-in'} | ${formatThaiDate(r.created_at, 'short')}</div>
                     </div>`).join('');
-                if (g.records.length > 1) {
+                
+                // ถ้ารายการมีมากกว่า 1 และเป็นลูกค้าที่มี HN (ไม่ใช่ Walk-in) จึงจะแสดงปุ่มรวมบิล
+                if (g.records.length > 1 && g.owner_hn) {
                     const totalAmt = g.records.reduce((s, r) => s + parseFloat(r.net_amount || r.total_cost || 0), 0);
                     return `<div class="border border-amber-500/30 rounded-xl p-2 bg-amber-500/5 space-y-2">
                         <div class="flex justify-between items-center px-2 py-1">
                             <span class="text-amber-300 font-bold text-xs">👤 ${g.owner_name} (${g.records.length} ตัว)</span>
-                            <button onclick="event.stopPropagation(); openCombinedPaymentModal('${hn}')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded-lg font-bold">🧾 รวมใบเสร็จ</button>
+                            <button type="button" onclick="openCombinedPaymentModal('${g.owner_hn}')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded-lg font-bold relative z-10 cursor-pointer">🧾 รวมใบเสร็จ</button>
                         </div>
                         ${cards}
                     </div>`;
