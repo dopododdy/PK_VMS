@@ -6,7 +6,7 @@
     <title>PK-VMS Pro | Smart POS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="ui-settings.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,101 +17,48 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="print-utils.js"></script>
-
     <style>
-        :root { 
-            --navy:     #020617; 
-            --navy-mid: #0f172a; 
-            --teal:     #14b8b1;
-            --teal-accent: #14b8b1;
-            --border:   rgba(255, 255, 255, 0.1); 
-        }
+        :root { --navy: #020617; --navy-mid: #0f172a; --teal: #14b8b1; --teal-accent: #14b8b1; --border: rgba(255, 255, 255, 0.1); }
         * { font-family: "Sarabun", sans-serif !important; }
         body { background: var(--navy); color: #e2e8f0; height: 100vh; overflow: hidden; }
-
-        /* Typography */
         .txt-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
         .txt-body { font-size: 16px; color: #cbd5e1; }
         .txt-title { font-size: 22px; font-weight: 800; color: #ffffff; }
         .txt-price { font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: -1px; }
-
-        /* Layout */
         .col-side { width: 23%; border-right: 1px solid var(--border); }
         .col-main { width: 52%; background: rgba(0,0,0,0.2); }
         .col-pay { width: 25%; background: var(--navy-mid); border-left: 1px solid var(--border); }
-
         .glass-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; transition: 0.2s; cursor: pointer; padding: 16px; }
         .glass-card:hover { border-color: var(--teal-accent); background: rgba(20, 184, 177, 0.05); }
         .glass-card.active { border-color: var(--teal-accent); background: rgba(20, 184, 177, 0.1); }
-
         .search-input { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; width: 100%; padding: 12px 14px 12px 42px; outline: none; font-size: 16px; color: white; }
         .search-input:focus { border-color: var(--teal-accent); }
-
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-
         .numpad button { background: rgba(255,255,255,0.05); height: 60px; border-radius: 10px; font-weight: 800; font-size: 22px; transition: 0.1s; }
         .numpad button:active { background: var(--teal-accent); color: var(--navy); transform: scale(0.95); }
-        
         .btn-print { background-color: #2563eb !important; color: white !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important; }
         .btn-print:hover { background-color: #1d4ed8 !important; }
-
         .btn-home { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-home:hover { background: var(--teal-accent); color: var(--navy); }
-
-        /* Modal Context Styles */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: #0f172a; border: 1px solid var(--border); border-radius: 30px; width: 100%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
         .item-grid-box { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-        
-        /* Remove Button */
         .btn-remove { color: #ef4444; opacity: 0.3; transition: 0.2s; cursor: pointer; }
         .btn-remove:hover { opacity: 1; transform: scale(1.2); }
-        /* Quantity +/- Buttons */
         .qty-btn { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; width: 24px; height: 24px; font-size: 16px; line-height: 1; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; }
         .qty-btn:hover { background: rgba(255,255,255,0.25); }
         .qty-input { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; width: 44px; text-align: center; font-size: 14px; padding: 2px 0; outline: none; }
         .qty-input:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.08); }
         .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .qty-input[type=number] { -moz-appearance: textfield; }
-        /* ─── Responsive POS Layout ─── */
-        .pos-tab-bar {
-            display: none;
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            background: var(--navy-mid);
-            border-bottom: 1px solid var(--border);
-        }
-        .pos-tab-btn {
-            flex: 1;
-            padding: 12px 8px;
-            font-weight: 800;
-            font-size: 0.85rem;
-            border: none;
-            background: transparent;
-            color: #64748b;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: 0.2s;
-        }
-        .pos-tab-btn.active {
-            color: var(--teal);
-            border-bottom-color: var(--teal);
-        }
+        .pos-tab-bar { display: none; position: sticky; top: 0; z-index: 30; background: var(--navy-mid); border-bottom: 1px solid var(--border); }
+        .pos-tab-btn { flex: 1; padding: 12px 8px; font-weight: 800; font-size: 0.85rem; border: none; background: transparent; color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; }
+        .pos-tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
         @media (max-width: 1023px) {
             body { overflow: auto !important; height: auto !important; }
-            .col-side, .col-main, .col-pay {
-                width: 100% !important;
-                border: none !important;
-                display: none !important;
-            }
-            .col-side.pos-active, .col-main.pos-active, .col-pay.pos-active {
-                display: flex !important;
-                flex-direction: column;
-                min-height: 100vh;
-                padding-bottom: 80px;
-            }
+            .col-side, .col-main, .col-pay { width: 100% !important; border: none !important; display: none !important; }
+            .col-side.pos-active, .col-main.pos-active, .col-pay.pos-active { display: flex !important; flex-direction: column; min-height: 100vh; padding-bottom: 80px; }
             body.flex { flex-direction: column !important; }
             .pos-tab-bar { display: flex !important; }
             .modal-content { max-width: calc(100vw - 32px) !important; }
@@ -284,7 +231,6 @@
                 <h3 class="text-3xl font-black flex items-center gap-3"><i data-lucide="plus-circle" class="text-teal-400"></i> เลือกรายการเพิ่มเติม</h3>
                 <button onclick="closeCatalog()" class="text-gray-400 hover:text-white transition-colors text-3xl">✕</button>
             </div>
-
             <div class="p-6 border-b border-white/10">
                 <input type="text" id="catalog-search" class="search-input" placeholder="ค้นหาชื่อรายการ..." oninput="filterCatalogItems()">
             </div>
@@ -571,7 +517,6 @@
             if (cols[tab]) cols[tab].classList.add('pos-active');
             if (tabs[tab]) tabs[tab].classList.add('active');
         }
-        // Init: on desktop all cols show, on mobile only first
         document.addEventListener('DOMContentLoaded', function() {
             if (window.innerWidth <= 1023) { switchPosTab('side'); }
         });
@@ -588,10 +533,8 @@
 
         const SCHEMA_MIGRATION_MSG = '⚠️ ฐานข้อมูลยังไม่ได้รัน Migration SQL\n\nกรุณาไปที่ Settings (set-db.html) → อัปเดต Schema ฐานข้อมูล แล้ว Copy SQL ไปรันใน Supabase → SQL Editor';
 
-        // ─── Utility: HTML attribute escaper ───
         function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 
-        // ─── Merged Groups (localStorage-backed, client-side only) ───
         function getMergedGroups(recordId) {
             if (!mergedGroupsCache[recordId]) {
                 try { mergedGroupsCache[recordId] = JSON.parse(localStorage.getItem('pos_merge_' + recordId) || '[]'); }
@@ -604,7 +547,6 @@
             try { localStorage.setItem('pos_merge_' + recordId, JSON.stringify(groups)); } catch {}
         }
 
-        // ─── Item Selection (for merge) ───
         function toggleItemSelection(itemId) {
             if (selectedItemIds.has(itemId)) selectedItemIds.delete(itemId);
             else selectedItemIds.add(itemId);
@@ -627,7 +569,6 @@
             updateMergeToolbar();
         }
 
-        // ─── Inline Item Name Editing ───
         function startEditName(itemId) {
             const displayDiv = document.getElementById('name-display-' + itemId);
             const editDiv = document.getElementById('name-edit-' + itemId);
@@ -654,7 +595,6 @@
             await refreshCartDisplay(activeRecordId, false);
         }
 
-        // ─── Merge Modal ───
         function openMergeModal() {
             if (selectedItemIds.size < 2) return;
             const preview = document.getElementById('merge-items-preview');
@@ -679,7 +619,6 @@
             const name = document.getElementById('merge-name-input').value.trim();
             if (!name) return alert('กรุณาตั้งชื่อรายการรวม');
             const ids = Array.from(selectedItemIds);
-            // Remove these ids from any existing groups, then add new group
             let groups = getMergedGroups(activeRecordId);
             groups = groups.map(g => ({ ...g, itemIds: g.itemIds.filter(id => !ids.includes(id)) }))
                            .filter(g => g.itemIds.length >= 2);
@@ -696,7 +635,6 @@
             refreshCartDisplay(recordId, false);
         }
 
-        // ─── Receive Full Amount ───
         function receiveFullAmount() {
             const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
             document.getElementById('received-cash').value = net.toFixed(2);
@@ -712,7 +650,6 @@
 
         function sendToCustomerDisplay(msg) {
             customerChannel.postMessage(msg);
-            // localStorage fallback for cross-origin windows
             try { localStorage.setItem('pos_customer_msg', JSON.stringify({...msg, _t: Date.now()})); } catch(e) {}
         }
 
@@ -728,25 +665,19 @@
         }
 
         async function showCustomerDisplay() {
-            // Open the window if not already open
             if (!customerWindow || customerWindow.closed) {
                 customerWindow = window.open('pos-customer.html', 'pos_customer_window');
             } else {
                 customerWindow.focus();
             }
-            // If no record is active, or the active record is already paid → return to ads
             const isPaidMode = currentRecordData && currentRecordData.payment_status === 'paid';
             if (!activeRecordId || isPaidMode) {
-                setTimeout(() => {
-                    sendToCustomerDisplay({ type: 'show_ads' });
-                }, 800);
+                setTimeout(() => { sendToCustomerDisplay({ type: 'show_ads' }); }, 800);
                 return;
             }
-            // Send item data for the active pending record
             const { data: items } = await db.from('medical_record_items').select('*').eq('record_id', activeRecordId);
             const { itemsWithTh } = await enrichItemsWithThaiNames(items || []);
             const net = parseFloat(document.getElementById('net-total').innerText.replace(/,/g, '')) || 0;
-            // Delay to allow pos-customer.html to load and register its BroadcastChannel listener
             setTimeout(() => {
                 sendToCustomerDisplay({
                     type: 'show_items',
@@ -775,31 +706,20 @@
             return '🐾';
         }
 
-        // ✅ แก้ไขฟังก์ชัน onload เพื่อเช็ค HN อัตโนมัติ
         window.onload = async () => { 
             await fetchPatients();
             await fetchPendingPayments();
-
             const urlParams = new URLSearchParams(window.location.search);
             const hnFromUrl = urlParams.get('hn');
-
             if (hnFromUrl) {
-                // ค้นหาข้อมูลคนไข้ในลิสต์ที่โหลดมา
                 const patient = allPatients.find(p => p.owner_hn === hnFromUrl);
                 if (patient) {
-                    // กรองรายชื่อฝั่งซ้ายให้เหลือแค่คนนี้เพื่อความชัดเจน
                     document.getElementById('main-search').value = hnFromUrl;
                     filterPatients();
-                    
-                    // โหลดข้อมูลประวัติคนไข้ทันที
                     await loadPatientHistory(patient.owner_hn, patient.pet_name, patient.owners?.owner_name);
-                    
-                    // ถ้ามีประวัติการรักษา (บิล) ให้เลือกบิลล่าสุดโดยอัตโนมัติ
                     const historyContainer = document.getElementById('payment-history');
                     const firstBill = historyContainer.querySelector('.glass-card');
-                    if (firstBill) {
-                        firstBill.click();
-                    }
+                    if (firstBill) { firstBill.click(); }
                 }
             }
         };
@@ -863,10 +783,9 @@
                 return;
             }
             
-            // ปรับปรุงการจัดกลุ่ม: ป้องกัน Walk-in มัดรวมกัน
             const groups = {};
             list.forEach(r => {
-                const key = r.owner_hn || ('walkin_' + r.id); // แยก Walk-in ออกจากกันด้วย ID
+                const key = r.owner_hn || ('walkin_' + r.id);
                 if (!groups[key]) groups[key] = { owner_name: r.owner_name, owner_hn: r.owner_hn, records: [] };
                 groups[key].records.push(r);
             });
@@ -881,12 +800,11 @@
                         <div class="text-gray-400 text-[11px]">${r.owner_hn || 'Walk-in'} | ${formatThaiDate(r.created_at, 'short')}</div>
                     </div>`).join('');
                 
-                // ถ้ารายการมีมากกว่า 1 และเป็นลูกค้าที่มี HN (ไม่ใช่ Walk-in) จึงจะแสดงปุ่มรวมบิล
                 if (g.records.length > 1 && g.owner_hn) {
                     return `<div class="border border-amber-500/30 rounded-xl p-2 bg-amber-500/5 space-y-2">
                         <div class="flex justify-between items-center px-2 py-1">
                             <span class="text-amber-300 font-bold text-xs">👤 ${g.owner_name} (${g.records.length} ตัว)</span>
-                            <button type="button" data-hn="${g.owner_hn}" onclick="openCombinedPaymentModal(this.dataset.hn, this)" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded-lg font-bold relative z-10 cursor-pointer">🧾 รวมใบเสร็จ</button>
+                            <button type="button" data-hn="${g.owner_hn}" onclick="event.stopPropagation(); openCombinedPaymentModal(this.dataset.hn, this)" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded-lg font-bold relative z-10 cursor-pointer">🧾 รวมใบเสร็จ</button>
                         </div>
                         ${cards}
                     </div>`;
@@ -899,7 +817,6 @@
             const r = pendingRecordsMap[recordId];
             if (!r) return;
             if (!r.owner_hn) {
-                // Walk-in record – no patient history needed
                 setWalkInActivePatient();
                 await viewRecordDetail(recordId, 'pending');
                 if (window.innerWidth <= 1023) switchPosTab('main');
@@ -919,12 +836,7 @@
 
         async function newWalkInSale() {
             const { data: record, error } = await db.from('medical_records').insert([{
-                owner_hn: null,
-                animal_id: null,
-                total_cost: 0,
-                net_amount: 0,
-                payment_status: 'pending',
-                dld_categories: []
+                owner_hn: null, animal_id: null, total_cost: 0, net_amount: 0, payment_status: 'pending', dld_categories: []
             }]).select().single();
             if (error) { alert('ไม่สามารถสร้างรายการ Walk-in ได้: ' + error.message); return; }
             setWalkInActivePatient();
@@ -1025,21 +937,16 @@
             const allItems = itms || [];
             const { nameTh } = await enrichItemsWithThaiNames(allItems);
 
-            // Resolve merged groups (only relevant for pending/editable records)
             let mergedGroups = isPaid ? [] : getMergedGroups(recordId);
             if (!isPaid) {
                 const allItemIds = new Set(allItems.map(i => i.id));
-                // Remove orphaned item IDs from groups
-                mergedGroups = mergedGroups
-                    .map(g => ({ ...g, itemIds: g.itemIds.filter(id => allItemIds.has(id)) }))
-                    .filter(g => g.itemIds.length >= 2);
+                mergedGroups = mergedGroups.map(g => ({ ...g, itemIds: g.itemIds.filter(id => allItemIds.has(id)) })).filter(g => g.itemIds.length >= 2);
                 saveMergedGroups(recordId, mergedGroups);
             }
             const mergedItemIdSet = new Set(mergedGroups.flatMap(g => g.itemIds));
 
             let html = '';
 
-            // ── Merged group rows (pending only) ──
             mergedGroups.forEach((group, groupIdx) => {
                 const groupItems = allItems.filter(i => group.itemIds.includes(i.id));
                 const groupTotal = groupItems.reduce((s, i) => s + parseFloat(i.total_price || 0), 0);
@@ -1059,7 +966,6 @@
                 </div>`;
             });
 
-            // ── Individual item rows ──
             allItems.filter(i => !mergedItemIdSet.has(i.id)).forEach(i => {
                 const displayName = nameTh[i.item_name] ? `${i.item_name} (${nameTh[i.item_name]})` : i.item_name;
                 html += `
@@ -1166,19 +1072,11 @@
             }]);
             if (error) return alert("Error adding item: " + error.message);
 
-            // บันทึกประวัติเมื่อสินค้าถูกเพิ่มขณะรอจ่ายเงิน
             if (currentRecordData?.payment_status === 'pending') {
-                const { error: histError } = await db.from('pos_pending_additions').insert([{
-                    record_id: activeRecordId,
-                    item_type: type,
-                    item_name: name,
-                    quantity: 1,
-                    unit_price: finalPrice,
-                    total_price: finalPrice
+                await db.from('pos_pending_additions').insert([{
+                    record_id: activeRecordId, item_type: type, item_name: name, quantity: 1, unit_price: finalPrice, total_price: finalPrice
                 }]);
-                if (histError) console.error('บันทึกประวัติล้มเหลว:', histError.message);
             }
-
             await syncTotalToDB();
             refreshCartDisplay(activeRecordId);
         }
@@ -1210,17 +1108,10 @@
             if (error) return alert("Error adding item: " + error.message);
 
             if (currentRecordData?.payment_status === 'pending') {
-                const { error: histError } = await db.from('pos_pending_additions').insert([{
-                    record_id: activeRecordId,
-                    item_type: type,
-                    item_name: name,
-                    quantity: 1,
-                    unit_price: price,
-                    total_price: price
+                await db.from('pos_pending_additions').insert([{
+                    record_id: activeRecordId, item_type: type, item_name: name, quantity: 1, unit_price: price, total_price: price
                 }]);
-                if (histError) console.error('บันทึกประวัติล้มเหลว:', histError.message);
             }
-
             document.getElementById('catalog-custom-name').value = '';
             document.getElementById('catalog-custom-price').value = '';
             await syncTotalToDB();
@@ -1229,11 +1120,9 @@
 
         async function removeItemFromDB(itemId) {
             if (!confirm("ลบรายการ?")) return;
-            // Clean up merged groups if item was part of one
             if (activeRecordId) {
                 const groups = getMergedGroups(activeRecordId);
-                const updated = groups.map(g => ({ ...g, itemIds: g.itemIds.filter(id => id !== itemId) }))
-                                      .filter(g => g.itemIds.length >= 2);
+                const updated = groups.map(g => ({ ...g, itemIds: g.itemIds.filter(id => id !== itemId) })).filter(g => g.itemIds.length >= 2);
                 saveMergedGroups(activeRecordId, updated);
             }
             selectedItemIds.delete(itemId);
@@ -1273,12 +1162,8 @@
             const discount = parseFloat(document.getElementById('input-discount').value) || 0;
             const { error } = await db.from('medical_records').update({ total_cost: newTotal, net_amount: newTotal - discount }).eq('id', activeRecordId);
             if (error) {
-                console.error('syncTotalToDB error:', error.message);
-                if (error.message && error.message.includes('schema cache')) {
-                    alert(SCHEMA_MIGRATION_MSG + '\n\n' + error.message);
-                } else {
-                    alert('Error อัปเดตยอดรวม: ' + error.message);
-                }
+                if (error.message && error.message.includes('schema cache')) alert(SCHEMA_MIGRATION_MSG + '\n\n' + error.message);
+                else alert('Error อัปเดตยอดรวม: ' + error.message);
                 return;
             }
             document.getElementById('sum-total').innerText = newTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -1303,18 +1188,13 @@
             }).eq('id', activeRecordId);
             
             if (error) {
-                if (error.message && error.message.includes('schema cache')) {
-                    return alert(SCHEMA_MIGRATION_MSG + '\n\n' + error.message);
-                }
+                if (error.message && error.message.includes('schema cache')) return alert(SCHEMA_MIGRATION_MSG + '\n\n' + error.message);
                 return alert(error.message);
             }
             sendToCustomerDisplay({ type: 'payment_done' });
             printReceipt(activeRecordId);
-            if (activePatient && activePatient.hn) {
-                loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
-            } else {
-                resetCartDisplay();
-            }
+            if (activePatient && activePatient.hn) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
+            else resetCartDisplay();
             fetchPendingPayments();
         }
 
@@ -1354,7 +1234,6 @@
                     change_amount: (parseFloat(record.received_amount || 0) - parseFloat(record.net_amount || 0)).toLocaleString(undefined, {minimumFractionDigits: 2}),
                     date: formatThaiDate(record.paid_at),
                     items_list: (() => {
-                        // Apply merged groups to receipt display
                         const mGroups = getMergedGroups(recordId);
                         const mItemIdSet = new Set(mGroups.flatMap(g => g.itemIds));
                         const printItems = [];
@@ -1375,29 +1254,23 @@
                 let pushOffset = 0;
                 const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
                     const base = `position:absolute; top:${parseFloat(l.y)+pushOffset}mm; left:${l.x}mm;`;
-                    if (l.type === 'image') {
-                        return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
-                    } else if (l.type === 'rect') {
-                        return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
-                    } else {
-                        let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
-                        if (l.text?.includes("{{items_list}}")) {
-                            const mGroups2 = getMergedGroups(recordId);
-                            const mSet2 = new Set(mGroups2.flatMap(g => g.itemIds));
-                            const printCount = mGroups2.length + (items || []).filter(i => !mSet2.has(i.id)).length;
-                            pushOffset += (printCount - 1) * 5;
-                        }
-                        const fw = l.bold ? 'font-weight:bold;' : '';
-                        const fs = l.italic ? 'font-style:italic;' : '';
-                        const td = l.underline ? 'text-decoration:underline;' : '';
-                        const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' :
-                                           l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
-                        const widthStyle = alignStyle ? '' : `width:${pw - parseFloat(l.x)}mm;`;
-                        return `<div style="${base} ${widthStyle} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
+                    if (l.type === 'image') return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                    if (l.type === 'rect') return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
+                    let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
+                    if (l.text?.includes("{{items_list}}")) {
+                        const mGroups2 = getMergedGroups(recordId);
+                        const mSet2 = new Set(mGroups2.flatMap(g => g.itemIds));
+                        const printCount = mGroups2.length + (items || []).filter(i => !mSet2.has(i.id)).length;
+                        pushOffset += (printCount - 1) * 5;
                     }
+                    const fw = l.bold ? 'font-weight:bold;' : '';
+                    const fs = l.italic ? 'font-style:italic;' : '';
+                    const td = l.underline ? 'text-decoration:underline;' : '';
+                    const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' : l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
+                    const widthStyle = alignStyle ? '' : `width:${pw - parseFloat(l.x)}mm;`;
+                    return `<div style="${base} ${widthStyle} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
                 }).join('');
 
-                // Use PrintUtils for silent printing if configured; falls back to hidden iframe
                 const receiptHtml = `<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`;
                 await PrintUtils.executePrint(receiptHtml, pw, ph, 'thermal_receipt');
             } catch (e) { alert("ข้อผิดพลาดในการพิมพ์: " + e.message); }
@@ -1424,15 +1297,10 @@
 
         function getBillsDateRange(date) {
             const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
-            return {
-                startDate: new Date(y, m, d).toISOString(),
-                endDate:   new Date(y, m, d, 23, 59, 59, 999).toISOString()
-            };
+            return { startDate: new Date(y, m, d).toISOString(), endDate: new Date(y, m, d, 23, 59, 59, 999).toISOString() };
         }
 
-        let _billsDatePicker = null;
-        let _printFromDatePicker = null;
-        let _printToDatePicker = null;
+        let _billsDatePicker = null; let _printFromDatePicker = null; let _printToDatePicker = null;
 
         function updateCalendarYearToBE(instance) {
             if (!instance.calendarContainer) return;
@@ -1442,26 +1310,16 @@
 
         function makeDashboardDatePickerConfig() {
             return {
-                locale: "th",
-                dateFormat: "Y-m-d",
-                altInput: true,
-                altFormat: "j F Y",
-                maxDate: "today",
+                locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y", maxDate: "today",
                 onReady: (selectedDates, dateStr, instance) => {
-                    if (dateStr && instance.altInput) {
-                        const y = new Date(dateStr).getFullYear();
-                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
-                    }
+                    if (dateStr && instance.altInput) { const y = new Date(dateStr).getFullYear(); instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543)); }
                     updateCalendarYearToBE(instance);
                 },
                 onOpen: (_, __, instance) => updateCalendarYearToBE(instance),
                 onMonthChange: (_, __, instance) => updateCalendarYearToBE(instance),
                 onYearChange: (_, __, instance) => updateCalendarYearToBE(instance),
                 onChange: (selectedDates, dateStr, instance) => {
-                    if (dateStr && instance.altInput) {
-                        const y = new Date(dateStr).getFullYear();
-                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
-                    }
+                    if (dateStr && instance.altInput) { const y = new Date(dateStr).getFullYear(); instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543)); }
                     onBillsDateChange(selectedDates[0] || null);
                 }
             };
@@ -1469,26 +1327,16 @@
 
         function makePrintDatePickerConfig() {
             return {
-                locale: "th",
-                dateFormat: "Y-m-d",
-                altInput: true,
-                altFormat: "j F Y",
-                maxDate: "today",
+                locale: "th", dateFormat: "Y-m-d", altInput: true, altFormat: "j F Y", maxDate: "today",
                 onReady: (selectedDates, dateStr, instance) => {
-                    if (dateStr && instance.altInput) {
-                        const y = new Date(dateStr).getFullYear();
-                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
-                    }
+                    if (dateStr && instance.altInput) { const y = new Date(dateStr).getFullYear(); instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543)); }
                     updateCalendarYearToBE(instance);
                 },
                 onOpen: (_, __, instance) => updateCalendarYearToBE(instance),
                 onMonthChange: (_, __, instance) => updateCalendarYearToBE(instance),
                 onYearChange: (_, __, instance) => updateCalendarYearToBE(instance),
                 onChange: (selectedDates, dateStr, instance) => {
-                    if (dateStr && instance.altInput) {
-                        const y = new Date(dateStr).getFullYear();
-                        instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543));
-                    }
+                    if (dateStr && instance.altInput) { const y = new Date(dateStr).getFullYear(); instance.altInput.value = instance.altInput.value.replace(String(y), String(y + 543)); }
                 }
             };
         }
@@ -1502,8 +1350,7 @@
                 if (labelEl) labelEl.textContent = formatThaiDate(startDate);
                 if (expLabelEl) expLabelEl.textContent = formatThaiDate(startDate);
                 if (todayBtn) todayBtn.classList.remove('hidden');
-                loadDailyBills(startDate, endDate);
-                loadDailyExpenses(startDate, endDate);
+                loadDailyBills(startDate, endDate); loadDailyExpenses(startDate, endDate);
             } else {
                 const now = new Date();
                 const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -1512,14 +1359,11 @@
                 if (labelEl) labelEl.textContent = formatThaiDate(now.toISOString());
                 if (expLabelEl) expLabelEl.textContent = formatThaiDate(now.toISOString());
                 if (todayBtn) todayBtn.classList.add('hidden');
-                loadDailyBills(effectiveStart);
-                loadDailyExpenses(effectiveStart);
+                loadDailyBills(effectiveStart); loadDailyExpenses(effectiveStart);
             }
         }
 
-        function resetBillsDateToToday() {
-            if (_billsDatePicker) _billsDatePicker.clear();
-        }
+        function resetBillsDateToToday() { if (_billsDatePicker) _billsDatePicker.clear(); }
 
         async function getAggregatedSales(startDate) {
             const { data } = await db.from('medical_records').select('net_amount').eq('payment_status', 'paid').gte('paid_at', startDate);
@@ -1528,9 +1372,7 @@
         }
         
         async function getAggregatedExpenses(startDate) {
-            const { data } = await db.from('clinic_expenses')
-                                     .select('amount')
-                                     .gte('expense_date', startDate);
+            const { data } = await db.from('clinic_expenses').select('amount').gte('expense_date', startDate);
             return data ? data.reduce((sum, row) => sum + parseFloat(row.amount || 0), 0) : 0;
         }
 
@@ -1538,12 +1380,7 @@
             document.getElementById('summary-modal').style.display = 'flex';
             lucide.createIcons();
             const now = new Date();
-            const periodStart = {
-                day:   new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
-                month: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
-                year:  new Date(now.getFullYear(), 0, 1).toISOString()
-            };
-            // Apply localStorage reset overrides
+            const periodStart = { day: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(), month: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), year: new Date(now.getFullYear(), 0, 1).toISOString() };
             const effectiveStart = {};
             for (const p of ['day', 'month', 'year']) {
                 const reset = localStorage.getItem('pos_reset_' + p);
@@ -1551,68 +1388,45 @@
                 const infoEl = document.getElementById('sum-' + p + '-reset-info');
                 if (infoEl) {
                     if (reset && reset > periodStart[p]) {
-                        const dt = new Date(reset);
-                        infoEl.textContent = '↺ รีเซ็ตเมื่อ ' + dt.toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
+                        infoEl.textContent = '↺ รีเซ็ตเมื่อ ' + new Date(reset).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
                         infoEl.classList.remove('hidden');
-                    } else {
-                        infoEl.classList.add('hidden');
-                    }
+                    } else infoEl.classList.add('hidden');
                 }
             }
             
             const [daily, monthly, yearly, dailyExp, monthlyExp, yearlyExp] = await Promise.all([
-                getAggregatedSales(effectiveStart.day),
-                getAggregatedSales(effectiveStart.month),
-                getAggregatedSales(effectiveStart.year),
-                getAggregatedExpenses(effectiveStart.day),
-                getAggregatedExpenses(effectiveStart.month),
-                getAggregatedExpenses(effectiveStart.year)
+                getAggregatedSales(effectiveStart.day), getAggregatedSales(effectiveStart.month), getAggregatedSales(effectiveStart.year),
+                getAggregatedExpenses(effectiveStart.day), getAggregatedExpenses(effectiveStart.month), getAggregatedExpenses(effectiveStart.year)
             ]);
 
-            // อัปเดตข้อมูลรายวัน
             document.getElementById('sum-day-amt').innerText = daily.total.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-day-count').innerText = daily.count;
             document.getElementById('sum-day-exp').innerText = dailyExp.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-day-profit').innerText = (daily.total - dailyExp).toLocaleString(undefined, {minimumFractionDigits: 2});
 
-            // อัปเดตข้อมูลรายเดือน
             document.getElementById('sum-month-amt').innerText = monthly.total.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-month-count').innerText = monthly.count;
             document.getElementById('sum-month-exp').innerText = monthlyExp.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-month-profit').innerText = (monthly.total - monthlyExp).toLocaleString(undefined, {minimumFractionDigits: 2});
 
-            // อัปเดตข้อมูลรายปี
             document.getElementById('sum-year-amt').innerText = yearly.total.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-year-count').innerText = yearly.count;
             document.getElementById('sum-year-exp').innerText = yearlyExp.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('sum-year-profit').innerText = (yearly.total - yearlyExp).toLocaleString(undefined, {minimumFractionDigits: 2});
             
-            // Initialize datepicker on first open
-            if (!_billsDatePicker) {
-                const dpEl = document.getElementById('bills-datepicker');
-                if (dpEl) _billsDatePicker = flatpickr(dpEl, makeDashboardDatePickerConfig());
-            }
-            if (!_printFromDatePicker) {
-                const fromEl = document.getElementById('print-from-datepicker');
-                if (fromEl) _printFromDatePicker = flatpickr(fromEl, makePrintDatePickerConfig());
-            }
-            if (!_printToDatePicker) {
-                const toEl = document.getElementById('print-to-datepicker');
-                if (toEl) _printToDatePicker = flatpickr(toEl, makePrintDatePickerConfig());
-            }
+            if (!_billsDatePicker) { const dpEl = document.getElementById('bills-datepicker'); if (dpEl) _billsDatePicker = flatpickr(dpEl, makeDashboardDatePickerConfig()); }
+            if (!_printFromDatePicker) { const fromEl = document.getElementById('print-from-datepicker'); if (fromEl) _printFromDatePicker = flatpickr(fromEl, makePrintDatePickerConfig()); }
+            if (!_printToDatePicker) { const toEl = document.getElementById('print-to-datepicker'); if (toEl) _printToDatePicker = flatpickr(toEl, makePrintDatePickerConfig()); }
             
-            // โหลดบิลและรายจ่ายสำหรับวันที่เลือก (หรือวันนี้ถ้าไม่ได้เลือก)
             if (_billsDatePicker && _billsDatePicker.selectedDates.length) {
                 const { startDate, endDate } = getBillsDateRange(_billsDatePicker.selectedDates[0]);
-                loadDailyBills(startDate, endDate);
-                loadDailyExpenses(startDate, endDate);
+                loadDailyBills(startDate, endDate); loadDailyExpenses(startDate, endDate);
             } else {
                 const labelEl = document.getElementById('bills-date-label');
                 const expLabelEl = document.getElementById('expenses-date-label');
                 if (labelEl) labelEl.textContent = formatThaiDate(now.toISOString());
                 if (expLabelEl) expLabelEl.textContent = formatThaiDate(now.toISOString());
-                loadDailyBills(effectiveStart.day);
-                loadDailyExpenses(effectiveStart.day);
+                loadDailyBills(effectiveStart.day); loadDailyExpenses(effectiveStart.day);
             }
         }
 
@@ -1629,35 +1443,16 @@
         async function loadDailyBills(startDate, endDate = null) {
             const container = document.getElementById('daily-bills-list');
             container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">กำลังโหลด...</p>';
-            
-            let query = db.from('medical_records')
-                .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)')
-                .eq('payment_status', 'paid')
-                .gte('paid_at', startDate);
+            let query = db.from('medical_records').select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)').eq('payment_status', 'paid').gte('paid_at', startDate);
             if (endDate) query = query.lte('paid_at', endDate);
-            
             const { data } = await query.order('paid_at', { ascending: false });
-            if (!data || data.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">ยังไม่มีบิลในช่วงเวลานี้</p>';
-                return;
-            }
+            if (!data || data.length === 0) { container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">ยังไม่มีบิลในช่วงเวลานี้</p>'; return; }
 
-            // จัดกลุ่มข้อมูลตาม receipt_no
-            const groupedData = {};
-            const groupedOrder = [];
-            
+            const groupedData = {}; const groupedOrder = [];
             data.forEach(r => {
-                const key = r.receipt_no || r.id; // ใช้ id เป็น fallback ถ้าไม่มีเลขบิล
+                const key = r.receipt_no || r.id;
                 if (!groupedData[key]) {
-                    groupedData[key] = {
-                        receipt_no: r.receipt_no,
-                        owner_hn: r.owner_hn,
-                        owner_name: r.owners?.owner_name,
-                        pets: [],
-                        total_net: 0,
-                        paid_at: r.paid_at,
-                        records: []
-                    };
+                    groupedData[key] = { receipt_no: r.receipt_no, owner_hn: r.owner_hn, owner_name: r.owners?.owner_name, pets: [], total_net: 0, paid_at: r.paid_at, records: [] };
                     groupedOrder.push(key);
                 }
                 groupedData[key].pets.push(r.animals?.pet_name || 'Walk-in');
@@ -1665,23 +1460,19 @@
                 groupedData[key].records.push(r);
             });
 
-            // แสดงผล
             container.innerHTML = groupedOrder.map((key, i) => {
                 const group = groupedData[key];
                 const isCombined = group.records.length > 1;
                 const petDisplay = group.pets.join(', ');
                 const timeStr = group.paid_at ? new Date(group.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : '-';
                 const firstId = group.records[0].id;
-                
-                // แยกปุ่มพิมพ์: บิลรวมใช้ฟังก์ชันใหม่, บิลเดี่ยวใช้ฟังก์ชันเดิม
                 const printFn = isCombined ? `reprintCombinedReceipt('${group.receipt_no}')` : `printReceipt('${firstId}')`;
                 const deleteFn = `deleteDailyBill('${group.receipt_no || ''}', '${firstId}')`;
 
                 return `
                 <div class="grid grid-cols-12 p-3 border-b border-white/5 text-sm hover:bg-white/5 transition ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}">
                     <div class="col-span-2 font-mono text-teal-400 text-xs truncate flex items-center">
-                        ${group.receipt_no || '-'} 
-                        ${isCombined ? '<span class="ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[10px] font-bold">รวม</span>' : ''}
+                        ${group.receipt_no || '-'} ${isCombined ? '<span class="ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[10px] font-bold">รวม</span>' : ''}
                     </div>
                     <div class="col-span-1 text-gray-400 text-xs truncate flex items-center">${group.owner_hn || '-'}</div>
                     <div class="col-span-2 text-white truncate flex items-center">${group.owner_name || (group.owner_hn ? '-' : 'Walk-in')}</div>
@@ -1689,12 +1480,8 @@
                     <div class="col-span-2 text-center text-gray-400 text-xs flex items-center justify-center">${timeStr}</div>
                     <div class="col-span-2 text-right font-bold text-white flex items-center justify-end">${group.total_net.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                     <div class="col-span-1 flex justify-center items-center gap-1">
-                        <button onclick="${printFn}" class="text-teal-400 hover:text-teal-300 hover:bg-teal-400/10 rounded p-1 transition" title="พิมพ์ใบเสร็จซ้ำ">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        </button>
-                        <button onclick="${deleteFn}" class="text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded p-1 transition" title="ยกเลิกบิล">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
-                        </button>
+                        <button onclick="${printFn}" class="text-teal-400 hover:text-teal-300 hover:bg-teal-400/10 rounded p-1 transition" title="พิมพ์ใบเสร็จซ้ำ"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></button>
+                        <button onclick="${deleteFn}" class="text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded p-1 transition" title="ยกเลิกบิล"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></button>
                     </div>
                 </div>`;
             }).join('');
@@ -1703,38 +1490,25 @@
         async function deleteDailyBill(receiptNo, fallbackRecordId) {
             const label = receiptNo ? `บิลเลขที่ ${receiptNo}` : 'บิลนี้';
             if (!confirm(`ยืนยันการยกเลิก ${label}?\n\n(หากเป็นบิลรวม ระบบจะยกเลิกทุกรายการในบิลนี้ และไม่นำมานับในยอดขาย)`)) return;
-            
             let error;
-            if (receiptNo) {
-                const res = await db.from('medical_records').update({ payment_status: 'void' }).eq('receipt_no', receiptNo);
-                error = res.error;
-            } else {
-                const res = await db.from('medical_records').update({ payment_status: 'void' }).eq('id', fallbackRecordId);
-                error = res.error;
-            }
-            
+            if (receiptNo) { const res = await db.from('medical_records').update({ payment_status: 'void' }).eq('receipt_no', receiptNo); error = res.error; }
+            else { const res = await db.from('medical_records').update({ payment_status: 'void' }).eq('id', fallbackRecordId); error = res.error; }
             if (error) { alert('เกิดข้อผิดพลาด: ' + error.message); return; }
-            await openSummaryModal(); // โหลดหน้าใหม่
+            await openSummaryModal();
         }
 
         async function printSalesReport(startIso, endIso, reportTitle, subtitle, showDate = false) {
             try {
-                // Fetch bills (รายรับ)
-                let query = db.from('medical_records')
-                    .select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)')
-                    .eq('payment_status', 'paid')
-                    .gte('paid_at', startIso);
+                let query = db.from('medical_records').select('id, receipt_no, net_amount, discount, total_cost, paid_at, owner_hn, owners(owner_name), animals(pet_name)').eq('payment_status', 'paid').gte('paid_at', startIso);
                 if (endIso) query = query.lte('paid_at', endIso);
                 const { data } = await query.order('paid_at', { ascending: true });
                 const bills = data || [];
 
-                // Fetch expenses (รายจ่าย)
                 let expQuery = db.from('clinic_expenses').select('*').gte('expense_date', startIso);
                 if (endIso) expQuery = expQuery.lte('expense_date', endIso);
                 const { data: expData } = await expQuery.order('expense_date', { ascending: true });
                 const expenses = expData || [];
 
-                // Fetch items for bills
                 const billIds = bills.map(b => b.id);
                 let allItems = [];
                 if (billIds.length > 0) {
@@ -1756,221 +1530,329 @@
                     itemsByBill[item.record_id][isG2 ? 'g2' : 'g1'].push(item);
                 });
 
-                // คำนวณยอดรวมต่างๆ
                 const grandDiscount = bills.reduce((s, r) => s + parseFloat(r.discount || 0), 0);
                 const grandRaw = bills.reduce((s, r) => s + parseFloat(r.total_cost || 0), 0);
-                const totalIncome = grandRaw - grandDiscount; // รวมรายรับ
-                const totalExpenses = expenses.reduce((s, r) => s + parseFloat(r.amount || 0), 0); // รวมรายจ่าย
-                const netProfit = totalIncome - totalExpenses; // กำไรสุทธิ
+                const totalIncome = grandRaw - grandDiscount;
+                const totalExpenses = expenses.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+                const netProfit = totalIncome - totalExpenses;
 
                 function itemRowsHtml(items) {
                     if (!items || items.length === 0) return '';
-                    return items.map(it => `<tr style="background:#f8fafc;">
-                        <td style="padding:2px 8px 2px 24px;border:1px solid #e2e8f0;color:#475569;font-size:8pt;" colspan="6">• ${it.item_name} x ${Math.floor(it.quantity)}</td>
-                        <td style="padding:2px 8px;text-align:right;border:1px solid #e2e8f0;color:#475569;font-size:8pt;">${parseFloat(it.unit_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                        <td style="padding:2px 8px;border:1px solid #e2e8f0;" colspan="1"></td>
-                        <td style="padding:2px 8px;text-align:right;border:1px solid #e2e8f0;color:#334155;font-size:8pt;">${parseFloat(it.total_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    </tr>`).join('');
+                    return items.map(it => `<tr style="background:#f8fafc;"><td style="padding:2px 8px 2px 24px;border:1px solid #e2e8f0;color:#475569;font-size:8pt;" colspan="6">• ${it.item_name} x ${Math.floor(it.quantity)}</td><td style="padding:2px 8px;text-align:right;border:1px solid #e2e8f0;color:#475569;font-size:8pt;">${parseFloat(it.unit_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td style="padding:2px 8px;border:1px solid #e2e8f0;" colspan="1"></td><td style="padding:2px 8px;text-align:right;border:1px solid #e2e8f0;color:#334155;font-size:8pt;">${parseFloat(it.total_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`).join('');
                 }
 
                 const timeColHeader = showDate ? 'วันที่/เวลา' : 'เวลา';
-                const incomeRowsHtml = bills.length === 0
-                    ? '<tr><td colspan="9" style="text-align:center;padding:20px;color:#64748b;">ไม่มีรายการรับเงิน</td></tr>'
-                    : bills.map((r, i) => {
-                        const bg = i % 2 === 0 ? '#fff' : '#f0f9ff';
-                        const grps = itemsByBill[r.id] || { g1: [], g2: [] };
-                        const g1Rows = itemRowsHtml(grps.g1);
-                        const g2Rows = itemRowsHtml(grps.g2);
-                        const timeCell = r.paid_at
-                            ? (showDate
-                                ? `${formatThaiDate(r.paid_at, 'short')} ${new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}`
-                                : new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}))
-                            : '-';
-                        return `<tr style="background:${bg}">
-                        <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-weight:700;">${i + 1}</td>
-                        <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-family:monospace;font-size:8pt;">${r.receipt_no || '-'}</td>
-                        <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-size:8pt;">${r.owner_hn || (r.owners?.owner_name ? '-' : 'Walk-in')}</td>
-                        <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.owners?.owner_name || (r.owner_hn ? '-' : 'Walk-in')}</td>
-                        <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.animals?.pet_name || (r.owner_hn ? '-' : 'Walk-in')}</td>
-                        <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-size:8pt;">${timeCell}</td>
-                        <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;">${parseFloat(r.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                        <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;color:#dc2626;">${parseFloat(r.discount || 0) > 0 ? parseFloat(r.discount).toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td>
-                        <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;font-weight:700;">${(parseFloat(r.total_cost || 0) - parseFloat(r.discount || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    </tr>${g1Rows}${g2Rows}`;
-                    }).join('');
+                const incomeRowsHtml = bills.length === 0 ? '<tr><td colspan="9" style="text-align:center;padding:20px;color:#64748b;">ไม่มีรายการรับเงิน</td></tr>' : bills.map((r, i) => {
+                    const bg = i % 2 === 0 ? '#fff' : '#f0f9ff';
+                    const grps = itemsByBill[r.id] || { g1: [], g2: [] };
+                    const timeCell = r.paid_at ? (showDate ? `${formatThaiDate(r.paid_at, 'short')} ${new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}` : new Date(r.paid_at).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})) : '-';
+                    return `<tr style="background:${bg}"><td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-weight:700;">${i + 1}</td><td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-family:monospace;font-size:8pt;">${r.receipt_no || '-'}</td><td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;font-size:8pt;">${r.owner_hn || (r.owners?.owner_name ? '-' : 'Walk-in')}</td><td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.owners?.owner_name || (r.owner_hn ? '-' : 'Walk-in')}</td><td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;">${r.animals?.pet_name || (r.owner_hn ? '-' : 'Walk-in')}</td><td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-size:8pt;">${timeCell}</td><td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;">${parseFloat(r.total_cost || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;color:#dc2626;">${parseFloat(r.discount || 0) > 0 ? parseFloat(r.discount).toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td><td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;font-weight:700;">${(parseFloat(r.total_cost || 0) - parseFloat(r.discount || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>${itemRowsHtml(grps.g1)}${itemRowsHtml(grps.g2)}`;
+                }).join('');
 
                 const catMap = { 'petty_cash': 'เงินสดย่อย/จิปาถะ', 'supplies': 'อุปกรณ์', 'utility': 'ค่าน้ำ/ไฟ/เน็ต', 'other': 'อื่นๆ' };
                 const expenseRowsHtml = expenses.length > 0 ? expenses.map((e, i) => {
                     const bg = i % 2 === 0 ? '#fff' : '#fef2f2';
-                    const timeCell = showDate 
-                        ? `${formatThaiDate(e.expense_date, 'short')} ${new Date(e.expense_date).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}` 
-                        : new Date(e.expense_date).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
-                    return `<tr style="background:${bg}">
-                        <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;">${i + 1}</td>
-                        <td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-size:8pt;">${timeCell}</td>
-                        <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;" colspan="2">${catMap[e.category] || e.category}</td>
-                        <td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;" colspan="4">${e.description}</td>
-                        <td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;color:#dc2626;font-weight:700;">${parseFloat(e.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    </tr>`;
+                    const timeCell = showDate ? `${formatThaiDate(e.expense_date, 'short')} ${new Date(e.expense_date).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}` : new Date(e.expense_date).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+                    return `<tr style="background:${bg}"><td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;">${i + 1}</td><td style="padding:5px 8px;text-align:center;border:1px solid #e2e8f0;font-size:8pt;">${timeCell}</td><td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;" colspan="2">${catMap[e.category] || e.category}</td><td style="padding:5px 8px;text-align:left;border:1px solid #e2e8f0;" colspan="4">${e.description}</td><td style="padding:5px 8px;text-align:right;border:1px solid #e2e8f0;color:#dc2626;font-weight:700;">${parseFloat(e.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
                 }).join('') : '';
 
                 const now = new Date();
-                const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-    @page { size: A4 portrait; margin: 15mm 12mm; }
-    * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-size: 10pt; color: #1e293b; }
-    h1 { font-size: 18pt; font-weight: 800; margin: 0 0 4px 0; text-align: center; }
-    .subtitle { font-size: 10pt; color: #475569; text-align: center; margin-bottom: 16px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th { background: #0f172a; color: #fff; padding: 7px 8px; font-size: 9pt; font-weight: 700; border: 1px solid #e2e8f0; text-align: center; }
-    td { font-size: 9pt; }
-    tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2px solid #0f172a; padding: 7px 8px; }
-    .section-title { font-size: 12pt; font-weight: 700; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin-top: 24px; margin-bottom: 8px; color: #1e293b; }
-    </style></head><body>
-    <h1>${reportTitle}</h1>
-    <div class="subtitle">${subtitle} &nbsp;|&nbsp; พิมพ์เมื่อ ${now.toLocaleTimeString('th-TH')}</div>
-
-    <div class="section-title">📊 รายรับ (Income)</div>
-    <table>
-    <thead><tr>
-        <th style="width:4%">#</th>
-        <th style="width:14%">เลขบิล</th>
-        <th style="width:8%">HN</th>
-        <th style="width:18%">เจ้าของ</th>
-        <th style="width:11%">สัตว์เลี้ยง</th>
-        <th style="width:${showDate ? '11%' : '7%'}">${timeColHeader}</th>
-        <th style="width:${showDate ? '7%' : '11%'}">ยอดรวม</th>
-        <th style="width:9%">ส่วนลด</th>
-        <th style="width:18%">ยอดสุทธิ</th>
-    </tr></thead>
-    <tbody>${incomeRowsHtml}</tbody>
-    <tfoot><tr>
-        <td colspan="6" style="text-align:right;">รวมรายรับ (${bills.length} บิล)</td>
-        <td style="text-align:right;">${grandRaw.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-        <td style="text-align:right;color:#dc2626;">${grandDiscount > 0 ? grandDiscount.toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td>
-        <td style="text-align:right;color:#0f9e6e;">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-    </tr></tfoot>
-    </table>
-
-    ${expenses.length > 0 ? `
-    <div class="section-title" style="margin-top: 30px;">💸 รายจ่าย (Expenses)</div>
-    <table>
-    <thead><tr>
-        <th style="width:4%">#</th>
-        <th style="width:${showDate ? '15%' : '10%'}">${timeColHeader}</th>
-        <th style="width:20%" colspan="2">หมวดหมู่</th>
-        <th style="width:${showDate ? '43%' : '48%'}" colspan="4">รายละเอียด</th>
-        <th style="width:18%">จำนวนเงิน</th>
-    </tr></thead>
-    <tbody>${expenseRowsHtml}</tbody>
-    <tfoot><tr>
-        <td colspan="8" style="text-align:right;">รวมรายจ่าย (${expenses.length} รายการ)</td>
-        <td style="text-align:right;color:#dc2626;">${totalExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-    </tr></tfoot>
-    </table>
-    ` : ''}
-
-    <div style="margin-top: 30px; border: 2px solid #0f172a; padding: 15px; border-radius: 8px; width: 350px; float: right; background-color: #f8fafc;">
-        <table style="width: 100%; border: none; margin: 0;">
-            <tr style="background: none;"><td style="font-weight:bold; font-size:11pt; padding: 4px 0; border: none;">รวมรายรับ</td><td style="text-align:right; font-weight:bold; font-size:11pt; color:#0f9e6e; padding: 4px 0; border: none;">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿</td></tr>
-            <tr style="background: none;"><td style="font-weight:bold; font-size:11pt; padding: 4px 0; border: none;">รวมรายจ่าย</td><td style="text-align:right; font-weight:bold; font-size:11pt; color:#dc2626; padding: 4px 0; border: none;">- ${totalExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿</td></tr>
-            <tr style="background: none;"><td colspan="2" style="border-top: 1px solid #cbd5e1; padding: 4px 0;"></td></tr>
-            <tr style="background: none;"><td style="font-weight:900; font-size:14pt; padding: 4px 0; border: none; color:#1e293b;">กำไรสุทธิ</td><td style="text-align:right; font-weight:900; font-size:14pt; color:#2563eb; padding: 4px 0; border: none;">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿</td></tr>
-        </table>
-    </div>
-    <div style="clear: both;"></div>
-    </body></html>`;
+                const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"><style>@page { size: A4 portrait; margin: 15mm 12mm; } * { font-family: 'Sarabun', sans-serif; box-sizing: border-box; } body { margin: 0; padding: 0; font-size: 10pt; color: #1e293b; } h1 { font-size: 18pt; font-weight: 800; margin: 0 0 4px 0; text-align: center; } .subtitle { font-size: 10pt; color: #475569; text-align: center; margin-bottom: 16px; } table { width: 100%; border-collapse: collapse; margin-top: 8px; } th { background: #0f172a; color: #fff; padding: 7px 8px; font-size: 9pt; font-weight: 700; border: 1px solid #e2e8f0; text-align: center; } td { font-size: 9pt; } tfoot td { background: #f1f5f9; font-weight: 800; font-size: 10pt; border-top: 2px solid #0f172a; padding: 7px 8px; } .section-title { font-size: 12pt; font-weight: 700; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin-top: 24px; margin-bottom: 8px; color: #1e293b; }</style></head><body><h1>${reportTitle}</h1><div class="subtitle">${subtitle} &nbsp;|&nbsp; พิมพ์เมื่อ ${now.toLocaleTimeString('th-TH')}</div><div class="section-title">📊 รายรับ (Income)</div><table><thead><tr><th style="width:4%">#</th><th style="width:14%">เลขบิล</th><th style="width:8%">HN</th><th style="width:18%">เจ้าของ</th><th style="width:11%">สัตว์เลี้ยง</th><th style="width:${showDate ? '11%' : '7%'}">${timeColHeader}</th><th style="width:${showDate ? '7%' : '11%'}">ยอดรวม</th><th style="width:9%">ส่วนลด</th><th style="width:18%">ยอดสุทธิ</th></tr></thead><tbody>${incomeRowsHtml}</tbody><tfoot><tr><td colspan="6" style="text-align:right;">รวมรายรับ (${bills.length} บิล)</td><td style="text-align:right;">${grandRaw.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td style="text-align:right;color:#dc2626;">${grandDiscount > 0 ? grandDiscount.toLocaleString(undefined, {minimumFractionDigits: 2}) : '-'}</td><td style="text-align:right;color:#0f9e6e;">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr></tfoot></table>${expenses.length > 0 ? `<div class="section-title" style="margin-top: 30px;">💸 รายจ่าย (Expenses)</div><table><thead><tr><th style="width:4%">#</th><th style="width:${showDate ? '15%' : '10%'}">${timeColHeader}</th><th style="width:20%" colspan="2">หมวดหมู่</th><th style="width:${showDate ? '43%' : '48%'}" colspan="4">รายละเอียด</th><th style="width:18%">จำนวนเงิน</th></tr></thead><tbody>${expenseRowsHtml}</tbody><tfoot><tr><td colspan="8" style="text-align:right;">รวมรายจ่าย (${expenses.length} รายการ)</td><td style="text-align:right;color:#dc2626;">${totalExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr></tfoot></table>` : ''}<div style="margin-top: 30px; border: 2px solid #0f172a; padding: 15px; border-radius: 8px; width: 350px; float: right; background-color: #f8fafc;"><table style="width: 100%; border: none; margin: 0;"><tr style="background: none;"><td style="font-weight:bold; font-size:11pt; padding: 4px 0; border: none;">รวมรายรับ</td><td style="text-align:right; font-weight:bold; font-size:11pt; color:#0f9e6e; padding: 4px 0; border: none;">${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿</td></tr><tr style="background: none;"><td style="font-weight:bold; font-size:11pt; padding: 4px 0; border: none;">รวมรายจ่าย</td><td style="text-align:right; font-weight:bold; font-size:11pt; color:#dc2626; padding: 4px 0; border: none;">- ${totalExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿</td></tr><tr style="background: none;"><td colspan="2" style="border-top: 1px solid #cbd5e1; padding: 4px 0;"></td></tr><tr style="background: none;"><td style="font-weight:900; font-size:14pt; padding: 4px 0; border: none; color:#1e293b;">กำไรสุทธิ</td><td style="text-align:right; font-weight:900; font-size:14pt; color:#2563eb; padding: 4px 0; border: none;">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿</td></tr></table></div><div style="clear: both;"></div></body></html>`;
 
                 const printWindow = window.open('', '_blank', 'width=800,height=600');
-                if (!printWindow) {
-                    alert('กรุณาอนุญาต Pop-up (Allow Pop-ups) บนเบราว์เซอร์ของคุณเพื่อพิมพ์รายงาน');
-                    return;
-                }
-                printWindow.document.open();
-                printWindow.document.write(html);
-                printWindow.document.close();
-                
-                setTimeout(() => {
-                    try {
-                        printWindow.focus();
-                        printWindow.print();
-                    } catch (err) {
-                        console.error("Print error:", err);
-                    }
-                }, 800);
-                
-            } catch (err) {
-                console.error("Error generating report:", err);
-                alert("เกิดข้อผิดพลาดในการสร้างรายงาน: " + err.message);
-            }
+                if (!printWindow) { alert('กรุณาอนุญาต Pop-up (Allow Pop-ups) บนเบราว์เซอร์ของคุณเพื่อพิมพ์รายงาน'); return; }
+                printWindow.document.open(); printWindow.document.write(html); printWindow.document.close();
+                setTimeout(() => { try { printWindow.focus(); printWindow.print(); } catch (err) { console.error("Print error:", err); } }, 800);
+            } catch (err) { console.error("Error generating report:", err); alert("เกิดข้อผิดพลาดในการสร้างรายงาน: " + err.message); }
         }
 
         async function printDailyReport(btn = null) {
             try {
                 if(btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
-                const now = new Date();
-                let effectiveStart, effectiveEnd = null, reportDate, reset = null;
+                const now = new Date(); let effectiveStart, effectiveEnd = null, reportDate, reset = null;
                 if (_billsDatePicker && _billsDatePicker.selectedDates.length) {
-                    reportDate = _billsDatePicker.selectedDates[0];
-                    ({ startDate: effectiveStart, endDate: effectiveEnd } = getBillsDateRange(reportDate));
+                    reportDate = _billsDatePicker.selectedDates[0]; ({ startDate: effectiveStart, endDate: effectiveEnd } = getBillsDateRange(reportDate));
                 } else {
-                    reportDate = now;
-                    const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-                    reset = localStorage.getItem('pos_reset_day');
-                    effectiveStart = (reset && reset > periodStart) ? reset : periodStart;
+                    reportDate = now; const periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+                    reset = localStorage.getItem('pos_reset_day'); effectiveStart = (reset && reset > periodStart) ? reset : periodStart;
                 }
                 const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
                 const thaiDateFull = `วัน${thaiDays[reportDate.getDay()]}ที่ ${formatThaiDate(reportDate.toISOString())}`;
                 const resetNote = reset ? ` (นับจากการรีเซ็ตเมื่อ ${new Date(reset).toLocaleTimeString('th-TH')})` : '';
                 await printSalesReport(effectiveStart, effectiveEnd, 'สรุปบิลประจำวัน', thaiDateFull + resetNote, false);
-            } catch(e) {
-                console.error(e);
-                alert("เกิดข้อผิดพลาด: " + e.message);
-            } finally {
-                if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
-            }
+            } catch(e) { alert("เกิดข้อผิดพลาด: " + e.message); } finally { if(btn) { btn.disabled = false; btn.style.opacity = '1'; } }
         }
 
         async function printRangeReport(btn = null) {
             try {
                 const fromDate = _printFromDatePicker && _printFromDatePicker.selectedDates.length ? _printFromDatePicker.selectedDates[0] : null;
                 const toDate = _printToDatePicker && _printToDatePicker.selectedDates.length ? _printToDatePicker.selectedDates[0] : null;
-                if (!fromDate || !toDate) { alert('กรุณาเลือก "ตั้งแต่วันที่" และ "ถึงวันที่" ให้ครบก่อนพิมพ์รายงาน'); return; }
-                if (fromDate > toDate) { alert('"ตั้งแต่วันที่" ต้องไม่เกิน "ถึงวันที่"'); return; }
-                
+                if (!fromDate || !toDate) return alert('กรุณาเลือก "ตั้งแต่วันที่" และ "ถึงวันที่" ให้ครบก่อนพิมพ์รายงาน');
+                if (fromDate > toDate) return alert('"ตั้งแต่วันที่" ต้องไม่เกิน "ถึงวันที่"');
                 if(btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
-                
                 const startIso = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()).toISOString();
                 const endIso = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59, 999).toISOString();
                 const subtitle = `${formatThaiDate(startIso)} – ${formatThaiDate(endIso)}`;
                 await printSalesReport(startIso, endIso, 'สรุปรายงานยอดขาย', subtitle, true);
-            } catch(e) {
-                console.error(e);
-                alert("เกิดข้อผิดพลาด: " + e.message);
-            } finally {
-                if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
-            }
+            } catch(e) { alert("เกิดข้อผิดพลาด: " + e.message); } finally { if(btn) { btn.disabled = false; btn.style.opacity = '1'; } }
         }
 
         async function printAnnualReport(btn = null) {
             try {
                 if(btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
-                const now = new Date();
-                const year = now.getFullYear();
-                const startIso = new Date(year, 0, 1).toISOString();
-                const endIso = new Date(year, 11, 31, 23, 59, 59, 999).toISOString();
-                const thaiYear = year + 543;
-                const subtitle = `มกราคม – ธันวาคม ${thaiYear}`;
+                const now = new Date(); const year = now.getFullYear();
+                const startIso = new Date(year, 0, 1).toISOString(); const endIso = new Date(year, 11, 31, 23, 59, 59, 999).toISOString();
+                const thaiYear = year + 543; const subtitle = `มกราคม – ธันวาคม ${thaiYear}`;
                 await printSalesReport(startIso, endIso, `สรุปรายงานยอดขายประจำปี ${thaiYear}`, subtitle, true);
-            } catch(e) {
-                console.error(e);
-                alert("เกิดข้อผิดพลาด: " + e.message);
+            } catch(e) { alert("เกิดข้อผิดพลาด: " + e.message); } finally { if(btn) { btn.disabled = false; btn.style.opacity = '1'; } }
+        }
+
+        /* ─── Combined Reprint Receipt (กรณีลูกค้าเดียวกันแต่รวมบิล) ─── */
+        async function openCombinedPaymentModal(ownerHn, btn = null) {
+            try {
+                if (btn) { btn.disabled = true; btn.innerText = '⏳ โหลด...'; }
+                combinedOwnerHn = ownerHn; combinedRecords = [];
+                const { data: records, error: err1 } = await db.from('medical_records').select('*, animals(pet_name), owners(owner_name, phone, address)').eq('owner_hn', ownerHn).eq('payment_status', 'pending');
+                if (err1) throw err1;
+                if (!records || records.length === 0) { alert('ไม่พบรายการรอชำระ'); return; }
+                
+                for (const rec of records) {
+                    const { data: items, error: err2 } = await db.from('medical_record_items').select('*').eq('record_id', rec.id);
+                    if (err2) throw err2;
+                    combinedRecords.push({ record: rec, items: items || [], petName: rec.animals?.pet_name || '-' });
+                }
+                
+                const ownerName = records[0]?.owners?.owner_name || ownerHn;
+                const allItems = combinedRecords.flatMap(cr => cr.items);
+                const { nameTh: combinedNameTh } = await enrichItemsWithThaiNames(allItems);
+                
+                renderCombinedItems(ownerName, combinedNameTh);
+                const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+                document.getElementById('combined-sum-total').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+                document.getElementById('combined-discount').value = 0;
+                document.getElementById('combined-received-cash').value = '';
+                calcCombinedNet();
+                
+                document.getElementById('combined-payment-modal').style.display = 'flex';
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Error in openCombinedPaymentModal:", err); alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + err.message);
             } finally {
-                if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
+                if (btn) { btn.disabled = false; btn.innerText = '🧾 รวมใบเสร็จ'; }
             }
         }
-        </script>
+
+        function renderCombinedItems(ownerName, nameTh = {}) {
+            const container = document.getElementById('combined-items-container');
+            const numAnimals = combinedRecords.length;
+            let html = `<div class="mb-3 txt-label">เจ้าของ: <span class="text-white font-black text-base">${ownerName}</span></div>`;
+            combinedItemMap = {};
+            for (const cr of combinedRecords) {
+                for (const item of cr.items) {
+                    if (!combinedItemMap[item.item_name]) combinedItemMap[item.item_name] = { quantity: 0, totalPrice: 0, displayName: nameTh[item.item_name] || item.item_name };
+                    combinedItemMap[item.item_name].quantity += parseFloat(item.quantity || 1);
+                    combinedItemMap[item.item_name].totalPrice += parseFloat(item.total_price);
+                }
+            }
+            const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+            html += `<div class="bg-white/5 rounded-xl p-4"><div class="font-black text-teal-400 mb-2 text-base">🐾 จำนวน ${numAnimals} ตัว</div><div class="space-y-2" id="combined-item-rows">`;
+            const itemKeys = Object.keys(combinedItemMap);
+            for (let idx = 0; idx < itemKeys.length; idx++) {
+                const itemName = itemKeys[idx]; const data = combinedItemMap[itemName];
+                const safeDisplay = data.displayName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                html += `<div class="flex items-center gap-2 text-sm"><span class="text-white flex-1">${safeDisplay} x <input type="number" min="0" step="any" value="${Math.floor(data.quantity)}" class="search-input w-14 text-center p-1 text-xs inline-block" data-item-idx="${idx}" data-field="qty" oninput="updateCombinedItemByIdx(this)"></span><input type="number" min="0" step="any" value="${data.totalPrice.toFixed(2)}" class="search-input w-24 text-right p-1 text-xs" data-item-idx="${idx}" data-field="price" oninput="updateCombinedItemByIdx(this)"></div>`;
+            }
+            html += `<div class="flex justify-between font-bold mt-2 pt-2 border-t border-white/10 text-sm"><span class="text-gray-400">รวม</span><span class="text-white" id="combined-item-grand">฿${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div></div></div>`;
+            container.innerHTML = html;
+        }
+
+        function updateCombinedItemByIdx(input) {
+            const keys = Object.keys(combinedItemMap); const idx = parseInt(input.dataset.itemIdx, 10); const field = input.dataset.field; const itemName = keys[idx];
+            if (!itemName || !combinedItemMap[itemName]) return;
+            if (field === 'qty') combinedItemMap[itemName].quantity = parseFloat(input.value) || 0;
+            else if (field === 'price') combinedItemMap[itemName].totalPrice = parseFloat(input.value) || 0;
+            const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+            const grandEl = document.getElementById('combined-item-grand');
+            if (grandEl) grandEl.innerText = '฿' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('combined-sum-total').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+            calcCombinedNet();
+        }
+
+        function calcCombinedNet() {
+            const sum = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+            const disc = parseFloat(document.getElementById('combined-discount').value) || 0;
+            document.getElementById('combined-net-total').innerText = (sum - disc).toLocaleString(undefined, {minimumFractionDigits: 2});
+            calcCombinedChange();
+        }
+
+        function calcCombinedChange() {
+            const net = parseFloat(document.getElementById('combined-net-total').innerText.replace(/,/g, '')) || 0;
+            const recv = parseFloat(document.getElementById('combined-received-cash').value) || 0;
+            document.getElementById('combined-change').innerText = (recv - net > 0 ? recv - net : 0).toLocaleString(undefined, {minimumFractionDigits: 2});
+        }
+
+        function closeCombinedModal() { document.getElementById('combined-payment-modal').style.display = 'none'; }
+
+        async function processCombinedPayment() {
+            const net = parseFloat(document.getElementById('combined-net-total').innerText.replace(/,/g, '')) || 0;
+            const recvd = parseFloat(document.getElementById('combined-received-cash').value) || 0;
+            if (recvd < net) { alert('เงินรับมาไม่พอ'); return; }
+            const totalDiscount = parseFloat(document.getElementById('combined-discount').value) || 0;
+            const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+            const now = new Date();
+            const yyyy = now.getFullYear() + 543, mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+            const { count } = await db.from('medical_records').select('*', { count: 'exact', head: true }).eq('payment_status', 'paid').gte('paid_at', startOfDay);
+            const receiptNo = `${yyyy}${mm}${dd}${combinedOwnerHn}C${String((count || 0) + 1).padStart(2, '0')}`;
+            
+            for (let i = 0; i < combinedRecords.length; i++) {
+                const cr = combinedRecords[i];
+                const recDiscount = grandTotal > 0 ? (parseFloat(cr.record.total_cost || 0) / grandTotal) * totalDiscount : 0;
+                const recNet = parseFloat(cr.record.total_cost || 0) - recDiscount;
+                await db.from('medical_records').update({
+                    payment_status: 'paid', receipt_no: receiptNo, discount: recDiscount, net_amount: recNet,
+                    received_amount: i === 0 ? recvd : 0, paid_at: now.toISOString()
+                }).eq('id', cr.record.id);
+            }
+            closeCombinedModal(); await printCombinedReceipt(receiptNo, recvd, net, totalDiscount, now);
+            fetchPendingPayments();
+            if (activePatient && activePatient.hn === combinedOwnerHn) loadPatientHistory(activePatient.hn, activePatient.petName, activePatient.ownerName);
+        }
+
+        async function reprintCombinedReceipt(receiptNo) {
+            try {
+                const { data: records } = await db.from('medical_records').select('*, animals(*), owners(*)').eq('receipt_no', receiptNo);
+                if (!records || records.length === 0) return alert('ไม่พบบิลนี้');
+                const ownerRec = records[0];
+                const ownerName = ownerRec.owners?.owner_name || '-';
+                const ownerHn = ownerRec.owner_hn || '-';
+                const paidAt = new Date(ownerRec.paid_at);
+                const recordIds = records.map(r => r.id);
+                const { data: items } = await db.from('medical_record_items').select('*').in('record_id', recordIds);
+                
+                const nonLabItemNames = (items || []).filter(i => i.item_type !== 'Lab').map(i => i.item_name);
+                const labItemNames = (items || []).filter(i => i.item_type === 'Lab').map(i => i.item_name);
+                const { data: pharmacyData } = nonLabItemNames.length > 0 ? await db.from('pharmacy').select('item_name, name_th').in('item_name', nonLabItemNames) : { data: [] };
+                const { data: servicesData } = labItemNames.length > 0 ? await db.from('services').select('service_name, name_th').in('service_name', labItemNames) : { data: [] };
+                const nameTh = {};
+                (pharmacyData || []).forEach(p => { if (p.name_th) nameTh[p.item_name] = p.name_th; });
+                (servicesData || []).forEach(s => { if (s.name_th) nameTh[s.service_name] = s.name_th; });
+                
+                const tempItemMap = {};
+                (items || []).forEach(item => {
+                    const displayStr = nameTh[item.item_name] || item.item_name || '';
+                    if (!tempItemMap[item.item_name]) tempItemMap[item.item_name] = { quantity: 0, totalPrice: 0, displayName: displayStr };
+                    tempItemMap[item.item_name].quantity += parseFloat(item.quantity || 1);
+                    tempItemMap[item.item_name].totalPrice += parseFloat(item.total_price || 0);
+                });
+                
+                const itemsTotal = Object.values(tempItemMap).reduce((s, d) => s + d.totalPrice, 0);
+                const discountAmt = records.reduce((s, r) => s + parseFloat(r.discount || 0), 0);
+                const netAmt = records.reduce((s, r) => s + parseFloat(r.net_amount || 0), 0);
+                const receivedAmt = records.reduce((s, r) => s + parseFloat(r.received_amount || 0), 0);
+                const changeAmt = receivedAmt - netAmt;
+                const petNames = records.map(r => r.animals?.pet_name || '-').join(', ');
+                
+                const { data: template } = await db.from('print_templates').select('config').eq('template_type', 'thermal_receipt').single();
+                if (!template) return alert('กรุณาตั้งค่า Template ใบเสร็จ');
+                const config = template.config, pw = config.width || 80;
+                
+                let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">`;
+                for (const [itemName, data] of Object.entries(tempItemMap)) {
+                    const safeDisplay = data.displayName.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                    itemsHtml += `<tr><td style="text-align:left;">${safeDisplay} x ${Math.floor(data.quantity)}</td><td style="text-align:right;">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
+                }
+                itemsHtml += `</table>`;
+                
+                const printData = {
+                    clinic_name: "PK-VMS Animal Clinic", clinic_address: "123 ถ.นเรศวร ต.ในเมือง อ.เมือง จ.พิษณุโลก 65000",
+                    phone: "02-123-4567", tax_id: "0105560001234", owner_name: ownerName, owner_phone: ownerRec.owners?.phone || "-",
+                    owner_address: ownerRec.owners?.address || "-", pet_name: petNames, species: "-", sex: "-", weight: "-", breed: "-",
+                    hn: ownerHn, receipt_no: receiptNo, time: paidAt.toLocaleTimeString('th-TH'),
+                    total_price: itemsTotal.toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    discount_val: discountAmt.toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    net_total: netAmt.toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    received_amount: receivedAmt.toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    change_amount: (changeAmt > 0 ? changeAmt : 0).toLocaleString(undefined, {minimumFractionDigits: 2}),
+                    date: formatThaiDate(paidAt.toISOString()), items_list: itemsHtml
+                };
+                
+                const ph = config.height || 297; let pushOffset = 0;
+                const elements = [...config.lines].sort((a,b) => parseFloat(a.y) - parseFloat(b.y)).map(l => {
+                    const base = `position:absolute; top:${parseFloat(l.y)+pushOffset}mm; left:${l.x}mm;`;
+                    if (l.type === 'image') return `<div style="${base} width:${l.w}mm; height:${l.h}mm; overflow:hidden;"><img src="${l.url || ''}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                    if (l.type === 'rect') return `<div style="${base} width:${l.w}mm; height:${l.h}mm; border:1px solid ${l.color || '#000'};"></div>`;
+                    let content = (l.text || "").replace(/\{\{(.*?)\}\}/g, (m, k) => printData[k.trim()] || m);
+                    if (l.text?.includes("{{items_list}}")) pushOffset += Object.keys(tempItemMap).length * 5;
+                    const fw = l.bold ? 'font-weight:bold;' : ''; const fs = l.italic ? 'font-style:italic;' : ''; const td = l.underline ? 'text-decoration:underline;' : '';
+                    const alignStyle = l.align === 'center' ? 'left:0; width:100%; text-align:center;' : l.align === 'right' ? `left:0; width:100%; text-align:right; padding-right:${l.x}mm;` : '';
+                    const widthStyle = alignStyle ? '' : `width:${pw - parseFloat(l.x)}mm;`;
+                    return `<div style="${base} ${widthStyle} font-family:'${l.font || 'Sarabun'}',sans-serif; font-size:${l.size}pt; color:${l.color || '#000'}; ${fw} ${fs} ${td} ${alignStyle}">${content}</div>`;
+                }).join('');
+                
+                const combinedHtml = `<html><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>@page{size:${pw}mm ${ph}mm; margin:0;} html,body{margin:0; padding:0; font-family:'Sarabun',sans-serif;} *{box-sizing:border-box;}</style></head><body><div style="position:relative; width:${pw}mm; height:${ph}mm;">${elements}</div></body></html>`;
+                await PrintUtils.executePrint(combinedHtml, pw, ph, 'thermal_receipt');
+            } catch (e) { alert("ข้อผิดพลาดในการพิมพ์บิลรวม: " + e.message); }
+        }
+
+        async function printCombinedReceipt(receiptNo, receivedAmt, netAmt, discountAmt, paidAt) {
+            await reprintCombinedReceipt(receiptNo);
+        }
+
+        // ─── Expense Features ───
+        function openExpenseModal() {
+            document.getElementById('expense-modal').style.display = 'flex';
+            document.getElementById('expense-desc').value = '';
+            document.getElementById('expense-amount').value = '';
+            lucide.createIcons(); setTimeout(() => document.getElementById('expense-desc').focus(), 100);
+        }
+
+        function closeExpenseModal() { document.getElementById('expense-modal').style.display = 'none'; }
+
+        async function saveExpense() {
+            const category = document.getElementById('expense-category').value;
+            const desc = document.getElementById('expense-desc').value.trim();
+            const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+            if (!desc) return alert('กรุณาระบุรายละเอียดรายจ่าย');
+            if (amount <= 0) return alert('กรุณาระบุจำนวนเงินให้ถูกต้อง');
+            
+            const { error } = await db.from('clinic_expenses').insert([{ category: category, description: desc, amount: amount, expense_date: new Date().toISOString() }]);
+            if (error) return alert('บันทึกรายจ่ายไม่สำเร็จ: ' + error.message);
+            alert('บันทึกรายจ่ายเรียบร้อยแล้ว');
+            if (document.getElementById('summary-modal').style.display === 'flex') openSummaryModal();
+            closeExpenseModal();
+        }
+
+        async function loadDailyExpenses(startDate, endDate = null) {
+            const container = document.getElementById('daily-expenses-list');
+            if (!container) return;
+            container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">กำลังโหลด...</p>';
+            let query = db.from('clinic_expenses').select('*').gte('expense_date', startDate);
+            if (endDate) query = query.lte('expense_date', endDate);
+            const { data, error } = await query.order('expense_date', { ascending: false });
+            if (error) return container.innerHTML = `<p class="text-red-500 text-center py-6 text-sm">ข้อผิดพลาด: ${error.message}</p>`;
+            if (!data || data.length === 0) return container.innerHTML = '<p class="text-gray-500 text-center py-6 text-sm">ไม่มีรายจ่ายในช่วงเวลานี้</p>';
+            
+            const catMap = { 'petty_cash': 'เงินสดย่อย/จิปาถะ', 'supplies': 'อุปกรณ์', 'utility': 'ค่าน้ำ/ไฟ/เน็ต', 'other': 'อื่นๆ' };
+            container.innerHTML = data.map((r, i) => `
+                <div class="grid grid-cols-12 p-3 border-b border-white/5 text-sm hover:bg-white/5 transition ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}">
+                    <div class="col-span-2 text-center text-gray-400 text-xs flex items-center justify-center">${new Date(r.expense_date).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</div>
+                    <div class="col-span-3 text-gray-300 truncate flex items-center">${catMap[r.category] || r.category}</div>
+                    <div class="col-span-4 text-white truncate flex items-center">${r.description}</div>
+                    <div class="col-span-2 text-right font-bold text-red-400 flex items-center justify-end">${parseFloat(r.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                    <div class="col-span-1 flex justify-center items-center">
+                        <button onclick="deleteExpense('${r.id}')" class="text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded p-1 transition" title="ลบรายจ่าย"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function deleteExpense(id) {
+            if (!confirm('ยืนยันการลบรายจ่ายนี้?')) return;
+            const { error } = await db.from('clinic_expenses').delete().eq('id', id);
+            if (error) return alert('ลบไม่สำเร็จ: ' + error.message);
+            await openSummaryModal();
+        }
+    </script>
 </body>
 </html>
