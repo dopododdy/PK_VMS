@@ -883,11 +883,10 @@
                 
                 // ถ้ารายการมีมากกว่า 1 และเป็นลูกค้าที่มี HN (ไม่ใช่ Walk-in) จึงจะแสดงปุ่มรวมบิล
                 if (g.records.length > 1 && g.owner_hn) {
-                    const totalAmt = g.records.reduce((s, r) => s + parseFloat(r.net_amount || r.total_cost || 0), 0);
                     return `<div class="border border-amber-500/30 rounded-xl p-2 bg-amber-500/5 space-y-2">
                         <div class="flex justify-between items-center px-2 py-1">
                             <span class="text-amber-300 font-bold text-xs">👤 ${g.owner_name} (${g.records.length} ตัว)</span>
-                            <button type="button" onclick="openCombinedPaymentModal('${g.owner_hn}')" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded-lg font-bold relative z-10 cursor-pointer">🧾 รวมใบเสร็จ</button>
+                            <button type="button" data-hn="${g.owner_hn}" onclick="openCombinedPaymentModal(this.dataset.hn, this)" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-3 py-1 rounded-lg font-bold relative z-10 cursor-pointer">🧾 รวมใบเสร็จ</button>
                         </div>
                         ${cards}
                     </div>`;
@@ -1974,6 +1973,53 @@
         }
 
         /* ─── Combined Reprint Receipt (กรณีลูกค้าเดียวกันแต่รวมบิล) ─── */
+        async function openCombinedPaymentModal(ownerHn, btn = null) {
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerText = '⏳ โหลด...';
+                }
+                combinedOwnerHn = ownerHn;
+                combinedRecords = [];
+                const { data: records, error: err1 } = await db.from('medical_records')
+                    .select('*, animals(pet_name), owners(owner_name, phone, address)')
+                    .eq('owner_hn', ownerHn)
+                    .eq('payment_status', 'pending');
+                
+                if (err1) throw err1;
+                if (!records || records.length === 0) { alert('ไม่พบรายการรอชำระ'); return; }
+                
+                for (const rec of records) {
+                    const { data: items, error: err2 } = await db.from('medical_record_items').select('*').eq('record_id', rec.id);
+                    if (err2) throw err2;
+                    combinedRecords.push({ record: rec, items: items || [], petName: rec.animals?.pet_name || '-' });
+                }
+                
+                const ownerName = records[0]?.owners?.owner_name || ownerHn;
+                const allItems = combinedRecords.flatMap(cr => cr.items);
+                const { nameTh: combinedNameTh } = await enrichItemsWithThaiNames(allItems);
+                
+                renderCombinedItems(ownerName, combinedNameTh);
+                const grandTotal = Object.values(combinedItemMap).reduce((s, d) => s + d.totalPrice, 0);
+                document.getElementById('combined-sum-total').innerText = grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
+                document.getElementById('combined-discount').value = 0;
+                document.getElementById('combined-received-cash').value = '';
+                calcCombinedNet();
+                
+                document.getElementById('combined-payment-modal').style.display = 'flex';
+                lucide.createIcons();
+                
+            } catch (err) {
+                console.error("Error in openCombinedPaymentModal:", err);
+                alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + err.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = '🧾 รวมใบเสร็จ';
+                }
+            }
+        }
+
         async function reprintCombinedReceipt(receiptNo) {
             try {
                 // 1. ดึง Records ทั้งหมดที่ใช้เลขใบเสร็จนี้
@@ -2006,8 +2052,9 @@
                 // 4. สร้าง Item Map เพื่อยุบรวมจำนวนรายการที่ซ้ำกัน
                 const tempItemMap = {};
                 (items || []).forEach(item => {
+                    const displayStr = nameTh[item.item_name] || item.item_name || '';
                     if (!tempItemMap[item.item_name]) {
-                        tempItemMap[item.item_name] = { quantity: 0, totalPrice: 0, displayName: nameTh[item.item_name] || item.item_name };
+                        tempItemMap[item.item_name] = { quantity: 0, totalPrice: 0, displayName: displayStr };
                     }
                     tempItemMap[item.item_name].quantity += parseFloat(item.quantity || 1);
                     tempItemMap[item.item_name].totalPrice += parseFloat(item.total_price || 0);
@@ -2028,7 +2075,8 @@
                 
                 let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:10pt; font-family:inherit;">`;
                 for (const [itemName, data] of Object.entries(tempItemMap)) {
-                    itemsHtml += `<tr><td style="text-align:left;">${data.displayName || itemName} x ${Math.floor(data.quantity)}</td><td style="text-align:right;">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
+                    const safeDisplay = data.displayName.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                    itemsHtml += `<tr><td style="text-align:left;">${safeDisplay} x ${Math.floor(data.quantity)}</td><td style="text-align:right;">${data.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
                 }
                 itemsHtml += `</table>`;
                 
