@@ -1688,29 +1688,44 @@ let sorted = [..._sbAnimals].sort((a, b) => {
         }
 
         let vaccRecordsByDate = {};
+        let labRecordsByDate = new Set();
 
-        async function fetchRecords() {
-            const [{ data, error }, { data: vRecs, error: vError }] = await Promise.all([
+async function fetchRecords() {
+            const [
+                { data, error }, 
+                { data: vRecs, error: vError },
+                { data: lRecs, error: lError } // ดึงข้อมูล lab_results
+            ] = await Promise.all([
                 db.from('medical_records').select('*, medical_record_items(*)').eq('animal_id', animalId).order('created_at', { ascending: false }),
-                db.from('vaccination_records').select('vaccine_name, vaccinated_date').eq('animal_id', animalId)
+                db.from('vaccination_records').select('vaccine_name, vaccinated_date').eq('animal_id', animalId),
+                db.from('lab_results').select('created_at').eq('animal_id', animalId) // ดึงเฉพาะวันที่
             ]);
             
-            // เพิ่มตัวเช็ค Error ถ้าโหลดข้อมูลไม่สำเร็จให้เด้งแจ้งเตือน
             if (error) {
                 console.error("โหลดประวัติไม่สำเร็จ:", error);
                 alert("⚠️ โหลดประวัติไม่สำเร็จ: " + error.message + "\n(ลองกดปุ่ม Reload schema cache ใน Supabase)");
             }
-            if (vError) {
-                console.error("โหลดประวัติวัคซีนไม่สำเร็จ:", vError);
-            }
+            if (vError) console.error("โหลดประวัติวัคซีนไม่สำเร็จ:", vError);
+            if (lError) console.error("โหลดประวัติผลเลือดไม่สำเร็จ:", lError);
             
             records = data || [];
+            
             vaccRecordsByDate = {};
             (vRecs || []).forEach(r => {
                 const d = r.vaccinated_date;
                 if (!vaccRecordsByDate[d]) vaccRecordsByDate[d] = [];
                 vaccRecordsByDate[d].push(r.vaccine_name);
             });
+
+            // จัดเก็บเฉพาะ "วันที่" (YYYY-MM-DD) ที่มีผลเลือด
+            labRecordsByDate = new Set();
+            (lRecs || []).forEach(r => {
+                if (r.created_at) {
+                    const d = r.created_at.slice(0, 10);
+                    labRecordsByDate.add(d);
+                }
+            });
+
             renderRecordsList();
             syncCurrentPetApptsToSbMedRecs();
             renderRightApptSidebar();
@@ -1758,6 +1773,13 @@ const txDetailHtml = txItems.map(i => `<div class="flex justify-between items-st
                 const vaccNames = vaccRecordsByDate[recDate] || [];
                 const vaccText = vaccNames.join(', ');
 
+                // --- เพิ่มใหม่: เช็คว่ามีผลเลือดในวันที่รักษา (recDate) หรือไม่ เพื่อแสดงปุ่ม ---
+                const hasLabResult = labRecordsByDate.has(recDate);
+                const labButtonHtml = hasLabResult 
+                ? `<button onclick="viewLabResults('${rec.animal_id}')" class="bg-purple-700 hover:bg-purple-600 text-white text-[10px] px-3 py-1 rounded-lg font-bold shrink-0 shadow-lg">📊 ผลเลือด</button>` 
+                : '';
+                // -------------------------------------------------------------
+
                 return `
                 <div class="history-record-box shadow-xl">
                     <div class="history-header" onclick="toggleCollapse('${rec.id}')">
@@ -1795,10 +1817,19 @@ const txDetailHtml = txItems.map(i => `<div class="flex justify-between items-st
 
                       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-b border-white/10">
     <!-- กล่องที่ 1: LAB Panel (สีม่วง) -->
-    <div class="bg-purple-900/20 border border-purple-500/20 rounded-2xl p-4">
-        <div class="flex justify-between mb-3 border-b border-purple-500/20 pb-2">
-            <span class="data-label text-purple-400 !mb-0">🔬 Lab / หัตถการ</span>
-        </div>
+
+<!-- LAB Panel -->
+<div class="bg-purple-900/20 border border-purple-500/20 rounded-2xl p-4">
+    <div class="flex justify-between items-center mb-3 border-b border-purple-500/20 pb-2">
+        <span class="data-label text-purple-400 !mb-0">🔬 Lab / หัตถการ</span>
+        ${labButtonHtml}
+    </div>
+    
+
+
+
+
+        
         <div class="data-value text-sm w-full space-y-1">
             ${labItems.length > 0 ? labItems.map(i => `
                 <div class="flex justify-between items-start gap-2">
