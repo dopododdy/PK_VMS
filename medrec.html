@@ -2693,25 +2693,107 @@ const txDetailHtml = txItems.map(i => `<div class="flex justify-between items-st
             document.getElementById('modal-session-list').innerHTML = current.map((i, idx) => `<span class="bg-teal-500 text-black px-3 py-1 rounded-lg text-sm font-bold cursor-pointer" onclick="removeItem(${idx})">✕ ${i.name}</span>`).join('');
         }
 
-        async function viewLabResults(id) {
-            const modal = document.getElementById('lab-view-modal'); modal.style.display = 'flex';
-            const head = document.getElementById('lab-view-head'), body = document.getElementById('lab-view-body');
-            head.innerHTML = '<th>กำลังโหลด...</th>'; body.innerHTML = '';
+
+async function viewLabResults(id) {
+            const modal = document.getElementById('lab-view-modal'); 
+            modal.style.display = 'flex';
+            const head = document.getElementById('lab-view-head');
+            const body = document.getElementById('lab-view-body');
+            
+            head.innerHTML = '<th>กำลังโหลด...</th>'; 
+            body.innerHTML = '';
+            
             try {
-                const { data: masterParams } = await db.from('mas_lab_parameters').select('*').order('parameter_name');
+                // โหลด Master Parameters เรียงตาม order_index เพื่อให้ลำดับถูกต้อง
+                const { data: masterParams } = await db.from('mas_lab_parameters').select('*').order('order_index', { ascending: true });
                 const { data: labData } = await db.from('lab_results').select('*').eq('animal_id', id).order('created_at', { ascending: false });
-                if (!labData || labData.length === 0) { head.innerHTML = '<th class="p-10 text-center">ไม่พบข้อมูล</th>'; return; }
-                const sessions = {}; labData.forEach(row => { if (!sessions[row.created_at]) sessions[row.created_at] = {}; sessions[row.created_at][row.parameter_name] = row; });
+                
+                if (!labData || labData.length === 0) { 
+                    head.innerHTML = '<th class="p-10 text-center">ไม่พบข้อมูลผลเลือด</th>'; 
+                    return; 
+                }
+                
+                // จัดกลุ่มผลเลือดตามเวลา
+                const sessions = {}; 
+                labData.forEach(row => { 
+                    if (!sessions[row.created_at]) sessions[row.created_at] = {}; 
+                    sessions[row.created_at][row.parameter_name] = row; 
+                });
                 const sortedTimestamps = Object.keys(sessions).sort((a, b) => new Date(b) - new Date(a));
-                head.innerHTML = `<th class="lab-param-name text-center">Parameter</th>` + sortedTimestamps.map(ts => { const d = new Date(ts); return `<th>${d.toLocaleDateString('th-TH')}<br><span class="text-[9px] text-teal-400">${d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</span></th>`; }).join('');
-                body.innerHTML = masterParams.map(p => {
-                    const isDog = petType === 'สุนัข', min = isDog ? p.dog_min : p.cat_min, max = isDog ? p.dog_max : p.cat_max;
-                    let rowHtml = `<td class="lab-param-name text-xs">${p.parameter_name} <span class="text-[9px] text-gray-500">(${min}-${max})</span></td>`;
-                    sortedTimestamps.forEach(ts => { const res = sessions[ts][p.parameter_name]; if (!res) rowHtml += `<td class="opacity-10">-</td>`; else { const val = res.test_value; const status = (val > max) ? 'val-high' : (val < min) ? 'val-low' : 'val-normal'; rowHtml += `<td class="${status} font-bold">${val}</td>`; } });
-                    return `<tr>${rowHtml}</tr>`;
-                }).join('');
-            } catch (e) { head.innerHTML = '<th>เกิดข้อผิดพลาด</th>'; }
+                
+                // สร้าง Header ตาราง
+                head.innerHTML = `<th class="text-left whitespace-nowrap pb-4 border-b border-white/10">Parameter <span class="text-xs text-gray-500 font-normal ml-1">(Ref) Unit</span></th>` + 
+                    sortedTimestamps.map(ts => { 
+                        const d = new Date(ts); 
+                        return `<th class="text-center pb-4 min-w-[80px] border-b border-white/10">${d.toLocaleDateString('th-TH')}<br><span class="text-[10px] text-teal-400">${d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</span></th>`; 
+                    }).join('');
+                    
+                const isDog = (petType === 'สุนัข' || petType === 'หมา');
+
+                // ฟังก์ชันช่วยวาดแถวแต่ละพารามิเตอร์
+                const renderRows = (params, title) => {
+                    // แถวหัวข้อหมวดหมู่ (CBC หรือ Chemistry)
+                    let html = `<tr><td colspan="${sortedTimestamps.length + 1}"><div class="font-black text-teal-400 mt-6 mb-2 border-b border-teal-500/30 pb-1 text-lg">${title}</div></td></tr>`;
+                    
+                    params.forEach(p => {
+                        // แก้ปัญหา undefined โดยใช้ค่าอ้างอิง Adult เป็นค่าตั้งต้น (dog_2 / cat_2)
+                        const min = isDog ? p.dog_2_min : p.cat_2_min;
+                        const max = isDog ? p.dog_2_max : p.cat_2_max;
+                        const unit = p.unit || '';
+                        const refDisplay = (min != null && max != null) ? `${min}-${max}` : '-';
+
+                        // แสดงชื่อพารามิเตอร์ (ค่า Ref) และ Unit
+                        let rowHtml = `<td class="text-sm font-bold text-gray-200 border-b border-white/5 py-2">${p.parameter_name} <span class="text-[10px] text-gray-500 font-normal ml-1">(${refDisplay}) ${unit}</span></td>`;
+                        
+                        sortedTimestamps.forEach(ts => { 
+                            const res = sessions[ts][p.parameter_name]; 
+                            if (!res) {
+                                rowHtml += `<td class="text-center opacity-20 border-b border-white/5 py-2">-</td>`; 
+                            } else { 
+                                const valStr = res.test_value;
+                                let statusClass = "text-white"; // ค่าปกติ (สีขาว)
+                                
+                                // ตรวจสอบค่า สูง/ต่ำ
+                                if (valStr && min != null && max != null) {
+                                    // ดักจับกรณีเครื่องหมาย > หรือ < เช่น ">16.0" หรือ "<0.1"
+                                    const m = String(valStr).trim().match(/^([<>])?\s*(-?\d+(?:\.\d+)?)$/);
+                                    if (m) {
+                                        const op = m[1] || '=';
+                                        const num = parseFloat(m[2]);
+                                        if (op === '>' || num > max) {
+                                            statusClass = "text-red-500 animate-pulse font-black text-base"; // ค่าสูง: สีแดงกระพริบ
+                                        } else if (op === '<' || num < min) {
+                                            statusClass = "text-blue-400 font-black text-base"; // ค่าต่ำ: สีน้ำเงิน
+                                        }
+                                    }
+                                }
+                                rowHtml += `<td class="text-center border-b border-white/5 py-2 ${statusClass}">${valStr}</td>`; 
+                            } 
+                        });
+                        html += `<tr class="hover:bg-white/5 transition-colors">${rowHtml}</tr>`;
+                    });
+                    return html;
+                };
+
+                // แยกข้อมูลออกเป็น 2 หมวดหมู่
+                const cbcParams = masterParams.filter(p => p.category === 'CBC');
+                const chemParams = masterParams.filter(p => p.category !== 'CBC'); // Chemistry & Electrolyte
+                
+                let finalHtml = '';
+                if (cbcParams.length > 0) finalHtml += renderRows(cbcParams, '🩸 Complete Blood Count (CBC)');
+                if (chemParams.length > 0) finalHtml += renderRows(chemParams, '🧪 Chemistry & Electrolytes');
+
+                body.innerHTML = finalHtml;
+            } catch (e) { 
+                console.error(e);
+                head.innerHTML = '<th>เกิดข้อผิดพลาดในการโหลดข้อมูล</th>'; 
+            }
         }
+
+
+
+
+        
 
         async function printHistoryRx(recordId) {
             const rec = records.find(r => r.id === recordId);
