@@ -9,6 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    
+    <!-- เพิ่ม HLS.js Library เพื่อเล่นไฟล์ .m3u8 (Free TV) -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -31,6 +35,7 @@
             display: flex;
             flex: 0 0 86%;
             min-height: 0;
+            border-bottom: 2px solid #020617;
         }
 
         /* Section 1 – Video */
@@ -74,18 +79,17 @@
         #video-controls {
             position: absolute;
             bottom: 15px;
-            left: 15px; /* ย้ายมาซ้าย */
+            left: 15px;
             z-index: 50;
             display: flex;
             gap: 10px;
-            opacity: 0.3; /* จางๆ เมื่อไม่ได้ชี้เมาส์ */
+            opacity: 0.3;
             transition: opacity 0.3s ease;
         }
         #video-area:hover #video-controls {
-            opacity: 1; /* เข้มขึ้นเมื่อเอาเมาส์ชี้ไปที่วิดีโอ */
+            opacity: 1;
         }
 
-        /* ปุ่มและแถบปรับระดับเสียง */
         .vol-container {
             display: flex;
             align-items: center;
@@ -131,7 +135,7 @@
         .quality-dropdown {
             position: absolute;
             bottom: 120%;
-            left: 0; /* เปลี่ยนให้เปิด dropdown จากฝั่งซ้าย */
+            left: 0;
             background: rgba(0,0,0,0.8);
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 8px;
@@ -314,8 +318,6 @@
             font-size: 1rem;
             font-weight: 600;
         }
-
-        #row-top { border-bottom: 2px solid #020617; }
     </style>
 </head>
 <body>
@@ -427,8 +429,8 @@ function loadVideoDB() {
 let isVideoMuted = true;
 let currentVolume = 100; // เก็บค่า Volume ตอนที่เปิดเสียง
 let isCCOn = false;
+let hlsInstance = null; // ตัวแปรเก็บ HLS object
 
-// จัดการ Mute/Unmute
 function toggleMute() {
     isVideoMuted = !isVideoMuted;
     updateVolumeUI();
@@ -448,12 +450,10 @@ function toggleMute() {
     }
 }
 
-// จัดการการเลื่อนหลอดเสียง (Slider)
 function changeVolume(val) {
     val = parseInt(val);
     currentVolume = val;
     
-    // ถ้าเลื่อนมาที่ 0 แปลว่า Mute
     if (val === 0) {
         isVideoMuted = true;
     } else {
@@ -477,7 +477,6 @@ function changeVolume(val) {
     }
 }
 
-// อัปเดตการแสดงผลไอคอนและหลอดเสียง
 function updateVolumeUI(sliderVal) {
     const icon = document.getElementById("mute-icon");
     const slider = document.getElementById("vol-slider");
@@ -491,7 +490,6 @@ function updateVolumeUI(sliderVal) {
     }
 }
 
-// จัดการ CC (คำบรรยาย)
 function toggleCC() {
     isCCOn = !isCCOn;
     const ccText = document.getElementById("cc-text");
@@ -504,7 +502,6 @@ function toggleCC() {
     const htmlVideo = videoArea.querySelector("video");
 
     if (ytIframe) {
-        // ใช้ YouTube API Command ในการบังคับเปิด/ปิด Captions
         if (isCCOn) {
             ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'loadModule', args: ['captions'] }), '*');
             ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setOption', args: ['captions', 'track', {'languageCode': 'th'}] }), '*');
@@ -512,14 +509,12 @@ function toggleCC() {
             ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unloadModule', args: ['captions'] }), '*');
         }
     } else if (htmlVideo) {
-        // สำหรับวิดีโออัปโหลดเอง ถ้ามีไฟล์ Subtitle ฝังไว้
         for (let i = 0; i < htmlVideo.textTracks.length; i++) {
             htmlVideo.textTracks[i].mode = isCCOn ? 'showing' : 'hidden';
         }
     }
 }
 
-// ความละเอียด
 function toggleQualityMenu() {
     const menu = document.getElementById('quality-menu');
     menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
@@ -550,6 +545,7 @@ function initVideo(cfg) {
     const container = document.getElementById("video-area");
     const controls = document.getElementById("video-controls");
 
+    // 1) โหมดอัปโหลดวิดีโอ (เล่นไฟล์จาก IndexedDB / Base64)
     if (mode === "upload") {
         const src = (cfg.videoSrc || "").trim();
         if (!src) return;
@@ -591,10 +587,38 @@ function initVideo(cfg) {
 
     document.getElementById("video-placeholder").style.display = "none";
 
+    // 2) โหมด Free TV (HLS .m3u8)
+    if (mode === "freetv" || url.endsWith('.m3u8')) {
+        const video = document.createElement("video");
+        video.autoplay = true;
+        video.muted = isVideoMuted;
+        video.playsInline = true;
+        video.controls = false;
+        container.insertBefore(video, controls);
+        controls.style.display = "flex";
+
+        if (Hls.isSupported()) {
+            hlsInstance = new Hls();
+            hlsInstance.loadSource(url);
+            hlsInstance.attachMedia(video);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play().catch(e => console.log("Autoplay prevented:", e));
+            });
+        } 
+        // fallback สำหรับ Safari (iOS, Mac) ที่รองรับ HLS native
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+            video.addEventListener('loadedmetadata', function() {
+                video.play().catch(e => console.log("Autoplay prevented:", e));
+            });
+        }
+        return;
+    }
+
+    // 3) โหมด URL ธรรมดา (YouTube)
     const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
     if (ytMatch) {
         const iframe = document.createElement("iframe");
-        // เพิ่ม cc_load_policy=0 เพื่อบังคับปิด CC ในตอนเริ่มต้น
         iframe.src = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=${isVideoMuted ? 1 : 0}&loop=1&playlist=${ytMatch[1]}&controls=0&modestbranding=1&enablejsapi=1&cc_load_policy=0`;
         iframe.allow = "autoplay; fullscreen";
         iframe.allowFullscreen = true;
@@ -603,6 +627,7 @@ function initVideo(cfg) {
         return;
     }
 
+    // 4) โหมด URL ไฟล์ .mp4 .webm ฯลฯ
     const video = document.createElement("video");
     video.src = url;
     video.autoplay = true;
@@ -774,14 +799,20 @@ async function boot() {
     }
 }
 
+// Reload when settings change in another tab
 window.addEventListener("storage", (e) => {
     if (e.key === "signageCfg") window.location.reload();
 });
 
+// Cleanup resources when closing/leaving page
 window.addEventListener("pagehide", () => {
     if (_signageVideoObjectURL) {
         URL.revokeObjectURL(_signageVideoObjectURL);
         _signageVideoObjectURL = null;
+    }
+    if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
     }
 });
 
