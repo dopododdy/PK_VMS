@@ -74,7 +74,7 @@
         #video-controls {
             position: absolute;
             bottom: 15px;
-            right: 15px;
+            left: 15px; /* ย้ายมาซ้าย */
             z-index: 50;
             display: flex;
             gap: 10px;
@@ -84,6 +84,29 @@
         #video-area:hover #video-controls {
             opacity: 1; /* เข้มขึ้นเมื่อเอาเมาส์ชี้ไปที่วิดีโอ */
         }
+
+        /* ปุ่มและแถบปรับระดับเสียง */
+        .vol-container {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+            overflow: hidden;
+        }
+        .vol-container .v-btn {
+            border: none;
+            background: transparent;
+            border-radius: 0;
+        }
+        .v-slider {
+            width: 70px;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: #14b8b1;
+        }
+
         .v-btn {
             background: rgba(0, 0, 0, 0.6);
             color: #fff;
@@ -91,6 +114,7 @@
             border-radius: 8px;
             padding: 8px 12px;
             font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
             backdrop-filter: blur(4px);
             display: flex;
@@ -103,10 +127,11 @@
             background: rgba(20, 184, 177, 0.8);
             border-color: #14b8b1;
         }
+
         .quality-dropdown {
             position: absolute;
             bottom: 120%;
-            right: 0;
+            left: 0; /* เปลี่ยนให้เปิด dropdown จากฝั่งซ้าย */
             background: rgba(0,0,0,0.8);
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 8px;
@@ -306,17 +331,27 @@
                     <div class="msg">ยังไม่ได้ตั้งค่า URL วิดีโอ</div>
                 </div>
 
-                <!-- Video Controls (Mute & Quality) -->
+                <!-- Video Controls (Left aligned) -->
                 <div id="video-controls" style="display: none;">
-                    <button class="v-btn" id="btn-mute" onclick="toggleMute()" title="เปิด/ปิดเสียง">
-                        <span id="mute-icon">🔇</span>
+                    
+                    <!-- Volume Container -->
+                    <div class="vol-container">
+                        <button class="v-btn" id="btn-mute" onclick="toggleMute()" title="เปิด/ปิดเสียง">
+                            <span id="mute-icon">🔇</span>
+                        </button>
+                        <input type="range" id="vol-slider" class="v-slider" min="0" max="100" value="0" oninput="changeVolume(this.value)" title="ระดับเสียง">
+                    </div>
+
+                    <!-- CC Toggle -->
+                    <button class="v-btn" id="btn-cc" onclick="toggleCC()" title="เปิด/ปิดคำบรรยาย">
+                        <span id="cc-text" style="color: #fff;">CC (Off)</span>
                     </button>
                     
+                    <!-- Quality Menu -->
                     <div style="position: relative;">
                         <button class="v-btn" id="btn-quality" onclick="toggleQualityMenu()" title="ความละเอียด">
                             ⚙️ <span id="quality-label">Auto</span>
                         </button>
-                        <!-- Quality Menu -->
                         <div id="quality-menu" class="quality-dropdown">
                             <button onclick="setQuality('1080p')">1080p</button>
                             <button onclick="setQuality('720p')">720p</button>
@@ -324,6 +359,7 @@
                             <button onclick="setQuality('Auto')">Auto</button>
                         </div>
                     </div>
+
                 </div>
             </div>
 
@@ -389,10 +425,13 @@ function loadVideoDB() {
 
 // ---- Video Controls Logic ----
 let isVideoMuted = true;
+let currentVolume = 100; // เก็บค่า Volume ตอนที่เปิดเสียง
+let isCCOn = false;
 
+// จัดการ Mute/Unmute
 function toggleMute() {
     isVideoMuted = !isVideoMuted;
-    document.getElementById("mute-icon").textContent = isVideoMuted ? "🔇" : "🔊";
+    updateVolumeUI();
 
     const videoArea = document.getElementById("video-area");
     const htmlVideo = videoArea.querySelector("video");
@@ -400,13 +439,87 @@ function toggleMute() {
 
     if (htmlVideo) {
         htmlVideo.muted = isVideoMuted;
+        if (!isVideoMuted && htmlVideo.volume === 0) {
+            htmlVideo.volume = 1;
+        }
     } else if (ytIframe) {
-        // ใช้ PostMessage สั่งงาน YouTube Iframe
         const command = isVideoMuted ? 'mute' : 'unMute';
         ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: command, args: [] }), '*');
     }
 }
 
+// จัดการการเลื่อนหลอดเสียง (Slider)
+function changeVolume(val) {
+    val = parseInt(val);
+    currentVolume = val;
+    
+    // ถ้าเลื่อนมาที่ 0 แปลว่า Mute
+    if (val === 0) {
+        isVideoMuted = true;
+    } else {
+        isVideoMuted = false;
+    }
+    
+    updateVolumeUI(val);
+
+    const videoArea = document.getElementById("video-area");
+    const htmlVideo = videoArea.querySelector("video");
+    const ytIframe = videoArea.querySelector("iframe");
+
+    if (htmlVideo) {
+        htmlVideo.volume = val / 100;
+        htmlVideo.muted = isVideoMuted;
+    } else if (ytIframe) {
+        if (!isVideoMuted) {
+            ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unMute', args: [] }), '*');
+        }
+        ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [val] }), '*');
+    }
+}
+
+// อัปเดตการแสดงผลไอคอนและหลอดเสียง
+function updateVolumeUI(sliderVal) {
+    const icon = document.getElementById("mute-icon");
+    const slider = document.getElementById("vol-slider");
+    
+    if (isVideoMuted || currentVolume === 0) {
+        icon.textContent = "🔇";
+        if (sliderVal === undefined) slider.value = 0;
+    } else {
+        icon.textContent = "🔊";
+        if (sliderVal === undefined) slider.value = currentVolume;
+    }
+}
+
+// จัดการ CC (คำบรรยาย)
+function toggleCC() {
+    isCCOn = !isCCOn;
+    const ccText = document.getElementById("cc-text");
+    
+    ccText.textContent = isCCOn ? "CC (On)" : "CC (Off)";
+    ccText.style.color = isCCOn ? "#14b8b1" : "#fff";
+
+    const videoArea = document.getElementById("video-area");
+    const ytIframe = videoArea.querySelector("iframe");
+    const htmlVideo = videoArea.querySelector("video");
+
+    if (ytIframe) {
+        // ใช้ YouTube API Command ในการบังคับเปิด/ปิด Captions
+        if (isCCOn) {
+            ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'loadModule', args: ['captions'] }), '*');
+            ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setOption', args: ['captions', 'track', {'languageCode': 'th'}] }), '*');
+        } else {
+            ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unloadModule', args: ['captions'] }), '*');
+        }
+    } else if (htmlVideo) {
+        // สำหรับวิดีโออัปโหลดเอง ถ้ามีไฟล์ Subtitle ฝังไว้
+        for (let i = 0; i < htmlVideo.textTracks.length; i++) {
+            htmlVideo.textTracks[i].mode = isCCOn ? 'showing' : 'hidden';
+        }
+    }
+}
+
+// ความละเอียด
 function toggleQualityMenu() {
     const menu = document.getElementById('quality-menu');
     menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
@@ -419,7 +532,6 @@ function setQuality(quality) {
     const videoArea = document.getElementById("video-area");
     const ytIframe = videoArea.querySelector("iframe");
     
-    // ส่งคำสั่งปรับความละเอียดไปที่ YouTube (ถ้าเป็น HTML5 วิดีโอไฟล์เดียว จะไม่สามารถสลับได้)
     if (ytIframe) {
         let ytQuality = 'default';
         if(quality === '1080p') ytQuality = 'hd1080';
@@ -454,7 +566,6 @@ function initVideo(cfg) {
                 video.loop = true;
                 video.playsInline = true;
                 video.controls = false;
-                // วางวิดีโอไว้ก่อนปุ่ม controls
                 container.insertBefore(video, controls);
                 controls.style.display = "flex";
             }).catch(err => console.warn("IndexedDB load error:", err));
@@ -483,8 +594,8 @@ function initVideo(cfg) {
     const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
     if (ytMatch) {
         const iframe = document.createElement("iframe");
-        // เพิ่ม &enablejsapi=1 เพื่อให้ปุ่มเราส่งคำสั่งไปควบคุมวิดีโอ YouTube ได้
-        iframe.src = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=${isVideoMuted ? 1 : 0}&loop=1&playlist=${ytMatch[1]}&controls=0&modestbranding=1&enablejsapi=1`;
+        // เพิ่ม cc_load_policy=0 เพื่อบังคับปิด CC ในตอนเริ่มต้น
+        iframe.src = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=${isVideoMuted ? 1 : 0}&loop=1&playlist=${ytMatch[1]}&controls=0&modestbranding=1&enablejsapi=1&cc_load_policy=0`;
         iframe.allow = "autoplay; fullscreen";
         iframe.allowFullscreen = true;
         container.insertBefore(iframe, controls);
