@@ -27,14 +27,13 @@
             height: 100vh;
         }
 
-        /* --- Top row: video + slideshow --- */
         #row-top {
             display: flex;
             flex: 0 0 86%;
             min-height: 0;
         }
 
-        /* Section 1 – Video (left top) */
+        /* Section 1 – Video */
         #sec-video {
             flex: 0 0 56%;
             display: flex;
@@ -42,7 +41,6 @@
             background: #000;
             overflow: hidden;
         }
-        /* Video area: natural 16:9 ratio, pinned to top */
         #video-area {
             width: 100%;
             aspect-ratio: 16 / 9;
@@ -71,6 +69,66 @@
         }
         #video-placeholder .icon { font-size: 3rem; }
         #video-placeholder .msg { font-size: 1rem; font-weight: 600; }
+        
+        /* Video Controls Overlay */
+        #video-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            z-index: 50;
+            display: flex;
+            gap: 10px;
+            opacity: 0.3; /* จางๆ เมื่อไม่ได้ชี้เมาส์ */
+            transition: opacity 0.3s ease;
+        }
+        #video-area:hover #video-controls {
+            opacity: 1; /* เข้มขึ้นเมื่อเอาเมาส์ชี้ไปที่วิดีโอ */
+        }
+        .v-btn {
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: "Sarabun", sans-serif;
+            transition: 0.2s;
+        }
+        .v-btn:hover {
+            background: rgba(20, 184, 177, 0.8);
+            border-color: #14b8b1;
+        }
+        .quality-dropdown {
+            position: absolute;
+            bottom: 120%;
+            right: 0;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 110px;
+        }
+        .quality-dropdown button {
+            background: transparent;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-family: "Sarabun", sans-serif;
+        }
+        .quality-dropdown button:hover {
+            background: rgba(20, 184, 177, 0.5);
+        }
+
         /* Below-video slide panel */
         #sec-video-bottom {
             flex: 1;
@@ -79,7 +137,6 @@
             background: #020617;
             overflow: hidden;
         }
-        /* Section 1B slide items */
         .vb-slide-item {
             position: absolute;
             inset: 0;
@@ -120,7 +177,7 @@
         #video-bottom-placeholder .icon { font-size: 2rem; }
         #video-bottom-placeholder .msg { font-size: 0.85rem; font-weight: 600; }
 
-        /* Section 2 – Slideshow (right top) */
+        /* Section 2 – Slideshow */
         #sec-slideshow {
             flex: 1;
             position: relative;
@@ -194,7 +251,7 @@
         #slideshow-placeholder .icon { font-size: 3rem; }
         #slideshow-placeholder .msg { font-size: 1rem; font-weight: 600; }
 
-        /* --- Bottom row: scrolling ticker --- */
+        /* Ticker */
         #row-ticker {
             flex: 0 0 14%;
             min-height: 0;
@@ -233,26 +290,43 @@
             font-weight: 600;
         }
 
-        /* Divider lines */
         #row-top { border-bottom: 2px solid #020617; }
     </style>
 </head>
 <body>
 
 <div id="signage-root">
-
-    <!-- Row 1: Top -->
     <div id="row-top">
 
         <!-- Section 1: Video -->
         <div id="sec-video">
-            <!-- 16:9 video pinned to top -->
             <div id="video-area">
                 <div id="video-placeholder">
                     <div class="icon">🎬</div>
                     <div class="msg">ยังไม่ได้ตั้งค่า URL วิดีโอ</div>
                 </div>
+
+                <!-- Video Controls (Mute & Quality) -->
+                <div id="video-controls" style="display: none;">
+                    <button class="v-btn" id="btn-mute" onclick="toggleMute()" title="เปิด/ปิดเสียง">
+                        <span id="mute-icon">🔇</span>
+                    </button>
+                    
+                    <div style="position: relative;">
+                        <button class="v-btn" id="btn-quality" onclick="toggleQualityMenu()" title="ความละเอียด">
+                            ⚙️ <span id="quality-label">Auto</span>
+                        </button>
+                        <!-- Quality Menu -->
+                        <div id="quality-menu" class="quality-dropdown">
+                            <button onclick="setQuality('1080p')">1080p</button>
+                            <button onclick="setQuality('720p')">720p</button>
+                            <button onclick="setQuality('480p')">480p</button>
+                            <button onclick="setQuality('Auto')">Auto</button>
+                        </div>
+                    </div>
+                </div>
             </div>
+
             <!-- Remaining space below video -->
             <div id="sec-video-bottom">
                 <div id="video-bottom-placeholder">
@@ -278,32 +352,24 @@
         <div id="ticker-placeholder">ยังไม่ได้ตั้งค่าข้อความวิ่ง</div>
         <div id="ticker-track" style="display:none;"></div>
     </div>
-
 </div>
 
 <script>
 // ==========================================
-//  signage.html – reads config from localStorage + Supabase
-//  Key: "signageCfg"
+//  signage.html Config
 // ==========================================
-
 function getConfig() {
-    try {
-        return JSON.parse(localStorage.getItem("signageCfg") || "{}");
-    } catch(e) { return {}; }
+    try { return JSON.parse(localStorage.getItem("signageCfg") || "{}"); } catch(e) { return {}; }
 }
-
 async function getConfigFromSupabase() {
     try {
         const { data } = await db.from('app_settings').select('value').eq('key', 'signageCfg').maybeSingle();
-        if (data?.value) {
-            return data.value;
-        }
+        if (data?.value) return data.value;
     } catch(e) { console.warn('Supabase load error:', e); }
     return null;
 }
 
-// ---- IndexedDB helpers (video blobs stored here to avoid localStorage quota) ----
+// ---- IndexedDB helpers ----
 function openSignageDB() {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open("signageDB", 1);
@@ -321,19 +387,62 @@ function loadVideoDB() {
     }));
 }
 
+// ---- Video Controls Logic ----
+let isVideoMuted = true;
+
+function toggleMute() {
+    isVideoMuted = !isVideoMuted;
+    document.getElementById("mute-icon").textContent = isVideoMuted ? "🔇" : "🔊";
+
+    const videoArea = document.getElementById("video-area");
+    const htmlVideo = videoArea.querySelector("video");
+    const ytIframe = videoArea.querySelector("iframe");
+
+    if (htmlVideo) {
+        htmlVideo.muted = isVideoMuted;
+    } else if (ytIframe) {
+        // ใช้ PostMessage สั่งงาน YouTube Iframe
+        const command = isVideoMuted ? 'mute' : 'unMute';
+        ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: command, args: [] }), '*');
+    }
+}
+
+function toggleQualityMenu() {
+    const menu = document.getElementById('quality-menu');
+    menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+}
+
+function setQuality(quality) {
+    document.getElementById('quality-label').textContent = quality;
+    document.getElementById('quality-menu').style.display = 'none';
+
+    const videoArea = document.getElementById("video-area");
+    const ytIframe = videoArea.querySelector("iframe");
+    
+    // ส่งคำสั่งปรับความละเอียดไปที่ YouTube (ถ้าเป็น HTML5 วิดีโอไฟล์เดียว จะไม่สามารถสลับได้)
+    if (ytIframe) {
+        let ytQuality = 'default';
+        if(quality === '1080p') ytQuality = 'hd1080';
+        if(quality === '720p') ytQuality = 'hd720';
+        if(quality === '480p') ytQuality = 'large';
+        
+        ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setPlaybackQuality', args: [ytQuality] }), '*');
+    }
+}
+
 // ---- Section 1: Video ----
-let _signageVideoObjectURL = null; // track blob URL for cleanup on unload
+let _signageVideoObjectURL = null;
 
 function initVideo(cfg) {
     const mode = cfg.videoMode || "url";
     const container = document.getElementById("video-area");
+    const controls = document.getElementById("video-controls");
 
     if (mode === "upload") {
         const src = (cfg.videoSrc || "").trim();
         if (!src) return;
 
         if (src === "__indexeddb__") {
-            // Video blob was saved locally via IndexedDB
             loadVideoDB().then(blob => {
                 if (!blob) return;
                 document.getElementById("video-placeholder").style.display = "none";
@@ -341,26 +450,28 @@ function initVideo(cfg) {
                 _signageVideoObjectURL = URL.createObjectURL(blob);
                 video.src = _signageVideoObjectURL;
                 video.autoplay = true;
-                video.muted = true;
+                video.muted = isVideoMuted;
                 video.loop = true;
                 video.playsInline = true;
                 video.controls = false;
-                container.appendChild(video);
+                // วางวิดีโอไว้ก่อนปุ่ม controls
+                container.insertBefore(video, controls);
+                controls.style.display = "flex";
             }).catch(err => console.warn("IndexedDB load error:", err));
             return;
         }
 
-        // Backward compat: data URI stored directly in config
         if (!src.startsWith("data:video/")) return;
         document.getElementById("video-placeholder").style.display = "none";
         const video = document.createElement("video");
         video.src = src;
         video.autoplay = true;
-        video.muted = true;
+        video.muted = isVideoMuted;
         video.loop = true;
         video.playsInline = true;
         video.controls = false;
-        container.appendChild(video);
+        container.insertBefore(video, controls);
+        controls.style.display = "flex";
         return;
     }
 
@@ -369,39 +480,38 @@ function initVideo(cfg) {
 
     document.getElementById("video-placeholder").style.display = "none";
 
-    // Detect YouTube (supports watch, short URL, embed, and /v/ formats)
     const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
     if (ytMatch) {
         const iframe = document.createElement("iframe");
-        iframe.src = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&modestbranding=1`;
+        // เพิ่ม &enablejsapi=1 เพื่อให้ปุ่มเราส่งคำสั่งไปควบคุมวิดีโอ YouTube ได้
+        iframe.src = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=${isVideoMuted ? 1 : 0}&loop=1&playlist=${ytMatch[1]}&controls=0&modestbranding=1&enablejsapi=1`;
         iframe.allow = "autoplay; fullscreen";
         iframe.allowFullscreen = true;
-        container.appendChild(iframe);
+        container.insertBefore(iframe, controls);
+        controls.style.display = "flex";
         return;
     }
 
-    // Direct video file
     const video = document.createElement("video");
     video.src = url;
     video.autoplay = true;
-    video.muted = true;
+    video.muted = isVideoMuted;
     video.loop = true;
     video.playsInline = true;
     video.controls = false;
-    container.appendChild(video);
+    container.insertBefore(video, controls);
+    controls.style.display = "flex";
 }
 
 // ---- Section 1b: Below-video slideshow ----
 let vbSlideIndex = 0;
 let vbSlideTimer = null;
-
 function initVideoBottomSlide(cfg) {
     const slides = cfg.videoBottomSlides || [];
     const interval = (cfg.videoBottomInterval || 5) * 1000;
     const container = document.getElementById("sec-video-bottom");
 
     if (!slides.length) {
-        // Backward compatibility: legacy single image
         const src = (cfg.videoBottomSrc || "").trim();
         if (src) {
             document.getElementById("video-bottom-placeholder").style.display = "none";
@@ -409,7 +519,6 @@ function initVideoBottomSlide(cfg) {
             item.className = "vb-slide-item active";
             const img = document.createElement("img");
             img.src = src;
-            img.alt = "รูปภาพแสดงผลใต้วิดีโอ";
             item.appendChild(img);
             container.appendChild(item);
         }
@@ -417,19 +526,15 @@ function initVideoBottomSlide(cfg) {
     }
 
     document.getElementById("video-bottom-placeholder").style.display = "none";
-
     slides.forEach((s, i) => {
         const el = document.createElement("div");
         el.className = "vb-slide-item" + (i === 0 ? " active" : "");
-
         if (s.type === "image" || s.type === "upload") {
             el.style.background = "#000";
             const img = document.createElement("img");
             img.src = s.src || s.url || "";
-            img.alt = s.caption || "";
             el.appendChild(img);
         } else {
-            // text – 1 line
             el.style.background = s.bg || "linear-gradient(135deg,#020617 0%,#0f172a 100%)";
             const textEl = document.createElement("div");
             textEl.className = "vb-slide-text";
@@ -438,38 +543,21 @@ function initVideoBottomSlide(cfg) {
             textEl.textContent = s.text || "";
             el.appendChild(textEl);
         }
-
         container.appendChild(el);
     });
 
     if (slides.length <= 1) return;
-
-    function showVBSlide(idx) {
-        const items = container.querySelectorAll(".vb-slide-item");
-        items.forEach((el, i) => el.classList.toggle("active", i === idx));
-        vbSlideIndex = idx;
-    }
-
     function nextVBSlide() {
         const items = container.querySelectorAll(".vb-slide-item");
-        showVBSlide((vbSlideIndex + 1) % items.length);
+        items.forEach((el, i) => el.classList.toggle("active", i === ((vbSlideIndex + 1) % items.length)));
+        vbSlideIndex = (vbSlideIndex + 1) % items.length;
     }
-
     vbSlideTimer = setInterval(nextVBSlide, interval);
-
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-            clearInterval(vbSlideTimer);
-        } else {
-            vbSlideTimer = setInterval(nextVBSlide, interval);
-        }
-    });
 }
 
 // ---- Section 2: Slideshow ----
 let slideIndex = 0;
 let slideTimer = null;
-
 function initSlideshow(cfg) {
     const slides = cfg.slides || [];
     const interval = (cfg.slideInterval || 5) * 1000;
@@ -477,37 +565,29 @@ function initSlideshow(cfg) {
     const dotsContainer = document.getElementById("slide-dots");
 
     if (!slides.length) return;
-
     document.getElementById("slideshow-placeholder").remove();
 
     slides.forEach((s, i) => {
         const el = document.createElement("div");
         el.className = "slide-item" + (i === 0 ? " active" : "");
-
         if (s.type === "image" || s.type === "upload") {
             const img = document.createElement("img");
             img.src = s.src || s.url || "";
-            img.alt = s.caption || "";
             el.appendChild(img);
         } else {
-            // text slide
             const wrap = document.createElement("div");
             wrap.className = "slide-text-wrap";
-            wrap.style.background = s.bg || "linear-gradient(135deg,#020617 0%,#0f172a 100%)";
-
             const title = document.createElement("div");
             title.className = "slide-title";
             title.style.color = s.titleColor || "#14b8b1";
             if (s.titleSize) title.style.fontSize = s.titleSize + "px";
             title.textContent = s.title || "";
             wrap.appendChild(title);
-
             if (s.subtitle) {
                 const sub = document.createElement("div");
                 sub.className = "slide-subtitle";
                 sub.style.color = s.subtitleColor || "#cbd5e1";
                 if (s.subtitleSize) sub.style.fontSize = s.subtitleSize + "px";
-                // Split on literal "\n" and insert <br> elements safely (no innerHTML)
                 const lines = (s.subtitle || "").split(/\\n/);
                 lines.forEach((line, li) => {
                     if (li > 0) sub.appendChild(document.createElement("br"));
@@ -518,51 +598,31 @@ function initSlideshow(cfg) {
             el.style.background = s.bg || "linear-gradient(135deg,#020617 0%,#0f172a 100%)";
             el.appendChild(wrap);
         }
-
         container.appendChild(el);
-
-        // dot
         const dot = document.createElement("div");
         dot.className = "slide-dot" + (i === 0 ? " active" : "");
         dotsContainer.appendChild(dot);
     });
 
-    function showSlide(idx) {
-        const items = container.querySelectorAll(".slide-item");
-        const dots  = dotsContainer.querySelectorAll(".slide-dot");
-        items.forEach((el, i) => el.classList.toggle("active", i === idx));
-        dots.forEach((d, i)  => d.classList.toggle("active", i === idx));
-        slideIndex = idx;
-    }
-
     function nextSlide() {
         const items = container.querySelectorAll(".slide-item");
-        showSlide((slideIndex + 1) % items.length);
+        const dots  = dotsContainer.querySelectorAll(".slide-dot");
+        const nIdx = (slideIndex + 1) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === nIdx));
+        dots.forEach((d, i)  => d.classList.toggle("active", i === nIdx));
+        slideIndex = nIdx;
     }
-
     slideTimer = setInterval(nextSlide, interval);
-
-    // Restart timer on visibility change
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-            clearInterval(slideTimer);
-        } else {
-            slideTimer = setInterval(nextSlide, interval);
-        }
-    });
 }
 
 // ---- Section 3: Ticker ----
 function initTicker(cfg) {
     const text = (cfg.tickerText || "").trim();
-    const speed = cfg.tickerSpeed || 60; // pixels per second (approx)
+    const speed = cfg.tickerSpeed || 60; 
     if (!text) return;
-
     document.getElementById("ticker-placeholder").style.display = "none";
     const track = document.getElementById("ticker-track");
     track.style.display = "flex";
-
-    // Apply font properties
     const fontSize = parseInt(cfg.tickerFontSize) || 28;
     const fontStyleStr = cfg.tickerFontStyle || "normal";
     track.style.fontSize = fontSize + "px";
@@ -570,47 +630,27 @@ function initTicker(cfg) {
     track.style.fontFamily = cfg.tickerFontFamily || "Sarabun, sans-serif";
     track.style.fontWeight = fontStyleStr.includes("bold") ? "bold" : "normal";
     track.style.fontStyle  = fontStyleStr.includes("italic") ? "italic" : "normal";
-
-    // Build ticker content safely using DOM (no innerHTML with user data)
-    function makeSep() {
-        const s = document.createElement("span");
-        s.className = "ticker-sep";
-        s.textContent = "◆";
-        return s;
-    }
-    function makeTextSpan(t) {
-        const s = document.createElement("span");
-        s.textContent = t;
-        return s;
-    }
-    // Duplicate 4× so the CSS translateX(-50%) loop is seamless
+    function makeSep() { const s = document.createElement("span"); s.className = "ticker-sep"; s.textContent = "◆"; return s; }
+    function makeTextSpan(t) { const s = document.createElement("span"); s.textContent = t; return s; }
     for (let i = 0; i < 4; i++) {
         track.appendChild(makeTextSpan(text));
         track.appendChild(makeSep());
     }
-
-    // Calculate animation duration based on speed (px/s).
-    // The animation scrolls 50% of the total track width (half = 2 copies).
-    // Approximate total content width as innerWidth × 2; minimum 8 s to avoid
-    // an imperceptibly fast animation on very wide screens.
     const duration = Math.max(8, Math.round((window.innerWidth * 2) / speed));
     track.style.animationDuration = duration + "s";
 }
 
 // ---- Boot ----
 async function boot() {
-    // Load from localStorage first for immediate display
     const cfgLocal = getConfig();
     initVideo(cfgLocal);
     initVideoBottomSlide(cfgLocal);
     initSlideshow(cfgLocal);
     initTicker(cfgLocal);
-    // After reloading due to Supabase data, skip another Supabase check to prevent loops
     if (sessionStorage.getItem('_supabase_boot')) {
         sessionStorage.removeItem('_supabase_boot');
         return;
     }
-    // Load from Supabase and reload page if config differs from localStorage
     const cfgSupabase = await getConfigFromSupabase();
     if (cfgSupabase && JSON.stringify(cfgSupabase) !== JSON.stringify(cfgLocal)) {
         const localTime = cfgLocal.savedAt || 0;
@@ -623,18 +663,25 @@ async function boot() {
     }
 }
 
-// Listen for storage updates (live reload when settings saved)
 window.addEventListener("storage", (e) => {
-    if (e.key === "signageCfg") {
-        window.location.reload();
-    }
+    if (e.key === "signageCfg") window.location.reload();
 });
 
-// Revoke video blob URL on page unload to free browser memory
 window.addEventListener("pagehide", () => {
     if (_signageVideoObjectURL) {
         URL.revokeObjectURL(_signageVideoObjectURL);
         _signageVideoObjectURL = null;
+    }
+});
+
+// Click outside quality menu to close
+document.addEventListener("click", function(event) {
+    const menu = document.getElementById('quality-menu');
+    const btn = document.getElementById('btn-quality');
+    if (menu && menu.style.display === 'flex') {
+        if (!menu.contains(event.target) && !btn.contains(event.target)) {
+            menu.style.display = 'none';
+        }
     }
 });
 
