@@ -438,18 +438,21 @@
         <!-- Section 1: Video -->
         <div class="settings-section">
             <div class="section-title">🎬 ส่วนที่ 1 — วิดีโอ (ซ้ายบน)</div>
-            <p class="text-sm text-gray-500 mb-4">เลือกแหล่งวิดีโอ: ป้อน URL หรืออัปโหลดไฟล์วิดีโอ</p>
+            <p class="text-sm text-gray-500 mb-4">เลือกแหล่งวิดีโอ: ป้อน URL หรืออัปโหลดไฟล์วิดีโอ หรือดูทีวีออนไลน์</p>
             <div class="flex gap-2 mb-4">
                 <button id="video-mode-url-btn" onclick="setVideoMode('url')" class="btn-primary text-sm">🔗 URL</button>
                 <button id="video-mode-upload-btn" onclick="setVideoMode('upload')" class="btn-secondary text-sm">📤 อัปโหลดวิดีโอ</button>
+                <button id="video-mode-freetv-btn" onclick="setVideoMode('freetv')" class="btn-secondary text-sm">📺 Free TV</button>
             </div>
             <input type="hidden" id="cfg-video-mode" value="url">
+            
             <!-- URL fields -->
             <div id="video-url-fields">
                 <label>URL วิดีโอ</label>
                 <input type="url" id="cfg-video-url" class="input-field" placeholder="https://www.youtube.com/watch?v=...">
                 <p class="text-xs text-gray-600 mt-1">รองรับ YouTube URL หรือ URL ไฟล์วิดีโอโดยตรง (mp4, webm ฯลฯ)</p>
             </div>
+            
             <!-- Upload fields -->
             <div id="video-upload-fields" class="hidden">
                 <label>อัปโหลดไฟล์วิดีโอ</label>
@@ -457,6 +460,17 @@
                 <div id="cfg-video-upload-preview" class="hidden mt-3" style="border-radius:10px;overflow:hidden;aspect-ratio:16/9;max-width:320px;">
                     <video id="cfg-video-upload-preview-el" controls muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
                 </div>
+            </div>
+
+            <!-- Free TV fields -->
+            <div id="video-freetv-fields" class="hidden">
+                <label>เลือกช่องรายการสด (IPTV .m3u8)</label>
+                <select id="cfg-video-freetv-select" class="input-field" style="cursor:pointer;">
+                    <option value="https://thairath-l-h-bkk.thairath.co.th/live/thairath.m3u8">Thairath TV 32 HD</option>
+                    <option value="https://edge92.3bb.co.th:8080/u/TNN24/index.m3u8">TNN 16 (ข่าว)</option>
+                    <option value="https://c82-node20.bgp.m-z.io/live/ch5/index.m3u8">TV5 HD</option>
+                </select>
+                <p class="text-xs text-gray-600 mt-1">หมายเหตุ: ลิงก์สตรีมมิ่งอาจใช้งานไม่ได้ชั่วคราวขึ้นอยู่กับเซิร์ฟเวอร์ของสถานี</p>
             </div>
         </div>
 
@@ -638,8 +652,16 @@ function setVideoPreviewURL(url) {
 function applyConfig(cfg) {
     const videoMode = cfg.videoMode || "url";
     document.getElementById("cfg-video-mode").value = videoMode;
-    document.getElementById("cfg-video-url").value  = cfg.videoUrl || "";
+    
+    // ตั้งค่า URL ให้ตรงกับโหมด
+    if (videoMode === "freetv") {
+        document.getElementById("cfg-video-freetv-select").value = cfg.videoUrl || "https://thairath-l-h-bkk.thairath.co.th/live/thairath.m3u8";
+    } else {
+        document.getElementById("cfg-video-url").value = cfg.videoUrl || "";
+    }
+    
     setVideoMode(videoMode);
+    
     if (videoMode === "upload" && cfg.videoSrc) {
         const prevEl = document.getElementById("cfg-video-upload-preview-el");
         const prev   = document.getElementById("cfg-video-upload-preview");
@@ -701,16 +723,24 @@ async function saveSettings() {
         showToast("⏳ กำลังบันทึกวิดีโอ กรุณารอสักครู่...");
         await _videoSavePromise;
         if (!_videoUploadBase64) {
-            // Video save failed; the upload handler already alerted the user
             showToast("❌ บันทึกวิดีโอล้มเหลว กรุณาลองอัปโหลดอีกครั้ง");
             return;
         }
     }
 
     const videoMode = document.getElementById("cfg-video-mode").value;
+    
+    // ดึง URL ตามโหมดที่เลือก
+    let finalVideoUrl = "";
+    if (videoMode === "url") {
+        finalVideoUrl = document.getElementById("cfg-video-url").value.trim();
+    } else if (videoMode === "freetv") {
+        finalVideoUrl = document.getElementById("cfg-video-freetv-select").value;
+    }
+
     const cfg = {
         videoMode,
-        videoUrl:             videoMode === "url" ? document.getElementById("cfg-video-url").value.trim() : "",
+        videoUrl:             finalVideoUrl,
         videoSrc:             videoMode === "upload" ? (_videoUploadBase64 || "") : "",
         videoBottomSlides:    videoBottomSlides,
         videoBottomInterval:  parseInt(document.getElementById("cfg-vb-interval").value) || 5,
@@ -728,9 +758,6 @@ async function saveSettings() {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
     } catch(e) {
-        // QuotaExceededError — this should not normally occur since video blobs are
-        // stored in IndexedDB and not in localStorage. If it does occur, the config
-        // (without the video) may still be too large due to many embedded images.
         console.warn('localStorage save error:', e);
         showToast("⚠️ บันทึกไม่สำเร็จ: ข้อมูลมีขนาดใหญ่เกินไป กรุณาลดจำนวนรูปภาพแล้วลองใหม่");
         return;
@@ -779,18 +806,29 @@ function setVideoMode(mode) {
     document.getElementById("cfg-video-mode").value = mode;
     const urlFields    = document.getElementById("video-url-fields");
     const uploadFields = document.getElementById("video-upload-fields");
+    const freetvFields = document.getElementById("video-freetv-fields");
+    
     const urlBtn       = document.getElementById("video-mode-url-btn");
     const uploadBtn    = document.getElementById("video-mode-upload-btn");
+    const freetvBtn    = document.getElementById("video-mode-freetv-btn");
+
+    // ซ่อนและเคลียร์ปุ่มทั้งหมดก่อน
+    urlFields.classList.add("hidden"); 
+    uploadFields.classList.add("hidden"); 
+    freetvFields.classList.add("hidden");
+    urlBtn.className    = "btn-secondary text-sm"; 
+    uploadBtn.className = "btn-secondary text-sm"; 
+    freetvBtn.className = "btn-secondary text-sm";
+
     if (mode === "upload") {
-        urlFields.classList.add("hidden");
         uploadFields.classList.remove("hidden");
-        urlBtn.className    = "btn-secondary text-sm";
         uploadBtn.className = "btn-primary text-sm";
+    } else if (mode === "freetv") {
+        freetvFields.classList.remove("hidden");
+        freetvBtn.className = "btn-primary text-sm";
     } else {
         urlFields.classList.remove("hidden");
-        uploadFields.classList.add("hidden");
-        urlBtn.className    = "btn-primary text-sm";
-        uploadBtn.className = "btn-secondary text-sm";
+        urlBtn.className = "btn-primary text-sm";
     }
 }
 
@@ -874,8 +912,8 @@ function openVBModal(type, idx) {
 
     if (type === "text") {
         document.getElementById("vb-modal-text-fields").classList.remove("hidden");
-        document.getElementById("vb-modal-text").value           = s ? (s.text || "") : "";
-        document.getElementById("vb-modal-text-color").value     = s ? (s.textColor || "#14b8b1") : "#14b8b1";
+        document.getElementById("vb-modal-text").value             = s ? (s.text || "") : "";
+        document.getElementById("vb-modal-text-color").value       = s ? (s.textColor || "#14b8b1") : "#14b8b1";
         document.getElementById("vb-modal-text-color-txt").value = s ? (s.textColor || "#14b8b1") : "#14b8b1";
         document.getElementById("vb-modal-text-size").value      = s ? (s.textSize || "") : "";
         const bgPreset = document.getElementById("vb-modal-bg-preset");
