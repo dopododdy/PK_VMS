@@ -444,7 +444,7 @@ function toggleMute() {
         if (!isVideoMuted && htmlVideo.volume === 0) {
             htmlVideo.volume = 1;
         }
-    } else if (ytIframe) {
+    } else if (ytIframe && !ytIframe.src.includes('website_mode')) {
         const command = isVideoMuted ? 'mute' : 'unMute';
         ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: command, args: [] }), '*');
     }
@@ -469,7 +469,7 @@ function changeVolume(val) {
     if (htmlVideo) {
         htmlVideo.volume = val / 100;
         htmlVideo.muted = isVideoMuted;
-    } else if (ytIframe) {
+    } else if (ytIframe && !ytIframe.src.includes('website_mode')) {
         if (!isVideoMuted) {
             ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'unMute', args: [] }), '*');
         }
@@ -501,7 +501,7 @@ function toggleCC() {
     const ytIframe = videoArea.querySelector("iframe");
     const htmlVideo = videoArea.querySelector("video");
 
-    if (ytIframe) {
+    if (ytIframe && !ytIframe.src.includes('website_mode')) {
         if (isCCOn) {
             ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'loadModule', args: ['captions'] }), '*');
             ytIframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setOption', args: ['captions', 'track', {'languageCode': 'th'}] }), '*');
@@ -527,7 +527,7 @@ function setQuality(quality) {
     const videoArea = document.getElementById("video-area");
     const ytIframe = videoArea.querySelector("iframe");
     
-    if (ytIframe) {
+    if (ytIframe && !ytIframe.src.includes('website_mode')) {
         let ytQuality = 'default';
         if(quality === '1080p') ytQuality = 'hd1080';
         if(quality === '720p') ytQuality = 'hd720';
@@ -586,6 +586,20 @@ function initVideo(cfg) {
     if (!url) return;
 
     document.getElementById("video-placeholder").style.display = "none";
+
+    // 1.5) โหมด Website (iframe เว็บไซต์)
+    if (mode === "website") {
+        const iframe = document.createElement("iframe");
+        iframe.src = url;
+        // แอบใส่พารามิเตอร์เพื่อให้รู้ว่าเป็น website_mode จะได้ไม่ไปใช้คำสั่งของ youtube api
+        iframe.src += (url.includes('?') ? '&' : '?') + 'website_mode=1';
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        iframe.style.border = "none";
+        // ใส่ iframe เข้าไป และไม่ต้องโชว์ Controls ของวิดีโอ
+        container.insertBefore(iframe, controls);
+        return;
+    }
 
     // 2) โหมด Free TV (HLS .m3u8)
     if (mode === "freetv" || url.endsWith('.m3u8')) {
