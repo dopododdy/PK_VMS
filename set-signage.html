@@ -438,11 +438,12 @@
         <!-- Section 1: Video -->
         <div class="settings-section">
             <div class="section-title">🎬 ส่วนที่ 1 — วิดีโอ (ซ้ายบน)</div>
-            <p class="text-sm text-gray-500 mb-4">เลือกแหล่งวิดีโอ: ป้อน URL หรืออัปโหลดไฟล์วิดีโอ หรือดูทีวีออนไลน์</p>
+            <p class="text-sm text-gray-500 mb-4">เลือกแหล่งวิดีโอ: ป้อน URL หรืออัปโหลดไฟล์วิดีโอ หรือดูทีวีออนไลน์ หรือเว็บไซต์</p>
             <div class="flex gap-2 mb-4">
-                <button id="video-mode-url-btn" onclick="setVideoMode('url')" class="btn-primary text-sm">🔗 URL</button>
+                <button id="video-mode-url-btn" onclick="setVideoMode('url')" class="btn-primary text-sm">🔗 URL (วิดีโอ)</button>
                 <button id="video-mode-upload-btn" onclick="setVideoMode('upload')" class="btn-secondary text-sm">📤 อัปโหลดวิดีโอ</button>
                 <button id="video-mode-freetv-btn" onclick="setVideoMode('freetv')" class="btn-secondary text-sm">📺 Free TV</button>
+                <button id="video-mode-website-btn" onclick="setVideoMode('website')" class="btn-secondary text-sm">🌐 เว็บไซต์</button>
             </div>
             <input type="hidden" id="cfg-video-mode" value="url">
             
@@ -471,6 +472,13 @@
                     <option value="https://livetptv.parliament.go.th/live/tptv1.m3u8">TPTV</option>
                 </select>
                 <p class="text-xs text-gray-600 mt-1">หมายเหตุ: ลิงก์สตรีมมิ่งอาจใช้งานไม่ได้ชั่วคราวขึ้นอยู่กับเซิร์ฟเวอร์ของสถานี</p>
+            </div>
+
+            <!-- Website fields -->
+            <div id="video-website-fields" class="hidden">
+                <label>URL เว็บไซต์</label>
+                <input type="url" id="cfg-website-url" class="input-field" placeholder="https://www.example.com">
+                <p class="text-xs text-gray-600 mt-1">หมายเหตุ: บางเว็บไซต์ที่มีระบบความปลอดภัย (X-Frame-Options) อาจไม่อนุญาตให้แสดงผลซ้อนในหน้าจออื่น</p>
             </div>
         </div>
 
@@ -655,7 +663,9 @@ function applyConfig(cfg) {
     
     // ตั้งค่า URL ให้ตรงกับโหมด
     if (videoMode === "freetv") {
-        document.getElementById("cfg-video-freetv-select").value = cfg.videoUrl || "https://thairath-l-h-bkk.thairath.co.th/live/thairath.m3u8";
+        document.getElementById("cfg-video-freetv-select").value = cfg.videoUrl || "https://thaipbs-live.cdn.byteark.com/live/playlist.m3u8";
+    } else if (videoMode === "website") {
+        document.getElementById("cfg-website-url").value = cfg.videoUrl || "";
     } else {
         document.getElementById("cfg-video-url").value = cfg.videoUrl || "";
     }
@@ -736,6 +746,8 @@ async function saveSettings() {
         finalVideoUrl = document.getElementById("cfg-video-url").value.trim();
     } else if (videoMode === "freetv") {
         finalVideoUrl = document.getElementById("cfg-video-freetv-select").value;
+    } else if (videoMode === "website") {
+        finalVideoUrl = document.getElementById("cfg-website-url").value.trim();
     }
 
     const cfg = {
@@ -807,18 +819,23 @@ function setVideoMode(mode) {
     const urlFields    = document.getElementById("video-url-fields");
     const uploadFields = document.getElementById("video-upload-fields");
     const freetvFields = document.getElementById("video-freetv-fields");
+    const websiteFields = document.getElementById("video-website-fields");
     
     const urlBtn       = document.getElementById("video-mode-url-btn");
     const uploadBtn    = document.getElementById("video-mode-upload-btn");
     const freetvBtn    = document.getElementById("video-mode-freetv-btn");
+    const websiteBtn   = document.getElementById("video-mode-website-btn");
 
     // ซ่อนและเคลียร์ปุ่มทั้งหมดก่อน
     urlFields.classList.add("hidden"); 
     uploadFields.classList.add("hidden"); 
     freetvFields.classList.add("hidden");
+    websiteFields.classList.add("hidden");
+
     urlBtn.className    = "btn-secondary text-sm"; 
     uploadBtn.className = "btn-secondary text-sm"; 
     freetvBtn.className = "btn-secondary text-sm";
+    websiteBtn.className = "btn-secondary text-sm";
 
     if (mode === "upload") {
         uploadFields.classList.remove("hidden");
@@ -826,6 +843,9 @@ function setVideoMode(mode) {
     } else if (mode === "freetv") {
         freetvFields.classList.remove("hidden");
         freetvBtn.className = "btn-primary text-sm";
+    } else if (mode === "website") {
+        websiteFields.classList.remove("hidden");
+        websiteBtn.className = "btn-primary text-sm";
     } else {
         urlFields.classList.remove("hidden");
         urlBtn.className = "btn-primary text-sm";
@@ -1033,7 +1053,7 @@ function renderSlides() {
         // Label
         const label = document.createElement("div");
         label.style.cssText = "font-size:0.8rem;color:#64748b;font-weight:700;margin-bottom:8px;";
-        label.textContent = s.type === "text" ? "✏️ ข้อความ" : (s.type === "upload" ? "📤 อัปโหลด" : "🖼️ รูปภาพ URL");
+        label.textContent = s.type === "text" ? "✏️ ข้อความ" : (s.type === "upload" ? "📤 อัปโหลด" : "🖼️️ รูปภาพ URL");
         card.appendChild(label);
 
         // Actions
