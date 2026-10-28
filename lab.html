@@ -224,6 +224,12 @@
                             <div id="chem-container" class="space-y-1"></div>
                         </div>
                     </div>
+
+                    <div class="section-card border-l-[8px] border-amber-500 mt-8">
+                        <h4 class="text-xl font-black text-white mb-4">📝 คำอธิบายผลเลือด (Interpretation)</h4>
+                        <textarea id="lab-interp-note" class="input-box min-h-[140px]"
+                            placeholder="เช่น BUN/Creatinine สูงเล็กน้อย สอดคล้องกับภาวะ... แนะนำติดตามผลใน 2 สัปดาห์"></textarea>
+                    </div>
                 </div>
 
                 <div id="view-imaging" class="hidden space-y-8">
@@ -367,6 +373,7 @@
         }
 
         let masterParams = [], currentAnimal = null, labHistory = [], imagingHistory = [];
+        let labNotes = {};
         let currentAgeYears = 0;
         let editingLabSession = null;
         let editingEchoRecord = null;
@@ -526,7 +533,7 @@
 
             // โหลดข้อมูลทั้งหมดของสัตว์ตัวนี้
             renderInputForm(); 
-            await Promise.all([fetchLabHistory(id), fetchImagingHistory(id)]);
+            await Promise.all([fetchLabHistory(id), fetchLabNotes(id), fetchImagingHistory(id)]);
             
             // บังคับเปิดไปที่แท็บ Input (กรอกผลเลือด) เสมอเวลาเปลี่ยนตัว
             switchTab('input', document.getElementById('tab-input'));
@@ -555,6 +562,7 @@
     const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
     document.getElementById('disp-ref-mode').innerText = `อ้างอิงช่วงอายุ: ${refInfo.modeName}`;
     document.getElementById('lab-date-input').value = toDatetimeLocalString(new Date());
+    document.getElementById('lab-interp-note').value = '';
 
     let htmlCbc = '', htmlChem = '';
 
@@ -610,6 +618,12 @@
         }
 
         async function fetchLabHistory(id) { const { data } = await db.from('lab_results').select('*').eq('animal_id', id).order('created_at', { ascending: false }); labHistory = data || []; renderTrendTable(); }
+
+        async function fetchLabNotes(id) {
+            const { data } = await db.from('lab_interpretations').select('*').eq('animal_id', id);
+            labNotes = {};
+            (data || []).forEach(r => { labNotes[r.created_at] = r.note; });
+        }
 
        function renderTrendTable() {
     const sessions = {}; 
@@ -1090,6 +1104,7 @@
             document.getElementById('form-title-text').innerText = '✏️ แก้ไขผลเลือด';
             document.getElementById('disp-ref-mode').innerText = `อัปเดตข้อมูลของวันที่: ${formatThaiDate(new Date(ts))}`;
             document.getElementById('lab-date-input').value = toDatetimeLocalString(new Date(ts));
+            document.getElementById('lab-interp-note').value = labNotes[ts] || '';
             
             const saveBtn = document.getElementById('btn-save-lab');
             saveBtn.innerHTML = '<i data-lucide="save"></i> อัปเดตผลเลือด';
@@ -1106,6 +1121,7 @@
         function cancelEditLab() {
             editingLabSession = null;
             document.querySelectorAll('.lab-input').forEach(i => { i.value = ''; i.classList.remove('invalid-format'); });
+            document.getElementById('lab-interp-note').value = '';
             
             document.getElementById('form-title-text').innerText = 'บันทึกผลเลือดใหม่';
             const refInfo = getAgeReferenceMode(currentAnimal.birth_date);
@@ -1155,29 +1171,43 @@
             if (invalidInputs.length > 0) {
                 return alert("⚠️ ค่าผลเลือดต่อไปนี้รูปแบบไม่ถูกต้อง:\n\n" + invalidInputs.join(", ") + "\n\nรองรับเฉพาะ: ตัวเลข เช่น 12.5  หรือ  >16.0  หรือ  <0.1");
             }
+
+            const note = document.getElementById('lab-interp-note').value.trim();
+            if (results.length === 0 && !note) return alert("กรุณากรอกข้อมูลผลเลือดหรือคำอธิบาย");
             
-            if (results.length === 0) return alert("กรุณากรอกข้อมูล");
-            
-            // หากเป็นการแก้ไข ให้ลบผลเลือดชุดเก่า (ของเวลานี้) ทิ้งก่อน แล้วค่อย Insert ใหม่ทับเข้าไป
+            // หากเป็นการแก้ไข ให้ลบชุดเก่า (ผลเลือดและคำอธิบาย) ของเวลานี้ทิ้งก่อน แล้วค่อย Insert ใหม่
             if (editingLabSession) {
                 await db.from('lab_results').delete().eq('animal_id', currentAnimal.id).eq('created_at', editingLabSession);
+                await db.from('lab_interpretations').delete().eq('animal_id', currentAnimal.id).eq('created_at', editingLabSession);
             }
-            
-            const { error } = await db.from('lab_results').insert(results);
-            
-            if (!error) { 
-                alert(editingLabSession ? "อัปเดตข้อมูลสำเร็จ" : "บันทึกข้อมูลสำเร็จ"); 
-                cancelEditLab(); // รีเซ็ตฟอร์ม
-                await fetchLabHistory(currentAnimal.id); 
-                switchTab('trends', document.getElementById('tab-trends')); 
-            } else {
-                // ⚠️ ถ้า column test_value ใน DB ยังเป็น numeric อยู่ จะ error ตรงนี้
-                alert("เกิดข้อผิดพลาด: " + error.message + "\n\n💡 หาก error เกี่ยวกับ 'invalid input syntax for type numeric' กรุณาเปลี่ยน column test_value ใน table lab_results ให้เป็น type 'text' ก่อน");
+
+            if (results.length > 0) {
+                const { error } = await db.from('lab_results').insert(results);
+                if (error) {
+                    // ⚠️ ถ้า column test_value ใน DB ยังเป็น numeric อยู่ จะ error ตรงนี้
+                    return alert("เกิดข้อผิดพลาด: " + error.message + "\n\n💡 หาก error เกี่ยวกับ 'invalid input syntax for type numeric' กรุณาเปลี่ยน column test_value ใน table lab_results ให้เป็น type 'text' ก่อน");
+                }
             }
+
+            if (note) {
+                const { error } = await db.from('lab_interpretations').insert([{ animal_id: currentAnimal.id, created_at: ts, note }]);
+                if (error) return alert("บันทึกคำอธิบายไม่สำเร็จ: " + error.message);
+            }
+
+            alert(editingLabSession ? "อัปเดตข้อมูลสำเร็จ" : "บันทึกข้อมูลสำเร็จ");
+            cancelEditLab(); // รีเซ็ตฟอร์ม
+            await Promise.all([fetchLabHistory(currentAnimal.id), fetchLabNotes(currentAnimal.id)]);
+            switchTab('trends', document.getElementById('tab-trends'));
         }
         
 
-        async function deleteSession(ts) { if (confirm("ลบผลเลือดชุดนี้ทิ้งอย่างถาวร?")) { await db.from('lab_results').delete().eq('animal_id', currentAnimal.id).eq('created_at', ts); fetchLabHistory(currentAnimal.id); } }
+        async function deleteSession(ts) {
+            if (confirm("ลบผลเลือดชุดนี้ทิ้งอย่างถาวร?")) {
+                await db.from('lab_results').delete().eq('animal_id', currentAnimal.id).eq('created_at', ts);
+                await db.from('lab_interpretations').delete().eq('animal_id', currentAnimal.id).eq('created_at', ts);
+                await Promise.all([fetchLabHistory(currentAnimal.id), fetchLabNotes(currentAnimal.id)]);
+            }
+        }
 
         // ---- Echo Edit / Delete helpers ----
         function editEchoRecord(id) {
