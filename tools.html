@@ -111,6 +111,21 @@
         .dose-range-hint { font-size: 0.63rem; color: #475569; line-height: 1.2; }
         /* Thai indication under drug name */
         .drug-indication-th { font-size: 0.68rem; color: #64748b; margin-top: 2px; margin-bottom: 2px; line-height: 1.3; }
+        /* Contraindication tooltip */
+        .ci-wrap { position: relative; display: inline-block; margin-left: 6px; }
+        .ci-icon { cursor: help; font-size: 0.85em; color: #f87171; }
+        .ci-tip {
+            display: none; position: absolute; left: 0; top: 130%; z-index: 100;
+            min-width: 260px; max-width: 340px; padding: 10px 12px;
+            background: #1e293b; border: 1px solid rgba(248,113,113,0.5);
+            border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            color: #e2e8f0; font-size: 0.78rem; line-height: 1.5; font-weight: 400;
+            white-space: normal; text-align: left;
+        }
+        .ci-tip strong { color: #f87171; display: block; margin-bottom: 4px; }
+        .ci-tip ul { margin: 0; padding-left: 16px; }
+        .ci-wrap:hover .ci-tip { display: block; }
+        @media (max-width: 767px) { .ci-tip { display: none !important; } }
     </style>
 </head>
 <body class="flex h-screen">
@@ -1390,6 +1405,67 @@
             'Stanozolol':{doseRange:{dog:[1,2]},indicationTh:'กระตุ้นการสร้างเม็ดเลือด / เพิ่มน้ำหนัก'},
         };
 
+        const drugContraindications = {
+            'Acepromazine': ['ภาวะช็อก / ความดันต่ำ', 'โรคตับหรือไตรุนแรง', 'ภาวะ MDR1 (Collie และสายพันธุ์ใกล้เคียง)', 'สัตว์ที่มีปัญหาการหายใจ'],
+            'Acetaminophen': ['แมวทุกกรณี (พิษรุนแรง ทำลายเม็ดเลือดแดง)', 'โรคตับ', 'โรคไตรุนแรง'],
+            'Amikacin': ['โรคไตเรื้อรัง / ไตวาย', 'ภาวะขาดน้ำ', 'หูหนวกหรือการทรงตัวผิดปกติ', 'ใช้ร่วมกับยาพิษต่อไตอื่น'],
+            'Amiodarone': ['Block หัวใจระดับ 2-3 ที่ไม่มี pacemaker', 'Bradycardia รุนแรง', 'โรคปอดชนิด Interstitial', 'โรคตับรุนแรง'],
+            'Amlodipine': ['ความดันต่ำ / Shock', 'Aortic stenosis รุนแรง'],
+            'Amoxicillin': ['แพ้เพนิซิลลิน', 'กระต่าย / หนูแกสบี้ / หนูแฮมสเตอร์ (ทำลายระบบทางเดินอาหาร)'],
+            'Atenolol': ['หัวใจล้มเหลวเฉียบพลัน', 'หัวใจเต้นช้า (Bradycardia)', 'หลอดลมหดเกร็ง / หอบหืด', 'เบาหวานชนิดที่ต้องใช้อินซูลิน'],
+            'Atropine': ['ต้อหินมุมปิด', 'ลำไส้อุดตัน / ท้องผูกรุนแรง', 'Tachycardia จากสาเหตุอื่นที่ยังไม่รู้สาเหตุ'],
+            'Azathioprine': ['แมว (พิษต่อไขกระดูกรุนแรง)', 'ติดเชื้อรุนแรงที่ยังไม่ควบคุม', 'ตั้งท้อง'],
+            'Azithromycin': ['แพ้ Macrolide', 'ตับผิดปกติรุนแรง', 'ยืดช่วง QT (ระวัง)'],
+            'Bupivacaine': ['ห้ามฉีดเข้าหลอดเลือด (IV) โดยตรง', 'ภาวะ Heart block', 'แพ้ยาชากลุ่ม Amide'],
+            'Buprenorphine': ['ระบบหายใจกดรุนแรง', 'ภาวะสมองบวม / ความดันในกะโหลกสูง'],
+            'Butorphanol': ['ระบบหายใจกดรุนแรง', 'ความดันในกะโหลกสูง', 'ระวังในสัตว์ที่ใช้ Opioid ตัวอื่นอยู่'],
+            'Carprofen': ['แมว (ห้ามใช้)', 'โรคไตหรือตับรุนแรง', 'ภาวะเลือดออกผิดปกติ / ทางเดินอาหารมีแผล', 'ภาวะขาดน้ำ / ช็อก', 'ใช้ร่วม Corticosteroid หรือ NSAID ตัวอื่น'],
+            'Cefazolin': ['แพ้ยากลุ่ม Cephalosporin', 'โรคไตรุนแรง (ปรับขนาดยา)'],
+            'Cephalexin': ['แพ้ยากลุ่ม Cephalosporin / Penicillin', 'โรคไตรุนแรง (ปรับขนาดยา)'],
+            'Chloramphenicol': ['แมว (อาจเกิดพิษต่อไขกระดูก)', 'ตั้งท้อง / ลูกแรกเกิด', 'โรคตับ', 'ภาวะกดไขกระดูก'],
+            'Clindamycin': ['กระต่าย / หนูแกสบี้ / หนูแฮมสเตอร์ (Colitis รุนแรง)', 'โรคตับรุนแรง', 'Colitis / ท้องเสียจากเชื้อ C. difficile'],
+            'Dexamethasone': ['ติดเชื้อรุนแรงที่ยังไม่ควบคุม', 'กระเพาะหรือลำไส้เป็นแผล', 'เบาหวาน', 'Hyperadrenocorticism (Cushing)', 'ตั้งท้อง (ระวัง)'],
+            'Diazepam': ['Hepatic failure / โรคตับรุนแรง (แมว)', 'ระบบหายใจกดรุนแรง', 'ห้ามผสมในไซริงค์เดียวกับยาอื่น'],
+            'Digoxin': ['Hypokalemia', 'Hypercalcemia', 'Heart block', 'โรคไตรุนแรง (ต้องปรับขนาด)'],
+            'Diltiazem': ['หัวใจล้มเหลวรุนแรง (Systolic dysfunction)', 'ความดันต่ำ', 'Heart block', 'ใช้ร่วม Beta-blocker โดยไม่ระวัง'],
+            'Doxycycline': ['แพ้ Tetracycline', 'ตั้งท้องและลูกอ่อนฟันยังไม่ขึ้น', 'ห้ามให้ร่วมกับนม/แคลเซียมสูงโดยไม่เว้นระยะ'],
+            'Enrofloxacin': ['ลูกสัตว์อายุน้อยกว่าที่กำหนด (กระดูกอ่อนได้รับผลกระทบ)', 'ชักหรือโรคลมชัก', 'โรคไตรุนแรง (ปรับขนาดยา)', 'แมว (ห้ามเกิน 5 mg/kg เนื่องจากตาบอดเฉียบพลันได้)'],
+            'Famotidine': ['โรคไตรุนแรง (ปรับขนาดยา)'],
+            'Fentanyl': ['ระบบหายใจกดรุนแรง', 'ภาวะสมองบวม / ความดันในกะโหลกสูง', 'ไข้สูง (ดูดซึมเพิ่มขึ้นในแผ่นแปะ)'],
+            'Firocoxib': ['แมว (ห้ามใช้)', 'ไตหรือตับผิดปกติ', 'ภาวะเลือดออกผิดปกติ / ทางเดินอาหารมีแผล', 'ภาวะขาดน้ำ / ช็อก'],
+            'Furosemide': ['ภาวะขาดน้ำรุนแรง', 'Hypokalemia / Hyponatremia รุนแรง', 'Anuria (ไม่มีปัสสาวะ)', 'แพ้ Sulfonamide'],
+            'Gentamicin': ['โรคไตเรื้อรัง / ไตวาย', 'ภาวะขาดน้ำ', 'หูหนวกหรือการทรงตัวผิดปกติ', 'ใช้ร่วมกับยาพิษต่อไตอื่น'],
+            'Heparin': ['เลือดออกผิดปกติ / Bleeding disorder', 'บาดเจ็บเส้นเลือดสมองเฉียบพลัน', 'ผ่าตัดสมองหรือตา (ระวัง)', 'ภาวะเกล็ดเลือดต่ำรุนแรง'],
+            'Ivermectin': ['Collie และสายพันธุ์ MDR1 (พิษต่อระบบประสาท)', 'ลูกสุนัขอายุน้อยกว่า 6 สัปดาห์', 'ควรระวังในสุนัขพันธุ์ Herding บางสายพันธุ์'],
+            'Ketoprofen': ['แมว (ระวังสูง)', 'โรคไต / ตับ', 'เลือดออกผิดปกติ / แผลในทางเดินอาหาร', 'ภาวะขาดน้ำ'],
+            'Lidocaine': ['Heart block', 'ภาวะ Hypovolemia รุนแรง', 'แพ้ยากลุ่ม Amide'],
+            'Maropitant': ['ลูกสุนัขอายุน้อยกว่า 16 สัปดาห์ (ความปลอดภัยไม่แน่นอน)', 'โรคตับ / ไตรุนแรง (ใช้ด้วยความระมัดระวัง)'],
+            'Marbofloxacin': ['ลูกสัตว์อายุน้อยกว่าที่กำหนด (กระดูกอ่อนได้รับผลกระทบ)', 'ชักหรือโรคลมชัก', 'โรคไตรุนแรง (ปรับขนาดยา)'],
+            'Meloxicam': ['แมว (ใช้ได้เฉพาะตามขนาดที่กำหนด ห้ามเกิน)', 'โรคไตหรือตับรุนแรง', 'ภาวะเลือดออกผิดปกติ / แผลในทางเดินอาหาร', 'ภาวะขาดน้ำ / ช็อก', 'ใช้ร่วม Corticosteroid หรือ NSAID ตัวอื่น'],
+            'Metoclopramide': ['ลำไส้อุดตัน / ทะลุ', 'ชักหรือโรคลมชัก', 'Pheochromocytoma'],
+            'Metoprolol': ['หัวใจล้มเหลวเฉียบพลัน', 'Heart block', 'หลอดลมหดเกร็ง / หอบหืด', 'ความดันต่ำ / Shock'],
+            'Metronidazole': ['ตับผิดปกติรุนแรง', 'ตั้งท้อง (ระวัง)', 'ระบบประสาทผิดปกติ / ชัก (ระวัง)'],
+            'Midazolam': ['ระบบหายใจกดรุนแรง', 'Hepatic failure', 'ห้ามผสมในไซริงค์เดียวกับยาอื่น'],
+            'Morphine': ['ระบบหายใจกดรุนแรง', 'ความดันในกะโหลกสูง / สมองบาดเจ็บ', 'ลำไส้อุดตัน', 'แมว (ระวังเป็นพิเศษ เพราะอาจกระตุ้นประสาท)'],
+            'Naloxone': ['ระวังในสัตว์ที่ได้รับ Opioid ชนิดปล่อยยาช้า (อาจเกิด withdrawal รุนแรง)'],
+            'Omeprazole': ['แพ้ยากลุ่ม PPI', 'ระวังในตับผิดปกติรุนแรง'],
+            'Ondansetron': ['ใช้ร่วมกับยาที่ยืด QT ต้องระวัง', 'Hepatic failure รุนแรง'],
+            'Phenobarbital': ['ตับผิดปกติรุนแรง', 'ไตเสื่อมรุนแรง (ระวัง)', 'ภาวะกดระบบหายใจ', 'ตั้งท้องและลูกแรกเกิด'],
+            'Phenytoin': ['แมว (ห้ามใช้)', 'Heart block', 'ตับผิดปกติ', 'ตั้งท้อง'],
+            'Pimobendan': ['Hypertrophic cardiomyopathy (HCM) ในแมว (ไม่มีประสิทธิภาพและอาจอันตราย)', 'Aortic stenosis รุนแรง', 'ตั้งท้อง / ให้นม'],
+            'Potassium Bromide': ['แมว (ปอดอักเสบรุนแรง)', 'โรคไตเรื้อรัง (ควรระวัง)', 'โรคตับรุนแรง'],
+            'Propofol': ['แพ้ไขมัน / ถั่วเหลือง (ขึ้นกับสูตร)', 'ภาวะช็อกรุนแรง', 'แมวบางตัวอาจเกิด Heinz body anemia เมื่อใช้ซ้ำ'],
+            'Propranolol': ['หัวใจล้มเหลวเฉียบพลัน', 'หลอดลมหดเกร็ง / หอบหืด', 'Heart block', 'ความดันต่ำ', 'เบาหวานที่ใช้อินซูลิน'],
+            'Sulfamethoxazole-Trimethoprim': ['แพ้ Sulfonamide', 'โรคไตหรือตับรุนแรง', 'ตั้งท้องใกล้คลอด', 'ภาวะ Hypothyroidism (ระวัง)', 'สุนัขที่เป็นตาแห้ง (Keratoconjunctivitis sicca)'],
+            'Theophylline': ['ชักหรือโรคลมชัก', 'Arrhythmia', 'ทางเดินอาหารเป็นแผล', 'ระวังเมื่อใช้ร่วมกับ Macrolide / Fluoroquinolone'],
+            'Tramadol': ['ชักหรือโรคลมชัก', 'โรคตับรุนแรง', 'ใช้ร่วม SSRI / MAOI (ความเสี่ยง Serotonin syndrome)'],
+            'Trazodone': ['ใช้ร่วม MAOI', 'โรคหัวใจรุนแรง / Arrhythmia', 'ความดันต่ำ'],
+            'Vancomycin': ['โรคไตรุนแรง (ปรับขนาดยาและติดตามระดับยา)', 'ห้ามฉีดเร็วเกินไป (อาจเกิด Histamine reaction)'],
+            'Warfarin': ['เลือดออกผิดปกติ', 'ตั้งท้อง', 'แผลเปิด / หลังผ่าตัดใหม่ๆ', 'โรคตับรุนแรง', 'ห้ามใช้ร่วมกับ NSAID หรือ Aspirin โดยไม่ระวัง'],
+            'Xylazine': ['หัวใจล้มเหลว / Arrhythmia', 'ความดันต่ำ / Shock', 'ตั้งท้อง', 'โรคตับ / ไต (ระวัง)'],
+            'Zonisamide': ['โรคไตหรือตับรุนแรง', 'แพ้ Sulfonamide'],
+        };
+
         function setSpecies(s) {
             patient.species = s;
             document.getElementById('btn-dog').classList.toggle('bg-teal-600', s==='dog');
@@ -2030,7 +2106,7 @@
                     const indicationHtml = extra.indicationTh ? `<div class="drug-indication-th">${escHtml(extra.indicationTh)}</div>` : '';
                     return `<tr${isChecked ? ' style="background:rgba(20,184,177,0.06)"' : ''}>
                         <td style="width:32px;text-align:center;padding:8px 4px"><input type="checkbox"${isChecked ? ' checked' : ''} onchange="toggleCommonDrugCheck(${idx})" style="width:16px;height:16px;cursor:pointer;accent-color:var(--teal)" title="เพิ่มใน Selected List"></td>
-                        <td><div class="font-semibold">${drug.name}${drugIcons ? ' <span style="font-size:0.85em">' + drugIcons + '</span>' : ''}</div>${indicationHtml}<span class="badge ${badgeClass}">${drug.category}</span></td>
+                        <td><div class="font-semibold">${drug.name}${drugIcons ? ' <span style="font-size:0.85em">' + drugIcons + '</span>' : ''}${ciHtml(drug.name)}</div>${indicationHtml}<span class="badge ${badgeClass}">${drug.category}</span></td>
                         <td>${doseCell}</td>
                         <td>${concCell}</td>
                         <td class="res-val">${resultText} <span class="text-xs text-gray-500 font-normal">${resultUnit}</span></td>
@@ -2197,6 +2273,14 @@
 
         function escHtml(str) {
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        function ciHtml(name) {
+            const list = drugContraindications[name];
+            if (!list || list.length === 0) return '';
+            const items = list.map(x => `<li>${escHtml(x)}</li>`).join('');
+            return `<span class="ci-wrap"><span class="ci-icon" aria-label="ข้อห้ามใช้">⛔</span>` +
+                   `<span class="ci-tip"><strong>ห้ามใช้ / ข้อควรระวัง</strong><ul>${items}</ul></span></span>`;
         }
 
         function formatFraction(val) {
